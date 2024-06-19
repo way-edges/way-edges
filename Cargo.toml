@@ -1,0 +1,12 @@
+[package]
+name = "gtk4-test"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+gtk4-layer-shell = "0.3.0"
+gtk = { package = "gtk4", version = "0.8", features = ["v4_12"] }
+gio = "0.19.5"
+pangocairo = "0.19.2"
+futures = "0.3"
+futures-time = "3.0.0"
