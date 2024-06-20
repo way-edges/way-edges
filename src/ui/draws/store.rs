@@ -8,54 +8,6 @@ use pangocairo::cairo;
 use pangocairo::cairo::Format;
 use std::str::FromStr;
 
-pub struct PanelState {
-    base_surface: ImageSurface,
-    normal_mask: ImageSurface,
-    pressing_mask: ImageSurface,
-    pressing: bool,
-    map_size: (i32, i32),
-    f_map_size: (f64, f64),
-}
-
-impl PanelState {
-    pub fn new(map_size: (i32, i32), size: (f64, f64)) -> Self {
-        let (b, n, p) = draw_to_surface(map_size, size);
-        Self {
-            base_surface: b,
-            normal_mask: n,
-            pressing_mask: p,
-            pressing: false,
-            map_size,
-            f_map_size: (map_size.0 as f64, map_size.1 as f64),
-        }
-    }
-
-    pub fn set_pressing_state(&mut self, s: bool) {
-        self.pressing = s
-    }
-
-    pub fn draw_into_surface(&self, ctx: &Context) {
-        // let base_surf =
-        //     ImageSurface::create(Format::ARgb32, self.map_size.0, self.map_size.1).unwrap();
-        // let ctx = Context::new(&base_surf).unwrap();
-
-        // base_surface
-        ctx.set_source_surface(&self.base_surface, 0., 0.);
-        ctx.rectangle(0., 0., self.f_map_size.0, self.f_map_size.1);
-        ctx.fill().unwrap();
-
-        // mask
-        if self.pressing {
-            ctx.set_source_surface(&self.pressing_mask, 0., 0.);
-        } else {
-            ctx.set_source_surface(&self.normal_mask, 0., 0.);
-        }
-        ctx.rectangle(0., 0., self.f_map_size.0, self.f_map_size.1);
-        ctx.fill().unwrap();
-        // base_surf
-    }
-}
-
 fn draw_2(context: &Context, radius: f64, h: f64) {
     let lg_height = h - radius * 2.;
 
@@ -66,7 +18,7 @@ fn draw_2(context: &Context, radius: f64, h: f64) {
     context.rel_line_to(0., -lg_height);
 }
 
-fn draw_to_surface(
+pub fn draw_to_surface(
     map_size: (i32, i32),
     item_size: (f64, f64),
 ) -> (ImageSurface, ImageSurface, ImageSurface) {
