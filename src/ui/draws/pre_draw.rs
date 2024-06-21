@@ -91,15 +91,15 @@ pub fn draw_to_surface(
     let (normal_surf, pressing_surf) = {
         let start_point = (0., f_map_size.1 / 2.);
         let end_point = (item_size.0, f_map_size.1 / 2.);
-        let lg = LinearGradient::new(start_point.0, start_point.1, end_point.0, end_point.1);
 
         let normal_surf = {
             let surf = cairo::ImageSurface::create(Format::ARgb32, map_size.0, map_size.1)
                 .expect("Couldn’t create surface");
             let ctx = cairo::Context::new(&surf).unwrap();
+            let lg = LinearGradient::new(start_point.0, start_point.1, end_point.0, end_point.1);
             lg.add_color_stop_rgba(0., 0., 0., 0., 0.);
             lg.add_color_stop_rgba(0.4, 0., 0., 0., 0.);
-            lg.add_color_stop_rgba(1., 0., 0., 0., 0.3);
+            lg.add_color_stop_rgba(1., 0., 0., 0., 0.7);
             ctx.set_source(&lg).unwrap();
             vertical_center(&ctx);
             ctx.append_path(&path);
@@ -111,9 +111,11 @@ pub fn draw_to_surface(
             let surf = cairo::ImageSurface::create(Format::ARgb32, map_size.0, map_size.1)
                 .expect("Couldn’t create surface");
             let ctx = cairo::Context::new(&surf).unwrap();
-            lg.add_color_stop_rgba(0., 0., 0., 0., 0.5);
-            lg.add_color_stop_rgba(0.4, 0., 0., 0., 0.);
-            lg.add_color_stop_rgba(1., 0., 0., 0., 0.3);
+            let lg = LinearGradient::new(start_point.0, start_point.1, end_point.0, end_point.1);
+            lg.add_color_stop_rgba(0., 0., 0., 0., 0.7);
+            lg.add_color_stop_rgba(0.45, 0., 0., 0., 0.2);
+            lg.add_color_stop_rgba(0.55, 0., 0., 0., 0.);
+            lg.add_color_stop_rgba(1., 0., 0., 0., 0.7);
             ctx.set_source(&lg).unwrap();
             vertical_center(&ctx);
             ctx.append_path(&path);
