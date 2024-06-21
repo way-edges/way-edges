@@ -12,6 +12,7 @@ pub fn draw_fan(ctx: &Context, point: (f64, f64), radius: f64, start: f64, end: 
     ctx.close_path();
 }
 
+/// do not use `PI`
 pub fn draw_fan_no_close(ctx: &Context, point: (f64, f64), radius: f64, start: f64, end: f64) {
     ctx.arc(point.0, point.1, radius, start * PI, end * PI);
     // ctx.line_to(point.0, point.1);

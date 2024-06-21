@@ -54,7 +54,7 @@ pub fn draw_to_surface(
                 draw_2(&ctx, item_size.0, item_size.1);
                 ctx.set_source_color(&main_color);
                 ctx.fill().unwrap();
-                super::blur_image_surface(&mut surf, (data::GLOW_SIZE as i32) * 2);
+                super::blur::blur_image_surface(&mut surf, (data::GLOW_SIZE as i32) * 2);
                 surf
             };
             base_ctx.save().unwrap();
