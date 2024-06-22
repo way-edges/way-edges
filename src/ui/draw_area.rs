@@ -5,7 +5,6 @@ use crate::data;
 use gtk::cairo::Context;
 use gtk::cairo::RectangleInt;
 use gtk::cairo::Region;
-use gtk::gdk::{self, prelude::*, RGBA};
 use gtk::glib;
 use gtk::prelude::*;
 use gtk::EventControllerMotion;
@@ -16,7 +15,6 @@ use interval_task::runner::ExternalRunnerExt;
 use std::cell::Cell;
 use std::cell::RefCell;
 use std::rc::Rc;
-use std::time::SystemTime;
 use std::time::{Duration, Instant};
 
 pub struct MouseState {

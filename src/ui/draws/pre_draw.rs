@@ -24,9 +24,9 @@ pub fn draw_to_surface(
 ) -> (ImageSurface, ImageSurface, ImageSurface) {
     // size and position
     let f_map_size = (map_size.0 as f64, map_size.1 as f64);
-    let vertical_center = |ctx: &Context| {
-        ctx.translate(0., (map_size.1 as f64 - item_size.1) / 2.);
-    };
+    // let vertical_center = |ctx: &Context| {
+    //     ctx.translate(0., (map_size.1 as f64 - item_size.1) / 2.);
+    // };
 
     // color
     let main_color = RGBA::from_str("#7B98FF").unwrap();
@@ -48,7 +48,7 @@ pub fn draw_to_surface(
                 let mut surf = cairo::ImageSurface::create(Format::ARgb32, map_size.0, map_size.1)
                     .expect("Couldn’t create surface");
                 let ctx = cairo::Context::new(&surf).unwrap();
-                vertical_center(&ctx);
+                // vertical_center(&ctx);
                 // let scale_x = 1. + (1. / item_size.0);
                 // ctx.scale(scale_x, 1.);
                 draw_2(&ctx, item_size.0, item_size.1);
@@ -67,7 +67,7 @@ pub fn draw_to_surface(
         // core fill
         {
             base_ctx.save().unwrap();
-            vertical_center(&base_ctx);
+            // vertical_center(&base_ctx);
             draw_2(&base_ctx, item_size.0, item_size.1);
             path = base_ctx.copy_path().unwrap();
             base_ctx.set_source_color(&main_color);
@@ -78,7 +78,7 @@ pub fn draw_to_surface(
         // border
         {
             base_ctx.save().unwrap();
-            vertical_center(&base_ctx);
+            // vertical_center(&base_ctx);
             base_ctx.append_path(&path);
             base_ctx.stroke().unwrap();
             base_ctx.restore().unwrap();
@@ -101,7 +101,7 @@ pub fn draw_to_surface(
             lg.add_color_stop_rgba(0.4, 0., 0., 0., 0.);
             lg.add_color_stop_rgba(1., 0., 0., 0., 0.7);
             ctx.set_source(&lg).unwrap();
-            vertical_center(&ctx);
+            // vertical_center(&ctx);
             ctx.append_path(&path);
             ctx.fill().unwrap();
             surf
@@ -117,7 +117,7 @@ pub fn draw_to_surface(
             lg.add_color_stop_rgba(0.55, 0., 0., 0., 0.);
             lg.add_color_stop_rgba(1., 0., 0., 0., 0.7);
             ctx.set_source(&lg).unwrap();
-            vertical_center(&ctx);
+            // vertical_center(&ctx);
             ctx.append_path(&path);
             ctx.fill().unwrap();
             surf

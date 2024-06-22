@@ -2,10 +2,9 @@ use crate::config::Config;
 
 use super::draw_area;
 use gtk::{prelude::*, Application, CssProvider, STYLE_PROVIDER_PRIORITY_APPLICATION};
-use gtk4_layer_shell::{Edge, Layer, LayerShell};
+use gtk4_layer_shell::{Layer, LayerShell};
 
 pub fn new_window(app: &Application, config: Config) {
-    // Create a normal GTK window however you like
     let window = gtk::ApplicationWindow::new(app);
     let size = config.size;
 
@@ -24,7 +23,7 @@ pub fn new_window(app: &Application, config: Config) {
     let darea = draw_area::setup_draw(&window, config.edge, size, config.event_map);
 
     window.connect_show(move |w: &gtk::ApplicationWindow| {
-        // transparency background !! may not work for some gtk4 theme, and idk how to fix !!
+        // transparency background !! may not work for some gtk4 theme, and idk what to do with it !!
         let provider = CssProvider::new();
         provider
             // .load_from_string("window.background { background: unset; border: 1px solid white; }");
