@@ -109,13 +109,15 @@ pub fn setup_draw(
             darea.set_width_request(map_size.1);
             darea.set_height_request(map_size.0);
         }
-        _ => todo!(),
+        _ => unreachable!(),
     };
-    let (mouse_state, mut set_motion) = draw_motion(Duration::from_millis(1000), (0., size.0), 144);
+    let (mouse_state, mut set_motion) = draw_motion(Duration::from_millis(30), (0., size.0), 24);
     let is_pressing = mouse_state.pressing.clone();
     let set_core = draw_core(map_size, size);
     let set_input_region = draw_input_region(size, edge);
+    let set_rotate = draw_rotation(edge, size);
     darea.set_draw_func(glib::clone!(@weak window =>move |darea, context, _, _| {
+        set_rotate(context);
         let visible_y = set_motion(darea, context);
         set_core(context, is_pressing.get().is_some());
         set_input_region(&window, visible_y);
@@ -160,12 +162,14 @@ fn draw_motion(
         mouse_state,
         move |darea: &DrawingArea, ctx: &Context| -> f64 {
             let visible_y = ts.get_y();
+            println!("{visible_y}");
             if visible_y == range.0 || visible_y == range.1 {
                 frame_manager.stop();
             } else {
                 frame_manager.start(darea);
             }
             ctx.translate(-range.1 + visible_y, 0.);
+            // ctx.translate(range.1 - visible_y, 0.);
             visible_y
         },
     )
@@ -183,9 +187,9 @@ fn draw_input_region(size: (f64, f64), edge: Edge) -> impl Fn(&gtk::ApplicationW
         }),
         Edge::Right => Box::new(move |visible_y: f64| {
             Region::create_rectangle(&RectangleInt::new(
-                (size.0 + data::GLOW_SIZE as f64 - visible_y) as i32,
+                (size.0 - visible_y) as i32,
                 0,
-                visible_y as i32 + data::GLOW_SIZE as i32,
+                (visible_y + data::GLOW_SIZE as f64).ceil() as i32,
                 size.1 as i32,
             ))
         }),
@@ -200,18 +204,38 @@ fn draw_input_region(size: (f64, f64), edge: Edge) -> impl Fn(&gtk::ApplicationW
         Edge::Bottom => Box::new(move |visible_y: f64| {
             Region::create_rectangle(&RectangleInt::new(
                 0,
-                (size.0 + data::GLOW_SIZE as f64 - visible_y) as i32,
+                (size.0 - visible_y) as i32,
                 size.1 as i32,
-                visible_y as i32 + data::GLOW_SIZE as i32,
+                (visible_y + data::GLOW_SIZE as f64).ceil() as i32,
             ))
         }),
-        _ => todo!(),
+        _ => unreachable!(),
     };
     move |window: &gtk::ApplicationWindow, visible_y: f64| {
         window
             .surface()
             .unwrap()
             .set_input_region(&get_region(visible_y));
+    }
+}
+
+fn draw_rotation(edge: Edge, size: (f64, f64)) -> Box<dyn Fn(&Context)> {
+    match edge {
+        Edge::Left => Box::new(move |_: &Context| {}),
+        Edge::Right => Box::new(move |ctx: &Context| {
+            println!("right");
+            ctx.rotate(180_f64.to_radians());
+            ctx.translate(0., -size.1);
+        }),
+        Edge::Top => Box::new(move |ctx: &Context| {
+            ctx.rotate(90.0_f64.to_radians());
+            ctx.translate(0., -size.1);
+        }),
+        Edge::Bottom => Box::new(move |ctx: &Context| {
+            ctx.rotate(270.0_f64.to_radians());
+            // ctx.translate(0., -size.1);
+        }),
+        _ => unreachable!(),
     }
 }
 
