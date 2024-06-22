@@ -6,7 +6,7 @@
 - [x] button movement motion curve(linear for now)
 - [x] Frame rate management, only render when content visible, saves some resources
 - [x] `wl_surface` input region change with button movement
-- [ ] pre-draw surface transform to fit other edges
+- [x] pre-draw surface transform to fit other edges
 - [ ] size calculation and buttons overlap issue
 - [ ] watch file & hot reload
 - [ ] configurations
