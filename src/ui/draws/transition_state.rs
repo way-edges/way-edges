@@ -19,8 +19,8 @@ where
     pub is_forward: Rc<Cell<bool>>,
     // const
     pub duration: Duration,
-    max_y: T,
     min_y: T,
+    max_y: T,
 }
 impl<T> TransitionState<T>
 where
@@ -31,8 +31,8 @@ where
             t: Rc::new(Cell::new(Instant::now().checked_sub(time_cost).unwrap())),
             duration: time_cost,
             is_forward: Rc::new(Cell::new(false)),
-            max_y,
             min_y,
+            max_y,
         }
     }
     fn calculation(&self, x: f64) -> T {

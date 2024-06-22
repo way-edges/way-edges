@@ -109,17 +109,27 @@ pub fn setup_draw(
         }
         _ => unreachable!(),
     };
-    let (mouse_state, mut set_motion) =
-        draw_motion(edge, Duration::from_millis(100), (0., size.0), 90);
+
+    let transition_range = (0., size.0);
+    let ts = TransitionState::new(
+        Duration::from_millis(100),
+        transition_range.0,
+        transition_range.1,
+    );
+    let mouse_state = MouseState::new(&ts);
     let is_pressing = mouse_state.pressing.clone();
+    let set_rotate = draw_rotation(edge, size);
+    let mut set_motion = draw_motion(edge, transition_range);
     let set_core = draw_core(map_size, size);
     let set_input_region = draw_input_region(size, edge);
-    let set_rotate = draw_rotation(edge, size);
+    let mut set_frame_manger = draw_frame_manager(90, transition_range);
     darea.set_draw_func(glib::clone!(@weak window =>move |darea, context, _, _| {
         set_rotate(context);
-        let visible_y = set_motion(darea, context);
+        let visible_y = ts.get_y();
+        set_motion(context, visible_y);
         set_core(context, is_pressing.get().is_some());
         set_input_region(&window, visible_y);
+        set_frame_manger(darea, visible_y);
     }));
     let mouse_state = Rc::new(RefCell::new(mouse_state));
     set_event_mouse_click(&darea, cbs, mouse_state.clone());
@@ -149,34 +159,26 @@ fn draw_core(map_size: (i32, i32), size: (f64, f64)) -> impl Fn(&Context, bool) 
     }
 }
 
-fn draw_motion(
-    edge: Edge,
-    time_cost: Duration,
-    range: (f64, f64),
-    frame_rate: u64,
-) -> (MouseState, impl FnMut(&DrawingArea, &Context) -> f64) {
-    let ts = TransitionState::new(time_cost, range.0, range.1);
-    let mouse_state = MouseState::new(&ts);
-    let mut frame_manager = FrameManager::new(frame_rate);
+fn draw_motion(edge: Edge, range: (f64, f64)) -> impl FnMut(&Context, f64) {
     let offset: f64 = match edge {
         Edge::Right | Edge::Bottom => data::GLOW_SIZE as f64,
         _ => 0.,
     };
-    (
-        mouse_state,
-        move |darea: &DrawingArea, ctx: &Context| -> f64 {
-            let visible_y = ts.get_y();
-            println!("{visible_y}");
-            if visible_y == range.0 || visible_y == range.1 {
-                frame_manager.stop();
-            } else {
-                frame_manager.start(darea);
-            }
-            ctx.translate(-range.1 + visible_y - offset, 0.);
-            // ctx.translate(range.1 - visible_y, 0.);
-            visible_y
-        },
-    )
+    move |ctx: &Context, visible_y: f64| {
+        ctx.translate(-range.1 + visible_y - offset, 0.);
+        // ctx.translate(range.1 - visible_y, 0.);
+    }
+}
+
+fn draw_frame_manager(frame_rate: u64, range: (f64, f64)) -> impl FnMut(&DrawingArea, f64) {
+    let mut frame_manager = FrameManager::new(frame_rate);
+    move |darea: &DrawingArea, visible_y: f64| {
+        if visible_y == range.0 || visible_y == range.1 {
+            frame_manager.stop();
+        } else {
+            frame_manager.start(darea);
+        }
+    }
 }
 
 fn draw_input_region(size: (f64, f64), edge: Edge) -> impl Fn(&gtk::ApplicationWindow, f64) {
@@ -227,7 +229,6 @@ fn draw_rotation(edge: Edge, size: (f64, f64)) -> Box<dyn Fn(&Context)> {
     match edge {
         Edge::Left => Box::new(move |_: &Context| {}),
         Edge::Right => Box::new(move |ctx: &Context| {
-            println!("right");
             ctx.rotate(180_f64.to_radians());
             ctx.translate(-size.0, -size.1);
         }),
