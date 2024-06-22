@@ -129,7 +129,7 @@ pub fn setup_draw(
         set_motion(context, visible_y);
         set_core(context, is_pressing.get().is_some());
         set_input_region(&window, visible_y);
-        set_frame_manger(darea, visible_y);
+        set_frame_manger(darea, visible_y, ts.is_forward.get());
     }));
     let mouse_state = Rc::new(RefCell::new(mouse_state));
     set_event_mouse_click(&darea, cbs, mouse_state.clone());
@@ -170,13 +170,13 @@ fn draw_motion(edge: Edge, range: (f64, f64)) -> impl FnMut(&Context, f64) {
     }
 }
 
-fn draw_frame_manager(frame_rate: u64, range: (f64, f64)) -> impl FnMut(&DrawingArea, f64) {
+fn draw_frame_manager(frame_rate: u64, range: (f64, f64)) -> impl FnMut(&DrawingArea, f64, bool) {
     let mut frame_manager = FrameManager::new(frame_rate);
-    move |darea: &DrawingArea, visible_y: f64| {
-        if visible_y == range.0 || visible_y == range.1 {
-            frame_manager.stop();
-        } else {
+    move |darea: &DrawingArea, visible_y: f64, is_forward: bool| {
+        if (is_forward && visible_y < range.1) || (!is_forward && visible_y > range.0) {
             frame_manager.start(darea);
+        } else {
+            frame_manager.stop();
         }
     }
 }
