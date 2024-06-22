@@ -1,25 +1,23 @@
 use super::draws;
 use super::draws::transition_state::TransitionState;
+use super::EventMap;
 use crate::data;
 use gtk::cairo::Context;
-use gtk::cairo::LinearGradient;
 use gtk::cairo::RectangleInt;
 use gtk::cairo::Region;
-use gtk::gdk::BUTTON_PRIMARY;
 use gtk::gdk::{self, prelude::*, RGBA};
 use gtk::glib;
 use gtk::prelude::*;
 use gtk::EventControllerMotion;
 use gtk::{DrawingArea, GestureClick};
+use gtk4_layer_shell::Edge;
 use interval_task::runner;
 use interval_task::runner::ExternalRunnerExt;
 use std::cell::Cell;
 use std::cell::RefCell;
-use std::collections::HashMap;
 use std::rc::Rc;
+use std::time::SystemTime;
 use std::time::{Duration, Instant};
-
-pub type EventMap = HashMap<u32, Box<dyn Fn()>>;
 
 pub struct MouseState {
     hovering: bool,
@@ -94,34 +92,33 @@ impl FrameManager {
     }
 }
 
-pub fn setup_draw(window: &gtk::ApplicationWindow, size: (f64, f64), cbs: EventMap) -> DrawingArea {
+pub fn setup_draw(
+    window: &gtk::ApplicationWindow,
+    edge: Edge,
+    size: (f64, f64),
+    cbs: EventMap,
+) -> DrawingArea {
     let darea = DrawingArea::new();
     let map_size = ((size.0 as i32 + data::GLOW_SIZE as i32), size.1 as i32);
-    darea.set_width_request(map_size.0);
-    darea.set_height_request(map_size.1);
-    let draw = make_draw_fn(map_size, size);
-    let ts = TransitionState::new(Duration::from_millis(100), size.0, 0.);
-    let mouse_state = MouseState::new(&ts);
-    let is_pressing = mouse_state.pressing.clone();
-    let mut frame_manager = FrameManager::new(144);
-    darea.set_draw_func(glib::clone!(@weak window =>move |darea, context, _, _| {
-        let visible_y = ts.get_y();
-        let transition_y = -size.0 + visible_y;
-        if transition_y == 0. || transition_y == -size.0 {
-            frame_manager.stop();
-        }else {
-            frame_manager.start(darea);
+    match edge {
+        Edge::Left | Edge::Right => {
+            darea.set_width_request(map_size.0);
+            darea.set_height_request(map_size.1);
         }
-        context.translate(transition_y, 0.);
-        draw(context, is_pressing.get().is_some());
-        window.surface().unwrap().set_input_region(
-            &Region::create_rectangle(&RectangleInt::new(
-                0,
-                0,
-                visible_y as i32 + data::GLOW_SIZE as i32,
-                size.1 as i32,
-            ))
-        );
+        Edge::Top | Edge::Bottom => {
+            darea.set_width_request(map_size.1);
+            darea.set_height_request(map_size.0);
+        }
+        _ => todo!(),
+    };
+    let (mouse_state, mut set_motion) = draw_motion(Duration::from_millis(1000), (0., size.0), 144);
+    let is_pressing = mouse_state.pressing.clone();
+    let set_core = draw_core(map_size, size);
+    let set_input_region = draw_input_region(size, edge);
+    darea.set_draw_func(glib::clone!(@weak window =>move |darea, context, _, _| {
+        let visible_y = set_motion(darea, context);
+        set_core(context, is_pressing.get().is_some());
+        set_input_region(&window, visible_y);
     }));
     let mouse_state = Rc::new(RefCell::new(mouse_state));
     set_event_mouse_click(&darea, cbs, mouse_state.clone());
@@ -130,7 +127,7 @@ pub fn setup_draw(window: &gtk::ApplicationWindow, size: (f64, f64), cbs: EventM
     darea
 }
 
-fn make_draw_fn(map_size: (i32, i32), size: (f64, f64)) -> impl Fn(&Context, bool) {
+fn draw_core(map_size: (i32, i32), size: (f64, f64)) -> impl Fn(&Context, bool) {
     let (b, n, p) = draws::pre_draw::draw_to_surface(map_size, size);
     let f_map_size = (map_size.0 as f64, map_size.1 as f64);
 
@@ -148,6 +145,73 @@ fn make_draw_fn(map_size: (i32, i32), size: (f64, f64)) -> impl Fn(&Context, boo
         }
         ctx.rectangle(0., 0., f_map_size.0, f_map_size.1);
         ctx.fill().unwrap();
+    }
+}
+
+fn draw_motion(
+    time_cost: Duration,
+    range: (f64, f64),
+    frame_rate: u64,
+) -> (MouseState, impl FnMut(&DrawingArea, &Context) -> f64) {
+    let ts = TransitionState::new(time_cost, range.0, range.1);
+    let mouse_state = MouseState::new(&ts);
+    let mut frame_manager = FrameManager::new(frame_rate);
+    (
+        mouse_state,
+        move |darea: &DrawingArea, ctx: &Context| -> f64 {
+            let visible_y = ts.get_y();
+            if visible_y == range.0 || visible_y == range.1 {
+                frame_manager.stop();
+            } else {
+                frame_manager.start(darea);
+            }
+            ctx.translate(-range.1 + visible_y, 0.);
+            visible_y
+        },
+    )
+}
+
+fn draw_input_region(size: (f64, f64), edge: Edge) -> impl Fn(&gtk::ApplicationWindow, f64) {
+    let get_region: Box<dyn Fn(f64) -> Region> = match edge {
+        Edge::Left => Box::new(move |visible_y: f64| {
+            Region::create_rectangle(&RectangleInt::new(
+                0,
+                0,
+                visible_y as i32 + data::GLOW_SIZE as i32,
+                size.1 as i32,
+            ))
+        }),
+        Edge::Right => Box::new(move |visible_y: f64| {
+            Region::create_rectangle(&RectangleInt::new(
+                (size.0 + data::GLOW_SIZE as f64 - visible_y) as i32,
+                0,
+                visible_y as i32 + data::GLOW_SIZE as i32,
+                size.1 as i32,
+            ))
+        }),
+        Edge::Top => Box::new(move |visible_y: f64| {
+            Region::create_rectangle(&RectangleInt::new(
+                0,
+                0,
+                size.1 as i32,
+                visible_y as i32 + data::GLOW_SIZE as i32,
+            ))
+        }),
+        Edge::Bottom => Box::new(move |visible_y: f64| {
+            Region::create_rectangle(&RectangleInt::new(
+                0,
+                (size.0 + data::GLOW_SIZE as f64 - visible_y) as i32,
+                size.1 as i32,
+                visible_y as i32 + data::GLOW_SIZE as i32,
+            ))
+        }),
+        _ => todo!(),
+    };
+    move |window: &gtk::ApplicationWindow, visible_y: f64| {
+        window
+            .surface()
+            .unwrap()
+            .set_input_region(&get_region(visible_y));
     }
 }
 
