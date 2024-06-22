@@ -111,7 +111,8 @@ pub fn setup_draw(
         }
         _ => unreachable!(),
     };
-    let (mouse_state, mut set_motion) = draw_motion(Duration::from_millis(30), (0., size.0), 24);
+    let (mouse_state, mut set_motion) =
+        draw_motion(edge, Duration::from_millis(100), (0., size.0), 90);
     let is_pressing = mouse_state.pressing.clone();
     let set_core = draw_core(map_size, size);
     let set_input_region = draw_input_region(size, edge);
@@ -151,6 +152,7 @@ fn draw_core(map_size: (i32, i32), size: (f64, f64)) -> impl Fn(&Context, bool) 
 }
 
 fn draw_motion(
+    edge: Edge,
     time_cost: Duration,
     range: (f64, f64),
     frame_rate: u64,
@@ -158,6 +160,10 @@ fn draw_motion(
     let ts = TransitionState::new(time_cost, range.0, range.1);
     let mouse_state = MouseState::new(&ts);
     let mut frame_manager = FrameManager::new(frame_rate);
+    let offset: f64 = match edge {
+        Edge::Right | Edge::Bottom => data::GLOW_SIZE as f64,
+        _ => 0.,
+    };
     (
         mouse_state,
         move |darea: &DrawingArea, ctx: &Context| -> f64 {
@@ -168,7 +174,7 @@ fn draw_motion(
             } else {
                 frame_manager.start(darea);
             }
-            ctx.translate(-range.1 + visible_y, 0.);
+            ctx.translate(-range.1 + visible_y - offset, 0.);
             // ctx.translate(range.1 - visible_y, 0.);
             visible_y
         },
@@ -225,7 +231,7 @@ fn draw_rotation(edge: Edge, size: (f64, f64)) -> Box<dyn Fn(&Context)> {
         Edge::Right => Box::new(move |ctx: &Context| {
             println!("right");
             ctx.rotate(180_f64.to_radians());
-            ctx.translate(0., -size.1);
+            ctx.translate(-size.0, -size.1);
         }),
         Edge::Top => Box::new(move |ctx: &Context| {
             ctx.rotate(90.0_f64.to_radians());
@@ -233,7 +239,7 @@ fn draw_rotation(edge: Edge, size: (f64, f64)) -> Box<dyn Fn(&Context)> {
         }),
         Edge::Bottom => Box::new(move |ctx: &Context| {
             ctx.rotate(270.0_f64.to_radians());
-            // ctx.translate(0., -size.1);
+            ctx.translate(-size.0, 0.);
         }),
         _ => unreachable!(),
     }
