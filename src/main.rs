@@ -17,6 +17,8 @@ fn activate(application: &gtk::Application, cfgs: Vec<Config>) {
 }
 
 fn main() {
+    config::parse_config_test();
+    return;
     std::env::set_var("GSK_RENDERER", "cairo");
     let application = gtk::Application::new(Some("sh.wmww.gtk-layer-example"), Default::default());
 

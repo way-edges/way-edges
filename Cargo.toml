@@ -9,3 +9,5 @@ gtk = { package = "gtk4", version = "0.8", features = ["v4_12"] }
 gio = "0.19.5"
 pangocairo = "0.19.2"
 interval-task = "0.2.0"
+serde_json = "1.0.117"
+serde = { version = "1.0", features = ["derive"] }
