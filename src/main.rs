@@ -36,15 +36,13 @@ fn main() {
             },
             Config {
                 edge: Edge::Top,
-                // position: Some(Edge::Right),
-                position: None,
+                position: Some(Edge::Right),
                 size: (data::RADIUS, data::LENGTH),
                 event_map: get_event_map_test(),
             },
             Config {
                 edge: Edge::Right,
-                // position: Some(Edge::Top),
-                position: None,
+                position: Some(Edge::Top),
                 size: (data::RADIUS, data::LENGTH),
                 event_map: get_event_map_test(),
             },
