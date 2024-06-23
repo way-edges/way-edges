@@ -7,11 +7,12 @@
 - [x] Frame rate management, only render when content visible, saves some resources
 - [x] `wl_surface` input region change with button movement
 - [x] pre-draw surface transform to fit other edges
-- [ ] widget grouping
+- [x] widget grouping
+- [x] configurations
+- [ ] cmdline args
 - [ ] watch file & hot reload
-- [ ] configurations
 - [ ] ease-in & ease-out button motion curve
-- [ ] ?relative height(maybe useful)
+- [ ] ?relative height(maybe useful but don't know if it's possible)
   - check if on size change signal works when other window appears
   - if use relative height, every draw process should be initialized within draw func, record and compare height in each draw call
 - [ ] ?size calculation and buttons overlap(should this be considered?)
