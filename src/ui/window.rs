@@ -4,7 +4,7 @@ use super::draw_area;
 use gtk::{prelude::*, Application, CssProvider, STYLE_PROVIDER_PRIORITY_APPLICATION};
 use gtk4_layer_shell::{Layer, LayerShell};
 
-pub fn new_window(app: &Application, config: Config) {
+pub fn new_window(app: &Application, config: Config) -> gtk::ApplicationWindow {
     let window = gtk::ApplicationWindow::new(app);
     let size = config.size;
 
@@ -36,4 +36,5 @@ pub fn new_window(app: &Application, config: Config) {
     });
 
     window.present();
+    window
 }
