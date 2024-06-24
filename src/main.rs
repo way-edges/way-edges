@@ -27,7 +27,7 @@ fn main() {
         init_app(app);
     });
 
-    application.run();
+    application.run_with_args::<String>(&[]);
 }
 
 fn init_app(app: &Application) {
