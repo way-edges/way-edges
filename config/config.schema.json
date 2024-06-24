@@ -64,6 +64,17 @@
                 "monitor_name": {
                   "description": "Which monitor to show the button.\nDefault empty string",
                   "type": "string"
+                },
+                "event_map": {
+                  "description": "array of tuples(int, string), int refers for the mouse button id.\n if you don't know what id your extra mouse button is, please run with `way-edges [group_name] --mouse-debug`: example [[1, \"kitty #open up kitty console\"],]",
+                  "type": "array",
+                  "items": {
+                    "type": "array",
+                    "prefixItems": [
+                      { "type": "integer", "minimum": 1 },
+                      { "type": "string" }
+                    ]
+                  }
                 }
               }
             }

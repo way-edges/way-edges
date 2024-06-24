@@ -112,6 +112,7 @@ fn dt_trigger_size() -> f64 {
 
 #[derive(Deserialize, Debug)]
 struct RawGroup {
+    #[serde(default)]
     name: String,
     #[serde(default)]
     widgets: Vec<RawConfig>,
