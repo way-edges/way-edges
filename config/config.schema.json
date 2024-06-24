@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "way-edges config",
+  "description": "A configuration for way-edges",
+  "type": "object",
+  "properties": {
+    "groups": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "widgets": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "edge": {
+                  "type": "string",
+                  "description": "edge of the screen: top/bottom/left/right.\nDefault `left`",
+                  "enum": ["top", "bottom", "left", "right"]
+                },
+                "position": {
+                  "type": "string",
+                  "description": "position of the edge: top/bottom; left/right; or leave empty string for center.\nDefault `center`",
+                  "enum": ["", "top", "bottom", "left", "right", "center"]
+                },
+                "width": {
+                  "description": "width of the button\nDefault 15",
+                  "type": "number",
+                  "minimum": 0
+                },
+                "height": {
+                  "description": "height of the button\nDefault 45",
+                  "type": "number",
+                  "minimum": 0
+                },
+                "color": {
+                  "description": "main color of the button: pattern: `#rgb`/`#rrggbb`/`#rrrgggbbb`/`rgb(r, g, b)`/`rgba(r, g, b, a)`.\nDefault `#7B98FF`",
+                  "type": "string"
+                },
+                "transition_duration": {
+                  "description": "button show/hide in `transition_duration` ms.\n Default 300ms",
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "frame_rate": {
+                  "description": "button frame rate.\nDefault 30",
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "extra_trigger_size": {
+                  "description": "transparent extra trigger area, must > 0 or else the button will not be triggered.\nDefault 5",
+                  "type": "number",
+                  "minimum": 0
+                },
+                "monitor_id": {
+                  "description": "Which monitor to show the button, ignored when given `monitor_name`.\nDefault 0",
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "monitor_name": {
+                  "description": "Which monitor to show the button.\nDefault empty string",
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
