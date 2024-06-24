@@ -6,7 +6,6 @@ use gtk::gdk::prelude::*;
 use gtk::gdk::RGBA;
 use pangocairo::cairo;
 use pangocairo::cairo::Format;
-use std::str::FromStr;
 
 fn draw_2(context: &Context, radius: f64, h: f64) {
     let lg_height = h - radius * 2.;
@@ -21,6 +20,7 @@ fn draw_2(context: &Context, radius: f64, h: f64) {
 pub fn draw_to_surface(
     map_size: (i32, i32),
     item_size: (f64, f64),
+    main_color: RGBA,
 ) -> (ImageSurface, ImageSurface, ImageSurface) {
     // size and position
     let f_map_size = (map_size.0 as f64, map_size.1 as f64);
@@ -29,10 +29,9 @@ pub fn draw_to_surface(
     // };
 
     // color
-    let main_color = RGBA::from_str("#7B98FF").unwrap();
-    let mut start_color = RGBA::from_str("#7B98FF").unwrap();
+    let mut start_color = main_color;
     start_color.set_alpha(1.);
-    let mut end_color = start_color;
+    let mut end_color = main_color;
     end_color.set_alpha(0.);
 
     let path;

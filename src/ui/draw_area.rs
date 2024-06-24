@@ -1,10 +1,10 @@
 use super::draws;
 use super::draws::transition_state::TransitionState;
 use super::EventMap;
-use crate::data;
 use gtk::cairo::Context;
 use gtk::cairo::RectangleInt;
 use gtk::cairo::Region;
+use gtk::gdk::RGBA;
 use gtk::glib;
 use gtk::prelude::*;
 use gtk::EventControllerMotion;
@@ -95,9 +95,13 @@ pub fn setup_draw(
     edge: Edge,
     size: (f64, f64),
     cbs: EventMap,
+    color: RGBA,
+    extra_trigger_size: f64,
+    transition_duration: u64,
+    frame_rate: u64,
 ) -> DrawingArea {
     let darea = DrawingArea::new();
-    let map_size = ((size.0 as i32 + data::GLOW_SIZE as i32), size.1 as i32);
+    let map_size = ((size.0 + extra_trigger_size) as i32, size.1 as i32);
     match edge {
         Edge::Left | Edge::Right => {
             darea.set_width_request(map_size.0);
@@ -112,17 +116,17 @@ pub fn setup_draw(
 
     let transition_range = (0., size.0);
     let ts = TransitionState::new(
-        Duration::from_millis(100),
+        Duration::from_millis(transition_duration),
         transition_range.0,
         transition_range.1,
     );
     let mouse_state = MouseState::new(&ts);
     let is_pressing = mouse_state.pressing.clone();
     let set_rotate = draw_rotation(edge, size);
-    let mut set_motion = draw_motion(edge, transition_range);
-    let set_core = draw_core(map_size, size);
-    let set_input_region = draw_input_region(size, edge);
-    let mut set_frame_manger = draw_frame_manager(90, transition_range);
+    let mut set_motion = draw_motion(edge, transition_range, extra_trigger_size);
+    let set_core = draw_core(map_size, size, color);
+    let set_input_region = draw_input_region(size, edge, extra_trigger_size);
+    let mut set_frame_manger = draw_frame_manager(frame_rate, transition_range);
     darea.set_draw_func(glib::clone!(@weak window =>move |darea, context, _, _| {
         set_rotate(context);
         let visible_y = ts.get_y();
@@ -138,8 +142,8 @@ pub fn setup_draw(
     darea
 }
 
-fn draw_core(map_size: (i32, i32), size: (f64, f64)) -> impl Fn(&Context, bool) {
-    let (b, n, p) = draws::pre_draw::draw_to_surface(map_size, size);
+fn draw_core(map_size: (i32, i32), size: (f64, f64), color: RGBA) -> impl Fn(&Context, bool) {
+    let (b, n, p) = draws::pre_draw::draw_to_surface(map_size, size, color);
     let f_map_size = (map_size.0 as f64, map_size.1 as f64);
 
     move |ctx: &Context, pressing: bool| {
@@ -159,9 +163,13 @@ fn draw_core(map_size: (i32, i32), size: (f64, f64)) -> impl Fn(&Context, bool) 
     }
 }
 
-fn draw_motion(edge: Edge, range: (f64, f64)) -> impl FnMut(&Context, f64) {
+fn draw_motion(
+    edge: Edge,
+    range: (f64, f64),
+    extra_trigger_size: f64,
+) -> impl FnMut(&Context, f64) {
     let offset: f64 = match edge {
-        Edge::Right | Edge::Bottom => data::GLOW_SIZE as f64,
+        Edge::Right | Edge::Bottom => extra_trigger_size,
         _ => 0.,
     };
     move |ctx: &Context, visible_y: f64| {
@@ -181,13 +189,17 @@ fn draw_frame_manager(frame_rate: u64, range: (f64, f64)) -> impl FnMut(&Drawing
     }
 }
 
-fn draw_input_region(size: (f64, f64), edge: Edge) -> impl Fn(&gtk::ApplicationWindow, f64) {
+fn draw_input_region(
+    size: (f64, f64),
+    edge: Edge,
+    extra_trigger_size: f64,
+) -> impl Fn(&gtk::ApplicationWindow, f64) {
     let get_region: Box<dyn Fn(f64) -> Region> = match edge {
         Edge::Left => Box::new(move |visible_y: f64| {
             Region::create_rectangle(&RectangleInt::new(
                 0,
                 0,
-                visible_y as i32 + data::GLOW_SIZE as i32,
+                (visible_y + extra_trigger_size) as i32,
                 size.1 as i32,
             ))
         }),
@@ -195,7 +207,7 @@ fn draw_input_region(size: (f64, f64), edge: Edge) -> impl Fn(&gtk::ApplicationW
             Region::create_rectangle(&RectangleInt::new(
                 (size.0 - visible_y) as i32,
                 0,
-                (visible_y + data::GLOW_SIZE as f64).ceil() as i32,
+                (visible_y + extra_trigger_size).ceil() as i32,
                 size.1 as i32,
             ))
         }),
@@ -204,7 +216,7 @@ fn draw_input_region(size: (f64, f64), edge: Edge) -> impl Fn(&gtk::ApplicationW
                 0,
                 0,
                 size.1 as i32,
-                visible_y as i32 + data::GLOW_SIZE as i32,
+                (visible_y + extra_trigger_size) as i32,
             ))
         }),
         Edge::Bottom => Box::new(move |visible_y: f64| {
@@ -212,7 +224,7 @@ fn draw_input_region(size: (f64, f64), edge: Edge) -> impl Fn(&gtk::ApplicationW
                 0,
                 (size.0 - visible_y) as i32,
                 size.1 as i32,
-                (visible_y + data::GLOW_SIZE as f64).ceil() as i32,
+                (visible_y + extra_trigger_size).ceil() as i32,
             ))
         }),
         _ => unreachable!(),

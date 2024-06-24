@@ -11,7 +11,7 @@ use std::{thread, time::Duration};
 fn main() {
     std::env::set_var("GSK_RENDERER", "cairo");
 
-    let application = gtk::Application::new(Some("sh.wmww.gtk-layer-example"), Default::default());
+    let application = gtk::Application::new(None::<String>, Default::default());
 
     application.connect_activate(|app| {
         let args = args::Cli::parse();

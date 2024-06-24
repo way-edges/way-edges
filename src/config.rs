@@ -18,10 +18,10 @@ pub struct Config {
     pub edge: Edge,
     pub position: Option<Edge>,
     pub size: (f64, f64),
-    pub event_map: EventMap,
+    pub event_map: Option<EventMap>,
     pub color: RGBA,
-    pub transition_duration: u32,
-    pub frame_rate: u32,
+    pub transition_duration: u64,
+    pub frame_rate: u64,
     pub extra_trigger_size: f64,
     pub monitor: MonitorSpecifier,
 }
@@ -31,8 +31,8 @@ struct Test {
     position: Option<Edge>,
     size: (f64, f64),
     color: RGBA,
-    transition_duration: u32,
-    frame_rate: u32,
+    transition_duration: u64,
+    frame_rate: u64,
     extra_trigger_size: f64,
     monitor: MonitorSpecifier,
 }
@@ -51,6 +51,11 @@ impl Config {
                 monitor: self.monitor.clone(),
             }
         )
+    }
+}
+impl Drop for Config {
+    fn drop(&mut self) {
+        println!("dropping config")
     }
 }
 
@@ -73,9 +78,9 @@ pub struct RawConfig {
     #[serde(default = "dt_color")]
     pub color: String,
     #[serde(default = "dt_duration")]
-    pub transition_duration: u32,
+    pub transition_duration: u64,
     #[serde(default = "dt_frame_rate")]
-    pub frame_rate: u32,
+    pub frame_rate: u64,
     #[serde(default = "dt_trigger_size")]
     pub extra_trigger_size: f64,
     #[serde(default)]
@@ -95,10 +100,10 @@ fn dt_height() -> f64 {
 fn dt_color() -> String {
     String::from("#7B98FF")
 }
-fn dt_duration() -> u32 {
+fn dt_duration() -> u64 {
     300
 }
-fn dt_frame_rate() -> u32 {
+fn dt_frame_rate() -> u64 {
     30
 }
 fn dt_trigger_size() -> f64 {
@@ -120,7 +125,7 @@ struct RawTemp {
 pub type GroupConfigMap = HashMap<String, GroupConfig>;
 pub type GroupConfig = Vec<Config>;
 
-pub fn get_config_test(args: crate::args::Cli) {
+pub fn get_config_test() {
     let res = get_config().unwrap();
 
     res.iter().for_each(|(name, vc)| {
@@ -188,7 +193,7 @@ fn raw_2_conf(raw: RawGroup) -> Result<GroupConfig, String> {
                 "left" => Some(Edge::Left),
                 "bottom" => Some(Edge::Bottom),
                 "right" => Some(Edge::Right),
-                "" => None,
+                "" | "center" => None,
                 _ => {
                     let a = Err(format!("invalid position {}", raw.position));
                     return a;
@@ -242,7 +247,7 @@ fn raw_2_conf(raw: RawGroup) -> Result<GroupConfig, String> {
                 edge,
                 position,
                 size: (width, height),
-                event_map,
+                event_map: Some(event_map),
                 color,
                 transition_duration,
                 frame_rate,
@@ -294,7 +299,7 @@ pub fn match_group_config(group_map: GroupConfigMap, group: Option<String>) -> G
         group_map
             .into_iter()
             .find(|(n, _)| n == &group_name)
-            .expect(format!("group not found given name: {group_name}").as_str())
+            .unwrap_or_else(|| panic!("group not found given name: {group_name}"))
             .1
     } else if group_map.len() == 1 {
         group_map.into_values().last().unwrap()

@@ -4,7 +4,7 @@ use super::draw_area;
 use gtk::{prelude::*, Application, CssProvider, STYLE_PROVIDER_PRIORITY_APPLICATION};
 use gtk4_layer_shell::{Layer, LayerShell};
 
-pub fn new_window(app: &Application, config: Config) -> gtk::ApplicationWindow {
+pub fn new_window(app: &Application, mut config: Config) -> gtk::ApplicationWindow {
     let window = gtk::ApplicationWindow::new(app);
     let size = config.size;
 
@@ -20,7 +20,16 @@ pub fn new_window(app: &Application, config: Config) -> gtk::ApplicationWindow {
         window.set_anchor(pos, true);
     }
 
-    let darea = draw_area::setup_draw(&window, config.edge, size, config.event_map);
+    draw_area::setup_draw(
+        &window,
+        config.edge,
+        size,
+        config.event_map.take().unwrap(),
+        config.color,
+        config.extra_trigger_size,
+        config.transition_duration,
+        config.frame_rate,
+    );
 
     window.connect_show(move |w: &gtk::ApplicationWindow| {
         // transparency background !! may not work for some gtk4 theme, and idk what to do with it !!
