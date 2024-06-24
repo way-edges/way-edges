@@ -106,53 +106,21 @@ fn dt_trigger_size() -> f64 {
 }
 
 #[derive(Deserialize, Debug)]
-struct Group {
+struct RawGroup {
     name: String,
     #[serde(default)]
     widgets: Vec<RawConfig>,
 }
 #[derive(Deserialize, Debug)]
-struct Temp {
+struct RawTemp {
     #[serde(default)]
-    groups: Vec<Group>,
+    groups: Vec<RawGroup>,
 }
 
-pub type GroupMap = HashMap<String, Vec<Config>>;
+pub type GroupConfigMap = HashMap<String, GroupConfig>;
+pub type GroupConfig = Vec<Config>;
 
-pub fn get_config() -> Result<GroupMap, String> {
-    let s = get_config_file()?;
-    parse_config(&s)
-}
-
-fn get_config_file() -> Result<String, String> {
-    let bd = match xdg::BaseDirectories::new() {
-        Ok(bd) => bd,
-        Err(e) => return Err(format!("no xdg base directories: {e}")),
-    };
-
-    let p = match bd.place_config_file("way-edges/config.jsonc") {
-        Ok(p) => p,
-        Err(e) => return Err(format!("failed to create config file: {e}")),
-    };
-
-    let mut f = match OpenOptions::new()
-        .create(true)
-        .append(true)
-        .read(true)
-        .open(p)
-    {
-        Ok(f) => f,
-        Err(e) => return Err(format!("failed to open config file: {e}")),
-    };
-    let mut s = String::new();
-    match f.read_to_string(&mut s) {
-        Ok(_) => {}
-        Err(e) => return Err(format!("failed to read config file: {e}")),
-    };
-    Ok(s)
-}
-
-pub fn get_config_test() {
+pub fn get_config_test(args: crate::args::Cli) {
     let res = get_config().unwrap();
 
     res.iter().for_each(|(name, vc)| {
@@ -187,9 +155,9 @@ pub fn parse_config_test() {
     });
 }
 
-fn parse_config(data: &str) -> Result<GroupMap, String> {
-    let res: Temp = serde_jsonrc::from_str(data).unwrap();
-    let mut group_map: GroupMap = HashMap::new();
+fn parse_config(data: &str) -> Result<GroupConfigMap, String> {
+    let res: RawTemp = serde_jsonrc::from_str(data).unwrap();
+    let mut group_map: GroupConfigMap = HashMap::new();
     res.groups
         .into_iter()
         .try_for_each(|g| -> Result<(), String> {
@@ -201,7 +169,7 @@ fn parse_config(data: &str) -> Result<GroupMap, String> {
     Ok(group_map)
 }
 
-fn raw_2_conf(raw: Group) -> Result<Vec<Config>, String> {
+fn raw_2_conf(raw: RawGroup) -> Result<GroupConfig, String> {
     raw.widgets
         .into_iter()
         .map(|raw| -> Result<Config, String> {
@@ -283,4 +251,54 @@ fn raw_2_conf(raw: Group) -> Result<Vec<Config>, String> {
             })
         })
         .collect()
+}
+
+fn get_config_file() -> Result<String, String> {
+    let bd = match xdg::BaseDirectories::new() {
+        Ok(bd) => bd,
+        Err(e) => return Err(format!("no xdg base directories: {e}")),
+    };
+
+    let p = match bd.place_config_file("way-edges/config.jsonc") {
+        Ok(p) => p,
+        Err(e) => return Err(format!("failed to create config file: {e}")),
+    };
+
+    let mut f = match OpenOptions::new()
+        .create(true)
+        .append(true)
+        .read(true)
+        .open(p)
+    {
+        Ok(f) => f,
+        Err(e) => return Err(format!("failed to open config file: {e}")),
+    };
+    let mut s = String::new();
+    match f.read_to_string(&mut s) {
+        Ok(_) => {}
+        Err(e) => return Err(format!("failed to read config file: {e}")),
+    };
+    Ok(s)
+}
+
+pub fn get_config() -> Result<GroupConfigMap, String> {
+    let s = get_config_file().unwrap();
+    parse_config(&s)
+}
+
+pub fn match_group_config(group_map: GroupConfigMap, group: Option<String>) -> GroupConfig {
+    if group_map.is_empty() {
+        panic!("empty config");
+    }
+    if let Some(group_name) = group {
+        group_map
+            .into_iter()
+            .find(|(n, _)| n == &group_name)
+            .expect(format!("group not found given name: {group_name}").as_str())
+            .1
+    } else if group_map.len() == 1 {
+        group_map.into_values().last().unwrap()
+    } else {
+        panic!("no group available");
+    }
 }
