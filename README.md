@@ -9,7 +9,7 @@
 - [x] pre-draw surface transformation(to fit other edges)
 - [x] widget grouping
 - [x] configuration file
-- [ ] cmdline args
+- [x] cmdline args
 - [ ] watch file & hot reload
 - [ ] ease-in & ease-out button motion curve
 - [ ] ?relative height(useful but is it possible for wayland client?)
