@@ -124,7 +124,7 @@ pub fn setup_draw(
     let is_pressing = mouse_state.pressing.clone();
     let set_rotate = draw_rotation(edge, size);
     let mut set_motion = draw_motion(edge, transition_range, extra_trigger_size);
-    let set_core = draw_core(map_size, size, color);
+    let set_core = draw_core(map_size, size, color, extra_trigger_size);
     let set_input_region = draw_input_region(size, edge, extra_trigger_size);
     let mut set_frame_manger = draw_frame_manager(frame_rate, transition_range);
     darea.set_draw_func(glib::clone!(@weak window =>move |darea, context, _, _| {
@@ -142,8 +142,13 @@ pub fn setup_draw(
     darea
 }
 
-fn draw_core(map_size: (i32, i32), size: (f64, f64), color: RGBA) -> impl Fn(&Context, bool) {
-    let (b, n, p) = draws::pre_draw::draw_to_surface(map_size, size, color);
+fn draw_core(
+    map_size: (i32, i32),
+    size: (f64, f64),
+    color: RGBA,
+    extra_trigger_size: f64,
+) -> impl Fn(&Context, bool) {
+    let (b, n, p) = draws::pre_draw::draw_to_surface(map_size, size, color, extra_trigger_size);
     let f_map_size = (map_size.0 as f64, map_size.1 as f64);
 
     move |ctx: &Context, pressing: bool| {

@@ -21,6 +21,7 @@ pub fn draw_to_surface(
     map_size: (i32, i32),
     item_size: (f64, f64),
     main_color: RGBA,
+    extra_trigger_size: f64,
 ) -> (ImageSurface, ImageSurface, ImageSurface) {
     // size and position
     let f_map_size = (map_size.0 as f64, map_size.1 as f64);
@@ -53,7 +54,7 @@ pub fn draw_to_surface(
                 draw_2(&ctx, item_size.0, item_size.1);
                 ctx.set_source_color(&main_color);
                 ctx.fill().unwrap();
-                super::blur::blur_image_surface(&mut surf, (data::GLOW_SIZE as i32) * 2);
+                super::blur::blur_image_surface(&mut surf, (extra_trigger_size * 2.) as i32);
                 surf
             };
             base_ctx.save().unwrap();
