@@ -12,6 +12,7 @@
 - [x] cmdline args
 - [ ] watch file & hot reload
 - [ ] ease-in & ease-out button motion curve
+- [ ] long press & release event
 - [ ] ?relative height(useful but is it possible for wayland client?)
   - check if on_size_change signal works
   - get available working area(how?)
