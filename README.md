@@ -20,3 +20,7 @@
 - [ ] ?buttom size calculation, arrangement and overlap(should this be considered?)
 - [ ] ?hover event(only bind with transition, not necessary - for now)
 - [ ] ?button click effects optimization(gradience)
+
+## Configuration
+
+Please refer to [config.jsonc](./config/config.jsonc) and [schema](./config/config.schema.json)

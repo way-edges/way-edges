@@ -1,0 +1,18 @@
+// this is an example
+{
+  // remember to get schema here
+  "$schema": "https://raw.githubusercontent.com/ogios/way-edges/master/config/config.schema.json",
+  "groups": [
+    {
+      "widgets": [
+        {
+          "edge": "left",
+          "position": "top",
+          "transition_duration": 100,
+          "frame_rate": 60,
+          "height": 200,
+        },
+      ],
+    },
+  ],
+}
