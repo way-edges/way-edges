@@ -1,6 +1,6 @@
 use std::{
     collections::HashMap, fs::OpenOptions, io::Read, os::unix::process::CommandExt,
-    process::Command, str::FromStr,
+    process::Command, str::FromStr, thread,
 };
 
 use gtk::gdk::RGBA;
@@ -221,7 +221,14 @@ fn raw_2_conf(raw: RawGroup) -> Result<GroupConfig, String> {
                     map.insert(
                         key,
                         Box::new(move || {
-                            Command::new("/bin/sh").arg("-c").arg(&value).exec();
+                            let value = value.clone();
+                            thread::spawn(move || {
+                                Command::new("/bin/sh")
+                                    .arg("-c")
+                                    .arg(&value)
+                                    .output()
+                                    .unwrap();
+                            });
                         }),
                     );
                 }

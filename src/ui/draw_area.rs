@@ -262,15 +262,24 @@ fn set_event_mouse_click(
     mouse_state: Rc<RefCell<MouseState>>,
 ) {
     let click_control = GestureClick::builder().button(0).exclusive(true).build();
-    let cbs = Rc::new(event_map);
+    // let cbs = Rc::new(Cell::new(Some(event_map)));
+    // let cbs = Rc::new(event_map);
+    let cbs = Rc::new(RefCell::new(event_map));
     let click_done_cb = move |mouse_state: &Rc<RefCell<MouseState>>,
                               darea: &DrawingArea,
-                              event_map: &Rc<EventMap>| {
+                              event_map: &Rc<RefCell<EventMap>>| {
+        // event_map: &mut Rc<EventMap>| {
         let key = mouse_state.borrow_mut().take_pressing();
         darea.queue_draw();
-        if let Some(cb) = event_map.get(&key) {
-            cb()
+
+        if let Some(cb) = event_map.borrow_mut().get_mut(&key) {
+            cb();
         };
+        // let a = event_map.replace(None);
+        // if let Some(mut map) = a {
+        //     map.get_mut(&key).unwrap()();
+        //     event_map.replace(Some(map));
+        // };
     };
 
     click_control.connect_pressed(
