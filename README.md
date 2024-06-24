@@ -24,3 +24,4 @@
 ## Configuration
 
 Please refer to [config.jsonc](./config/config.jsonc) and [schema](./config/config.schema.json)
+place `config.jsonc` under `~/.config/way-edges/`
