@@ -266,31 +266,29 @@ fn set_event_mouse_click(
     event_map: EventMap,
     mouse_state: Rc<RefCell<MouseState>>,
 ) {
+    let show_mouse_debug = crate::args::get_args().mouse_debug;
     let click_control = GestureClick::builder().button(0).exclusive(true).build();
-    // let cbs = Rc::new(Cell::new(Some(event_map)));
-    // let cbs = Rc::new(event_map);
     let cbs = Rc::new(RefCell::new(event_map));
     let click_done_cb = move |mouse_state: &Rc<RefCell<MouseState>>,
                               darea: &DrawingArea,
                               event_map: &Rc<RefCell<EventMap>>| {
-        // event_map: &mut Rc<EventMap>| {
         let key = mouse_state.borrow_mut().take_pressing();
-        darea.queue_draw();
-
+        if show_mouse_debug {
+            println!("key released: {}", key);
+        };
         if let Some(cb) = event_map.borrow_mut().get_mut(&key) {
             cb();
         };
-        // let a = event_map.replace(None);
-        // if let Some(mut map) = a {
-        //     map.get_mut(&key).unwrap()();
-        //     event_map.replace(Some(map));
-        // };
+        darea.queue_draw();
     };
 
     click_control.connect_pressed(
         glib::clone!(@strong mouse_state, @weak darea => move |g, _, _, _| {
-            println!("key: {}", g.current_button());
-            mouse_state.borrow_mut().set_pressing(g.current_button());
+            let btn = g.current_button();
+            if show_mouse_debug {
+                println!("key pressed: {}", btn);
+            };
+            mouse_state.borrow_mut().set_pressing(btn);
             darea.queue_draw();
         }),
     );

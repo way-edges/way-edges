@@ -299,14 +299,14 @@ pub fn get_config() -> Result<GroupConfigMap, String> {
     parse_config(&s)
 }
 
-pub fn match_group_config(group_map: GroupConfigMap, group: Option<String>) -> GroupConfig {
+pub fn match_group_config(group_map: GroupConfigMap, group: &Option<String>) -> GroupConfig {
     if group_map.is_empty() {
         panic!("empty config");
     }
     if let Some(group_name) = group {
         group_map
             .into_iter()
-            .find(|(n, _)| n == &group_name)
+            .find(|(n, _)| n == group_name)
             .unwrap_or_else(|| panic!("group not found given name: {group_name}"))
             .1
     } else if group_map.len() == 1 {

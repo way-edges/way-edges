@@ -24,4 +24,19 @@
 ## Configuration
 
 Please refer to [config.jsonc](./config/config.jsonc) and [schema](./config/config.schema.json)
-place `config.jsonc` under `~/.config/way-edges/`
+
+Place `config.jsonc` under `~/.config/way-edges/`
+
+## Arguments
+
+```rust
+Usage: gtk4-test [OPTIONS] [GROUP]
+
+Arguments:
+  [GROUP]  which grouop to activate
+
+Options:
+  -d, --mouse-debug  whether enable mouse click output
+  -h, --help         Print help
+  -V, --version      Print version
+```

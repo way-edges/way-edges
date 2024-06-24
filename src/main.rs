@@ -4,14 +4,13 @@ mod config;
 mod data;
 mod ui;
 
-use clap::Parser;
 use gio::{prelude::*, ApplicationFlags};
 use gtk::Application;
 
 fn main() {
     // for cmd line help msg.
-    // or else it will show help from `gtk` not `clap`
-    args::Cli::parse();
+    // or else it will show help from `gtk` other than `clap`
+    args::get_args();
 
     // set renderer explicitly to cairo instead of ngl
     std::env::set_var("GSK_RENDERER", "cairo");
@@ -31,10 +30,10 @@ fn main() {
 }
 
 fn init_app(app: &Application) {
-    let args = args::Cli::parse();
+    let args = args::get_args();
     println!("{:#?}", args);
     let group_map = config::get_config().unwrap();
-    let cfgs = config::match_group_config(group_map, args.group);
+    let cfgs = config::match_group_config(group_map, &args.group);
     cfgs.iter().for_each(|c| {
         println!("{}", c.debug());
     });
