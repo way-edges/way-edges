@@ -1,165 +1,15 @@
-use std::{
-    collections::HashMap, fs::OpenOptions, io::Read, os::unix::process::CommandExt,
-    process::Command, str::FromStr, thread,
-};
+pub mod conf;
+mod raw;
 
-use gtk::gdk::RGBA;
-use gtk4_layer_shell::Edge;
+pub use conf::*;
+use raw::*;
 
 use crate::ui::EventMap;
-
-#[derive(Debug, Clone)]
-pub enum MonitorSpecifier {
-    ID(usize),
-    Name(String),
-}
-
-pub struct Config {
-    pub edge: Edge,
-    pub position: Option<Edge>,
-    pub size: (f64, f64),
-    pub event_map: Option<EventMap>,
-    pub color: RGBA,
-    pub transition_duration: u64,
-    pub frame_rate: u64,
-    pub extra_trigger_size: f64,
-    pub monitor: MonitorSpecifier,
-}
-#[derive(Debug)]
-struct Test {
-    edge: Edge,
-    position: Option<Edge>,
-    size: (f64, f64),
-    color: RGBA,
-    transition_duration: u64,
-    frame_rate: u64,
-    extra_trigger_size: f64,
-    monitor: MonitorSpecifier,
-}
-impl Config {
-    pub fn debug(&self) -> String {
-        format!(
-            "{:#?}",
-            Test {
-                edge: self.edge,
-                position: self.position,
-                size: self.size,
-                color: self.color,
-                transition_duration: self.transition_duration,
-                frame_rate: self.frame_rate,
-                extra_trigger_size: self.extra_trigger_size,
-                monitor: self.monitor.clone(),
-            }
-        )
-    }
-}
-impl Drop for Config {
-    fn drop(&mut self) {
-        println!("dropping config")
-    }
-}
-
-use serde::Deserialize;
-#[derive(Deserialize, Debug, Default)]
-#[serde(default)]
-pub struct RawConfig {
-    #[serde(default = "dt_edge")]
-    pub edge: String,
-    #[serde(default)]
-    pub position: String,
-    #[serde(default = "dt_width")]
-    pub width: f64,
-    #[serde(default = "dt_height")]
-    pub height: f64,
-    // #[serde(default = "dt_rel_height")]
-    // pub rel_height: f64,
-    #[serde(default)]
-    pub event_map: Vec<(u32, String)>,
-    #[serde(default = "dt_color")]
-    pub color: String,
-    #[serde(default = "dt_duration")]
-    pub transition_duration: u64,
-    #[serde(default = "dt_frame_rate")]
-    pub frame_rate: u64,
-    #[serde(default = "dt_trigger_size")]
-    pub extra_trigger_size: f64,
-    #[serde(default)]
-    monitor_id: usize,
-    #[serde(default)]
-    monitor_name: String,
-}
-fn dt_edge() -> String {
-    String::from("left")
-}
-fn dt_width() -> f64 {
-    15.
-}
-fn dt_height() -> f64 {
-    50.
-}
-fn dt_color() -> String {
-    String::from("#7B98FF")
-}
-fn dt_duration() -> u64 {
-    300
-}
-fn dt_frame_rate() -> u64 {
-    30
-}
-fn dt_trigger_size() -> f64 {
-    5.
-}
-
-#[derive(Deserialize, Debug)]
-struct RawGroup {
-    #[serde(default)]
-    name: String,
-    #[serde(default)]
-    widgets: Vec<RawConfig>,
-}
-#[derive(Deserialize, Debug)]
-struct RawTemp {
-    #[serde(default)]
-    groups: Vec<RawGroup>,
-}
-
-pub type GroupConfigMap = HashMap<String, GroupConfig>;
-pub type GroupConfig = Vec<Config>;
-
-pub fn get_config_test() {
-    let res = get_config().unwrap();
-
-    res.iter().for_each(|(name, vc)| {
-        println!("name: {name}");
-        vc.iter().for_each(|c| {
-            println!("{}", c.debug());
-        });
-    });
-}
-
-pub fn parse_config_test() {
-    let data = r#"
-    {
-        "$schema": "sfa",
-        "groups": [
-            {
-                "name": "test",
-                "widgets": [{
-                    "event_map": [[ 0, "ee" ]]
-                }]
-            }
-        ]
-    }
-    "#;
-    let res = parse_config(data).unwrap();
-
-    res.iter().for_each(|(name, vc)| {
-        println!("name: {name}");
-        vc.iter().for_each(|c| {
-            println!("{}", c.debug());
-        });
-    });
-}
+use gtk::gdk::RGBA;
+use gtk4_layer_shell::Edge;
+use std::{
+    collections::HashMap, fs::OpenOptions, io::Read, process::Command, str::FromStr, thread,
+};
 
 fn parse_config(data: &str) -> Result<GroupConfigMap, String> {
     let res: RawTemp = serde_jsonrc::from_str(data).unwrap();
@@ -250,6 +100,22 @@ fn raw_2_conf(raw: RawGroup) -> Result<GroupConfig, String> {
                     MonitorSpecifier::Name(raw.monitor_name)
                 }
             };
+            let margins = {
+                let mut m = Vec::new();
+                if raw.margin.left > 0 {
+                    m.push((Edge::Left, raw.margin.left))
+                }
+                if raw.margin.right > 0 {
+                    m.push((Edge::Right, raw.margin.right))
+                }
+                if raw.margin.top > 0 {
+                    m.push((Edge::Top, raw.margin.top))
+                }
+                if raw.margin.bottom > 0 {
+                    m.push((Edge::Bottom, raw.margin.bottom))
+                }
+                m
+            };
 
             Ok(Config {
                 edge,
@@ -261,6 +127,7 @@ fn raw_2_conf(raw: RawGroup) -> Result<GroupConfig, String> {
                 frame_rate,
                 extra_trigger_size,
                 monitor,
+                margins,
             })
         })
         .collect()
@@ -314,4 +181,39 @@ pub fn match_group_config(group_map: GroupConfigMap, group: &Option<String>) -> 
     } else {
         panic!("no group available");
     }
+}
+
+pub fn get_config_test() {
+    let res = get_config().unwrap();
+
+    res.iter().for_each(|(name, vc)| {
+        println!("name: {name}");
+        vc.iter().for_each(|c| {
+            println!("{}", c.debug());
+        });
+    });
+}
+
+pub fn parse_config_test() {
+    let data = r#"
+    {
+        "$schema": "sfa",
+        "groups": [
+            {
+                "name": "test",
+                "widgets": [{
+                    "event_map": [[ 0, "ee" ]]
+                }]
+            }
+        ]
+    }
+    "#;
+    let res = parse_config(data).unwrap();
+
+    res.iter().for_each(|(name, vc)| {
+        println!("name: {name}");
+        vc.iter().for_each(|c| {
+            println!("{}", c.debug());
+        });
+    });
 }
