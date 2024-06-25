@@ -37,6 +37,31 @@
                   "type": "number",
                   "minimum": 0
                 },
+                "margin": {
+                  "type": "object",
+                  "properties": {
+                    "top": {
+                      "description": "top margin of the button\nDefault 0",
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "bottom": {
+                      "description": "bottom margin of the button\nDefault 0",
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "left": {
+                      "description": "left margin of the button\nDefault 0",
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "right": {
+                      "description": "right margin of the button\nDefault 0",
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  }
+                },
                 "color": {
                   "description": "main color of the button: pattern: `#rgb`/`#rrggbb`/`#rrrgggbbb`/`rgb(r, g, b)`/`rgba(r, g, b, a)`.\nFor additional notes, please refer to: https://gtk-rs.org/gtk4-rs/stable/latest/docs/src/gdk4/rgba.rs.html#205\nDefault `#7B98FF`",
                   "type": "string"
