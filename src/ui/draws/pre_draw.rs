@@ -1,4 +1,3 @@
-use crate::data;
 use gtk::cairo::Context;
 use gtk::cairo::ImageSurface;
 use gtk::cairo::LinearGradient;

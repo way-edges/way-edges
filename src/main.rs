@@ -1,7 +1,6 @@
 mod activate;
 mod args;
 mod config;
-mod data;
 mod ui;
 
 use gio::{prelude::*, ApplicationFlags};
