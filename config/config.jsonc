@@ -12,6 +12,9 @@
           "frame_rate": 60,
           "height": 200,
           "event_map": [[1, "notify-send \"This is from way-edges\""]],
+          "margin": {
+            "top": 100,
+          },
         },
       ],
     },

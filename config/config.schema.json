@@ -38,6 +38,7 @@
                   "minimum": 0
                 },
                 "margin": {
+                  "description": "margin of the button, relative to the `position`.\nDefault all 0.",
                   "type": "object",
                   "properties": {
                     "top": {
