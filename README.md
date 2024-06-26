@@ -17,13 +17,15 @@
 - [ ] ease-in & ease-out button motion curve
 - [ ] modulize mouse event
 - [ ] multiple click & long press & release event
-- [ ] ?relative height(useful but is it possible for wayland client?)
-  - check if on_size_change signal works
-  - get available working area(how?)
-  - every draw process should be initialized within draw func, record and compare height in each draw call. (lots of code rewrite)
-- [ ] ?buttom size calculation, arrangement and overlap(should this be considered?)
+- [ ] add some customized widgets
+- [ ] wayland compositor specific relative height as features(including exclusive zone calculation)
+- [ ] relative height
+  - ~~check if on_size_change signal works~~ no need.
+  - get available working area(~~how?~~ each compositor specific)
+  - ~~every draw process should be initialized within draw func, record and compare height in each draw call. (lots of code rewrite)~~ no need.
 - [ ] ?hover event(only bind with transition, not necessary - for now)
 - [ ] ?button click effects optimization(gradience)
+- [ ] ~~?buttom size calculation, arrangement and overlap(should this be considered?)~~
 
 ## Configuration
 
