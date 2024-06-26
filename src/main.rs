@@ -15,7 +15,8 @@ fn main() {
     std::env::set_var("GSK_RENDERER", "cairo");
 
     // that flag is for command line arguments
-    let application = gtk::Application::new(None::<String>, ApplicationFlags::HANDLES_OPEN);
+    let application =
+        gtk::Application::new(Some("com.ogios.way-edges"), ApplicationFlags::HANDLES_OPEN);
 
     // when args passed, `open` will be signaled instead of `activate`
     application.connect_open(|app, _, _| {

@@ -35,6 +35,7 @@ pub fn activate(application: &gtk::Application, cfgs: Vec<Config>) {
             let monitor = find_monitor(&t.monitors(), cfg.monitor.clone());
             let window = ui::new_window(application, cfg);
             window.set_monitor(&monitor);
+            window.set_namespace("way-edges-widget");
         });
     } else {
         panic!("display for monitor not found");
