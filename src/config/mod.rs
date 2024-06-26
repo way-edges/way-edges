@@ -57,14 +57,25 @@ fn raw_2_conf(raw: RawGroup) -> Result<GroupConfig, String> {
                 raw.width
             };
             let height = {
-                if raw.height <= 0. {
-                    return Err("height must be > 0".to_string());
+                if raw.height < 0. {
+                    return Err("height must be >= 0".to_string());
                 }
                 raw.height
             };
-            if width * 2. > height {
+            // if height is given then ignore rel_height
+            let rel_height = {
+                if height > 0. {
+                    0.
+                } else {
+                    if raw.rel_height < 0. {
+                        return Err("rel_height must be >= 0".to_string());
+                    }
+                    raw.rel_height * 0.01
+                }
+            };
+            if height > 0. && width * 2. > height {
                 return Err("width * 2 must be <= height".to_string());
-            }
+            };
             let event_map = {
                 let mut map = EventMap::new();
                 for (key, value) in raw.event_map {
@@ -121,6 +132,7 @@ fn raw_2_conf(raw: RawGroup) -> Result<GroupConfig, String> {
                 edge,
                 position,
                 size: (width, height),
+                rel_height,
                 event_map: Some(event_map),
                 color,
                 transition_duration,

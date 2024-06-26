@@ -16,6 +16,7 @@ pub struct Config {
     pub edge: Edge,
     pub position: Option<Edge>,
     pub size: (f64, f64),
+    pub rel_height: f64,
     pub event_map: Option<EventMap>,
     pub color: RGBA,
     pub transition_duration: u64,
@@ -30,6 +31,7 @@ struct Test {
     edge: Edge,
     position: Option<Edge>,
     size: (f64, f64),
+    pub rel_height: f64,
     color: RGBA,
     transition_duration: u64,
     frame_rate: u64,
@@ -51,6 +53,7 @@ impl Config {
                 extra_trigger_size: self.extra_trigger_size,
                 monitor: self.monitor.clone(),
                 margins: self.margins.clone(),
+                rel_height: self.rel_height
             }
         )
     }

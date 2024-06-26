@@ -20,12 +20,12 @@ pub struct RawConfig {
     pub edge: String,
     #[serde(default)]
     pub position: String,
-    #[serde(default = "dt_width")]
+    #[serde(default)]
     pub width: f64,
-    #[serde(default = "dt_height")]
+    #[serde(default)]
     pub height: f64,
-    // #[serde(default = "dt_rel_height")]
-    // pub rel_height: f64,
+    #[serde(default)]
+    pub rel_height: f64,
     #[serde(default)]
     pub event_map: Vec<(u32, String)>,
     #[serde(default = "dt_color")]
@@ -45,12 +45,6 @@ pub struct RawConfig {
 }
 fn dt_edge() -> String {
     String::from("left")
-}
-fn dt_width() -> f64 {
-    15.
-}
-fn dt_height() -> f64 {
-    50.
 }
 fn dt_color() -> String {
     String::from("#7B98FF")

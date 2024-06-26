@@ -3,6 +3,7 @@ mod args;
 mod config;
 mod ui;
 
+use activate::WindowInitializer;
 use gio::{prelude::*, ApplicationFlags};
 use gtk::Application;
 
@@ -38,5 +39,14 @@ fn init_app(app: &Application) {
         println!("{}", c.debug());
     });
 
-    activate::activate(app, cfgs);
+    #[cfg(feature = "hyprland")]
+    {
+        use activate::compositor_hyprland;
+        compositor_hyprland::Hyprland::init_window(app, cfgs);
+    }
+    #[cfg(not(feature = "hyprland"))]
+    {
+        use activate::compositor_unknow;
+        compositor_unknow::Unknow::init_window(app, cfgs);
+    }
 }

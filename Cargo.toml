@@ -13,3 +13,13 @@ serde_jsonrc = "0.1"
 serde = { version = "1.0", features = ["derive"] }
 xdg = "2.5.2"
 clap = { version = "4.5.7", features = ["derive"] }
+hyprland = { version = "0.4.0-alpha.2", optional = true, default_features = false, features = [
+  "data",
+  "async-lite",
+] }
+
+
+[features]
+default = ["normal"]
+hyprland = ["dep:hyprland"]
+normal = []
