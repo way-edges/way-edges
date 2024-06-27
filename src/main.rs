@@ -46,7 +46,7 @@ fn init_app(app: &Application) {
     }
     #[cfg(not(feature = "hyprland"))]
     {
-        use activate::compositor_unknow;
-        compositor_unknow::Unknow::init_window(app, cfgs);
+        use activate::compositor_default;
+        compositor_default::Default::init_window(app, cfgs);
     }
 }
