@@ -2,14 +2,14 @@ use crate::config::Config;
 
 use super::draw_area;
 use gtk::{prelude::*, Application, CssProvider, STYLE_PROVIDER_PRIORITY_APPLICATION};
-use gtk4_layer_shell::{Layer, LayerShell};
+use gtk4_layer_shell::LayerShell;
 
 pub fn new_window(app: &Application, mut config: Config) -> gtk::ApplicationWindow {
     let window = gtk::ApplicationWindow::new(app);
 
     // init layer
     window.init_layer_shell();
-    window.set_layer(Layer::Top);
+    window.set_layer(config.layer);
 
     // edge and position
     window.set_anchor(config.edge, true);

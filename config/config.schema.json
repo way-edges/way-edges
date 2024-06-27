@@ -27,6 +27,11 @@
                   "description": "position of the edge: top/bottom; left/right; or leave empty string for center.\nDefault `center`",
                   "enum": ["", "top", "bottom", "left", "right", "center"]
                 },
+                "layer": {
+                  "type": "string",
+                  "description": "layer of the screen: background/bottom/top/overlay.\nDefault `top`",
+                  "enum": ["top", "bottom", "background", "overlay"]
+                },
                 "width": {
                   "description": "width of the button\nDefault 15",
                   "type": "number",

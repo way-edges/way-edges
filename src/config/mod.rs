@@ -6,7 +6,7 @@ use raw::*;
 
 use crate::ui::EventMap;
 use gtk::gdk::RGBA;
-use gtk4_layer_shell::Edge;
+use gtk4_layer_shell::{Edge, Layer};
 use std::{
     collections::HashMap, fs::OpenOptions, io::Read, process::Command, str::FromStr, thread,
 };
@@ -35,8 +35,7 @@ fn raw_2_conf(raw: RawGroup) -> Result<GroupConfig, String> {
                 "bottom" => Edge::Bottom,
                 "right" => Edge::Right,
                 _ => {
-                    let a = Err(format!("invalid edge {}", raw.edge));
-                    return a;
+                    return Err(format!("invalid edge {}", raw.edge));
                 }
             };
             let position = match raw.position.as_str() {
@@ -46,8 +45,16 @@ fn raw_2_conf(raw: RawGroup) -> Result<GroupConfig, String> {
                 "right" => Some(Edge::Right),
                 "" | "center" => None,
                 _ => {
-                    let a = Err(format!("invalid position {}", raw.position));
-                    return a;
+                    return Err(format!("invalid position {}", raw.position));
+                }
+            };
+            let layer = match raw.layer.as_str() {
+                "background" => Layer::Background,
+                "bottom" => Layer::Bottom,
+                "top" => Layer::Top,
+                "overlay" => Layer::Overlay,
+                _ => {
+                    return Err(format!("invalid layer {}", raw.layer));
                 }
             };
             let width = {
@@ -131,6 +138,7 @@ fn raw_2_conf(raw: RawGroup) -> Result<GroupConfig, String> {
             Ok(Config {
                 edge,
                 position,
+                layer,
                 size: (width, height),
                 rel_height,
                 event_map: Some(event_map),

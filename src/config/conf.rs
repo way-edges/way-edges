@@ -1,6 +1,6 @@
 use crate::ui::EventMap;
 use gtk::gdk::RGBA;
-use gtk4_layer_shell::Edge;
+use gtk4_layer_shell::{Edge, Layer};
 use std::collections::HashMap;
 
 pub type GroupConfigMap = HashMap<String, GroupConfig>;
@@ -15,6 +15,7 @@ pub enum MonitorSpecifier {
 pub struct Config {
     pub edge: Edge,
     pub position: Option<Edge>,
+    pub layer: Layer,
     pub size: (f64, f64),
     pub rel_height: f64,
     pub event_map: Option<EventMap>,
@@ -30,8 +31,9 @@ pub struct Config {
 struct Test {
     edge: Edge,
     position: Option<Edge>,
+    layer: Layer,
     size: (f64, f64),
-    pub rel_height: f64,
+    rel_height: f64,
     color: RGBA,
     transition_duration: u64,
     frame_rate: u64,
@@ -46,6 +48,7 @@ impl Config {
             Test {
                 edge: self.edge,
                 position: self.position,
+                layer: self.layer,
                 size: self.size,
                 color: self.color,
                 transition_duration: self.transition_duration,

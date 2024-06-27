@@ -20,6 +20,8 @@ pub struct RawConfig {
     pub edge: String,
     #[serde(default)]
     pub position: String,
+    #[serde(default = "dt_layer")]
+    pub layer: String,
     #[serde(default)]
     pub width: f64,
     #[serde(default)]
@@ -45,6 +47,9 @@ pub struct RawConfig {
 }
 fn dt_edge() -> String {
     String::from("left")
+}
+fn dt_layer() -> String {
+    String::from("top")
 }
 fn dt_color() -> String {
     String::from("#7B98FF")
