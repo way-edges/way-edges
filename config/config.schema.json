@@ -5,14 +5,17 @@
   "type": "object",
   "properties": {
     "groups": {
+      "description": "Groups of buttons. you can activate each group by `way-edges [group_name]`.\nDefault empty array",
       "type": "array",
       "items": {
         "type": "object",
         "properties": {
           "name": {
+            "description": "Name of the group, can be empty if exist only one group.\nDefault empty string",
             "type": "string"
           },
           "widgets": {
+            "description": "Button items: available params:\nedge | position | layer | width | height | rel_height | margin | color | transition_duration | frame_rate | extra_trigger_size | monitor_id | monitor_name | event_map",
             "type": "array",
             "items": {
               "type": "object",
