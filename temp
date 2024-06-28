@@ -1,0 +1,45 @@
+
+    type MonitorLayerSizeMap = HashMap<String, (i32, i32)>;
+    fn get_layer_map() -> MonitorLayerSizeMap {
+        let ls = Layers::get().unwrap();
+        println!("layer shell: {ls:#?}");
+        let tl_ns = String::from(NAMESPACE_TL);
+        let br_ns = String::from(NAMESPACE_BR);
+        let res = ls
+            .into_iter()
+            .map_while(|(ms, mut d)| {
+                let vc = d.levels.remove(TOP_LEVEL).expect("no layer info");
+                let mut nsm = NameSpaceMatch::new(vec![tl_ns.to_string(), br_ns.to_string()]);
+                let lcm = vc
+                    .into_iter()
+                    .filter_map(|c| {
+                        if nsm.ok(&c.namespace) {
+                            Some((c.namespace.clone(), c))
+                        } else {
+                            None
+                        }
+                    })
+                    .collect::<HashMap<String, LayerClient>>();
+                if nsm.is_finish() {
+                    println!("layer client: {lcm:#?}");
+                    // top left
+                    let tl = lcm.get(&tl_ns.to_string()).unwrap();
+                    let start_x = tl.x;
+                    let start_y = tl.y;
+
+                    // bottom right
+                    let br = lcm.get(&br_ns.to_string()).unwrap();
+                    let end_x = br.x + br.w as i32;
+                    let end_y = br.y + br.h as i32;
+                    // calculate
+                    let w = end_x - start_x;
+                    let h = end_y - start_y;
+
+                    Some((ms, (w, h)))
+                } else {
+                    None
+                }
+            })
+            .collect::<HashMap<String, (i32, i32)>>();
+        res
+    }

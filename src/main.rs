@@ -41,12 +41,12 @@ fn init_app(app: &Application) {
 
     #[cfg(feature = "hyprland")]
     {
-        use activate::compositor_hyprland;
-        compositor_hyprland::Hyprland::init_window(app, cfgs);
+        use activate::hyprland::Hyprland;
+        Hyprland::init_window(app, cfgs);
     }
     #[cfg(not(feature = "hyprland"))]
     {
-        use activate::compositor_default;
-        compositor_default::Default::init_window(app, cfgs);
+        use activate::default::Default;
+        Default::init_window(app, cfgs);
     }
 }
