@@ -42,6 +42,11 @@
                   "type": "number",
                   "minimum": 0
                 },
+                "rel_height": {
+                  "description": "reltive height of the button, ignored when given `height`.\nDefault relative to monitor size. If you wanto count in the exclusive zone, please enable feature to your compositor.\nDefault 0, example: 20",
+                  "type": "number",
+                  "minimum": 0
+                },
                 "margin": {
                   "description": "margin of the button, relative to the `position`.\nDefault all 0.",
                   "type": "object",
