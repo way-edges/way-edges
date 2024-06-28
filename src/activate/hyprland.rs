@@ -5,7 +5,8 @@ use std::cell::Cell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use crate::config::GroupConfig;
+use crate::activate::{calculate_height, create_buttons, find_monitor, get_monitors, ButtonItem};
+use crate::config::{GroupConfig, MonitorSpecifier};
 use gio::glib::idle_add_local_once;
 use gtk::gdk::Monitor;
 use gtk::glib;
@@ -132,23 +133,38 @@ fn window_for_detect(
     [Some(win_tl), Some(win_br)]
 }
 
-fn connect(ws: Vec<Option<ApplicationWindow>>, app: &gtk::Application) {
+fn connect(ws: Vec<Option<ApplicationWindow>>, app: &gtk::Application, cfgs: GroupConfig) {
     // connect show
     let max_count = ws.len();
     let counter = Rc::new(Cell::new(0));
-    let connect = gtk::glib::clone!(@strong counter, @strong ws, @weak app => move |w: &ApplicationWindow| {
-        // `connect_realize` only accept `Fn`
-        // only way i can think of is wrap function with rc
-        // glib::clone! macro is also `Fn` not `FnOnce`
-        w.connect_realize(gtk::glib::clone!(@strong counter, @strong ws, @weak app => move |_| {
+    let cfgs = Rc::new(Cell::new(Some(cfgs)));
+    let connect = gtk::glib::clone!(@strong counter, @strong ws, @weak app, @strong cfgs => move |w: &ApplicationWindow| {
+        w.connect_realize(gtk::glib::clone!(@strong counter, @strong ws, @weak app, @strong cfgs => move |_| {
+            // calculate after all window rendered
             idle_add_local_once(
-                gtk::glib::clone!(@strong counter, @strong ws, @weak app  => move || {
+                gtk::glib::clone!(@weak counter, @strong ws, @weak app, @weak cfgs  => move || {
                     if add_or_else(&counter, max_count) {
-                        let a = get_monitor_map();
+                        let mm = get_monitor_map();
+                        println!("layer map: {mm:#?}");
                         ws.into_iter().for_each(|mut w| {
                             w.take().unwrap().close();
                         });
-                        println!("layer map: {a:#?}");
+                        let monitors = get_monitors();
+                        let mm: HashMap<Monitor, (i32, i32)> = mm.into_iter().map(|(m, s)| {
+                            let m = find_monitor(&monitors, MonitorSpecifier::Name(m));
+                            (m, s)
+                        }).collect();
+                        let cfgs = cfgs.take().unwrap();
+                        let btis: Vec<ButtonItem> = cfgs.into_iter().map(|mut cfg| {
+                            let monitor = find_monitor(&monitors, cfg.monitor.clone());
+                            if cfg.rel_height > 0. {
+                                let size = *mm.get(&monitor).unwrap();
+                                println!("size: {:?}", size);
+                                calculate_height(&mut cfg, size);
+                            };
+                            ButtonItem { cfg, monitor }
+                        }).collect();
+                        create_buttons(&app, btis);
                     }
                 })
             );
@@ -171,14 +187,14 @@ fn get_need_monitors(cfgs: &GroupConfig, monitors: &gio::ListModel) -> Vec<Monit
 pub struct Hyprland;
 impl super::WindowInitializer for Hyprland {
     fn init_window(app: &Application, cfgs: GroupConfig) {
-        let monitors = super::get_monitors();
+        let monitors = get_monitors();
         let ml = get_need_monitors(&cfgs, &monitors);
         println!("monitor layer map: {ml:#?}");
         let ws: Vec<Option<ApplicationWindow>> = ml
             .into_iter()
             .flat_map(|m| window_for_detect(app, m))
             .collect();
-        connect(ws.clone(), app);
+        connect(ws.clone(), app, cfgs);
         ws.iter().for_each(|f| {
             f.as_ref().unwrap().present();
         });

@@ -39,8 +39,8 @@ fn find_monitor(monitors: &gio::ListModel, specifier: MonitorSpecifier) -> Monit
 
 fn calculate_height(cfg: &mut Config, max_size: (i32, i32)) {
     let mx = match cfg.edge {
-        Edge::Left | Edge::Right => max_size.0,
-        Edge::Top | Edge::Bottom => max_size.1,
+        Edge::Left | Edge::Right => max_size.1,
+        Edge::Top | Edge::Bottom => max_size.0,
         _ => unreachable!(),
     };
     cfg.size.1 = mx as f64 * cfg.rel_height;
@@ -62,7 +62,7 @@ struct ButtonItem {
 
 fn create_buttons(app: &gtk::Application, button_items: Vec<ButtonItem>) {
     button_items.into_iter().for_each(|bti| {
-        // match relative height
+        println!("rel height: {:?}", bti.cfg.size);
         let window = ui::new_window(app, bti.cfg);
         window.set_monitor(&bti.monitor);
         window.set_namespace("way-edges-widget");

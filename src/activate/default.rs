@@ -12,7 +12,9 @@ impl super::WindowInitializer for Default {
                 let monitor = find_monitor(&monitors, cfg.monitor.clone());
                 if cfg.rel_height > 0. {
                     let geom = monitor.geometry();
-                    calculate_height(&mut cfg, (geom.width(), geom.height()));
+                    let size = (geom.width(), geom.height());
+                    println!("size: {:?}", size);
+                    calculate_height(&mut cfg, size);
                 };
                 ButtonItem { cfg, monitor }
             })
