@@ -209,7 +209,7 @@ pub fn get_config_test() {
     res.iter().for_each(|(name, vc)| {
         println!("name: {name}");
         vc.iter().for_each(|c| {
-            println!("{}", c.debug());
+            println!("{c:#?}");
         });
     });
 }
@@ -233,7 +233,7 @@ pub fn parse_config_test() {
     res.iter().for_each(|(name, vc)| {
         println!("name: {name}");
         vc.iter().for_each(|c| {
-            println!("{}", c.debug());
+            println!("{c:#?}");
         });
     });
 }
