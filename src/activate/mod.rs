@@ -39,10 +39,11 @@ fn find_monitor(monitors: &gio::ListModel, specifier: MonitorSpecifier) -> Monit
 
 fn calculate_relative(cfg: &mut Config, max_size_raw: (i32, i32)) {
     let max_size = match cfg.edge {
-        Edge::Left | Edge::Right => (max_size_raw.1, max_size_raw.0),
-        Edge::Top | Edge::Bottom => (max_size_raw.0, max_size_raw.1),
+        Edge::Left | Edge::Right => (max_size_raw.0, max_size_raw.1),
+        Edge::Top | Edge::Bottom => (max_size_raw.1, max_size_raw.0),
         _ => unreachable!(),
     };
+    println!("max_size: {max_size:?}");
     if let Ok(r) = cfg.width.get_rel() {
         cfg.width = NumOrRelative::Num(max_size.0 as f64 * r);
     };
@@ -84,7 +85,7 @@ struct ButtonItem {
 
 fn create_buttons(app: &gtk::Application, button_items: Vec<ButtonItem>) {
     button_items.into_iter().for_each(|bti| {
-        println!("rel height: {:?}", bti.cfg.get_size().unwrap());
+        println!("config: {:#?}", bti.cfg);
         let window = ui::new_window(app, bti.cfg);
         window.set_monitor(&bti.monitor);
         window.set_namespace("way-edges-widget");
