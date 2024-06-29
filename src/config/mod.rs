@@ -7,9 +7,7 @@ use raw::*;
 use crate::ui::EventMap;
 use gtk::gdk::RGBA;
 use gtk4_layer_shell::{Edge, Layer};
-use std::{
-    collections::HashMap, fs::OpenOptions, io::Read, process::Command, str::FromStr, thread,
-};
+use std::{fs::OpenOptions, io::Read, process::Command, str::FromStr, thread};
 
 fn parse_config(data: &str, group_name: &Option<String>) -> Result<GroupConfig, String> {
     let mut res: RawTemp = serde_jsonrc::from_str(data).unwrap();
@@ -17,7 +15,7 @@ fn parse_config(data: &str, group_name: &Option<String>) -> Result<GroupConfig, 
         res.groups
             .into_iter()
             .find(|g| &g.name == s)
-            .expect(format!("group {} not found", s).as_str())
+            .unwrap_or_else(|| panic!("group {} not found", s))
     } else {
         res.groups.remove(0)
     };
@@ -62,14 +60,12 @@ fn raw_2_conf(raw: RawGroup) -> Result<GroupConfig, String> {
                 }
                 raw.width
             };
-            println!("width: {:?}", width);
             let height = {
                 if !raw.height.is_valid_length() {
                     return Err(format!("height must be >= 0: {:#?}", raw.height).to_string());
                 }
                 raw.height
             };
-            println!("height: {:?}", height);
             // {
             //     let h = height.get_num();
             //     let w = width.get_num();
@@ -180,23 +176,6 @@ fn get_config_file() -> Result<String, String> {
 pub fn get_config(group_name: &Option<String>) -> Result<GroupConfig, String> {
     let s = get_config_file().unwrap();
     parse_config(&s, group_name)
-}
-
-pub fn match_group_config(group_map: GroupConfigMap, group: &Option<String>) -> GroupConfig {
-    if group_map.is_empty() {
-        panic!("empty config");
-    }
-    if let Some(group_name) = group {
-        group_map
-            .into_iter()
-            .find(|(n, _)| n == group_name)
-            .unwrap_or_else(|| panic!("group not found given name: {group_name}"))
-            .1
-    } else if group_map.len() == 1 {
-        group_map.into_values().last().unwrap()
-    } else {
-        panic!("no group available");
-    }
 }
 
 pub fn get_config_test() {

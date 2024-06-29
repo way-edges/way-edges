@@ -1,4 +1,4 @@
-use pangocairo::cairo::{Format, ImageSurface};
+use gtk::cairo::{Format, ImageSurface};
 
 /// Blur a cairo image surface
 pub fn blur_image_surface(surface: &mut ImageSurface, radius: i32) {

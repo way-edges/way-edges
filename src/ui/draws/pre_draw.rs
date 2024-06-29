@@ -1,10 +1,6 @@
-use gtk::cairo::Context;
-use gtk::cairo::ImageSurface;
-use gtk::cairo::LinearGradient;
+use gtk::cairo::{self, Context, Format, ImageSurface, LinearGradient};
 use gtk::gdk::prelude::*;
 use gtk::gdk::RGBA;
-use pangocairo::cairo;
-use pangocairo::cairo::Format;
 
 fn draw_2(context: &Context, radius: f64, h: f64) {
     let lg_height = h - radius * 2.;

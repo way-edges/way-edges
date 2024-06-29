@@ -1,4 +1,3 @@
-// !!!not finished yet
 #![cfg(feature = "hyprland")]
 
 use std::cell::Cell;
@@ -49,7 +48,6 @@ impl NameSpaceMatch {
         }
     }
     fn is_finish(&self) -> bool {
-        println!("len: {} | 1: {}", self.0.len(), self.1);
         self.1 == self.0.len()
     }
 }
@@ -57,7 +55,7 @@ impl NameSpaceMatch {
 type MonitorLayerSizeMap = HashMap<String, (i32, i32)>;
 fn get_monitor_map() -> MonitorLayerSizeMap {
     let ls = Layers::get().unwrap();
-    println!("layer shell: {ls:#?}");
+    log::debug!("Layer shells from hyprland: {ls:?}");
     let tl_ns = String::from(NAMESPACE_TL);
     let br_ns = String::from(NAMESPACE_BR);
     let res = ls
@@ -76,7 +74,7 @@ fn get_monitor_map() -> MonitorLayerSizeMap {
                 })
                 .collect::<HashMap<String, LayerClient>>();
             if nsm.is_finish() {
-                println!("layer client: {lcm:#?}");
+                log::debug!("Layer client for monitor({ms}): {lcm:?}");
                 // top left
                 let tl = lcm.get(&tl_ns.to_string()).unwrap();
                 let start_x = tl.x;
@@ -145,7 +143,7 @@ fn connect(ws: Vec<Option<ApplicationWindow>>, app: &gtk::Application, cfgs: Gro
                 gtk::glib::clone!(@weak counter, @strong ws, @weak app, @weak cfgs  => move || {
                     if add_or_else(&counter, max_count) {
                         let mm = get_monitor_map();
-                        println!("layer map: {mm:#?}");
+                        log::debug!("Calculated layer map sizes: {mm:?}");
                         ws.into_iter().for_each(|mut w| {
                             w.take().unwrap().close();
                         });
@@ -158,7 +156,6 @@ fn connect(ws: Vec<Option<ApplicationWindow>>, app: &gtk::Application, cfgs: Gro
                         let btis: Vec<ButtonItem> = cfgs.into_iter().map(|mut cfg| {
                             let monitor = find_monitor(&monitors, cfg.monitor.clone());
                             let size = *mm.get(&monitor).unwrap();
-                            println!("size: {:?}", size);
                             calculate_relative(&mut cfg, size);
                             ButtonItem { cfg, monitor }
                         }).collect();
@@ -187,7 +184,6 @@ impl super::WindowInitializer for Hyprland {
     fn init_window(app: &Application, cfgs: GroupConfig) {
         let monitors = get_monitors();
         let ml = get_need_monitors(&cfgs, &monitors);
-        println!("monitor layer map: {ml:#?}");
         let ws: Vec<Option<ApplicationWindow>> = ml
             .into_iter()
             .flat_map(|m| window_for_detect(app, m))

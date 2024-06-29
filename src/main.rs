@@ -6,8 +6,10 @@ mod ui;
 use activate::WindowInitializer;
 use gio::{prelude::*, ApplicationFlags};
 use gtk::Application;
+use log::debug;
 
 fn main() {
+    env_logger::builder().format_suffix("\n\n").init();
     // for cmd line help msg.
     // or else it will show help from `gtk` other than `clap`
     args::get_args();
@@ -17,7 +19,8 @@ fn main() {
 
     // that flag is for command line arguments
     let application =
-        gtk::Application::new(Some("com.ogios.way-edges"), ApplicationFlags::HANDLES_OPEN);
+        // gtk::Application::new(Some("com.ogios.way-edges"), ApplicationFlags::HANDLES_OPEN);
+        gtk::Application::new(None::<String>, ApplicationFlags::HANDLES_OPEN);
 
     // when args passed, `open` will be signaled instead of `activate`
     application.connect_open(|app, _, _| {
@@ -32,12 +35,10 @@ fn main() {
 
 fn init_app(app: &Application) {
     let args = args::get_args();
-    println!("{:#?}", args);
+    debug!("Parsed Args: {:?}", args);
     let cfgs = config::get_config(&args.group).unwrap();
     // let cfgs = config::match_group_config(group_map, &args.group);
-    cfgs.iter().for_each(|c| {
-        println!("{c:#?}");
-    });
+    debug!("Parsed Config: {cfgs:?}");
 
     #[cfg(feature = "hyprland")]
     {

@@ -11,7 +11,9 @@ use gtk4_layer_shell::{Edge, LayerShell};
 
 fn get_monitors() -> gio::ListModel {
     let dt_display = gtk::gdk::Display::default().expect("display for monitor not found");
-    dt_display.monitors()
+    let mms = dt_display.monitors();
+    log::debug!("Get monitors: {mms:?}");
+    mms
 }
 
 fn find_monitor(monitors: &gio::ListModel, specifier: MonitorSpecifier) -> Monitor {
@@ -43,7 +45,6 @@ fn calculate_relative(cfg: &mut Config, max_size_raw: (i32, i32)) {
         Edge::Top | Edge::Bottom => (max_size_raw.1, max_size_raw.0),
         _ => unreachable!(),
     };
-    println!("max_size: {max_size:?}");
     if let Ok(r) = cfg.width.get_rel() {
         cfg.width = NumOrRelative::Num(max_size.0 as f64 * r);
     };
@@ -85,7 +86,7 @@ struct ButtonItem {
 
 fn create_buttons(app: &gtk::Application, button_items: Vec<ButtonItem>) {
     button_items.into_iter().for_each(|bti| {
-        println!("config: {:#?}", bti.cfg);
+        log::debug!("Final Config: {:?}", bti.cfg);
         let window = ui::new_window(app, bti.cfg);
         window.set_monitor(&bti.monitor);
         window.set_namespace("way-edges-widget");

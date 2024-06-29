@@ -1,10 +1,10 @@
-use crate::{activate::default, ui::EventMap};
+use crate::ui::EventMap;
 use educe::Educe;
 use gtk::gdk::RGBA;
 use gtk4_layer_shell::{Edge, Layer};
-use std::collections::HashMap;
+// use std::collections::HashMap;
 
-pub type GroupConfigMap = HashMap<String, GroupConfig>;
+// pub type GroupConfigMap = HashMap<String, GroupConfig>;
 pub type GroupConfig = Vec<Config>;
 
 #[derive(Debug, Clone)]
@@ -129,6 +129,6 @@ impl Config {
 }
 impl Drop for Config {
     fn drop(&mut self) {
-        println!("dropping config")
+        log::debug!("dropping config: {self:?}")
     }
 }

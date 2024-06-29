@@ -19,7 +19,6 @@ where
         where
             E: serde::de::Error,
         {
-            println!("visit i64: {}", v);
             Ok(NumOrRelative::Num(v as f64))
         }
 
@@ -27,7 +26,6 @@ where
         where
             E: serde::de::Error,
         {
-            println!("visit u64: {}", v);
             Ok(NumOrRelative::Num(v as f64))
         }
 
@@ -35,7 +33,6 @@ where
         where
             E: serde::de::Error,
         {
-            println!("visit f64: {}", v);
             Ok(NumOrRelative::Num(v))
         }
         fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
@@ -76,7 +73,6 @@ fn transform_num_or_relative_i32<'de, D>(d: D) -> Result<NumOrRelative<i32>, D::
 where
     D: Deserializer<'de>,
 {
-    println!("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
     let a = transform_num_or_relative_f64(d)?;
     Ok(a.convert_i32())
 }
@@ -96,9 +92,6 @@ pub struct RawMargins {
     #[serde(default)]
     #[serde(deserialize_with = "transform_num_or_relative_i32")]
     pub bottom: NumOrRelative<i32>,
-}
-fn dt_margins() -> NumOrRelative<i32> {
-    NumOrRelative::Num(0)
 }
 
 #[derive(Deserialize, Debug, Default)]

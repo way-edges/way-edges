@@ -1,3 +1,5 @@
+#![cfg(not(feature = "hyprland"))]
+
 use super::{calculate_relative, create_buttons, find_monitor, ButtonItem};
 use crate::config::GroupConfig;
 use gtk::prelude::MonitorExt;
