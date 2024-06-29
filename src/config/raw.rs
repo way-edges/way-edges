@@ -39,6 +39,7 @@ where
         where
             E: serde::de::Error,
         {
+            // just `unwrap`, it's ok
             let re = regex::Regex::new(r"^(\d+(\.\d+)?)%\s*(.*)$").unwrap();
 
             if let Some(captures) = re.captures(v) {

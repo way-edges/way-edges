@@ -10,12 +10,13 @@ use gtk4_layer_shell::{Edge, Layer};
 use std::{fs::OpenOptions, io::Read, process::Command, str::FromStr, thread};
 
 fn parse_config(data: &str, group_name: &Option<String>) -> Result<GroupConfig, String> {
-    let mut res: RawTemp = serde_jsonrc::from_str(data).unwrap();
+    let mut res: RawTemp =
+        serde_jsonrc::from_str(data).map_err(|e| format!("JSON parse error: {e}"))?;
     let group = if let Some(s) = group_name {
         res.groups
             .into_iter()
             .find(|g| &g.name == s)
-            .unwrap_or_else(|| panic!("group {} not found", s))
+            .ok_or_else(|| format!("group {s} not found"))?
     } else {
         res.groups.remove(0)
     };
@@ -66,15 +67,6 @@ fn raw_2_conf(raw: RawGroup) -> Result<GroupConfig, String> {
                 }
                 raw.height
             };
-            // {
-            //     let h = height.get_num();
-            //     let w = width.get_num();
-            //     if let (Ok(width), Ok(height)) = (w, h) {
-            //         if height > 0. && width * 2. > height {
-            //             return Err("width * 2 must be <= height".to_string());
-            //         }
-            //     };
-            // };
             let event_map = {
                 let mut map = EventMap::new();
                 for (key, value) in raw.event_map {
@@ -83,11 +75,16 @@ fn raw_2_conf(raw: RawGroup) -> Result<GroupConfig, String> {
                         Box::new(move || {
                             let value = value.clone();
                             thread::spawn(move || {
-                                Command::new("/bin/sh")
-                                    .arg("-c")
-                                    .arg(&value)
-                                    .output()
-                                    .unwrap();
+                                let mut cmd = Command::new("/bin/sh");
+                                let res = cmd.arg("-c").arg(&value).output();
+                                if let Err(e) = res {
+                                    log::error!("error running command: {value}\nError: {e}");
+                                    notify_rust::Notification::new()
+                                        .summary("Way-Edges command error")
+                                        .body(&format!("Command: {value}\nError: {e}"))
+                                        .show()
+                                        .unwrap();
+                                }
                             });
                         }),
                     );
@@ -174,7 +171,7 @@ fn get_config_file() -> Result<String, String> {
 }
 
 pub fn get_config(group_name: &Option<String>) -> Result<GroupConfig, String> {
-    let s = get_config_file().unwrap();
+    let s = get_config_file()?;
     parse_config(&s, group_name)
 }
 
