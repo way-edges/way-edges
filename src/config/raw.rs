@@ -144,13 +144,13 @@ fn dt_color() -> String {
     String::from("#7B98FF")
 }
 fn dt_duration() -> u64 {
-    300
+    100
 }
 fn dt_frame_rate() -> u64 {
     30
 }
 fn dt_trigger_size() -> NumOrRelative<i32> {
-    NumOrRelative::Num(0)
+    NumOrRelative::Num(5)
 }
 
 #[derive(Deserialize, Debug)]
