@@ -4,17 +4,34 @@
   "$schema": "https://raw.githubusercontent.com/ogios/way-edges/master/config/config.schema.json",
   "groups": [
     {
+      "name": "test",
       "widgets": [
         {
-          "edge": "left",
-          "position": "top",
-          "transition_duration": 100,
-          "frame_rate": 60,
-          "height": 200,
-          "event_map": [[1, "notify-send \"This is from way-edges\""]],
-          "layer": "overlay",
+          "edge": "top",
+          "position": "left",
+          "width": 15,
+          "height": "25%",
+          "frame_rate": 90,
+          "event_map": [
+            [1, "notify-send 'This is from way-edges:left-click'"],
+            [3, "notify-send 'This is from way-edges:right-click'"],
+          ],
           "margin": {
-            "top": 100,
+            "left": "25%",
+          },
+        },
+        {
+          "edge": "top",
+          "position": "right",
+          "width": 15,
+          "height": "25%",
+          "frame_rate": 90,
+          "event_map": [
+            [1, "notify-send 'This is from way-edges:left-click'"],
+            [3, "notify-send 'This is from way-edges:right-click'"],
+          ],
+          "margin": {
+            "right": "25%",
           },
         },
       ],

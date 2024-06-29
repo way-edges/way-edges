@@ -1,5 +1,10 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "numOrPercentage": {
+      "anyOf": [{ "type": "number", "minimum": 0 }, { "type": "string" }]
+    }
+  },
   "title": "way-edges config",
   "description": "A configuration for way-edges",
   "type": "object",
@@ -19,6 +24,7 @@
             "type": "array",
             "items": {
               "type": "object",
+              "required": ["width", "height"],
               "properties": {
                 "edge": {
                   "type": "string",
@@ -36,19 +42,12 @@
                   "enum": ["top", "bottom", "background", "overlay"]
                 },
                 "width": {
-                  "description": "width of the button\nDefault 15",
-                  "type": "number",
-                  "minimum": 0
+                  "description": "width of the button. Can be either a number or a percentage.\nExample: 15",
+                  "$ref": "#/definitions/numOrPercentage"
                 },
                 "height": {
-                  "description": "height of the button\nDefault 45",
-                  "type": "number",
-                  "minimum": 0
-                },
-                "rel_height": {
-                  "description": "reltive height of the button, ignored when given `height`.\nDefault relative to monitor size. If you wanto count in the exclusive zone, please enable feature to your compositor.\nDefault 0, example: 20",
-                  "type": "number",
-                  "minimum": 0
+                  "description": "height of the button. Can be either a number or a percentage.\nExample: \"25%\"",
+                  "$ref": "#/definitions/numOrPercentage"
                 },
                 "margin": {
                   "description": "margin of the button, relative to the `position`.\nDefault all 0.",
@@ -56,23 +55,19 @@
                   "properties": {
                     "top": {
                       "description": "top margin of the button\nDefault 0",
-                      "type": "integer",
-                      "minimum": 0
+                      "$ref": "#/definitions/numOrPercentage"
                     },
                     "bottom": {
                       "description": "bottom margin of the button\nDefault 0",
-                      "type": "integer",
-                      "minimum": 0
+                      "$ref": "#/definitions/numOrPercentage"
                     },
                     "left": {
                       "description": "left margin of the button\nDefault 0",
-                      "type": "integer",
-                      "minimum": 0
+                      "$ref": "#/definitions/numOrPercentage"
                     },
                     "right": {
                       "description": "right margin of the button\nDefault 0",
-                      "type": "integer",
-                      "minimum": 0
+                      "$ref": "#/definitions/numOrPercentage"
                     }
                   }
                 },
@@ -81,7 +76,7 @@
                   "type": "string"
                 },
                 "transition_duration": {
-                  "description": "button show/hide in `transition_duration` ms.\n Default 300ms",
+                  "description": "button show/hide in `transition_duration` ms.\n Default 100ms",
                   "type": "integer",
                   "minimum": 0
                 },
@@ -92,8 +87,7 @@
                 },
                 "extra_trigger_size": {
                   "description": "transparent extra trigger area, must > 0 or else the button will not be triggered.\nDefault 5",
-                  "type": "number",
-                  "minimum": 0
+                  "$ref": "#/definitions/numOrPercentage"
                 },
                 "monitor_id": {
                   "description": "Which monitor to show the button, ignored when given `monitor_name`.\nDefault 0",
