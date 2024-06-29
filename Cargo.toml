@@ -20,6 +20,7 @@ educe = { version = "0.6.0", default-features = false, features = ["Debug"] }
 regex = "1.10.5"
 log = "0.4.22"
 env_logger = "0.11.3"
+notify-rust = "4.11.0"
 
 
 [features]

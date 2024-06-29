@@ -272,11 +272,11 @@ fn set_event_mouse_click(
     let click_done_cb = move |mouse_state: &Rc<RefCell<MouseState>>,
                               darea: &DrawingArea,
                               event_map: &Rc<RefCell<EventMap>>| {
-        let key = mouse_state.borrow_mut().take_pressing();
+        let btn = mouse_state.borrow_mut().take_pressing();
         if show_mouse_debug {
-            println!("key released: {}", key);
+            notify(&format!("key released: {}", btn));
         };
-        if let Some(cb) = event_map.borrow_mut().get_mut(&key) {
+        if let Some(cb) = event_map.borrow_mut().get_mut(&btn) {
             cb();
         };
         darea.queue_draw();
@@ -286,7 +286,7 @@ fn set_event_mouse_click(
         glib::clone!(@strong mouse_state, @weak darea => move |g, _, _, _| {
             let btn = g.current_button();
             if show_mouse_debug {
-                println!("key pressed: {}", btn);
+                notify(&format!("key pressed: {}", btn));
             };
             mouse_state.borrow_mut().set_pressing(btn);
             darea.queue_draw();
@@ -320,4 +320,15 @@ fn set_event_mouse_move(darea: &DrawingArea, mouse_state: Rc<RefCell<MouseState>
         darea.queue_draw();
     }));
     darea.add_controller(motion);
+}
+
+fn notify(body: &str) {
+    let mut n = notify_rust::Notification::new();
+    let res = n
+        .summary("Way-edges mouse button debug message")
+        .body(body)
+        .show();
+    if let Err(e) = res {
+        log::error!("Error sending notification: {}", e);
+    }
 }
