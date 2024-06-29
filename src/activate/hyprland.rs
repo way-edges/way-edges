@@ -5,7 +5,7 @@ use std::cell::Cell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use crate::activate::{calculate_height, create_buttons, find_monitor, get_monitors, ButtonItem};
+use crate::activate::{calculate_relative, create_buttons, find_monitor, get_monitors, ButtonItem};
 use crate::config::{GroupConfig, MonitorSpecifier};
 use gio::glib::idle_add_local_once;
 use gtk::gdk::Monitor;
@@ -157,11 +157,9 @@ fn connect(ws: Vec<Option<ApplicationWindow>>, app: &gtk::Application, cfgs: Gro
                         let cfgs = cfgs.take().unwrap();
                         let btis: Vec<ButtonItem> = cfgs.into_iter().map(|mut cfg| {
                             let monitor = find_monitor(&monitors, cfg.monitor.clone());
-                            if cfg.rel_height > 0. {
-                                let size = *mm.get(&monitor).unwrap();
-                                println!("size: {:?}", size);
-                                calculate_height(&mut cfg, size);
-                            };
+                            let size = *mm.get(&monitor).unwrap();
+                            println!("size: {:?}", size);
+                            calculate_relative(&mut cfg, size);
                             ButtonItem { cfg, monitor }
                         }).collect();
                         create_buttons(&app, btis);

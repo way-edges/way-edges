@@ -96,12 +96,12 @@ pub fn setup_draw(
     size: (f64, f64),
     cbs: EventMap,
     color: RGBA,
-    extra_trigger_size: f64,
+    extra_trigger_size: i32,
     transition_duration: u64,
     frame_rate: u64,
 ) -> DrawingArea {
     let darea = DrawingArea::new();
-    let map_size = ((size.0 + extra_trigger_size) as i32, size.1 as i32);
+    let map_size = (size.0 as i32 + extra_trigger_size, size.1 as i32);
     match edge {
         Edge::Left | Edge::Right => {
             darea.set_width_request(map_size.0);
@@ -123,9 +123,9 @@ pub fn setup_draw(
     let mouse_state = MouseState::new(&ts);
     let is_pressing = mouse_state.pressing.clone();
     let set_rotate = draw_rotation(edge, size);
-    let mut set_motion = draw_motion(edge, transition_range, extra_trigger_size);
-    let set_core = draw_core(map_size, size, color, extra_trigger_size);
-    let set_input_region = draw_input_region(size, edge, extra_trigger_size);
+    let mut set_motion = draw_motion(edge, transition_range, extra_trigger_size as f64);
+    let set_core = draw_core(map_size, size, color, extra_trigger_size as f64);
+    let set_input_region = draw_input_region(size, edge, extra_trigger_size as f64);
     let mut set_frame_manger = draw_frame_manager(frame_rate, transition_range);
     darea.set_draw_func(glib::clone!(@weak window =>move |darea, context, _, _| {
         set_rotate(context);

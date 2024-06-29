@@ -1,7 +1,7 @@
 pub mod default;
 pub mod hyprland;
 
-use crate::config::{Config, GroupConfig, MonitorSpecifier};
+use crate::config::{Config, GroupConfig, MonitorSpecifier, NumOrRelative};
 use crate::ui;
 use gio::prelude::*;
 use gtk::gdk::Monitor;
@@ -37,17 +37,39 @@ fn find_monitor(monitors: &gio::ListModel, specifier: MonitorSpecifier) -> Monit
     a
 }
 
-fn calculate_height(cfg: &mut Config, max_size: (i32, i32)) {
-    let mx = match cfg.edge {
-        Edge::Left | Edge::Right => max_size.1,
-        Edge::Top | Edge::Bottom => max_size.0,
+fn calculate_relative(cfg: &mut Config, max_size_raw: (i32, i32)) {
+    let max_size = match cfg.edge {
+        Edge::Left | Edge::Right => (max_size_raw.1, max_size_raw.0),
+        Edge::Top | Edge::Bottom => (max_size_raw.0, max_size_raw.1),
         _ => unreachable!(),
     };
-    cfg.size.1 = mx as f64 * cfg.rel_height;
+    if let Ok(r) = cfg.width.get_rel() {
+        cfg.width = NumOrRelative::Num(max_size.0 as f64 * r);
+    };
+    if let Ok(r) = cfg.height.get_rel() {
+        cfg.height = NumOrRelative::Num(max_size.1 as f64 * r);
+    };
+    if let Ok(r) = cfg.extra_trigger_size.get_rel() {
+        cfg.extra_trigger_size = NumOrRelative::Num((max_size.0 as f64 * r) as i32);
+    };
+    cfg.margins.iter_mut().for_each(|(e, n)| {
+        if let Ok(r) = n.get_rel() {
+            *n = match e {
+                Edge::Left | Edge::Right => NumOrRelative::Num((r * max_size_raw.0 as f64) as i32),
+                Edge::Top | Edge::Bottom => NumOrRelative::Num((r * max_size_raw.1 as f64) as i32),
+                _ => unreachable!(),
+            };
+        };
+    });
+
     // remember to check height since we didn't do it in `parse_config`
     // when passing only `rel_height`
-    if cfg.size.0 * 2. > cfg.size.1 {
-        panic!("relative height detect: width * 2 must be <= height: {{cfg.size.0}} * 2 <= {{cfg.size.1}}");
+    if cfg.width.get_num().unwrap() * 2. > cfg.height.get_num().unwrap() {
+        panic!(
+            "relative height detect: width * 2 must be <= height: {} * 2 <= {}",
+            cfg.width.get_num().unwrap(),
+            cfg.height.get_num().unwrap()
+        );
     }
 }
 
@@ -62,7 +84,7 @@ struct ButtonItem {
 
 fn create_buttons(app: &gtk::Application, button_items: Vec<ButtonItem>) {
     button_items.into_iter().for_each(|bti| {
-        println!("rel height: {:?}", bti.cfg.size);
+        println!("rel height: {:?}", bti.cfg.get_size().unwrap());
         let window = ui::new_window(app, bti.cfg);
         window.set_monitor(&bti.monitor);
         window.set_namespace("way-edges-widget");

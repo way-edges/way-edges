@@ -33,10 +33,10 @@ fn main() {
 fn init_app(app: &Application) {
     let args = args::get_args();
     println!("{:#?}", args);
-    let group_map = config::get_config().unwrap();
-    let cfgs = config::match_group_config(group_map, &args.group);
+    let cfgs = config::get_config(&args.group).unwrap();
+    // let cfgs = config::match_group_config(group_map, &args.group);
     cfgs.iter().for_each(|c| {
-        println!("{}", c.debug());
+        println!("{c:#?}");
     });
 
     #[cfg(feature = "hyprland")]

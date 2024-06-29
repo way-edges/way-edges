@@ -15,10 +15,27 @@ where
             formatter.write_str("a number or a string")
         }
 
+        fn visit_i64<E>(self, v: i64) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            println!("visit i64: {}", v);
+            Ok(NumOrRelative::Num(v as f64))
+        }
+
+        fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            println!("visit u64: {}", v);
+            Ok(NumOrRelative::Num(v as f64))
+        }
+
         fn visit_f64<E>(self, v: f64) -> Result<Self::Value, E>
         where
             E: serde::de::Error,
         {
+            println!("visit f64: {}", v);
             Ok(NumOrRelative::Num(v))
         }
         fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
@@ -44,7 +61,7 @@ where
                 //     })
                 //     .flatten();
 
-                Ok(NumOrRelative::Relative(percentage))
+                Ok(NumOrRelative::Relative(percentage * 0.01))
             } else {
                 Err(E::custom(
                     "Input does not match the expected format.".to_string(),
@@ -59,6 +76,7 @@ fn transform_num_or_relative_i32<'de, D>(d: D) -> Result<NumOrRelative<i32>, D::
 where
     D: Deserializer<'de>,
 {
+    println!("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
     let a = transform_num_or_relative_f64(d)?;
     Ok(a.convert_i32())
 }

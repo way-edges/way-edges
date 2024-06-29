@@ -1,4 +1,4 @@
-use super::{calculate_height, create_buttons, find_monitor, ButtonItem};
+use super::{calculate_relative, create_buttons, find_monitor, ButtonItem};
 use crate::config::GroupConfig;
 use gtk::prelude::MonitorExt;
 
@@ -10,12 +10,9 @@ impl super::WindowInitializer for Default {
             .into_iter()
             .map(|mut cfg| {
                 let monitor = find_monitor(&monitors, cfg.monitor.clone());
-                if cfg.rel_height > 0. {
-                    let geom = monitor.geometry();
-                    let size = (geom.width(), geom.height());
-                    println!("size: {:?}", size);
-                    calculate_height(&mut cfg, size);
-                };
+                let geom = monitor.geometry();
+                let size = (geom.width(), geom.height());
+                calculate_relative(&mut cfg, size);
                 ButtonItem { cfg, monitor }
             })
             .collect();

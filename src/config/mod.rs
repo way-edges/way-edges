@@ -11,18 +11,17 @@ use std::{
     collections::HashMap, fs::OpenOptions, io::Read, process::Command, str::FromStr, thread,
 };
 
-fn parse_config(data: &str) -> Result<GroupConfigMap, String> {
-    let res: RawTemp = serde_jsonrc::from_str(data).unwrap();
-    let mut group_map: GroupConfigMap = HashMap::new();
-    res.groups
-        .into_iter()
-        .try_for_each(|g| -> Result<(), String> {
-            let name = g.name.clone();
-            let vc = raw_2_conf(g)?;
-            group_map.insert(name, vc);
-            Ok(())
-        })?;
-    Ok(group_map)
+fn parse_config(data: &str, group_name: &Option<String>) -> Result<GroupConfig, String> {
+    let mut res: RawTemp = serde_jsonrc::from_str(data).unwrap();
+    let group = if let Some(s) = group_name {
+        res.groups
+            .into_iter()
+            .find(|g| &g.name == s)
+            .expect(format!("group {} not found", s).as_str())
+    } else {
+        res.groups.remove(0)
+    };
+    raw_2_conf(group)
 }
 
 fn raw_2_conf(raw: RawGroup) -> Result<GroupConfig, String> {
@@ -58,31 +57,28 @@ fn raw_2_conf(raw: RawGroup) -> Result<GroupConfig, String> {
                 }
             };
             let width = {
-                if raw.width <= 0. {
+                if !raw.width.is_valid_length() {
                     return Err("width must be > 0".to_string());
                 }
                 raw.width
             };
+            println!("width: {:?}", width);
             let height = {
-                if raw.height < 0. {
-                    return Err("height must be >= 0".to_string());
+                if !raw.height.is_valid_length() {
+                    return Err(format!("height must be >= 0: {:#?}", raw.height).to_string());
                 }
                 raw.height
             };
-            // if height is given then ignore rel_height
-            let rel_height = {
-                if height > 0. {
-                    0.
-                } else {
-                    if raw.rel_height < 0. {
-                        return Err("rel_height must be >= 0".to_string());
-                    }
-                    raw.rel_height * 0.01
-                }
-            };
-            if height > 0. && width * 2. > height {
-                return Err("width * 2 must be <= height".to_string());
-            };
+            println!("height: {:?}", height);
+            // {
+            //     let h = height.get_num();
+            //     let w = width.get_num();
+            //     if let (Ok(width), Ok(height)) = (w, h) {
+            //         if height > 0. && width * 2. > height {
+            //             return Err("width * 2 must be <= height".to_string());
+            //         }
+            //     };
+            // };
             let event_map = {
                 let mut map = EventMap::new();
                 for (key, value) in raw.event_map {
@@ -120,16 +116,16 @@ fn raw_2_conf(raw: RawGroup) -> Result<GroupConfig, String> {
             };
             let margins = {
                 let mut m = Vec::new();
-                if raw.margin.left > 0 {
+                if raw.margin.left.is_valid_length() {
                     m.push((Edge::Left, raw.margin.left))
                 }
-                if raw.margin.right > 0 {
+                if raw.margin.right.is_valid_length() {
                     m.push((Edge::Right, raw.margin.right))
                 }
-                if raw.margin.top > 0 {
+                if raw.margin.top.is_valid_length() {
                     m.push((Edge::Top, raw.margin.top))
                 }
-                if raw.margin.bottom > 0 {
+                if raw.margin.bottom.is_valid_length() {
                     m.push((Edge::Bottom, raw.margin.bottom))
                 }
                 m
@@ -139,8 +135,8 @@ fn raw_2_conf(raw: RawGroup) -> Result<GroupConfig, String> {
                 edge,
                 position,
                 layer,
-                size: (width, height),
-                rel_height,
+                width,
+                height,
                 event_map: Some(event_map),
                 color,
                 transition_duration,
@@ -181,9 +177,9 @@ fn get_config_file() -> Result<String, String> {
     Ok(s)
 }
 
-pub fn get_config() -> Result<GroupConfigMap, String> {
+pub fn get_config(group_name: &Option<String>) -> Result<GroupConfig, String> {
     let s = get_config_file().unwrap();
-    parse_config(&s)
+    parse_config(&s, group_name)
 }
 
 pub fn match_group_config(group_map: GroupConfigMap, group: &Option<String>) -> GroupConfig {
@@ -204,14 +200,8 @@ pub fn match_group_config(group_map: GroupConfigMap, group: &Option<String>) -> 
 }
 
 pub fn get_config_test() {
-    let res = get_config().unwrap();
-
-    res.iter().for_each(|(name, vc)| {
-        println!("name: {name}");
-        vc.iter().for_each(|c| {
-            println!("{c:#?}");
-        });
-    });
+    let res = get_config(&None).unwrap();
+    println!("res: {res:#?}");
 }
 
 pub fn parse_config_test() {
@@ -228,12 +218,6 @@ pub fn parse_config_test() {
         ]
     }
     "#;
-    let res = parse_config(data).unwrap();
-
-    res.iter().for_each(|(name, vc)| {
-        println!("name: {name}");
-        vc.iter().for_each(|c| {
-            println!("{c:#?}");
-        });
-    });
+    let res = parse_config(data, &None).unwrap();
+    println!("{res:#?}");
 }

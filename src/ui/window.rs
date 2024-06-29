@@ -18,17 +18,19 @@ pub fn new_window(app: &Application, mut config: Config) -> gtk::ApplicationWind
     }
 
     // margin
-    config.margins.clone().iter().for_each(|m| {
-        window.set_margin(m.0, m.1);
-    });
+    std::mem::take(&mut config.margins)
+        .into_iter()
+        .for_each(|(e, m)| {
+            window.set_margin(e, m.get_num_into().unwrap());
+        });
 
     draw_area::setup_draw(
         &window,
         config.edge,
-        config.size,
+        config.get_size_into().unwrap(),
         config.event_map.take().unwrap(),
         config.color,
-        config.extra_trigger_size,
+        config.extra_trigger_size.get_num().unwrap(),
         config.transition_duration,
         config.frame_rate,
     );

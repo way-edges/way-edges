@@ -14,11 +14,17 @@ pub enum MonitorSpecifier {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub enum NumOrRelative<T: Copy + Clone> {
+pub enum NumOrRelative<T>
+where
+    T: Copy + Clone + Default + PartialOrd,
+{
     Num(T),
     Relative(f64),
 }
-impl<T: Copy + Clone> NumOrRelative<T> {
+impl<T> NumOrRelative<T>
+where
+    T: Copy + Clone + Default + PartialOrd,
+{
     pub fn get_num(&self) -> Result<T, &str> {
         if let Self::Num(r) = self {
             Ok(*r)
@@ -33,14 +39,37 @@ impl<T: Copy + Clone> NumOrRelative<T> {
             Err("relative, not num")
         }
     }
+    pub fn is_valid_length(&self) -> bool {
+        match self {
+            NumOrRelative::Num(r) => *r > T::default(),
+            NumOrRelative::Relative(r) => *r > 0.,
+        }
+    }
+    pub fn get_rel(&self) -> Result<f64, &'static str> {
+        if let Self::Relative(r) = self {
+            Ok(*r)
+        } else {
+            Err("num, not relative")
+        }
+    }
+    pub fn get_rel_into(self) -> Result<f64, &'static str> {
+        if let Self::Relative(r) = self {
+            Ok(r)
+        } else {
+            Err("num, not relative")
+        }
+    }
 }
-pub trait Convert<U: Copy + Clone> {
+pub trait Convert<U: Copy + Clone>
+where
+    U: Copy + Clone + Default + PartialOrd,
+{
     fn convert(self) -> NumOrRelative<U>;
 }
 impl<T, U> Convert<U> for NumOrRelative<T>
 where
-    T: Copy + Clone + Into<U>,
-    U: Copy + Clone + Into<T>,
+    T: Copy + Clone + Into<U> + Default + PartialOrd,
+    U: Copy + Clone + Into<T> + Default + PartialOrd,
 {
     fn convert(self) -> NumOrRelative<U> {
         match self {
@@ -60,26 +89,12 @@ impl NumOrRelative<f64> {
 // Implement Default for NumOrRelative<T> where T: Default
 impl<T> Default for NumOrRelative<T>
 where
-    T: Copy + Clone + Default,
+    T: Copy + Clone + Default + PartialOrd,
 {
     fn default() -> Self {
         NumOrRelative::Num(T::default())
     }
 }
-
-// // Implement a generic conversion from NumOrRelative<T> to NumOrRelative<U>
-// impl<T, U> From<NumOrRelative<T>> for NumOrRelative<U>
-// where
-//     T: Copy + Clone + Into<U>,
-//     U: Copy + Clone,
-// {
-//     fn from(value: NumOrRelative<T>) -> Self {
-//         match value {
-//             NumOrRelative::Num(num) => NumOrRelative::Num(num.into()),
-//             NumOrRelative::Relative(rel) => NumOrRelative::Relative(rel),
-//         }
-//     }
-// }
 
 #[derive(Educe)]
 #[educe(Debug)]
@@ -98,7 +113,7 @@ pub struct Config {
     pub transition_duration: u64,
     pub frame_rate: u64,
     // pub extra_trigger_size: f64,
-    pub extra_trigger_size: NumOrRelative<f64>,
+    pub extra_trigger_size: NumOrRelative<i32>,
     pub monitor: MonitorSpecifier,
     // pub margins: Vec<(Edge, i32)>,
     pub margins: Vec<(Edge, NumOrRelative<i32>)>,
