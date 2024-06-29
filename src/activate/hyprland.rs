@@ -53,15 +53,20 @@ impl NameSpaceMatch {
 }
 
 type MonitorLayerSizeMap = HashMap<String, (i32, i32)>;
-fn get_monitor_map() -> MonitorLayerSizeMap {
-    let ls = Layers::get().unwrap();
-    log::debug!("Layer shells from hyprland: {ls:?}");
+// TODO: only iter included monitors
+fn get_monitor_map() -> Result<MonitorLayerSizeMap, String> {
+    let mls = Layers::get().map_err(|e| format!("Failed to get layer info: {e}"))?;
+    log::debug!("Layer shells from hyprland: {mls:?}");
     let tl_ns = String::from(NAMESPACE_TL);
     let br_ns = String::from(NAMESPACE_BR);
-    let res = ls
+    let res = mls
         .into_iter()
         .map_while(|(ms, mut d)| {
-            let vc = d.levels.remove(TOP_LEVEL).expect("no layer info");
+            let vc = if let Some(v) = d.levels.remove(TOP_LEVEL) {
+                v
+            } else {
+                return Some(Err(format!("No layer info for {ms}")));
+            };
             let mut nsm = NameSpaceMatch::new(vec![tl_ns.to_string(), br_ns.to_string()]);
             let lcm = vc
                 .into_iter()
@@ -76,24 +81,25 @@ fn get_monitor_map() -> MonitorLayerSizeMap {
             if nsm.is_finish() {
                 log::debug!("Layer client for monitor({ms}): {lcm:?}");
                 // top left
-                let tl = lcm.get(&tl_ns.to_string()).unwrap();
+                let tl = lcm.get(&tl_ns.to_string())?;
                 let start_x = tl.x;
                 let start_y = tl.y;
 
                 // bottom right
-                let br = lcm.get(&br_ns.to_string()).unwrap();
+                let br = lcm.get(&br_ns.to_string())?;
                 let end_x = br.x + br.w as i32;
                 let end_y = br.y + br.h as i32;
                 // calculate
                 let w = end_x - start_x;
                 let h = end_y - start_y;
 
-                Some((ms, (w, h)))
+                Some(Ok((ms, (w, h))))
             } else {
                 None
             }
         })
-        .collect::<HashMap<String, (i32, i32)>>();
+        .collect::<Result<HashMap<String, (i32, i32)>, String>>();
+    // .collect::<HashMap<String, (i32, i32)>>();
     res
 }
 
