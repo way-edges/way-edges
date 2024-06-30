@@ -225,6 +225,7 @@ impl super::WindowInitializer for Hyprland {
             })
         });
         if let Err(e) = res {
+            app.quit();
             super::notify_app_error(e)
         }
     }
