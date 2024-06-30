@@ -9,37 +9,52 @@ use gtk::prelude::{DisplayExt, MonitorExt};
 use gtk::Application;
 use gtk4_layer_shell::{Edge, LayerShell};
 
-fn get_monitors() -> gio::ListModel {
-    let dt_display = gtk::gdk::Display::default().expect("display for monitor not found");
-    let mms = dt_display.monitors();
-    log::debug!("Get monitors: {mms:?}");
-    mms
+fn notify_app_error(err_des: String) {
+    log::error!("{err_des}");
+    if let Err(e) = notify_rust::Notification::new()
+        .summary("Way-edges")
+        .body(&err_des)
+        .urgency(notify_rust::Urgency::Critical)
+        .show()
+    {
+        log::error!("error sending Error notification: {e}");
+    }
 }
 
-fn find_monitor(monitors: &gio::ListModel, specifier: MonitorSpecifier) -> Monitor {
-    let a = match specifier {
+fn get_monitors() -> Result<gio::ListModel, String> {
+    let dt_display = gtk::gdk::Display::default().ok_or("display for monitor not found")?;
+    let mms = dt_display.monitors();
+    log::debug!("Get monitors: {mms:?}");
+    Ok(mms)
+}
+
+fn find_monitor(monitors: &gio::ListModel, specifier: MonitorSpecifier) -> Result<Monitor, String> {
+    match specifier {
         MonitorSpecifier::ID(index) => {
             let a = monitors
                 .iter::<Monitor>()
                 .nth(index)
-                .unwrap_or_else(|| panic!("error matching monitor with id: {index}"))
-                .unwrap_or_else(|_| panic!("error matching monitor with id: {index}"));
-            a
+                .ok_or(format!("error matching monitor with id: {index}"))?
+                .map_err(|e| format!("error matching monitor with id: {index}\nError: {e}"))?;
+            Ok(a)
         }
         MonitorSpecifier::Name(name) => {
             for m in monitors.iter() {
-                let m: Monitor = m.unwrap();
-                if m.connector().unwrap() == name {
-                    return m;
+                let m: Monitor =
+                    m.map_err(|e| format!("error matching monitor with name: {name}\nError: {e}"))?;
+                if m.connector()
+                    .ok_or(format!("Fail to get monitor connector name: {m:?}"))?
+                    == name
+                {
+                    return Ok(m);
                 }
             }
-            panic!("monitor with name: {name} not found");
+            Err(format!("monitor with name: {name} not found"))
         }
-    };
-    a
+    }
 }
 
-fn calculate_relative(cfg: &mut Config, max_size_raw: (i32, i32)) {
+fn calculate_relative(cfg: &mut Config, max_size_raw: (i32, i32)) -> Result<(), String> {
     let max_size = match cfg.edge {
         Edge::Left | Edge::Right => (max_size_raw.0, max_size_raw.1),
         Edge::Top | Edge::Bottom => (max_size_raw.1, max_size_raw.0),
@@ -66,12 +81,14 @@ fn calculate_relative(cfg: &mut Config, max_size_raw: (i32, i32)) {
 
     // remember to check height since we didn't do it in `parse_config`
     // when passing only `rel_height`
-    if cfg.width.get_num().unwrap() * 2. > cfg.height.get_num().unwrap() {
-        panic!(
-            "relative height detect: width * 2 must be <= height: {} * 2 <= {}",
-            cfg.width.get_num().unwrap(),
-            cfg.height.get_num().unwrap()
-        );
+    let w = cfg.width.get_num()?;
+    let h = cfg.height.get_num()?;
+    if w * 2. > h {
+        Err(format!(
+            "relative height detect: width * 2 must be <= height: {w} * 2 <= {h}",
+        ))
+    } else {
+        Ok(())
     }
 }
 

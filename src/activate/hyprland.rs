@@ -9,11 +9,12 @@ use crate::config::{GroupConfig, MonitorSpecifier};
 use gio::glib::idle_add_local_once;
 use gtk::gdk::Monitor;
 use gtk::glib;
-use gtk::prelude::{GtkWindowExt, WidgetExt};
+use gtk::prelude::{ApplicationExt, GtkWindowExt, WidgetExt};
 use gtk::{Application, ApplicationWindow};
 use gtk4_layer_shell::{Edge, Layer, LayerShell};
 use hyprland::data::{LayerClient, Layers};
 use hyprland::shared::HyprData;
+use scopeguard::defer;
 
 const NAMESPACE_TL: &str = "way-edges-detect-tl";
 const NAMESPACE_BR: &str = "way-edges-detect-br";
@@ -59,8 +60,7 @@ fn get_monitor_map() -> Result<MonitorLayerSizeMap, String> {
     log::debug!("Layer shells from hyprland: {mls:?}");
     let tl_ns = String::from(NAMESPACE_TL);
     let br_ns = String::from(NAMESPACE_BR);
-    let res = mls
-        .into_iter()
+    mls.into_iter()
         .map_while(|(ms, mut d)| {
             let vc = if let Some(v) = d.levels.remove(TOP_LEVEL) {
                 v
@@ -98,9 +98,7 @@ fn get_monitor_map() -> Result<MonitorLayerSizeMap, String> {
                 None
             }
         })
-        .collect::<Result<HashMap<String, (i32, i32)>, String>>();
-    // .collect::<HashMap<String, (i32, i32)>>();
-    res
+        .collect::<Result<HashMap<String, (i32, i32)>, String>>()
 }
 
 fn window_for_detect(
@@ -137,6 +135,8 @@ fn window_for_detect(
     [Some(win_tl), Some(win_br)]
 }
 
+// TODO: Strong ref about ApplicationWindow should be weak
+// change Option to WeakRef
 fn connect(ws: Vec<Option<ApplicationWindow>>, app: &gtk::Application, cfgs: GroupConfig) {
     // connect show
     let max_count = ws.len();
@@ -148,55 +148,84 @@ fn connect(ws: Vec<Option<ApplicationWindow>>, app: &gtk::Application, cfgs: Gro
             idle_add_local_once(
                 gtk::glib::clone!(@weak counter, @strong ws, @weak app, @weak cfgs  => move || {
                     if add_or_else(&counter, max_count) {
-                        let mm = get_monitor_map();
-                        log::debug!("Calculated layer map sizes: {mm:?}");
-                        ws.into_iter().for_each(|mut w| {
-                            w.take().unwrap().close();
+                        defer!(
+                            ws.into_iter().for_each(|mut w| {
+                                if let Some(w) = w.take() {
+                                    w.close();
+                                }
+                            });
+                        );
+                        let res = get_monitor_map().and_then(|mm| {
+                            log::debug!("Calculated layer map sizes: {mm:?}");
+                            let monitors = get_monitors()?;
+                            let mm = mm.into_iter().map(|(m, s)| {
+                                let m = find_monitor(&monitors, MonitorSpecifier::Name(m))?;
+                                Ok((m, s))
+                            }).collect::<Result<HashMap<Monitor, (i32, i32)>, String>>()?;
+                            let cfgs = cfgs.take().ok_or("cfgs is None")?;
+                            let btis = cfgs.into_iter().map(|mut cfg| {
+                                let monitor = find_monitor(&monitors, cfg.monitor.clone())?;
+                                let size = *mm.get(&monitor).ok_or(format!("Did not find Calculated monitor size for {:?}", cfg.monitor))?;
+                                calculate_relative(&mut cfg, size)?;
+                                Ok(ButtonItem { cfg, monitor })
+                            }).collect::<Result<Vec<ButtonItem>, String>>()?;
+                            create_buttons(&app, btis);
+                            Ok(())
                         });
-                        let monitors = get_monitors();
-                        let mm: HashMap<Monitor, (i32, i32)> = mm.into_iter().map(|(m, s)| {
-                            let m = find_monitor(&monitors, MonitorSpecifier::Name(m));
-                            (m, s)
-                        }).collect();
-                        let cfgs = cfgs.take().unwrap();
-                        let btis: Vec<ButtonItem> = cfgs.into_iter().map(|mut cfg| {
-                            let monitor = find_monitor(&monitors, cfg.monitor.clone());
-                            let size = *mm.get(&monitor).unwrap();
-                            calculate_relative(&mut cfg, size);
-                            ButtonItem { cfg, monitor }
-                        }).collect();
-                        create_buttons(&app, btis);
+                        if let Err(e) = res {
+                            app.quit();
+                            super::notify_app_error(format!("Failed to initialize app: get_monitor_map(): {e}"));
+                            return;
+                        }
                     }
                 })
             );
         }));
     });
     ws.iter().for_each(|w| {
-        connect(&w.clone().unwrap());
+        if let Some(w) = w.as_ref() {
+            connect(w);
+        } else {
+            log::debug!("Positioning window not found")
+        }
     });
 }
 
-fn get_need_monitors(cfgs: &GroupConfig, monitors: &gio::ListModel) -> Vec<Monitor> {
+fn get_need_monitors(
+    cfgs: &GroupConfig,
+    monitors: &gio::ListModel,
+) -> Result<Vec<Monitor>, String> {
     let mut mm = HashMap::new();
-    cfgs.iter().for_each(|cfg| {
-        let monitor = super::find_monitor(monitors, cfg.monitor.clone());
+    cfgs.iter().try_for_each(|cfg| -> Result<(), String> {
+        let monitor = super::find_monitor(monitors, cfg.monitor.clone())?;
         mm.entry(monitor).or_insert(());
-    });
-    mm.into_keys().collect()
+        Ok(())
+    })?;
+    Ok(mm.into_keys().collect())
 }
 
 pub struct Hyprland;
 impl super::WindowInitializer for Hyprland {
     fn init_window(app: &Application, cfgs: GroupConfig) {
-        let monitors = get_monitors();
-        let ml = get_need_monitors(&cfgs, &monitors);
-        let ws: Vec<Option<ApplicationWindow>> = ml
-            .into_iter()
-            .flat_map(|m| window_for_detect(app, m))
-            .collect();
-        connect(ws.clone(), app, cfgs);
-        ws.iter().for_each(|f| {
-            f.as_ref().unwrap().present();
+        let res = get_monitors().and_then(|monitors| {
+            get_need_monitors(&cfgs, &monitors).map(|ml| {
+                let ws: Vec<Option<ApplicationWindow>> = ml
+                    .into_iter()
+                    .flat_map(|m| window_for_detect(app, m))
+                    .collect();
+                connect(ws.clone(), app, cfgs);
+
+                ws.iter().for_each(|w| {
+                    if let Some(w) = w.as_ref() {
+                        w.present();
+                    } else {
+                        log::debug!("Positioning window not found")
+                    }
+                });
+            })
         });
+        if let Err(e) = res {
+            super::notify_app_error(e)
+        }
     }
 }
