@@ -1,6 +1,10 @@
+use crate::config::Config;
+
 use super::draws;
 use super::draws::transition_state::TransitionState;
 use super::EventMap;
+use clap::error::Result;
+use gtk::cairo;
 use gtk::cairo::Context;
 use gtk::cairo::RectangleInt;
 use gtk::cairo::Region;
@@ -50,12 +54,15 @@ impl MouseState {
     pub fn set_pressing(&mut self, p: u32) {
         self.pressing.set(Some(p));
     }
-    pub fn take_pressing(&mut self) -> u32 {
-        let old = self.pressing.take().unwrap();
-        if !self.hovering {
-            self.set_transition(false);
-        };
-        old
+    pub fn take_pressing(&mut self) -> Option<u32> {
+        if let Some(old) = self.pressing.take() {
+            if !self.hovering {
+                self.set_transition(false);
+            };
+            Some(old)
+        } else {
+            None
+        }
     }
 }
 
@@ -70,37 +77,32 @@ impl FrameManager {
             frame_gap: Duration::from_micros(1_000_000 / frame_rate),
         }
     }
-    fn start(&mut self, darea: &DrawingArea) {
-        if self.runner.is_some() {
-            return;
+    fn start(&mut self, darea: &DrawingArea) -> Result<(), String> {
+        if self.runner.is_none() {
+            let (r, mut runner) = interval_task::channel::new(self.frame_gap);
+            runner.start()?;
+            self.runner = Some(runner);
+            glib::spawn_future_local(glib::clone!(@weak darea => async move {
+                while r.recv().await.is_ok() {
+                    darea.queue_draw();
+                }
+            }));
         }
-        let (r, mut runner) = interval_task::channel::new(self.frame_gap);
-        runner.start().unwrap();
-        self.runner = Some(runner);
-        glib::spawn_future_local(glib::clone!(@weak darea => async move {
-            while r.recv().await.is_ok() {
-                darea.queue_draw();
-            }
-        }));
+        Ok(())
     }
-    fn stop(&mut self) {
+    fn stop(&mut self) -> Result<(), String> {
         if let Some(runner) = self.runner.take() {
-            runner.close().unwrap();
+            runner.close()?;
         }
+        Ok(())
     }
 }
 
-pub fn setup_draw(
-    window: &gtk::ApplicationWindow,
-    edge: Edge,
-    size: (f64, f64),
-    cbs: EventMap,
-    color: RGBA,
-    extra_trigger_size: i32,
-    transition_duration: u64,
-    frame_rate: u64,
-) -> DrawingArea {
+pub fn setup_draw(window: &gtk::ApplicationWindow, mut cfg: Config) -> Result<DrawingArea, String> {
     let darea = DrawingArea::new();
+    let size = cfg.get_size_into()?;
+    let edge = cfg.edge;
+    let extra_trigger_size = cfg.extra_trigger_size.get_num_into()?;
     let map_size = (size.0 as i32 + extra_trigger_size, size.1 as i32);
     match edge {
         Edge::Left | Edge::Right => {
@@ -116,7 +118,7 @@ pub fn setup_draw(
 
     let transition_range = (0., size.0);
     let ts = TransitionState::new(
-        Duration::from_millis(transition_duration),
+        Duration::from_millis(cfg.transition_duration),
         transition_range.0,
         transition_range.1,
     );
@@ -124,22 +126,34 @@ pub fn setup_draw(
     let is_pressing = mouse_state.pressing.clone();
     let set_rotate = draw_rotation(edge, size);
     let mut set_motion = draw_motion(edge, transition_range, extra_trigger_size as f64);
-    let set_core = draw_core(map_size, size, color, extra_trigger_size as f64);
+    let set_core = draw_core(map_size, size, cfg.color, extra_trigger_size as f64)?;
     let set_input_region = draw_input_region(size, edge, extra_trigger_size as f64);
-    let mut set_frame_manger = draw_frame_manager(frame_rate, transition_range);
+    let mut set_frame_manger = draw_frame_manager(cfg.frame_rate, transition_range);
     darea.set_draw_func(glib::clone!(@weak window =>move |darea, context, _, _| {
         set_rotate(context);
         let visible_y = ts.get_y();
         set_motion(context, visible_y);
-        set_core(context, is_pressing.get().is_some());
-        set_input_region(&window, visible_y);
-        set_frame_manger(darea, visible_y, ts.is_forward.get());
+        let res = set_core(context, is_pressing.get().is_some()).and_then(|_| {
+            set_input_region(&window, visible_y).and_then(|_| {
+                set_frame_manger(darea, visible_y, ts.is_forward.get())
+            })
+        });
+        if let Err(e) = res {
+            window.close();
+            log::error!("{e}");
+            // error ignored
+            notify_rust::Notification::new().summary("Way-edges widget draw error").body(&e).show().ok();
+        }
     }));
     let mouse_state = Rc::new(RefCell::new(mouse_state));
-    set_event_mouse_click(&darea, cbs, mouse_state.clone());
+    set_event_mouse_click(
+        &darea,
+        cfg.event_map.take().ok_or("EventMap is None")?,
+        mouse_state.clone(),
+    );
     set_event_mouse_move(&darea, mouse_state);
     window.set_child(Some(&darea));
-    darea
+    Ok(darea)
 }
 
 fn draw_core(
@@ -147,25 +161,31 @@ fn draw_core(
     size: (f64, f64),
     color: RGBA,
     extra_trigger_size: f64,
-) -> impl Fn(&Context, bool) {
-    let (b, n, p) = draws::pre_draw::draw_to_surface(map_size, size, color, extra_trigger_size);
+) -> Result<impl Fn(&Context, bool) -> Result<(), String>, String> {
+    let (b, n, p) = draws::pre_draw::draw_to_surface(map_size, size, color, extra_trigger_size)?;
     let f_map_size = (map_size.0 as f64, map_size.1 as f64);
 
-    move |ctx: &Context, pressing: bool| {
+    fn error_handle(e: cairo::Error) -> String {
+        format!("Draw core error: {:?}", e)
+    }
+
+    Ok(move |ctx: &Context, pressing: bool| -> Result<(), String> {
         // base_surface
-        ctx.set_source_surface(&b, 0., 0.).unwrap();
+        ctx.set_source_surface(&b, 0., 0.).map_err(error_handle)?;
         ctx.rectangle(0., 0., f_map_size.0, f_map_size.1);
-        ctx.fill().unwrap();
+        ctx.fill().map_err(error_handle)?;
 
         // mask
         if pressing {
-            ctx.set_source_surface(&p, 0., 0.).unwrap();
+            ctx.set_source_surface(&p, 0., 0.)
         } else {
-            ctx.set_source_surface(&n, 0., 0.).unwrap();
+            ctx.set_source_surface(&n, 0., 0.)
         }
+        .map_err(error_handle)?;
         ctx.rectangle(0., 0., f_map_size.0, f_map_size.1);
-        ctx.fill().unwrap();
-    }
+        ctx.fill().map_err(error_handle)?;
+        Ok(())
+    })
 }
 
 fn draw_motion(
@@ -183,14 +203,18 @@ fn draw_motion(
     }
 }
 
-fn draw_frame_manager(frame_rate: u64, range: (f64, f64)) -> impl FnMut(&DrawingArea, f64, bool) {
+fn draw_frame_manager(
+    frame_rate: u64,
+    range: (f64, f64),
+) -> impl FnMut(&DrawingArea, f64, bool) -> Result<(), String> {
     let mut frame_manager = FrameManager::new(frame_rate);
     move |darea: &DrawingArea, visible_y: f64, is_forward: bool| {
         if (is_forward && visible_y < range.1) || (!is_forward && visible_y > range.0) {
-            frame_manager.start(darea);
+            frame_manager.start(darea)?;
         } else {
-            frame_manager.stop();
+            frame_manager.stop()?;
         }
+        Ok(())
     }
 }
 
@@ -198,7 +222,7 @@ fn draw_input_region(
     size: (f64, f64),
     edge: Edge,
     extra_trigger_size: f64,
-) -> impl Fn(&gtk::ApplicationWindow, f64) {
+) -> impl Fn(&gtk::ApplicationWindow, f64) -> Result<(), String> {
     let get_region: Box<dyn Fn(f64) -> Region> = match edge {
         Edge::Left => Box::new(move |visible_y: f64| {
             Region::create_rectangle(&RectangleInt::new(
@@ -237,8 +261,9 @@ fn draw_input_region(
     move |window: &gtk::ApplicationWindow, visible_y: f64| {
         window
             .surface()
-            .unwrap()
+            .ok_or("Input region surface not found")?
             .set_input_region(&get_region(visible_y));
+        Ok(())
     }
 }
 
@@ -272,14 +297,17 @@ fn set_event_mouse_click(
     let click_done_cb = move |mouse_state: &Rc<RefCell<MouseState>>,
                               darea: &DrawingArea,
                               event_map: &Rc<RefCell<EventMap>>| {
-        let btn = mouse_state.borrow_mut().take_pressing();
-        if show_mouse_debug {
-            notify(&format!("key released: {}", btn));
-        };
-        if let Some(cb) = event_map.borrow_mut().get_mut(&btn) {
-            cb();
-        };
-        darea.queue_draw();
+        if let Some(btn) = mouse_state.borrow_mut().take_pressing() {
+            if show_mouse_debug {
+                notify(&format!("key released: {}", btn));
+            };
+            if let Some(cb) = event_map.borrow_mut().get_mut(&btn) {
+                cb();
+            };
+            darea.queue_draw();
+        } else {
+            log::debug!("No pressing button in mouse_state");
+        }
     };
 
     click_control.connect_pressed(

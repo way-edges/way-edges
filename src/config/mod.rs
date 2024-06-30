@@ -175,11 +175,13 @@ pub fn get_config(group_name: &Option<String>) -> Result<GroupConfig, String> {
     parse_config(&s, group_name)
 }
 
+#[allow(dead_code)]
 pub fn get_config_test() {
     let res = get_config(&None).unwrap();
     println!("res: {res:#?}");
 }
 
+#[allow(dead_code)]
 pub fn parse_config_test() {
     let data = r#"
     {

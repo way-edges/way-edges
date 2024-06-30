@@ -21,6 +21,8 @@ where
     Num(T),
     Relative(f64),
 }
+
+#[allow(dead_code)]
 impl<T> NumOrRelative<T>
 where
     T: Copy + Clone + Default + PartialOrd,
@@ -60,24 +62,24 @@ where
         }
     }
 }
-pub trait Convert<U: Copy + Clone>
-where
-    U: Copy + Clone + Default + PartialOrd,
-{
-    fn convert(self) -> NumOrRelative<U>;
-}
-impl<T, U> Convert<U> for NumOrRelative<T>
-where
-    T: Copy + Clone + Into<U> + Default + PartialOrd,
-    U: Copy + Clone + Into<T> + Default + PartialOrd,
-{
-    fn convert(self) -> NumOrRelative<U> {
-        match self {
-            NumOrRelative::Num(num) => NumOrRelative::Num(num.into()),
-            NumOrRelative::Relative(rel) => NumOrRelative::Relative(rel),
-        }
-    }
-}
+// pub trait Convert<U: Copy + Clone>
+// where
+//     U: Copy + Clone + Default + PartialOrd,
+// {
+//     fn convert(self) -> NumOrRelative<U>;
+// }
+// impl<T, U> Convert<U> for NumOrRelative<T>
+// where
+//     T: Copy + Clone + Into<U> + Default + PartialOrd,
+//     U: Copy + Clone + Into<T> + Default + PartialOrd,
+// {
+//     fn convert(self) -> NumOrRelative<U> {
+//         match self {
+//             NumOrRelative::Num(num) => NumOrRelative::Num(num.into()),
+//             NumOrRelative::Relative(rel) => NumOrRelative::Relative(rel),
+//         }
+//     }
+// }
 impl NumOrRelative<f64> {
     pub fn convert_i32(self) -> NumOrRelative<i32> {
         match self {
@@ -119,6 +121,7 @@ pub struct Config {
     pub margins: Vec<(Edge, NumOrRelative<i32>)>,
 }
 
+#[allow(dead_code)]
 impl Config {
     pub fn get_size(&self) -> Result<(f64, f64), &str> {
         Ok((self.width.get_num()?, self.height.get_num()?))

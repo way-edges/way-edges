@@ -1,27 +1,32 @@
+use std::{cell::Cell, rc::Rc};
+
 use gtk::cairo::{Format, ImageSurface};
 
 /// Blur a cairo image surface
-pub fn blur_image_surface(surface: &mut ImageSurface, radius: i32) {
+pub fn blur_image_surface(surface: &mut ImageSurface, radius: i32) -> Result<(), String> {
     let mut width = surface.width();
     let height = surface.height();
-    let temp =
-        ImageSurface::create(Format::ARgb32, width, height).expect("Couldn’t create surface");
+    let temp = ImageSurface::create(Format::ARgb32, width, height)
+        .map_err(|e| format!("Blur surface error: {e}"))?;
     let mut kernel = [0u8; 17];
     let size = kernel.len() as i32;
     let half = size / 2;
 
     match surface.format() {
-        Format::A1 => return,
+        Format::A1 => return Ok(()),
 
         Format::A8 => width /= 4,
         _ => (),
     }
 
+    // how should i deal with this kind of err?
+    let temp_err: Rc<Cell<Option<String>>> = Rc::new(Cell::new(None));
+    let temp_err_clone = temp_err.clone();
     let src_stride = surface.stride();
     let dst_stride = temp.stride();
     surface
         .with_data(move |src| {
-            temp.with_data(move |dst| {
+            let res = temp.with_data(move |dst| {
                 let src =
                     unsafe { std::slice::from_raw_parts_mut(src.as_ptr() as *mut u8, src.len()) };
                 let dst =
@@ -110,10 +115,17 @@ pub fn blur_image_surface(surface: &mut ImageSurface, radius: i32) {
                         d[j as usize] = (x / a) << 24 | (y / a) << 16 | (z / a) << 8 | (w / a);
                     }
                 }
-            })
-            .unwrap();
+            });
+
+            if let Err(e) = res {
+                temp_err_clone.set(Some(format!("Blur surface error temp: {e}")));
+            }
         })
-        .unwrap();
+        .map_err(|e| format!("Blur surface error: {e}"))?;
+    if let Some(e) = temp_err.take() {
+        return Err(e);
+    }
 
     surface.mark_dirty();
+    Ok(())
 }

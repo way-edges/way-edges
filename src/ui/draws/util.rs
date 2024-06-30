@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use gtk::cairo::{self, Context, Format, ImageSurface};
 
 pub fn copy_surface(src: &ImageSurface) -> ImageSurface {

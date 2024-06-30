@@ -17,27 +17,8 @@ pub fn new_window(app: &Application, mut config: Config) -> gtk::ApplicationWind
         window.set_anchor(pos, true);
     }
 
-    // margin
-    std::mem::take(&mut config.margins)
-        .into_iter()
-        .for_each(|(e, m)| {
-            window.set_margin(e, m.get_num_into().unwrap());
-        });
-
-    draw_area::setup_draw(
-        &window,
-        config.edge,
-        config.get_size_into().unwrap(),
-        config.event_map.take().unwrap(),
-        config.color,
-        config.extra_trigger_size.get_num().unwrap(),
-        config.transition_duration,
-        config.frame_rate,
-    );
-    drop(config);
-
     // set something after show
-    window.connect_show(move |w: &gtk::ApplicationWindow| {
+    window.connect_show(|w: &gtk::ApplicationWindow| {
         // transparency background !! may not work for some gtk4 theme, and idk what to do with it !!
         let provider = CssProvider::new();
         provider
@@ -50,6 +31,29 @@ pub fn new_window(app: &Application, mut config: Config) -> gtk::ApplicationWind
         );
     });
 
-    window.present();
+    // margin
+    let res = std::mem::take(&mut config.margins)
+        .into_iter()
+        .try_for_each(|(e, m)| {
+            window.set_margin(e, m.get_num_into()?);
+            Ok(())
+        })
+        .and_then(|_| {
+            draw_area::setup_draw(&window, config).map(|_| {
+                window.present();
+            })
+        });
+    if let Err(e) = res {
+        window.close();
+        let msg = format!("Failed to create window: {e}");
+        log::error!("{msg}");
+        // error ignored
+        notify_rust::Notification::new()
+            .summary("Way-edges widgets")
+            .body(&msg)
+            .show()
+            .ok();
+    }
+
     window
 }
