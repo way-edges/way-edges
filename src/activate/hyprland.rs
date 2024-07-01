@@ -1,15 +1,17 @@
 #![cfg(feature = "hyprland")]
 
-use std::cell::{Cell, RefCell};
+use std::cell::Cell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use crate::activate::{calculate_relative, create_buttons, find_monitor, get_monitors, ButtonItem};
-use crate::config::{GroupConfig, MonitorSpecifier};
+use crate::activate::{
+    calculate_relative, create_buttons, find_monitor_with_vec, get_monitors, ButtonItem,
+};
+use crate::config::GroupConfig;
 use gio::glib::idle_add_local_once;
 use gtk::gdk::Monitor;
 use gtk::glib;
-use gtk::prelude::{ApplicationExt, GtkWindowExt, WidgetExt};
+use gtk::prelude::{ApplicationExt, GtkWindowExt, MonitorExt, WidgetExt};
 use gtk::{Application, ApplicationWindow};
 use gtk4_layer_shell::{Edge, Layer, LayerShell};
 use hyprland::data::{LayerClient, Layers};
@@ -53,15 +55,17 @@ impl NameSpaceMatch {
     }
 }
 
-type MonitorLayerSizeMap = HashMap<String, (i32, i32)>;
-// TODO: only iter included monitors
-fn get_monitor_map() -> Result<MonitorLayerSizeMap, String> {
+type MonitorLayerSizeMap = HashMap<Monitor, (i32, i32)>;
+fn get_monitor_map(
+    mut needed_monitors: HashMap<String, Monitor>,
+) -> Result<MonitorLayerSizeMap, String> {
     let mls = Layers::get().map_err(|e| format!("Failed to get layer info: {e}"))?;
     log::debug!("Layer shells from hyprland: {mls:?}");
     let tl_ns = String::from(NAMESPACE_TL);
     let br_ns = String::from(NAMESPACE_BR);
     mls.into_iter()
         .map_while(|(ms, mut d)| {
+            let monitor = needed_monitors.remove(&ms)?;
             let vc = if let Some(v) = d.levels.remove(TOP_LEVEL) {
                 v
             } else {
@@ -93,17 +97,26 @@ fn get_monitor_map() -> Result<MonitorLayerSizeMap, String> {
                 let w = end_x - start_x;
                 let h = end_y - start_y;
 
-                Some(Ok((ms, (w, h))))
+                Some(Ok((monitor, (w, h))))
             } else {
                 None
             }
         })
-        .collect::<Result<HashMap<String, (i32, i32)>, String>>()
+        .collect::<Result<MonitorLayerSizeMap, String>>()
+        .and_then(|mlsm| {
+            if needed_monitors.is_empty() {
+                Ok(mlsm)
+            } else {
+                Err(format!(
+                    "Needed monitors not cleared, remaining: {needed_monitors:?}"
+                ))
+            }
+        })
 }
 
 fn window_for_detect(
     app: &Application,
-    monitor: Monitor,
+    monitor: &Monitor,
     // layer: Layer,
 ) -> [ApplicationWindow; 2] {
     // left top
@@ -117,7 +130,7 @@ fn window_for_detect(
     win_tl.set_height_request(1);
     let tlname = String::from("way-edges-detect-tl");
     win_tl.set_namespace(tlname.as_str());
-    win_tl.set_monitor(&monitor);
+    win_tl.set_monitor(monitor);
 
     // bottom left
     let win_br = gtk::ApplicationWindow::new(app);
@@ -130,24 +143,28 @@ fn window_for_detect(
     win_br.set_height_request(1);
     let brname = String::from("way-edges-detect-br");
     win_br.set_namespace(brname.as_str());
-    win_tl.set_monitor(&monitor);
+    win_tl.set_monitor(monitor);
 
     [win_tl, win_br]
 }
 
-// TODO: Strong ref about ApplicationWindow should be weak
-// change Option to WeakRef
-fn connect(ws: Vec<ApplicationWindow>, app: &gtk::Application, cfgs: GroupConfig) {
+fn connect(
+    ws: Vec<ApplicationWindow>,
+    app: &gtk::Application,
+    cfgs: GroupConfig,
+    monitor_connectors: HashMap<String, Monitor>,
+) {
     // connect show
     let max_count = ws.len();
     let counter = Rc::new(Cell::new(0));
-    let cfgs = Rc::new(Cell::new(Some(cfgs)));
+    let cfgs = Rc::new(Cell::new(cfgs));
     let ws = Rc::new(Cell::new(ws));
-    let connect = gtk::glib::clone!(@strong counter, @strong ws, @weak app, @strong cfgs => move |w: &ApplicationWindow| {
-        w.connect_realize(gtk::glib::clone!(@strong counter, @strong ws, @weak app, @strong cfgs => move |_| {
+    let monitor_connectors = Rc::new(Cell::new(monitor_connectors));
+    let connect = gtk::glib::clone!(@strong counter, @strong ws, @weak app, @strong cfgs, @strong monitor_connectors => move |w: &ApplicationWindow| {
+        w.connect_realize(gtk::glib::clone!(@strong counter, @strong ws, @weak app, @strong cfgs, @strong monitor_connectors => move |_| {
             // calculate after all window rendered
             idle_add_local_once(
-                gtk::glib::clone!(@weak counter, @strong ws, @weak app, @weak cfgs  => move || {
+                gtk::glib::clone!(@weak counter, @weak ws, @weak app, @weak cfgs, @weak monitor_connectors  => move || {
                     if add_or_else(&counter, max_count) {
                         let ws = ws.take();
                         defer!(
@@ -155,16 +172,13 @@ fn connect(ws: Vec<ApplicationWindow>, app: &gtk::Application, cfgs: GroupConfig
                                 w.close();
                             });
                         );
-                        let res = get_monitor_map().and_then(|mm| {
+                        let res = get_monitor_map(monitor_connectors.take()).and_then(|mm| {
                             log::debug!("Calculated layer map sizes: {mm:?}");
-                            let monitors = get_monitors()?;
-                            let mm = mm.into_iter().map(|(m, s)| {
-                                let m = find_monitor(&monitors, MonitorSpecifier::Name(m))?;
-                                Ok((m, s))
-                            }).collect::<Result<HashMap<Monitor, (i32, i32)>, String>>()?;
-                            let cfgs = cfgs.take().ok_or("cfgs is None")?;
+                            // let monitors = get_monitors()?;
+                            let cfgs = cfgs.take();
+                            let monitors = mm.keys().collect::<Vec<&Monitor>>();
                             let btis = cfgs.into_iter().map(|mut cfg| {
-                                let monitor = find_monitor(&monitors, cfg.monitor.clone())?;
+                                let monitor = find_monitor_with_vec(&monitors, cfg.monitor.clone())?;
                                 let size = *mm.get(&monitor).ok_or(format!("Did not find Calculated monitor size for {:?}", cfg.monitor))?;
                                 calculate_relative(&mut cfg, size)?;
                                 Ok(ButtonItem { cfg, monitor })
@@ -206,16 +220,26 @@ pub struct Hyprland;
 impl super::WindowInitializer for Hyprland {
     fn init_window(app: &Application, cfgs: GroupConfig) {
         let res = get_monitors().and_then(|monitors| {
-            get_need_monitors(&cfgs, &monitors).map(|ml| {
+            get_need_monitors(&cfgs, &monitors).and_then(|ml| {
                 let ws = ml
-                    .into_iter()
+                    .iter()
                     .flat_map(|m| window_for_detect(app, m))
                     .collect::<Vec<ApplicationWindow>>();
-                connect(ws.clone(), app, cfgs);
-
+                let ml = ml
+                    .into_iter()
+                    .map(|m| {
+                        let name = m
+                            .connector()
+                            .map(|v| v.to_string())
+                            .ok_or(format!("Failed to get monitor name: {m:?}"))?;
+                        Ok((name, m))
+                    })
+                    .collect::<Result<HashMap<String, Monitor>, String>>()?;
+                connect(ws.clone(), app, cfgs, ml);
                 ws.iter().for_each(|w| {
                     w.present();
                 });
+                Ok(())
             })
         });
         if let Err(e) = res {

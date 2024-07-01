@@ -54,6 +54,31 @@ fn find_monitor(monitors: &gio::ListModel, specifier: MonitorSpecifier) -> Resul
     }
 }
 
+fn find_monitor_with_vec(
+    monitors: &[&Monitor],
+    specifier: MonitorSpecifier,
+) -> Result<Monitor, String> {
+    match specifier {
+        MonitorSpecifier::ID(index) => {
+            let a = monitors
+                .get(index)
+                .ok_or(format!("error matching monitor with id: {index}"))?;
+            Ok((*a).clone())
+        }
+        MonitorSpecifier::Name(name) => {
+            for m in monitors.iter() {
+                if m.connector()
+                    .ok_or(format!("Fail to get monitor connector name: {m:?}"))?
+                    == name
+                {
+                    return Ok((*m).clone());
+                }
+            }
+            Err(format!("monitor with name: {name} not found"))
+        }
+    }
+}
+
 fn calculate_relative(cfg: &mut Config, max_size_raw: (i32, i32)) -> Result<(), String> {
     let max_size = match cfg.edge {
         Edge::Left | Edge::Right => (max_size_raw.0, max_size_raw.1),
