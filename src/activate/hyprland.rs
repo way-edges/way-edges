@@ -1,6 +1,6 @@
 #![cfg(feature = "hyprland")]
 
-use std::cell::Cell;
+use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::rc::Rc;
 
@@ -105,7 +105,7 @@ fn window_for_detect(
     app: &Application,
     monitor: Monitor,
     // layer: Layer,
-) -> [Option<ApplicationWindow>; 2] {
+) -> [ApplicationWindow; 2] {
     // left top
     let win_tl = gtk::ApplicationWindow::new(app);
     win_tl.init_layer_shell();
@@ -132,27 +132,27 @@ fn window_for_detect(
     win_br.set_namespace(brname.as_str());
     win_tl.set_monitor(&monitor);
 
-    [Some(win_tl), Some(win_br)]
+    [win_tl, win_br]
 }
 
 // TODO: Strong ref about ApplicationWindow should be weak
 // change Option to WeakRef
-fn connect(ws: Vec<Option<ApplicationWindow>>, app: &gtk::Application, cfgs: GroupConfig) {
+fn connect(ws: Vec<ApplicationWindow>, app: &gtk::Application, cfgs: GroupConfig) {
     // connect show
     let max_count = ws.len();
     let counter = Rc::new(Cell::new(0));
     let cfgs = Rc::new(Cell::new(Some(cfgs)));
+    let ws = Rc::new(Cell::new(ws));
     let connect = gtk::glib::clone!(@strong counter, @strong ws, @weak app, @strong cfgs => move |w: &ApplicationWindow| {
         w.connect_realize(gtk::glib::clone!(@strong counter, @strong ws, @weak app, @strong cfgs => move |_| {
             // calculate after all window rendered
             idle_add_local_once(
                 gtk::glib::clone!(@weak counter, @strong ws, @weak app, @weak cfgs  => move || {
                     if add_or_else(&counter, max_count) {
+                        let ws = ws.take();
                         defer!(
-                            ws.into_iter().for_each(|mut w| {
-                                if let Some(w) = w.take() {
-                                    w.close();
-                                }
+                            ws.into_iter().for_each(|w| {
+                                w.close();
                             });
                         );
                         let res = get_monitor_map().and_then(|mm| {
@@ -182,13 +182,11 @@ fn connect(ws: Vec<Option<ApplicationWindow>>, app: &gtk::Application, cfgs: Gro
             );
         }));
     });
-    ws.iter().for_each(|w| {
-        if let Some(w) = w.as_ref() {
+    unsafe {
+        ws.as_ptr().as_ref().unwrap().iter().for_each(|w| {
             connect(w);
-        } else {
-            log::debug!("Positioning window not found")
-        }
-    });
+        });
+    }
 }
 
 fn get_need_monitors(
@@ -209,18 +207,14 @@ impl super::WindowInitializer for Hyprland {
     fn init_window(app: &Application, cfgs: GroupConfig) {
         let res = get_monitors().and_then(|monitors| {
             get_need_monitors(&cfgs, &monitors).map(|ml| {
-                let ws: Vec<Option<ApplicationWindow>> = ml
+                let ws = ml
                     .into_iter()
                     .flat_map(|m| window_for_detect(app, m))
-                    .collect();
+                    .collect::<Vec<ApplicationWindow>>();
                 connect(ws.clone(), app, cfgs);
 
                 ws.iter().for_each(|w| {
-                    if let Some(w) = w.as_ref() {
-                        w.present();
-                    } else {
-                        log::debug!("Positioning window not found")
-                    }
+                    w.present();
                 });
             })
         });
