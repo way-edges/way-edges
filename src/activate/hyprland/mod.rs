@@ -1,27 +1,34 @@
 #![cfg(feature = "hyprland")]
 
+mod monitor;
+use monitor::*;
+
 use std::cell::Cell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
 use crate::activate::{
-    calculate_relative, create_buttons, find_monitor_with_vec, get_monitors, ButtonItem,
+    calculate_relative, create_buttons, find_monitor_with_vec, get_monitors, notify_app_error,
+    ButtonItem,
 };
 use crate::config::GroupConfig;
 use gio::glib::idle_add_local_once;
 use gtk::gdk::Monitor;
 use gtk::glib;
-use gtk::prelude::{ApplicationExt, GtkWindowExt, MonitorExt, WidgetExt};
+use gtk::prelude::{GtkWindowExt, MonitorExt, WidgetExt};
 use gtk::{Application, ApplicationWindow};
 use gtk4_layer_shell::{Edge, Layer, LayerShell};
-use hyprland::data::{LayerClient, Layers};
-use hyprland::shared::HyprData;
 use scopeguard::defer;
 
+/// namespace for detect size of available working area
+/// TL: Top Left
 const NAMESPACE_TL: &str = "way-edges-detect-tl";
-const NAMESPACE_BR: &str = "way-edges-detect-br";
-const TOP_LEVEL: &str = "2";
 
+/// namespace for detect size of available working area
+/// BR: Bottom Right
+const NAMESPACE_BR: &str = "way-edges-detect-br";
+
+/// reach max counter
 type Counter = Rc<Cell<usize>>;
 fn add_or_else(c: &Counter, max: usize) -> bool {
     if c.get() == max - 1 {
@@ -32,88 +39,8 @@ fn add_or_else(c: &Counter, max: usize) -> bool {
     }
 }
 
-struct NameSpaceMatch(HashMap<String, bool>, usize);
-impl NameSpaceMatch {
-    fn new(vs: Vec<String>) -> Self {
-        NameSpaceMatch(HashMap::from_iter(vs.into_iter().map(|s| (s, false))), 0)
-    }
-    fn ok(&mut self, s: &String) -> bool {
-        if let Some(b) = self.0.get(s) {
-            if *b {
-                panic!("{s} found twice");
-            } else {
-                self.0.insert(s.clone(), true);
-                self.1 += 1;
-                true
-            }
-        } else {
-            false
-        }
-    }
-    fn is_finish(&self) -> bool {
-        self.1 == self.0.len()
-    }
-}
-
-type MonitorLayerSizeMap = HashMap<Monitor, (i32, i32)>;
-fn get_monitor_map(
-    mut needed_monitors: HashMap<String, Monitor>,
-) -> Result<MonitorLayerSizeMap, String> {
-    let mls = Layers::get().map_err(|e| format!("Failed to get layer info: {e}"))?;
-    log::debug!("Layer shells from hyprland: {mls:?}");
-    let tl_ns = String::from(NAMESPACE_TL);
-    let br_ns = String::from(NAMESPACE_BR);
-    mls.into_iter()
-        .map_while(|(ms, mut d)| {
-            let monitor = needed_monitors.remove(&ms)?;
-            let vc = if let Some(v) = d.levels.remove(TOP_LEVEL) {
-                v
-            } else {
-                return Some(Err(format!("No layer info for {ms}")));
-            };
-            let mut nsm = NameSpaceMatch::new(vec![tl_ns.to_string(), br_ns.to_string()]);
-            let lcm = vc
-                .into_iter()
-                .filter_map(|c| {
-                    if nsm.ok(&c.namespace) {
-                        Some((c.namespace.clone(), c))
-                    } else {
-                        None
-                    }
-                })
-                .collect::<HashMap<String, LayerClient>>();
-            if nsm.is_finish() {
-                log::debug!("Layer client for monitor({ms}): {lcm:?}");
-                // top left
-                let tl = lcm.get(&tl_ns.to_string())?;
-                let start_x = tl.x;
-                let start_y = tl.y;
-
-                // bottom right
-                let br = lcm.get(&br_ns.to_string())?;
-                let end_x = br.x + br.w as i32;
-                let end_y = br.y + br.h as i32;
-                // calculate
-                let w = end_x - start_x;
-                let h = end_y - start_y;
-
-                Some(Ok((monitor, (w, h))))
-            } else {
-                None
-            }
-        })
-        .collect::<Result<MonitorLayerSizeMap, String>>()
-        .and_then(|mlsm| {
-            if needed_monitors.is_empty() {
-                Ok(mlsm)
-            } else {
-                Err(format!(
-                    "Needed monitors not cleared, remaining: {needed_monitors:?}"
-                ))
-            }
-        })
-}
-
+/// create window for detection on specific monitor
+/// 2 window for positioning: one on top-left corner; one on bottom-right corner
 fn window_for_detect(
     app: &Application,
     monitor: &Monitor,
@@ -128,8 +55,7 @@ fn window_for_detect(
     win_tl.set_anchor(Edge::Left, true);
     win_tl.set_width_request(1);
     win_tl.set_height_request(1);
-    let tlname = String::from("way-edges-detect-tl");
-    win_tl.set_namespace(tlname.as_str());
+    win_tl.set_namespace(NAMESPACE_TL);
     win_tl.set_monitor(monitor);
 
     // bottom left
@@ -141,43 +67,57 @@ fn window_for_detect(
     win_br.set_anchor(Edge::Right, true);
     win_br.set_width_request(1);
     win_br.set_height_request(1);
-    let brname = String::from("way-edges-detect-br");
-    win_br.set_namespace(brname.as_str());
+    win_br.set_namespace(NAMESPACE_BR);
     win_tl.set_monitor(monitor);
 
     [win_tl, win_br]
 }
 
+/// connect realize signal.
+/// get layer info from hyprland after rendered.
+/// calculate the available area size for each monitor.
+/// calculate relative size.
+/// render widgets.
 fn connect(
     ws: Vec<ApplicationWindow>,
     app: &gtk::Application,
     cfgs: GroupConfig,
     monitor_connectors: HashMap<String, Monitor>,
 ) {
-    // connect show
-    let max_count = ws.len();
+    let windows_count = ws.len();
+
+    // as for why so many rc cells, `connect_realize` is not `FnOnce` but `Fn`
+    // idk what i can do better for this
     let counter = Rc::new(Cell::new(0));
     let cfgs = Rc::new(Cell::new(cfgs));
     let ws = Rc::new(Cell::new(ws));
     let monitor_connectors = Rc::new(Cell::new(monitor_connectors));
+
+    // used to setup realize event for each window
     let connect = gtk::glib::clone!(@strong counter, @strong ws, @weak app, @strong cfgs, @strong monitor_connectors => move |w: &ApplicationWindow| {
         w.connect_realize(gtk::glib::clone!(@strong counter, @strong ws, @weak app, @strong cfgs, @strong monitor_connectors => move |_| {
-            // calculate after all window rendered
+            // calculate after all window rendered(windows are not actually rendered when realize signaled)
             idle_add_local_once(
                 gtk::glib::clone!(@weak counter, @weak ws, @weak app, @weak cfgs, @weak monitor_connectors  => move || {
-                    if add_or_else(&counter, max_count) {
+                    // we need to get all layer info of windows
+                    // we are going to do it after the last window rendered
+                    // and we use counter to do it
+                    if add_or_else(&counter, windows_count) {
+                        // close window after calculation
                         let ws = ws.take();
                         defer!(
                             ws.into_iter().for_each(|w| {
                                 w.close();
                             });
                         );
+                        // get available area size for all needed monitor
                         let res = get_monitor_map(monitor_connectors.take()).and_then(|mm| {
                             log::debug!("Calculated layer map sizes: {mm:?}");
-                            // let monitors = get_monitors()?;
                             let cfgs = cfgs.take();
                             let monitors = mm.keys().collect::<Vec<&Monitor>>();
+                            // create button items
                             let btis = cfgs.into_iter().map(|mut cfg| {
+                                // get available area size for each monitor
                                 let monitor = find_monitor_with_vec(&monitors, cfg.monitor.clone())?;
                                 let size = *mm.get(&monitor).ok_or(format!("Did not find Calculated monitor size for {:?}", cfg.monitor))?;
                                 calculate_relative(&mut cfg, size)?;
@@ -187,8 +127,7 @@ fn connect(
                             Ok(())
                         });
                         if let Err(e) = res {
-                            app.quit();
-                            super::notify_app_error(format!("Failed to initialize app: get_monitor_map(): {e}"));
+                            notify_app_error(format!("Failed to initialize app: get_monitor_map(): {e}"), &app);
                             return;
                         }
                     }
@@ -203,28 +142,18 @@ fn connect(
     }
 }
 
-fn get_need_monitors(
-    cfgs: &GroupConfig,
-    monitors: &gio::ListModel,
-) -> Result<Vec<Monitor>, String> {
-    let mut mm = HashMap::new();
-    cfgs.iter().try_for_each(|cfg| -> Result<(), String> {
-        let monitor = super::find_monitor(monitors, cfg.monitor.clone())?;
-        mm.entry(monitor).or_insert(());
-        Ok(())
-    })?;
-    Ok(mm.into_keys().collect())
-}
-
 pub struct Hyprland;
 impl super::WindowInitializer for Hyprland {
     fn init_window(app: &Application, cfgs: GroupConfig) {
         let res = get_monitors().and_then(|monitors| {
             get_need_monitors(&cfgs, &monitors).and_then(|ml| {
+                // initialize corner windows for eache monitor
                 let ws = ml
                     .iter()
                     .flat_map(|m| window_for_detect(app, m))
                     .collect::<Vec<ApplicationWindow>>();
+
+                // monitor name -> monitor
                 let ml = ml
                     .into_iter()
                     .map(|m| {
@@ -235,7 +164,11 @@ impl super::WindowInitializer for Hyprland {
                         Ok((name, m))
                     })
                     .collect::<Result<HashMap<String, Monitor>, String>>()?;
+
+                // setup connect signal
                 connect(ws.clone(), app, cfgs, ml);
+
+                // show each window
                 ws.iter().for_each(|w| {
                     w.present();
                 });
@@ -243,8 +176,7 @@ impl super::WindowInitializer for Hyprland {
             })
         });
         if let Err(e) = res {
-            app.quit();
-            super::notify_app_error(e)
+            notify_app_error(e, app)
         }
     }
 }

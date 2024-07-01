@@ -9,10 +9,11 @@ use gtk::prelude::{DisplayExt, MonitorExt};
 use gtk::Application;
 use gtk4_layer_shell::{Edge, LayerShell};
 
-fn notify_app_error(err_des: String) {
+fn notify_app_error(err_des: String, app: &Application) {
+    app.quit();
     log::error!("{err_des}");
     if let Err(e) = notify_rust::Notification::new()
-        .summary("Way-edges")
+        .summary("Way-edges app error")
         .body(&err_des)
         .urgency(notify_rust::Urgency::Critical)
         .show()
