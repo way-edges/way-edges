@@ -2,7 +2,7 @@
 
 use super::{calculate_relative, create_buttons, find_monitor, ButtonItem};
 use crate::config::GroupConfig;
-use gtk::prelude::{ApplicationExt, MonitorExt};
+use gtk::prelude::MonitorExt;
 
 pub struct Default;
 impl super::WindowInitializer for Default {
@@ -22,8 +22,7 @@ impl super::WindowInitializer for Default {
             Ok(())
         });
         if let Err(e) = res {
-            app.quit();
-            super::notify_app_error(e)
+            super::notify_app_error(e, app)
         }
     }
 }
