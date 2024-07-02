@@ -1,6 +1,4 @@
-
 https://github.com/ogios/way-edges/assets/96933655/98219132-b37e-4d8d-9b4a-01c64105e25e
-
 
 ## TODO
 
@@ -20,11 +18,12 @@ https://github.com/ogios/way-edges/assets/96933655/98219132-b37e-4d8d-9b4a-01c64
   - get available working area(~~how?~~ each compositor specific)
   - ~~every draw process should be initialized within draw func, record and compare height in each draw call. (lots of code rewrite)~~ no need.
 - [x] wayland compositor specific relative height as features(including exclusive zone calculation)
-- [ ] watch file & hot reload
+- [x] watch file & hot reload
 - [ ] ease-in & ease-out button motion curve
 - [ ] modulize mouse event
 - [ ] multiple click & long press & release event
 - [ ] add some customized widgets
+  - Slider(for volume, brightness, etc.)
 - [ ] ?hover event(only bind with transition, not necessary - for now)
 - [ ] ?button click effects optimization(gradience)
 - [ ] ~~?buttom size calculation, arrangement and overlap(should this be considered?)~~
