@@ -7,7 +7,32 @@ use raw::*;
 use crate::ui::EventMap;
 use gtk::gdk::RGBA;
 use gtk4_layer_shell::{Edge, Layer};
-use std::{fs::OpenOptions, io::Read, process::Command, str::FromStr, thread};
+use std::{
+    fs::OpenOptions,
+    io::Read,
+    path::{Path, PathBuf},
+    process::Command,
+    str::FromStr,
+    sync::OnceLock,
+    thread,
+};
+
+pub static mut GLOBAL_CONFIG: Option<Box<GroupConfig>> = None;
+
+pub fn init_config() -> Result<(), String> {
+    unsafe {
+        GLOBAL_CONFIG = Some(Box::new(get_config(&crate::args::get_args().group)?));
+        Ok(())
+    }
+}
+
+pub fn take_config() -> Result<GroupConfig, String> {
+    let config = unsafe { GLOBAL_CONFIG.take().ok_or("no config found".to_string()) };
+    match config {
+        Ok(v) => Ok(*v),
+        Err(e) => Err(e),
+    }
+}
 
 fn parse_config(data: &str, group_name: &Option<String>) -> Result<GroupConfig, String> {
     let mut res: RawTemp =
@@ -142,17 +167,25 @@ fn raw_2_conf(raw: RawGroup) -> Result<GroupConfig, String> {
         .collect()
 }
 
+static CONFIG_PATH: OnceLock<PathBuf> = OnceLock::new();
+pub fn get_config_path() -> &'static Path {
+    let pb = CONFIG_PATH.get_or_init(|| {
+        let bd = match xdg::BaseDirectories::new() {
+            Ok(bd) => bd,
+            Err(e) => panic!("no xdg base directories: {e}"),
+        };
+
+        match bd.place_config_file("way-edges/config.jsonc") {
+            Ok(p) => p,
+            Err(e) => panic!("failed to create config file: {e}"),
+        }
+    });
+    let b = pb.as_path();
+    b
+}
+
 fn get_config_file() -> Result<String, String> {
-    let bd = match xdg::BaseDirectories::new() {
-        Ok(bd) => bd,
-        Err(e) => return Err(format!("no xdg base directories: {e}")),
-    };
-
-    let p = match bd.place_config_file("way-edges/config.jsonc") {
-        Ok(p) => p,
-        Err(e) => return Err(format!("failed to create config file: {e}")),
-    };
-
+    let p = get_config_path();
     let mut f = match OpenOptions::new()
         .create(true)
         .append(true)

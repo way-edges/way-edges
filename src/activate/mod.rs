@@ -5,21 +5,13 @@ use crate::config::{Config, GroupConfig, MonitorSpecifier, NumOrRelative};
 use crate::ui;
 use gio::prelude::*;
 use gtk::gdk::Monitor;
-use gtk::prelude::{DisplayExt, MonitorExt};
-use gtk::Application;
+use gtk::prelude::{DisplayExt, GtkWindowExt, MonitorExt};
+use gtk::{Application, ApplicationWindow};
 use gtk4_layer_shell::{Edge, LayerShell};
 
-fn notify_app_error(err_des: String, app: &Application) {
-    app.quit();
+fn notify_app_error(err_des: &str) {
     log::error!("{err_des}");
-    if let Err(e) = notify_rust::Notification::new()
-        .summary("Way-edges app error")
-        .body(&err_des)
-        .urgency(notify_rust::Urgency::Critical)
-        .show()
-    {
-        log::error!("error sending Error notification: {e}");
-    }
+    crate::notify_send("Way-edges app error", err_des, true);
 }
 
 fn get_monitors() -> Result<gio::ListModel, String> {
@@ -118,8 +110,11 @@ fn calculate_relative(cfg: &mut Config, max_size_raw: (i32, i32)) -> Result<(), 
     }
 }
 
-pub trait WindowInitializer {
-    fn init_window(app: &Application, cfgs: GroupConfig);
+pub trait WindowInitializer: Clone {
+    fn init_window(app: &Application, cfgs: GroupConfig) -> Result<Self, String>;
+}
+pub trait WindowDestroyer {
+    fn close_window(self);
 }
 
 struct ButtonItem {
@@ -127,11 +122,20 @@ struct ButtonItem {
     monitor: Monitor,
 }
 
-fn create_buttons(app: &gtk::Application, button_items: Vec<ButtonItem>) {
-    button_items.into_iter().for_each(|bti| {
-        log::debug!("Final Config: {:?}", bti.cfg);
-        let window = ui::new_window(app, bti.cfg);
-        window.set_monitor(&bti.monitor);
-        window.set_namespace("way-edges-widget");
-    });
+fn create_buttons(
+    app: &gtk::Application,
+    button_items: Vec<ButtonItem>,
+) -> Result<Vec<ApplicationWindow>, String> {
+    let a = button_items
+        .into_iter()
+        .map(|bti| {
+            log::debug!("Final Config: {:?}", bti.cfg);
+            let window = ui::new_window(app, bti.cfg)?;
+            window.set_monitor(&bti.monitor);
+            window.set_namespace("way-edges-widget");
+            Ok(window)
+        })
+        .collect::<Result<Vec<ApplicationWindow>, String>>()?;
+    a.iter().for_each(|f| f.present());
+    Ok(a)
 }

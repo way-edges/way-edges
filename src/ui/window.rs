@@ -4,7 +4,7 @@ use super::draw_area;
 use gtk::{prelude::*, Application, CssProvider, STYLE_PROVIDER_PRIORITY_APPLICATION};
 use gtk4_layer_shell::LayerShell;
 
-pub fn new_window(app: &Application, mut config: Config) -> gtk::ApplicationWindow {
+pub fn new_window(app: &Application, mut config: Config) -> Result<gtk::ApplicationWindow, String> {
     let window = gtk::ApplicationWindow::new(app);
 
     // init layer
@@ -32,28 +32,13 @@ pub fn new_window(app: &Application, mut config: Config) -> gtk::ApplicationWind
     });
 
     // margin
-    let res = std::mem::take(&mut config.margins)
+    std::mem::take(&mut config.margins)
         .into_iter()
         .try_for_each(|(e, m)| {
             window.set_margin(e, m.get_num_into()?);
             Ok(())
         })
-        .and_then(|_| {
-            draw_area::setup_draw(&window, config).map(|_| {
-                window.present();
-            })
-        });
-    if let Err(e) = res {
-        window.close();
-        let msg = format!("Failed to create window: {e}");
-        log::error!("{msg}");
-        // error ignored
-        notify_rust::Notification::new()
-            .summary("Way-edges widgets")
-            .body(&msg)
-            .show()
-            .ok();
-    }
+        .and_then(|_| draw_area::setup_draw(&window, config))?;
 
-    window
+    Ok(window)
 }

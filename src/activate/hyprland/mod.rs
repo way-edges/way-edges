@@ -1,6 +1,7 @@
 #![cfg(feature = "hyprland")]
 
 mod monitor;
+use gio::prelude::ApplicationExt;
 use monitor::*;
 
 use std::cell::Cell;
@@ -79,32 +80,51 @@ fn window_for_detect(
 /// calculate relative size.
 /// render widgets.
 fn connect(
-    ws: Vec<ApplicationWindow>,
     app: &gtk::Application,
     cfgs: GroupConfig,
     monitor_connectors: HashMap<String, Monitor>,
+    instance_ref: &Hyprland,
 ) {
-    let windows_count = ws.len();
+    let windows_count;
+    if let Some(vw) = instance_ref.0.take() {
+        windows_count = vw.len();
+        instance_ref.0.set(Some(vw));
+    } else {
+        return;
+    }
 
     // as for why so many rc cells, `connect_realize` is not `FnOnce` but `Fn`
     // idk what i can do better for this
     let counter = Rc::new(Cell::new(0));
     let cfgs = Rc::new(Cell::new(cfgs));
-    let ws = Rc::new(Cell::new(ws));
     let monitor_connectors = Rc::new(Cell::new(monitor_connectors));
+    let instance = Rc::new(Cell::new(Some(instance_ref.clone())));
 
     // used to setup realize event for each window
-    let connect = gtk::glib::clone!(@strong counter, @strong ws, @weak app, @strong cfgs, @strong monitor_connectors => move |w: &ApplicationWindow| {
-        w.connect_realize(gtk::glib::clone!(@strong counter, @strong ws, @weak app, @strong cfgs, @strong monitor_connectors => move |_| {
+    let connect = gtk::glib::clone!(@weak app, @strong counter, @strong cfgs, @strong monitor_connectors, @strong instance => move |w: &ApplicationWindow| {
+        w.connect_realize(gtk::glib::clone!(@weak app, @strong counter, @strong cfgs, @strong monitor_connectors, @strong instance => move |_| {
             // calculate after all window rendered(windows are not actually rendered when realize signaled)
             idle_add_local_once(
-                gtk::glib::clone!(@weak counter, @weak ws, @weak app, @weak cfgs, @weak monitor_connectors  => move || {
+                gtk::glib::clone!(@weak counter, @weak app, @weak cfgs, @weak monitor_connectors, @weak instance  => move || {
                     // we need to get all layer info of windows
                     // we are going to do it after the last window rendered
                     // and we use counter to do it
                     if add_or_else(&counter, windows_count) {
-                        // close window after calculation
-                        let ws = ws.take();
+                        let (instance, ws) = {
+                            let instance = if let Some(instance) = instance.take() {
+                                instance
+                            }else {
+                                // window realized after calculation which is unexpected
+                                // it should be closed
+                                return;
+                            };
+                            if let Some(vw) = instance.0.take() {
+                                (instance, vw)
+                            }else {
+                                // position windows are closed meaning application quit
+                                return;
+                            }
+                        };
                         defer!(
                             ws.into_iter().for_each(|w| {
                                 w.close();
@@ -123,11 +143,16 @@ fn connect(
                                 calculate_relative(&mut cfg, size)?;
                                 Ok(ButtonItem { cfg, monitor })
                             }).collect::<Result<Vec<ButtonItem>, String>>()?;
-                            create_buttons(&app, btis);
+                            let a = create_buttons(&app, btis)?;
+                            instance.0.set(Some(a));
                             Ok(())
                         });
                         if let Err(e) = res {
-                            notify_app_error(format!("Failed to initialize app: get_monitor_map(): {e}"), &app);
+                            notify_app_error(format!("Failed to initialize app: get_monitor_map(): {e}").as_str());
+                            // defer close windows, so we only quit app here
+                            idle_add_local_once(glib::clone!(@weak app => move|| {
+                                app.quit();
+                            }));
                             return;
                         }
                     }
@@ -136,16 +161,20 @@ fn connect(
         }));
     });
     unsafe {
-        ws.as_ptr().as_ref().unwrap().iter().for_each(|w| {
-            connect(w);
-        });
+        let ovw = instance_ref.0.as_ptr().as_ref().unwrap();
+        if let Some(vw) = ovw {
+            vw.iter().for_each(|w| {
+                connect(w);
+            });
+        }
     }
 }
 
-pub struct Hyprland;
+#[derive(Clone)]
+pub struct Hyprland(Rc<Cell<Option<Vec<ApplicationWindow>>>>);
 impl super::WindowInitializer for Hyprland {
-    fn init_window(app: &Application, cfgs: GroupConfig) {
-        let res = get_monitors().and_then(|monitors| {
+    fn init_window(app: &Application, cfgs: GroupConfig) -> Result<Self, String> {
+        get_monitors().and_then(|monitors| {
             get_need_monitors(&cfgs, &monitors).and_then(|ml| {
                 // initialize corner windows for eache monitor
                 let ws = ml
@@ -165,18 +194,23 @@ impl super::WindowInitializer for Hyprland {
                     })
                     .collect::<Result<HashMap<String, Monitor>, String>>()?;
 
+                let instance = Self(Rc::new(Cell::new(Some(ws.clone()))));
                 // setup connect signal
-                connect(ws.clone(), app, cfgs, ml);
+                connect(app, cfgs, ml, &instance);
 
                 // show each window
                 ws.iter().for_each(|w| {
                     w.present();
                 });
-                Ok(())
+                Ok(instance)
             })
-        });
-        if let Err(e) = res {
-            notify_app_error(e, app)
+        })
+    }
+}
+impl super::WindowDestroyer for Hyprland {
+    fn close_window(self) {
+        if let Some(vw) = self.0.take() {
+            vw.into_iter().for_each(|w| w.close());
         }
     }
 }

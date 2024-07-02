@@ -2,11 +2,16 @@
 
 use super::{calculate_relative, create_buttons, find_monitor, ButtonItem};
 use crate::config::GroupConfig;
-use gtk::prelude::MonitorExt;
+use gtk::{
+    prelude::{GtkWindowExt, MonitorExt},
+    ApplicationWindow,
+};
 
-pub struct Default;
+#[derive(Clone)]
+// pub struct Default(Rc<Cell<Vec<ApplicationWindow>>>);
+pub struct Default(Vec<ApplicationWindow>);
 impl super::WindowInitializer for Default {
-    fn init_window(app: &gtk::Application, cfgs: GroupConfig) {
+    fn init_window(app: &gtk::Application, cfgs: GroupConfig) -> Result<Self, String> {
         let res = super::get_monitors().and_then(|monitors| {
             let btis: Vec<ButtonItem> = cfgs
                 .into_iter()
@@ -18,11 +23,17 @@ impl super::WindowInitializer for Default {
                     Ok(ButtonItem { cfg, monitor })
                 })
                 .collect::<Result<Vec<ButtonItem>, String>>()?;
-            create_buttons(app, btis);
-            Ok(())
+            // let vw = Rc::new(Cell::new(create_buttons(app, btis)?));
+            let vw = create_buttons(app, btis)?;
+            Ok(Self(vw))
         });
-        if let Err(e) = res {
-            super::notify_app_error(e, app)
-        }
+        res.inspect_err(|e| {
+            super::notify_app_error(e);
+        })
+    }
+}
+impl super::WindowDestroyer for Default {
+    fn close_window(self) {
+        self.0.into_iter().for_each(|w| w.close());
     }
 }
