@@ -84,7 +84,11 @@ where
                         transition_duration = Some(map.next_value()?);
                     }
                     "frame_rate" => {
-                        frame_rate = Some(map.next_value()?);
+                        let fps = map.next_value()?;
+                        if fps < 1 {
+                            return Err(serde::de::Error::custom("Frame rate must be >= 1"));
+                        }
+                        frame_rate = Some(fps);
                     }
                     "extra_trigger_size" => {
                         let v: Value = map.next_value()?;
@@ -92,27 +96,17 @@ where
                             .map_err(serde::de::Error::custom)?;
                         extra_trigger_size = Some(res);
                     }
-                    _ => {
-                        // return Err(serde::de::Error::unknown_field(
-                        //     key,
-                        //     &[
-                        //         "event_map",
-                        //         "color",
-                        //         "transition_duration",
-                        //         "frame_rate",
-                        //         "extra_trigger_size",
-                        //     ],
-                        // ))
-                    }
+                    _ => {}
                 };
             }
-            Ok(Widget::Btn(Box::new(BtnConfig {
+            let w = Widget::Btn(Box::new(BtnConfig {
                 event_map: Some(event_map.unwrap_or_default()),
                 color: color.unwrap_or(RGBA::from_str("#7B98FF").unwrap()),
                 transition_duration: transition_duration.unwrap_or(100),
                 frame_rate: frame_rate.unwrap_or(60),
                 extra_trigger_size: extra_trigger_size.unwrap_or(NumOrRelative::Num(5.)),
-            })))
+            }));
+            Ok(w)
         }
     }
     d.deserialize_any(BtnConfigVisitor)
