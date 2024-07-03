@@ -4,6 +4,7 @@ mod config;
 mod file_watch;
 mod ui;
 
+use std::sync::{Arc, RwLock};
 use std::{process, thread};
 
 use activate::WindowDestroyer;
@@ -28,8 +29,10 @@ fn main() {
 
     let file_change_signal_receiver = init_file_monitor();
 
-    let (reload_signal_sender, reload_signal_receiver) = async_channel::bounded(1);
+    let (reload_signal_sender, reload_signal_receiver) = async_channel::bounded::<i32>(1);
     let (continue_sender, continue_receiver) = async_channel::bounded(1);
+    let sync_signal = Arc::new(RwLock::new(0));
+    let sync_signal_clone = sync_signal.clone();
 
     thread::spawn(move || loop {
         if let Err(e) = file_change_signal_receiver.recv_blocking() {
@@ -39,7 +42,9 @@ fn main() {
             process::exit(1);
         } else {
             debug!("Receive file change signal");
-            reload_signal_sender.try_send(()).ok();
+            let signal = sync_signal_clone.read().unwrap();
+            reload_signal_sender.try_send(*signal).ok();
+            drop(signal);
             if let Err(e) = continue_sender.send_blocking(()) {
                 let msg = format!("Reload conitnue siganl Error: {e}");
                 log::error!("{msg}");
@@ -66,15 +71,15 @@ fn main() {
 
             // when args passed, `open` will be signaled instead of `activate`
             application.connect_open(
-                glib::clone!(@strong reload_signal_receiver as r  =>  move |app, _, _| {
+                glib::clone!(@strong reload_signal_receiver as r, @strong sync_signal  =>  move |app, _, _| {
                     debug!("connect open");
-                    init_app(app, &r);
+                    init_app(app, &r, &sync_signal);
                 }),
             );
             application.connect_activate(
-                glib::clone!(@strong reload_signal_receiver as r  =>  move |app| {
+                glib::clone!(@strong reload_signal_receiver as r, @strong sync_signal  =>  move |app| {
                     debug!("connect activate");
-                    init_app(app, &r);
+                    init_app(app, &r, &sync_signal);
                 }),
             );
             if application.run_with_args::<String>(&[]).value() == 1 {
@@ -98,10 +103,17 @@ fn main() {
         }
         log::debug!("Reload!!!");
         notify_send("Way-edges", "App Reload", false);
+        let mut reload_signal = sync_signal.write().unwrap();
+        *reload_signal += 1;
+        drop(reload_signal)
     }
 }
 
-fn init_app(app: &Application, error_signal_receiver: &Receiver<()>) {
+fn init_app(
+    app: &Application,
+    reload_signal_receiver: &Receiver<i32>,
+    reload_signal: &Arc<RwLock<i32>>,
+) {
     let args = args::get_args();
     debug!("Parsed Args: {:?}", args);
     let cfgs = match config::take_config() {
@@ -150,8 +162,11 @@ fn init_app(app: &Application, error_signal_receiver: &Receiver<()>) {
     };
 
     glib::spawn_future_local(
-        glib::clone!(@weak app, @strong error_signal_receiver as r => async move {
-            if r.recv().await.is_ok() {
+        glib::clone!(@weak app, @strong reload_signal_receiver as r, @strong reload_signal  => async move {
+            if let Ok(s) = r.recv().await {
+                if s != *reload_signal.read().unwrap() {
+                    return
+                }
                 log::info!("Received reload signal, quiting..");
                 window_destroyer.close_window();
                 idle_add_local_once(glib::clone!(@weak app => move || {
