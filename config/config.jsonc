@@ -9,14 +9,14 @@
         {
           "edge": "top",
           "position": "left",
-          "width": 25,
+          "width": 15,
           "height": "25%",
           "margin": {
             "left": "25%",
           },
           "widget": {
             "type": "btn",
-            "frame_rate": 90,
+            "frame_rate": 60,
             "event_map": [
               [1, "hyprctl dispatch scroller:movefocus l"],
               [3, "hyprctl dispatch 'workspace -1'"],
@@ -33,7 +33,7 @@
           },
           "widget": {
             "type": "btn",
-            "frame_rate": 20,
+            "frame_rate": 60,
             "event_map": [
               [1, "hyprctl dispatch scroller:movefocus r"],
               [3, "hyprctl dispatch 'workspace +1'"],
