@@ -3,6 +3,45 @@
   "definitions": {
     "numOrPercentage": {
       "anyOf": [{ "type": "number", "minimum": 0 }, { "type": "string" }]
+    },
+    "BtnWidget": {
+      "type": "object",
+      "description": "Button widget specific properties",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "btn"
+        },
+        "color": {
+          "description": "main color of the button: pattern: `#rgb`/`#rrggbb`/`#rrrgggbbb`/`rgb(r, g, b)`/`rgba(r, g, b, a)`.\nFor additional notes, please refer to: https://gtk-rs.org/gtk4-rs/stable/latest/docs/src/gdk4/rgba.rs.html#205\nDefault `#7B98FF`",
+          "type": "string"
+        },
+        "transition_duration": {
+          "description": "button show/hide in `transition_duration` ms.\n Default 100ms",
+          "type": "integer",
+          "minimum": 0
+        },
+        "frame_rate": {
+          "description": "button frame rate.\nDefault 30",
+          "type": "integer",
+          "minimum": 1
+        },
+        "extra_trigger_size": {
+          "description": "transparent extra trigger area, must > 0 or else the button will not be triggered.\nDefault 5",
+          "$ref": "#/definitions/numOrPercentage"
+        },
+        "event_map": {
+          "description": "array of tuples(int, string), int refers for the mouse button id.\n if you don't know what id your extra mouse button is, please run with `way-edges [group_name] --mouse-debug`: example [[1, \"kitty #open up kitty console\"],]",
+          "type": "array",
+          "items": {
+            "type": "array",
+            "prefixItems": [
+              { "type": "integer", "minimum": 1 },
+              { "type": "string" }
+            ]
+          }
+        }
+      }
     }
   },
   "title": "way-edges config",
@@ -20,7 +59,7 @@
             "type": "string"
           },
           "widgets": {
-            "description": "Button items: available params:\nedge | position | layer | width | height | rel_height | margin | color | transition_duration | frame_rate | extra_trigger_size | monitor_id | monitor_name | event_map",
+            "description": "Button items: available params:\nedge | position | layer | width | height | margin | monitor_id | monitor_name | widget",
             "type": "array",
             "items": {
               "type": "object",
@@ -71,24 +110,6 @@
                     }
                   }
                 },
-                "color": {
-                  "description": "main color of the button: pattern: `#rgb`/`#rrggbb`/`#rrrgggbbb`/`rgb(r, g, b)`/`rgba(r, g, b, a)`.\nFor additional notes, please refer to: https://gtk-rs.org/gtk4-rs/stable/latest/docs/src/gdk4/rgba.rs.html#205\nDefault `#7B98FF`",
-                  "type": "string"
-                },
-                "transition_duration": {
-                  "description": "button show/hide in `transition_duration` ms.\n Default 100ms",
-                  "type": "integer",
-                  "minimum": 0
-                },
-                "frame_rate": {
-                  "description": "button frame rate.\nDefault 30",
-                  "type": "integer",
-                  "minimum": 0
-                },
-                "extra_trigger_size": {
-                  "description": "transparent extra trigger area, must > 0 or else the button will not be triggered.\nDefault 5",
-                  "$ref": "#/definitions/numOrPercentage"
-                },
                 "monitor_id": {
                   "description": "Which monitor to show the button, ignored when given `monitor_name`.\nDefault 0",
                   "type": "integer",
@@ -98,16 +119,13 @@
                   "description": "Which monitor to show the button.\nDefault empty string",
                   "type": "string"
                 },
-                "event_map": {
-                  "description": "array of tuples(int, string), int refers for the mouse button id.\n if you don't know what id your extra mouse button is, please run with `way-edges [group_name] --mouse-debug`: example [[1, \"kitty #open up kitty console\"],]",
-                  "type": "array",
-                  "items": {
-                    "type": "array",
-                    "prefixItems": [
-                      { "type": "integer", "minimum": 1 },
-                      { "type": "string" }
-                    ]
-                  }
+                "widget": {
+                  "description": "Select one widget type",
+                  "oneOf": [
+                    {
+                      "$ref": "#/definitions/BtnWidget"
+                    }
+                  ]
                 }
               }
             }
