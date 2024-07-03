@@ -9,6 +9,7 @@
       "description": "Button widget specific properties",
       "properties": {
         "type": {
+          "description": "button widget type",
           "type": "string",
           "const": "btn"
         },

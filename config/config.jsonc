@@ -9,15 +9,18 @@
         {
           "edge": "top",
           "position": "left",
-          "width": 15,
+          "width": 25,
           "height": "25%",
-          "frame_rate": 90,
-          "event_map": [
-            [1, "notify-send 'This is from way-edges:left-click'"],
-            [3, "notify-send 'This is from way-edges:right-click'"],
-          ],
           "margin": {
             "left": "25%",
+          },
+          "widget": {
+            "type": "btn",
+            "frame_rate": 90,
+            "event_map": [
+              [1, "hyprctl dispatch scroller:movefocus l"],
+              [3, "hyprctl dispatch 'workspace -1'"],
+            ],
           },
         },
         {
@@ -25,13 +28,16 @@
           "position": "right",
           "width": 15,
           "height": "25%",
-          "frame_rate": 90,
-          "event_map": [
-            [1, "notify-send 'This is from way-edges:left-click'"],
-            [3, "notify-send 'This is from way-edges:right-click'"],
-          ],
           "margin": {
             "right": "25%",
+          },
+          "widget": {
+            "type": "btn",
+            "frame_rate": 20,
+            "event_map": [
+              [1, "hyprctl dispatch scroller:movefocus r"],
+              [3, "hyprctl dispatch 'workspace +1'"],
+            ],
           },
         },
       ],
