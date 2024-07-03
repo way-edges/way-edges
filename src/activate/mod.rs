@@ -33,7 +33,7 @@ fn calculate_config_relative(cfg: &mut Config, max_size_raw: (i32, i32)) -> Resu
         _ => unreachable!(),
     };
     cfg.width.calculate_relative(max_size.0 as f64);
-    cfg.height.calculate_relative(max_size.0 as f64);
+    cfg.height.calculate_relative(max_size.1 as f64);
     cfg.margins.iter_mut().for_each(|(e, n)| {
         match e {
             Edge::Left | Edge::Right => n.calculate_relative(max_size_raw.0 as f64),
