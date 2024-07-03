@@ -1,7 +1,7 @@
 use crate::config::Config;
+use crate::ui::draws::transition_state::TransitionState;
 
-use super::draws;
-use super::draws::transition_state::TransitionState;
+use super::BtnConfig;
 use super::EventMap;
 use clap::error::Result;
 use gtk::cairo;
@@ -98,12 +98,16 @@ impl FrameManager {
     }
 }
 
-pub fn setup_draw(window: &gtk::ApplicationWindow, mut cfg: Config) -> Result<DrawingArea, String> {
+pub fn setup_draw(
+    window: &gtk::ApplicationWindow,
+    cfg: Config,
+    mut btn_cfg: BtnConfig,
+) -> Result<DrawingArea, String> {
     let darea = DrawingArea::new();
     let size = cfg.get_size_into()?;
     let edge = cfg.edge;
-    let extra_trigger_size = cfg.extra_trigger_size.get_num_into()?;
-    let map_size = (size.0 as i32 + extra_trigger_size, size.1 as i32);
+    let extra_trigger_size = btn_cfg.extra_trigger_size.get_num_into()?;
+    let map_size = ((size.0 + extra_trigger_size) as i32, size.1 as i32);
     match edge {
         Edge::Left | Edge::Right => {
             darea.set_width_request(map_size.0);
@@ -118,17 +122,17 @@ pub fn setup_draw(window: &gtk::ApplicationWindow, mut cfg: Config) -> Result<Dr
 
     let transition_range = (0., size.0);
     let ts = TransitionState::new(
-        Duration::from_millis(cfg.transition_duration),
+        Duration::from_millis(btn_cfg.transition_duration),
         transition_range.0,
         transition_range.1,
     );
     let mouse_state = MouseState::new(&ts);
     let is_pressing = mouse_state.pressing.clone();
     let set_rotate = draw_rotation(edge, size);
-    let mut set_motion = draw_motion(edge, transition_range, extra_trigger_size as f64);
-    let set_core = draw_core(map_size, size, cfg.color, extra_trigger_size as f64)?;
-    let set_input_region = draw_input_region(size, edge, extra_trigger_size as f64);
-    let mut set_frame_manger = draw_frame_manager(cfg.frame_rate, transition_range);
+    let mut set_motion = draw_motion(edge, transition_range, extra_trigger_size);
+    let set_core = draw_core(map_size, size, btn_cfg.color, extra_trigger_size)?;
+    let set_input_region = draw_input_region(size, edge, extra_trigger_size);
+    let mut set_frame_manger = draw_frame_manager(btn_cfg.frame_rate, transition_range);
     darea.set_draw_func(glib::clone!(@weak window =>move |darea, context, _, _| {
         set_rotate(context);
         let visible_y = ts.get_y();
@@ -148,7 +152,7 @@ pub fn setup_draw(window: &gtk::ApplicationWindow, mut cfg: Config) -> Result<Dr
     let mouse_state = Rc::new(RefCell::new(mouse_state));
     set_event_mouse_click(
         &darea,
-        cfg.event_map.take().ok_or("EventMap is None")?,
+        btn_cfg.event_map.take().ok_or("EventMap is None")?,
         mouse_state.clone(),
     );
     set_event_mouse_move(&darea, mouse_state);
@@ -162,7 +166,7 @@ fn draw_core(
     color: RGBA,
     extra_trigger_size: f64,
 ) -> Result<impl Fn(&Context, bool) -> Result<(), String>, String> {
-    let (b, n, p) = draws::pre_draw::draw_to_surface(map_size, size, color, extra_trigger_size)?;
+    let (b, n, p) = super::pre_draw::draw_to_surface(map_size, size, color, extra_trigger_size)?;
     let f_map_size = (map_size.0 as f64, map_size.1 as f64);
 
     fn error_handle(e: cairo::Error) -> String {

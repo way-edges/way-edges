@@ -9,8 +9,8 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use crate::activate::{
-    calculate_relative, create_buttons, find_monitor_with_vec, get_monitors, notify_app_error,
-    ButtonItem,
+    calculate_config_relative, create_widgets, get_working_area_size, notify_app_error,
+    take_monitor, WidgetItem,
 };
 use crate::config::GroupConfig;
 use gio::glib::idle_add_local_once;
@@ -20,6 +20,8 @@ use gtk::prelude::{GtkWindowExt, MonitorExt, WidgetExt};
 use gtk::{Application, ApplicationWindow};
 use gtk4_layer_shell::{Edge, Layer, LayerShell};
 use scopeguard::defer;
+
+use super::get_monitors;
 
 /// namespace for detect size of available working area
 /// TL: Top Left
@@ -82,7 +84,7 @@ fn window_for_detect(
 fn connect(
     app: &gtk::Application,
     cfgs: GroupConfig,
-    monitor_connectors: HashMap<String, Monitor>,
+    needed_monitors: HashMap<String, ()>,
     instance_ref: &Hyprland,
 ) {
     let windows_count;
@@ -97,15 +99,15 @@ fn connect(
     // idk what i can do better for this
     let counter = Rc::new(Cell::new(0));
     let cfgs = Rc::new(Cell::new(cfgs));
-    let monitor_connectors = Rc::new(Cell::new(monitor_connectors));
+    let needed_monitors = Rc::new(Cell::new(needed_monitors));
     let instance = Rc::new(Cell::new(Some(instance_ref.clone())));
 
     // used to setup realize event for each window
-    let connect = gtk::glib::clone!(@weak app, @strong counter, @strong cfgs, @strong monitor_connectors, @strong instance => move |w: &ApplicationWindow| {
-        w.connect_realize(gtk::glib::clone!(@weak app, @strong counter, @strong cfgs, @strong monitor_connectors, @strong instance => move |_| {
+    let connect = gtk::glib::clone!(@weak app, @strong counter, @strong cfgs, @strong needed_monitors, @strong instance => move |w: &ApplicationWindow| {
+        w.connect_realize(gtk::glib::clone!(@weak app, @strong counter, @strong cfgs, @strong needed_monitors, @strong instance => move |_| {
             // calculate after all window rendered(windows are not actually rendered when realize signaled)
             idle_add_local_once(
-                gtk::glib::clone!(@weak counter, @weak app, @weak cfgs, @weak monitor_connectors, @weak instance  => move || {
+                gtk::glib::clone!(@weak counter, @weak app, @weak cfgs, @weak needed_monitors, @weak instance  => move || {
                     // we need to get all layer info of windows
                     // we are going to do it after the last window rendered
                     // and we use counter to do it
@@ -131,19 +133,21 @@ fn connect(
                             });
                         );
                         // get available area size for all needed monitor
-                        let res = get_monitor_map(monitor_connectors.take()).and_then(|mm| {
-                            log::debug!("Calculated layer map sizes: {mm:?}");
+                        let res = get_monitor_map(needed_monitors.take()).and_then(|_| {
                             let cfgs = cfgs.take();
-                            let monitors = mm.keys().collect::<Vec<&Monitor>>();
+                            let monitors = take_monitor()?;
+                            let monitors: HashMap<usize, Monitor> = HashMap::from_iter(monitors.into_iter().enumerate());
                             // create button items
                             let btis = cfgs.into_iter().map(|mut cfg| {
                                 // get available area size for each monitor
-                                let monitor = find_monitor_with_vec(&monitors, cfg.monitor.clone())?;
-                                let size = *mm.get(&monitor).ok_or(format!("Did not find Calculated monitor size for {:?}", cfg.monitor))?;
-                                calculate_relative(&mut cfg, size)?;
-                                Ok(ButtonItem { cfg, monitor })
-                            }).collect::<Result<Vec<ButtonItem>, String>>()?;
-                            let a = create_buttons(&app, btis)?;
+                                let index = cfg.monitor.to_index()?;
+                                let size = get_working_area_size(index)?.ok_or(format!("Did not find Calculated monitor size for {:?}", cfg.monitor))?;
+                                calculate_config_relative(&mut cfg, size)?;
+                                let monitor = monitors.get(&index).ok_or(format!( "Did not find monitor given index: {index}" ))?.clone();
+                                // create widgets
+                                Ok(WidgetItem { cfg, monitor })
+                            }).collect::<Result<Vec<WidgetItem>, String>>()?;
+                            let a = create_widgets(&app, btis)?;
                             instance.0.set(Some(a));
                             Ok(())
                         });
@@ -175,14 +179,15 @@ pub struct Hyprland(Rc<Cell<Option<Vec<ApplicationWindow>>>>);
 impl super::WindowInitializer for Hyprland {
     fn init_window(app: &Application, cfgs: GroupConfig) -> Result<Self, String> {
         get_monitors().and_then(|monitors| {
-            get_need_monitors(&cfgs, &monitors).and_then(|ml| {
+            get_need_monitors(&cfgs, monitors).and_then(|ml| {
                 // initialize corner windows for eache monitor
                 let ws = ml
                     .iter()
                     .flat_map(|m| window_for_detect(app, m))
                     .collect::<Vec<ApplicationWindow>>();
 
-                // monitor name -> monitor
+                // all needed monitor's name
+                // because hyprland returns monitor's name
                 let ml = ml
                     .into_iter()
                     .map(|m| {
@@ -190,9 +195,9 @@ impl super::WindowInitializer for Hyprland {
                             .connector()
                             .map(|v| v.to_string())
                             .ok_or(format!("Failed to get monitor name: {m:?}"))?;
-                        Ok((name, m))
+                        Ok((name, ()))
                     })
-                    .collect::<Result<HashMap<String, Monitor>, String>>()?;
+                    .collect::<Result<HashMap<String, ()>, String>>()?;
 
                 let instance = Self(Rc::new(Cell::new(Some(ws.clone()))));
                 // setup connect signal

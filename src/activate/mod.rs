@@ -1,11 +1,10 @@
 pub mod default;
 pub mod hyprland;
 
-use crate::config::{Config, GroupConfig, MonitorSpecifier, NumOrRelative};
+use crate::config::{Config, GroupConfig};
 use crate::ui;
-use gio::prelude::*;
 use gtk::gdk::Monitor;
-use gtk::prelude::{DisplayExt, GtkWindowExt, MonitorExt};
+use gtk::prelude::GtkWindowExt;
 use gtk::{Application, ApplicationWindow};
 use gtk4_layer_shell::{Edge, LayerShell};
 
@@ -14,86 +13,32 @@ fn notify_app_error(err_des: &str) {
     crate::notify_send("Way-edges app error", err_des, true);
 }
 
-fn get_monitors() -> Result<gio::ListModel, String> {
-    let dt_display = gtk::gdk::Display::default().ok_or("display for monitor not found")?;
-    let mms = dt_display.monitors();
-    log::debug!("Get monitors: {mms:?}");
-    Ok(mms)
+fn find_monitor<'a>(
+    monitors: &'a [Monitor],
+    specifier: &MonitorSpecifier,
+) -> Result<&'a Monitor, String> {
+    let index = match specifier {
+        MonitorSpecifier::ID(index) => *index,
+        MonitorSpecifier::Name(name) => get_monitor_index_by_name(name)?,
+    };
+    monitors
+        .get(index)
+        .ok_or(format!("error matching monitor with id: {index}"))
 }
 
-fn find_monitor(monitors: &gio::ListModel, specifier: MonitorSpecifier) -> Result<Monitor, String> {
-    match specifier {
-        MonitorSpecifier::ID(index) => {
-            let a = monitors
-                .iter::<Monitor>()
-                .nth(index)
-                .ok_or(format!("error matching monitor with id: {index}"))?
-                .map_err(|e| format!("error matching monitor with id: {index}\nError: {e}"))?;
-            Ok(a)
-        }
-        MonitorSpecifier::Name(name) => {
-            for m in monitors.iter() {
-                let m: Monitor =
-                    m.map_err(|e| format!("error matching monitor with name: {name}\nError: {e}"))?;
-                if m.connector()
-                    .ok_or(format!("Fail to get monitor connector name: {m:?}"))?
-                    == name
-                {
-                    return Ok(m);
-                }
-            }
-            Err(format!("monitor with name: {name} not found"))
-        }
-    }
-}
-
-fn find_monitor_with_vec(
-    monitors: &[&Monitor],
-    specifier: MonitorSpecifier,
-) -> Result<Monitor, String> {
-    match specifier {
-        MonitorSpecifier::ID(index) => {
-            let a = monitors
-                .get(index)
-                .ok_or(format!("error matching monitor with id: {index}"))?;
-            Ok((*a).clone())
-        }
-        MonitorSpecifier::Name(name) => {
-            for m in monitors.iter() {
-                if m.connector()
-                    .ok_or(format!("Fail to get monitor connector name: {m:?}"))?
-                    == name
-                {
-                    return Ok((*m).clone());
-                }
-            }
-            Err(format!("monitor with name: {name} not found"))
-        }
-    }
-}
-
-fn calculate_relative(cfg: &mut Config, max_size_raw: (i32, i32)) -> Result<(), String> {
+fn calculate_config_relative(cfg: &mut Config, max_size_raw: (i32, i32)) -> Result<(), String> {
     let max_size = match cfg.edge {
         Edge::Left | Edge::Right => (max_size_raw.0, max_size_raw.1),
         Edge::Top | Edge::Bottom => (max_size_raw.1, max_size_raw.0),
         _ => unreachable!(),
     };
-    if let Ok(r) = cfg.width.get_rel() {
-        cfg.width = NumOrRelative::Num(max_size.0 as f64 * r);
-    };
-    if let Ok(r) = cfg.height.get_rel() {
-        cfg.height = NumOrRelative::Num(max_size.1 as f64 * r);
-    };
-    if let Ok(r) = cfg.extra_trigger_size.get_rel() {
-        cfg.extra_trigger_size = NumOrRelative::Num((max_size.0 as f64 * r) as i32);
-    };
+    cfg.width.calculate_relative(max_size.0 as f64);
+    cfg.height.calculate_relative(max_size.0 as f64);
     cfg.margins.iter_mut().for_each(|(e, n)| {
-        if let Ok(r) = n.get_rel() {
-            *n = match e {
-                Edge::Left | Edge::Right => NumOrRelative::Num((r * max_size_raw.0 as f64) as i32),
-                Edge::Top | Edge::Bottom => NumOrRelative::Num((r * max_size_raw.1 as f64) as i32),
-                _ => unreachable!(),
-            };
+        match e {
+            Edge::Left | Edge::Right => n.calculate_relative(max_size_raw.0 as f64),
+            Edge::Top | Edge::Bottom => n.calculate_relative(max_size_raw.1 as f64),
+            _ => unreachable!(),
         };
     });
 
@@ -117,25 +62,167 @@ pub trait WindowDestroyer {
     fn close_window(self);
 }
 
-struct ButtonItem {
+struct WidgetItem {
     cfg: Config,
     monitor: Monitor,
 }
 
-fn create_buttons(
+fn create_widgets(
     app: &gtk::Application,
-    button_items: Vec<ButtonItem>,
+    widget_items: Vec<WidgetItem>,
 ) -> Result<Vec<ApplicationWindow>, String> {
-    let a = button_items
+    let a = widget_items
         .into_iter()
-        .map(|bti| {
-            log::debug!("Final Config: {:?}", bti.cfg);
-            let window = ui::new_window(app, bti.cfg)?;
-            window.set_monitor(&bti.monitor);
+        .map(|w| {
+            log::debug!("Final Config: {:?}", w.cfg);
+            let window = ui::new_window(app, w.cfg)?;
+            window.set_monitor(&w.monitor);
             window.set_namespace("way-edges-widget");
             Ok(window)
         })
         .collect::<Result<Vec<ApplicationWindow>, String>>()?;
     a.iter().for_each(|f| f.present());
     Ok(a)
+}
+
+pub use globals::*;
+
+mod globals {
+    use gio::prelude::*;
+    use gtk::gdk::{Monitor, Rectangle};
+    use gtk::prelude::{DisplayExt, MonitorExt};
+    use std::collections::HashMap;
+
+    #[derive(Debug, Clone)]
+    pub enum MonitorSpecifier {
+        ID(usize),
+        Name(String),
+    }
+    impl MonitorSpecifier {
+        pub fn to_index(&self) -> Result<usize, String> {
+            let index = match self {
+                Self::ID(index) => *index,
+                Self::Name(name) => get_monitor_index_by_name(name)?,
+            };
+            Ok(index)
+        }
+    }
+
+    pub static mut MONITORS: Option<Vec<Monitor>> = None;
+    // pub fn init_monitor() -> Result<&'static Vec<Monitor>, String> {
+    pub fn init_monitor() -> Result<(), String> {
+        let dt_display = gtk::gdk::Display::default().ok_or("display for monitor not found")?;
+        let mms = dt_display
+            .monitors()
+            .iter::<Monitor>()
+            .map(|m| m.map_err(|e| format!("Set monitor error: {e}")))
+            .collect::<Result<Vec<Monitor>, String>>()?;
+        {
+            let name_index_map = mms
+                .iter()
+                .enumerate()
+                .map(|(index, m)| {
+                    let a = m
+                        .connector()
+                        .ok_or(format!("Fail to get monitor connector name: {m:?}"))?;
+                    Ok((a.to_string(), index))
+                })
+                .collect::<Result<MonitorNameIndexMap, String>>()?;
+            set_monitor_name_index(name_index_map);
+        }
+        log::debug!("Set monitors: {mms:?}");
+        {
+            let geoms: Vec<Rectangle> = mms.iter().map(|m| m.geometry()).collect();
+            set_monitor_size_map(geoms);
+        }
+        unsafe {
+            WORKING_AREA_SIZE_MAP = Some(HashMap::new());
+        }
+        unsafe { MONITORS = Some(mms) };
+        Ok(())
+        // get_monitors()
+    }
+    pub fn get_monitors() -> Result<&'static Vec<Monitor>, String> {
+        unsafe { MONITORS.as_ref().ok_or("MONITORS is NONE".to_string()) }
+    }
+    pub fn take_monitor() -> Result<Vec<Monitor>, String> {
+        unsafe { MONITORS.take().ok_or("MONITORS is NONE".to_string()) }
+    }
+
+    pub type MonitorNameIndexMap = HashMap<String, usize>;
+    pub static mut MONITOR_NAME_INDEX_MAP: Option<MonitorNameIndexMap> = None;
+    pub fn set_monitor_name_index(map: MonitorNameIndexMap) {
+        unsafe { MONITOR_NAME_INDEX_MAP = Some(map) }
+    }
+    pub fn get_monitor_index_by_name(name: &str) -> Result<usize, String> {
+        unsafe {
+            let map = MONITOR_NAME_INDEX_MAP
+                .as_ref()
+                .ok_or("MONITOR_NAME_INDEX_MAP has not been initialized")?;
+            map.get(name).copied().ok_or("Name not found".to_string())
+        }
+    }
+
+    pub type Size = (i32, i32);
+
+    // pub static mut MONITOR_SIZE_MAP: Option<Vec<(Monitor, (i32, i32))>> = None;
+    /// working area size
+    pub static mut WORKING_AREA_SIZE_MAP: Option<HashMap<usize, Rectangle>> = None;
+    // do not run this directly, unless you know what you are doing
+    fn get_working_area_size_map() -> Result<&'static mut HashMap<usize, Rectangle>, String> {
+        unsafe {
+            WORKING_AREA_SIZE_MAP
+                .as_mut()
+                .ok_or("MONITOR_SIZE_MAP has not been initialized, this is unexpected".to_string())
+        }
+    }
+    pub fn set_working_area_size_map(index: usize, v: Rectangle) -> Result<(), String> {
+        let map = get_working_area_size_map()?;
+        map.insert(index, v);
+        drop(map);
+        Ok(())
+    }
+    pub fn set_working_area_size_map_multiple(v: Vec<(usize, Rectangle)>) -> Result<(), String> {
+        let map = get_working_area_size_map()?;
+        for (i, r) in v.into_iter() {
+            map.insert(i, r);
+        }
+        log::debug!("Calculated layer map sizes: {map:?}");
+        drop(map);
+        Ok(())
+    }
+    pub fn get_working_area_size(index: usize) -> Result<Option<Size>, String> {
+        unsafe {
+            let map = WORKING_AREA_SIZE_MAP
+                .as_ref()
+                .ok_or("WORKING_AREA_SIZE_MAP has not been initialized")?;
+            if let Some(geom) = map.get(&index) {
+                drop(map);
+                Ok(Some((geom.width(), geom.height())))
+            } else {
+                Ok(None)
+            }
+        }
+    }
+
+    /// monitor size
+    pub static mut MONITOR_SIZE_MAP: Option<HashMap<usize, Rectangle>> = None;
+    pub fn set_monitor_size_map(geoms: Vec<Rectangle>) {
+        unsafe {
+            MONITOR_SIZE_MAP = Some(HashMap::from_iter(geoms.into_iter().enumerate()));
+        }
+    }
+    pub fn get_monior_size(index: usize) -> Result<Option<Size>, String> {
+        unsafe {
+            let map = MONITOR_SIZE_MAP
+                .as_ref()
+                .ok_or("MONITOR_SIZE_MAP has not been initialized")?;
+            if let Some(geom) = map.get(&index) {
+                drop(map);
+                Ok(Some((geom.width(), geom.height())))
+            } else {
+                Ok(None)
+            }
+        }
+    }
 }

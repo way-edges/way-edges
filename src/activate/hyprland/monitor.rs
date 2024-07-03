@@ -1,8 +1,9 @@
 use std::collections::HashMap;
 
 use crate::activate::hyprland::{NAMESPACE_BR, NAMESPACE_TL};
+use crate::activate::{get_monitor_index_by_name, set_working_area_size_map_multiple};
 use crate::config::GroupConfig;
-use gtk::gdk::Monitor;
+use gtk::gdk::{Monitor, Rectangle};
 use hyprland::data::{LayerClient, Layers};
 use hyprland::shared::HyprData;
 
@@ -38,25 +39,34 @@ impl NameSpaceMatch {
 
 /// the calculated size of the available layer area size for each monitor
 /// not each layer specific, at lease for hyprland 0.40.0
-pub type MonitorLayerSizeMap = HashMap<Monitor, (i32, i32)>;
+// pub type MonitorLayerSizeMap = HashMap<Monitor, (i32, i32)>;
+// pub type MonitorLayerSizeMap = Vec<Option<(usize, Rectangle)>>;
+pub type MonitorLayerSize = (usize, Rectangle);
 
 /// calculate available layer area
 pub fn get_monitor_map(
-    mut needed_monitors: HashMap<String, Monitor>,
-) -> Result<MonitorLayerSizeMap, String> {
+    mut needed_monitors: HashMap<String, ()>,
+    // ) -> Result<MonitorLayerSizeMap, String> {
+) -> Result<Vec<usize>, String> {
     let mls = Layers::get().map_err(|e| format!("Failed to get layer info: {e}"))?;
     log::debug!("Layer shells from hyprland: {mls:?}");
-    mls.into_iter()
-        .map_while(|(ms, mut d)| {
+    let res = mls
+        .into_iter()
+        .map(|(ms, mut d)| {
             // check if the monitor is the needed one
-            let monitor = needed_monitors.remove(&ms)?;
+            log::debug!("Layer shell into monitor: {ms:?}");
+            if needed_monitors.remove_entry(&ms).is_none() {
+                return Ok(None);
+            };
             // just assume that `TOP` layer always exists
             let vc = d.levels.remove(TOP_LEVEL).unwrap();
             let mut lcs: (Option<Box<LayerClient>>, Option<Box<LayerClient>>) = (None, None);
             let mut nsm =
                 NameSpaceMatch::new(vec![NAMESPACE_TL.to_string(), NAMESPACE_BR.to_string()]);
             {
-                let res = vc.into_iter().try_for_each(|c| {
+                // multiple namespace window, can not determine which to use to calculate size
+                // so raise error
+                vc.into_iter().try_for_each(|c| -> Result<(), String> {
                     if nsm.ok(&c.namespace)? {
                         match c.namespace.as_str() {
                             NAMESPACE_TL => {
@@ -69,12 +79,7 @@ pub fn get_monitor_map(
                         }
                     }
                     Ok(())
-                });
-                // multiple namespace window, can not determine which to use to calculate size
-                // so raise error
-                if let Err(e) = res {
-                    return Some(Err(e));
-                }
+                })?;
             };
             {
                 // if 2 positioning window all exist
@@ -93,36 +98,47 @@ pub fn get_monitor_map(
                     // calculate
                     let w = end_x - start_x;
                     let h = end_y - start_y;
+                    let index = match get_monitor_index_by_name(&ms) {
+                        Ok(i) => i,
+                        Err(e) => {
+                            return Err(e);
+                        }
+                    };
 
-                    Some(Ok((monitor, (w, h))))
+                    Ok(Some((index, Rectangle::new(start_x, start_y, w, h))))
                 } else {
-                    None
+                    Ok(None)
                 }
             }
         })
-        .collect::<Result<MonitorLayerSizeMap, String>>()
-        .and_then(|mlsm| {
-            // check if all the needed monitors' size are calculated
-            if needed_monitors.is_empty() {
-                Ok(mlsm)
-            } else {
-                Err(format!(
-                    "Needed monitors not cleared, remaining: {needed_monitors:?}"
-                ))
-            }
-        })
+        .collect::<Result<Vec<Option<MonitorLayerSize>>, String>>()?
+        .into_iter()
+        .flatten()
+        .collect::<Vec<MonitorLayerSize>>();
+    // check if all the needed monitors' size are calculated
+    if needed_monitors.is_empty() {
+        let indexs = res.iter().map(|(i, _)| *i).collect();
+        set_working_area_size_map_multiple(res)?;
+        Ok(indexs)
+    } else {
+        Err(format!(
+            "Needed monitors not cleared, remaining: {needed_monitors:?}"
+        ))
+    }
 }
 
 /// get monitors specified in config
-pub fn get_need_monitors(
+pub fn get_need_monitors<'a>(
     cfgs: &GroupConfig,
-    monitors: &gio::ListModel,
-) -> Result<Vec<Monitor>, String> {
+    monitors: &'a [Monitor],
+) -> Result<Vec<&'a Monitor>, String> {
     let mut mm = HashMap::new();
     cfgs.iter().try_for_each(|cfg| -> Result<(), String> {
-        let monitor = crate::activate::find_monitor(monitors, cfg.monitor.clone())?;
+        let monitor = crate::activate::find_monitor(monitors, &cfg.monitor)?;
         mm.entry(monitor).or_insert(());
         Ok(())
     })?;
-    Ok(mm.into_keys().collect())
+    let res = mm.into_keys().collect();
+    log::debug!("Needed monitors: {res:?}");
+    Ok(res)
 }

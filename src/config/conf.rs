@@ -1,40 +1,32 @@
-use crate::ui::EventMap;
+use crate::{activate::MonitorSpecifier, ui::button::BtnConfig};
 use educe::Educe;
-use gtk::gdk::RGBA;
 use gtk4_layer_shell::{Edge, Layer};
 // use std::collections::HashMap;
 
 // pub type GroupConfigMap = HashMap<String, GroupConfig>;
 pub type GroupConfig = Vec<Config>;
 
-#[derive(Debug, Clone)]
-pub enum MonitorSpecifier {
-    ID(usize),
-    Name(String),
-}
-
 #[derive(Debug, Clone, Copy)]
-pub enum NumOrRelative<T>
-where
-    T: Copy + Clone + Default + PartialOrd,
-{
-    Num(T),
+pub enum NumOrRelative {
+    Num(f64),
     Relative(f64),
+}
+impl Default for NumOrRelative {
+    fn default() -> Self {
+        Self::Num(f64::default())
+    }
 }
 
 #[allow(dead_code)]
-impl<T> NumOrRelative<T>
-where
-    T: Copy + Clone + Default + PartialOrd,
-{
-    pub fn get_num(&self) -> Result<T, &str> {
+impl NumOrRelative {
+    pub fn get_num(&self) -> Result<f64, &str> {
         if let Self::Num(r) = self {
             Ok(*r)
         } else {
             Err("relative, not num")
         }
     }
-    pub fn get_num_into(self) -> Result<T, &'static str> {
+    pub fn get_num_into(self) -> Result<f64, &'static str> {
         if let Self::Num(r) = self {
             Ok(r)
         } else {
@@ -43,7 +35,7 @@ where
     }
     pub fn is_valid_length(&self) -> bool {
         match self {
-            NumOrRelative::Num(r) => *r > T::default(),
+            NumOrRelative::Num(r) => *r > f64::default(),
             NumOrRelative::Relative(r) => *r > 0.,
         }
     }
@@ -61,41 +53,28 @@ where
             Err("num, not relative")
         }
     }
-}
-// pub trait Convert<U: Copy + Clone>
-// where
-//     U: Copy + Clone + Default + PartialOrd,
-// {
-//     fn convert(self) -> NumOrRelative<U>;
-// }
-// impl<T, U> Convert<U> for NumOrRelative<T>
-// where
-//     T: Copy + Clone + Into<U> + Default + PartialOrd,
-//     U: Copy + Clone + Into<T> + Default + PartialOrd,
-// {
-//     fn convert(self) -> NumOrRelative<U> {
-//         match self {
-//             NumOrRelative::Num(num) => NumOrRelative::Num(num.into()),
-//             NumOrRelative::Relative(rel) => NumOrRelative::Relative(rel),
-//         }
-//     }
-// }
-impl NumOrRelative<f64> {
-    pub fn convert_i32(self) -> NumOrRelative<i32> {
-        match self {
-            NumOrRelative::Num(num) => NumOrRelative::Num(num as i32),
-            NumOrRelative::Relative(rel) => NumOrRelative::Relative(rel),
+    pub fn calculate_relative_into(self, max: f64) -> Self {
+        if let Self::Relative(r) = self {
+            Self::Num(r * max)
+        } else {
+            self
+        }
+    }
+    pub fn calculate_relative(&mut self, max: f64) {
+        if let Self::Relative(r) = self {
+            *self = Self::Num(*r * max)
         }
     }
 }
-// Implement Default for NumOrRelative<T> where T: Default
-impl<T> Default for NumOrRelative<T>
-where
-    T: Copy + Clone + Default + PartialOrd,
-{
-    fn default() -> Self {
-        NumOrRelative::Num(T::default())
-    }
+
+#[derive(Educe)]
+#[educe(Debug)]
+pub enum Widget {
+    Btn(Box<BtnConfig>),
+    ToggleBtn,
+    Slider,
+    Combo,
+    SpinBtn,
 }
 
 #[derive(Educe)]
@@ -104,21 +83,18 @@ pub struct Config {
     pub edge: Edge,
     pub position: Option<Edge>,
     pub layer: Layer,
-    // pub size: (f64, f64),
-    pub width: NumOrRelative<f64>,
-    pub height: NumOrRelative<f64>,
-
-    #[educe(Debug(ignore))]
-    pub event_map: Option<EventMap>,
-
-    pub color: RGBA,
-    pub transition_duration: u64,
-    pub frame_rate: u64,
-    // pub extra_trigger_size: f64,
-    pub extra_trigger_size: NumOrRelative<i32>,
+    pub width: NumOrRelative,
+    pub height: NumOrRelative,
     pub monitor: MonitorSpecifier,
-    // pub margins: Vec<(Edge, i32)>,
-    pub margins: Vec<(Edge, NumOrRelative<i32>)>,
+    pub margins: Vec<(Edge, NumOrRelative)>,
+
+    pub widget: Option<Widget>,
+    // #[educe(Debug(ignore))]
+    // pub event_map: Option<EventMap>,
+    // pub color: RGBA,
+    // pub transition_duration: u64,
+    // pub frame_rate: u64,
+    // pub extra_trigger_size: NumOrRelative<i32>,
 }
 
 #[allow(dead_code)]

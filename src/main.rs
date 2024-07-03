@@ -117,6 +117,17 @@ fn init_app(app: &Application, error_signal_receiver: &Receiver<()>) {
     };
     // let cfgs = config::match_group_config(group_map, &args.group);
     debug!("Parsed Config: {cfgs:?}");
+    match activate::init_monitor() {
+        Ok(_) => {}
+        Err(e) => {
+            notify_send(
+                "Way-edges monitor",
+                &format!("Failed to init monitor: {e}"),
+                true,
+            );
+            return;
+        }
+    };
     let res = {
         #[cfg(feature = "hyprland")]
         {

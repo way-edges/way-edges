@@ -1,6 +1,6 @@
 #![cfg(not(feature = "hyprland"))]
 
-use super::{calculate_relative, create_buttons, find_monitor, ButtonItem};
+use super::{calculate_config_relative, create_widgets, find_monitor, take_monitor, WidgetItem};
 use crate::config::GroupConfig;
 use gtk::{
     prelude::{GtkWindowExt, MonitorExt},
@@ -12,19 +12,18 @@ use gtk::{
 pub struct Default(Vec<ApplicationWindow>);
 impl super::WindowInitializer for Default {
     fn init_window(app: &gtk::Application, cfgs: GroupConfig) -> Result<Self, String> {
-        let res = super::get_monitors().and_then(|monitors| {
-            let btis: Vec<ButtonItem> = cfgs
+        let res = take_monitor().and_then(|monitors| {
+            let btis: Vec<WidgetItem> = cfgs
                 .into_iter()
                 .map(|mut cfg| {
-                    let monitor = find_monitor(&monitors, cfg.monitor.clone())?;
+                    let monitor = find_monitor(&monitors, &cfg.monitor)?.clone();
                     let geom = monitor.geometry();
                     let size = (geom.width(), geom.height());
-                    calculate_relative(&mut cfg, size)?;
-                    Ok(ButtonItem { cfg, monitor })
+                    calculate_config_relative(&mut cfg, size)?;
+                    Ok(WidgetItem { cfg, monitor })
                 })
-                .collect::<Result<Vec<ButtonItem>, String>>()?;
-            // let vw = Rc::new(Cell::new(create_buttons(app, btis)?));
-            let vw = create_buttons(app, btis)?;
+                .collect::<Result<Vec<WidgetItem>, String>>()?;
+            let vw = create_widgets(app, btis)?;
             Ok(Self(vw))
         });
         res.inspect_err(|e| {

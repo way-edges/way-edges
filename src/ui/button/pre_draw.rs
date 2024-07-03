@@ -1,3 +1,4 @@
+use crate::ui::draws;
 use gtk::cairo::{self, Context, Format, ImageSurface, LinearGradient};
 use gtk::gdk::prelude::*;
 use gtk::gdk::RGBA;
@@ -10,10 +11,10 @@ fn predraw_err_handle(e: cairo::Error) -> String {
 fn draw_2(context: &Context, radius: f64, h: f64) {
     let lg_height = h - radius * 2.;
 
-    super::draw_fan_no_close(context, (0., radius), radius, 1., 2.);
+    draws::draw_fan_no_close(context, (0., radius), radius, 1., 2.);
     context.move_to(radius, radius);
     context.rel_line_to(0., lg_height);
-    super::draw_fan_no_close(context, (0., h - radius), radius, 0., 1.);
+    draws::draw_fan_no_close(context, (0., h - radius), radius, 0., 1.);
     context.rel_line_to(0., -lg_height);
 }
 
@@ -56,7 +57,7 @@ pub fn draw_to_surface(
                 draw_2(&ctx, item_size.0, item_size.1);
                 ctx.set_source_color(&main_color);
                 ctx.fill().map_err(predraw_err_handle)?;
-                super::blur::blur_image_surface(&mut surf, (extra_trigger_size * 2.) as i32)?;
+                draws::blur::blur_image_surface(&mut surf, (extra_trigger_size * 2.) as i32)?;
                 surf
             };
             base_ctx.save().map_err(predraw_err_handle)?;

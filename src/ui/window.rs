@@ -1,6 +1,5 @@
 use crate::config::Config;
 
-use super::draw_area;
 use gtk::{prelude::*, Application, CssProvider, STYLE_PROVIDER_PRIORITY_APPLICATION};
 use gtk4_layer_shell::LayerShell;
 
@@ -35,10 +34,13 @@ pub fn new_window(app: &Application, mut config: Config) -> Result<gtk::Applicat
     std::mem::take(&mut config.margins)
         .into_iter()
         .try_for_each(|(e, m)| {
-            window.set_margin(e, m.get_num_into()?);
+            window.set_margin(e, m.get_num_into()? as i32);
             Ok(())
         })
-        .and_then(|_| draw_area::setup_draw(&window, config))?;
+        .and_then(|_| match config.widget.take().ok_or("Widget is None")? {
+            crate::config::Widget::Btn(cfg) => super::button::init_widget(&window, config, *cfg),
+            _ => unreachable!(),
+        })?;
 
     Ok(window)
 }
