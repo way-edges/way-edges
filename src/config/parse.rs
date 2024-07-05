@@ -2,6 +2,7 @@ use crate::activate::MonitorSpecifier;
 
 use super::conf::*;
 use super::raw::*;
+use super::widgets;
 
 use gtk4_layer_shell::{Edge, Layer};
 use serde_jsonrc::Value;
@@ -113,7 +114,7 @@ fn parse_widget(raw: Value) -> Result<Widget, String> {
         .as_str()
         .ok_or("widget type must be string")?;
     let w = match t {
-        "btn" => crate::ui::button::visit_btn_config(raw).map_err(|e| e.to_string())?,
+        "btn" => widgets::button::visit_btn_config(raw).map_err(|e| e.to_string())?,
         _ => Widget::Slider,
     };
     Ok(w)

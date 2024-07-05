@@ -3,6 +3,8 @@ use crate::config::Config;
 use gtk::{prelude::*, Application, CssProvider, STYLE_PROVIDER_PRIORITY_APPLICATION};
 use gtk4_layer_shell::LayerShell;
 
+use super::widgets;
+
 pub fn new_window(app: &Application, mut config: Config) -> Result<gtk::ApplicationWindow, String> {
     let window = gtk::ApplicationWindow::new(app);
 
@@ -38,7 +40,7 @@ pub fn new_window(app: &Application, mut config: Config) -> Result<gtk::Applicat
             Ok(())
         })
         .and_then(|_| match config.widget.take().ok_or("Widget is None")? {
-            crate::config::Widget::Btn(cfg) => super::button::init_widget(&window, config, *cfg),
+            crate::config::Widget::Btn(cfg) => widgets::button::init_widget(&window, config, *cfg),
             _ => unreachable!(),
         })?;
 

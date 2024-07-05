@@ -1,6 +1,8 @@
-use crate::{activate::MonitorSpecifier, ui::button::BtnConfig};
+use crate::activate::MonitorSpecifier;
 use educe::Educe;
 use gtk4_layer_shell::{Edge, Layer};
+
+use super::widgets::button::BtnConfig;
 // use std::collections::HashMap;
 
 // pub type GroupConfigMap = HashMap<String, GroupConfig>;

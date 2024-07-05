@@ -26,7 +26,7 @@ impl<T> TransitionState<T>
 where
     T: Add<Output = T> + Mul<Output = T> + Sub<Output = T> + From<f64> + Clone + Copy,
 {
-    pub fn new(time_cost: Duration, min_y: T, max_y: T) -> TransitionState<T> {
+    pub fn new(time_cost: Duration, (min_y, max_y): (T, T)) -> TransitionState<T> {
         Self {
             t: Rc::new(Cell::new(Instant::now().checked_sub(time_cost).unwrap())),
             duration: time_cost,

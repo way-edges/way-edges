@@ -3,6 +3,7 @@ mod parse;
 mod raw;
 pub mod test;
 mod util;
+pub mod widgets;
 
 pub use conf::*;
 pub use util::*;

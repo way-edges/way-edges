@@ -5,7 +5,7 @@ use gtk::gdk::RGBA;
 
 // FIXME: too many `map_err`s, is there any better way?
 fn predraw_err_handle(e: cairo::Error) -> String {
-    format!("Predraw error: {e}")
+    format!("Button Predraw error: {e}")
 }
 
 fn draw_2(context: &Context, radius: f64, h: f64) {
