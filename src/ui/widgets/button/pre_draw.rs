@@ -1,4 +1,5 @@
 use crate::ui::draws;
+use crate::ui::draws::util::new_surface;
 use gtk::cairo::{self, Context, Format, ImageSurface, LinearGradient};
 use gtk::gdk::prelude::*;
 use gtk::gdk::RGBA;
@@ -36,8 +37,7 @@ pub fn draw_to_surface(
     let mut end_color = main_color;
     end_color.set_alpha(0.);
 
-    let new_surface =
-        || ImageSurface::create(Format::ARgb32, map_size.0, map_size.1).map_err(predraw_err_handle);
+    let new_surface = move || new_surface(map_size, predraw_err_handle);
 
     let path;
 

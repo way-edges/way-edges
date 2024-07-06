@@ -1,3 +1,5 @@
+use std::f64::consts::PI;
+
 use crate::ui::draws::frame_manager::FrameManager;
 
 use clap::error::Result;
@@ -7,6 +9,12 @@ use gtk::prelude::*;
 use gtk::DrawingArea;
 use gtk4_layer_shell::Edge;
 
+pub const Z: f64 = 0.;
+
+pub fn from_angel(a: f64) -> f64 {
+    a / 180. * PI
+}
+
 pub fn copy_surface(src: &ImageSurface) -> ImageSurface {
     let dst = ImageSurface::create(Format::ARgb32, src.width(), src.height()).unwrap();
     let ctx = cairo::Context::new(&dst).unwrap();
@@ -15,9 +23,16 @@ pub fn copy_surface(src: &ImageSurface) -> ImageSurface {
 }
 
 pub fn copy_surface_to_context(dst: &Context, src: &ImageSurface) {
-    dst.set_source_surface(src, 0., 0.).unwrap();
-    dst.rectangle(0., 0., src.width().into(), src.height().into());
+    dst.set_source_surface(src, Z, Z).unwrap();
+    dst.rectangle(Z, Z, src.width().into(), src.height().into());
     dst.fill().unwrap();
+}
+
+pub fn new_surface(
+    size: (i32, i32),
+    error_func: impl Copy + Fn(cairo::Error) -> String,
+) -> Result<ImageSurface, String> {
+    ImageSurface::create(Format::ARgb32, size.0, size.1).map_err(error_func)
 }
 
 pub fn draw_motion(
