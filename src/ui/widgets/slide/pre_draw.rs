@@ -1,6 +1,5 @@
 use std::{f64::consts::PI, str::FromStr};
 
-use gio::glib::BoolError;
 use gtk::{
     cairo::{self, ImageSurface, LinearGradient, Path},
     gdk::RGBA,
@@ -13,7 +12,7 @@ pub struct SlidePredraw {
     pub bg: ImageSurface,
     pub fg: ImageSurface,
     pub path: Path,
-    pub mask: ImageSurface,
+    pub shade: ImageSurface,
     pub stroke: ImageSurface,
 }
 
@@ -75,10 +74,6 @@ fn draw_slide_path(
     ctx.copy_path().map_err(predraw_err_handle)
 }
 
-fn color_error(e: BoolError) -> String {
-    format!("Parse color error: {e}")
-}
-
 pub fn draw(size: (f64, f64), map_size: (i32, i32)) -> Result<SlidePredraw, String> {
     // provide
     let obtuse_angle = 120.;
@@ -138,7 +133,7 @@ pub fn draw(size: (f64, f64), map_size: (i32, i32)) -> Result<SlidePredraw, Stri
         bg: bg_surf,
         fg: fg_surf,
         path,
-        mask,
+        shade: mask,
         stroke,
     })
 }

@@ -8,6 +8,10 @@ use crate::{
 };
 use gtk::ApplicationWindow;
 
+pub fn init_widget(window: &ApplicationWindow, config: Config) -> Result<gtk::DrawingArea, String> {
+    draw::setup_draw(window, config)
+}
+
 // pub fn init_widget(
 //     window: &ApplicationWindow,
 //     config: Config,

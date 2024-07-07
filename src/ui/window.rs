@@ -41,6 +41,7 @@ pub fn new_window(app: &Application, mut config: Config) -> Result<gtk::Applicat
         })
         .and_then(|_| match config.widget.take().ok_or("Widget is None")? {
             crate::config::Widget::Btn(cfg) => widgets::button::init_widget(&window, config, *cfg),
+            crate::config::Widget::Slider => widgets::slide::init_widget(&window, config),
             _ => unreachable!(),
         })?;
 
