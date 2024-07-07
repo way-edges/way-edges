@@ -122,10 +122,11 @@ fn draw_core(
         let blur_surface = {
             let mut surf = new_surface()?;
             let ctx = cairo::Context::new(&surf).map_err(error_handle)?;
-            ctx.set_source_surface(&base_surf, Z, Z).unwrap();
+            ctx.set_source_surface(&base_surf, Z, Z)
+                .map_err(error_handle)?;
             ctx.rectangle(Z, Z, f_map_size.0, f_map_size.1);
             ctx.fill().map_err(error_handle)?;
-            blur_image_surface(&mut surf, 100).unwrap();
+            blur_image_surface(&mut surf, 100)?;
             surf
         };
 
@@ -134,6 +135,10 @@ fn draw_core(
         ctx.fill().unwrap();
 
         ctx.set_source_surface(base_surf, Z, Z).unwrap();
+        ctx.rectangle(Z, Z, f_map_size.0, f_map_size.1);
+        ctx.fill().unwrap();
+
+        ctx.set_source_surface(&predraw.shade, Z, Z).unwrap();
         ctx.rectangle(Z, Z, f_map_size.0, f_map_size.1);
         ctx.fill().unwrap();
 

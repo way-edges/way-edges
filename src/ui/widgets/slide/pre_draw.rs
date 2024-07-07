@@ -109,7 +109,7 @@ pub fn draw(size: (f64, f64), map_size: (i32, i32)) -> Result<SlidePredraw, Stri
 
         let surf = new_surface()?;
         let ctx = cairo::Context::new(&surf).map_err(predraw_err_handle)?;
-        let lg = LinearGradient::new(size.0, start_point.1, end_point.0, end_point.1);
+        let lg = LinearGradient::new(start_point.0, start_point.1, end_point.0, end_point.1);
         lg.add_color_stop_rgba(0., Z, Z, Z, 0.);
         lg.add_color_stop_rgba(0.4, Z, Z, Z, 0.);
         lg.add_color_stop_rgba(1., Z, Z, Z, 0.7);
