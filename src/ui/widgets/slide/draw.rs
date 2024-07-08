@@ -198,7 +198,7 @@ impl DrawCore {
             let w = ctx.current_point().unwrap().0;
             let mut f = File::create("/tmp/test.png").unwrap();
             surf.write_to_png(&mut f).unwrap();
-            println!("text size: {}", w);
+            log::debug!("text size: {}", w);
             (surf, w)
         };
 
@@ -214,8 +214,6 @@ impl DrawCore {
                 }
             }
             Edge::Right => {
-                // ctx.rotate(90_f64.to_radians());
-                // ctx.translate(Z, -self.f_map_size.1);
                 if self.is_start {
                     (Z, -self.predraw.slope_position)
                 } else {
@@ -249,9 +247,7 @@ impl DrawCore {
             }
             _ => unreachable!(),
         };
-        println!("x: {}, y: {}", x, y);
         ctx.set_source_surface(text_surf, x, y).unwrap();
-        // ctx.set_source_surface(text_surf, Z, Z).unwrap();
         self.fill_rect(ctx);
         Ok(())
     }

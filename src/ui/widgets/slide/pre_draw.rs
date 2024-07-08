@@ -32,7 +32,7 @@ fn draw_slide_path(
     // calculate
     let acute_angel = 180. - obtuse_angle;
     let stop_width = radius / from_angel(obtuse_angle / 2.).tan();
-    println!("acute angle: {} stop width: {}", acute_angel, stop_width);
+    log::debug!("acute angle: {} stop width: {}", acute_angel, stop_width);
 
     // draw
     {
@@ -41,15 +41,18 @@ fn draw_slide_path(
         let full_y = size.0 / from_angel(acute_angel).tan();
         let x = size.0 * percentage;
         let y = full_y * percentage;
-        println!(
+        log::debug!(
             "full: {} percentage: {} x: {} y: {}",
-            full, percentage, x, y
+            full,
+            percentage,
+            x,
+            y
         );
         ctx.move_to(Z, Z);
         ctx.rel_line_to(x, y);
 
         let center = (size.0 - radius, full_y + stop_width);
-        println!(
+        log::debug!(
             "center: {:?}, angle1: {}, angle2: {}",
             center,
             (180. - obtuse_angle) / 180.,
