@@ -1,5 +1,4 @@
 use std::cell::Cell;
-use std::time::{Duration, Instant};
 use std::{cell::RefCell, rc::Rc};
 
 use gtk::gdk::{BUTTON_MIDDLE, BUTTON_PRIMARY};
@@ -8,14 +7,9 @@ use gtk::{glib, EventControllerMotion};
 use gtk::{DrawingArea, GestureClick};
 use gtk4_layer_shell::Edge;
 
+use crate::config::widgets::slide::Direction;
 use crate::ui::draws::util::Z;
 use crate::ui::draws::{mouse_state::BaseMouseState, transition_state::TransitionState};
-
-#[derive(Clone, Copy)]
-pub enum Direction {
-    Forward,
-    Backward,
-}
 
 #[derive(Clone)]
 pub struct ProgressState {

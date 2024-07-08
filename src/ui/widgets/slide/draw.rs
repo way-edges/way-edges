@@ -22,8 +22,8 @@ use gtk::DrawingArea;
 use gtk4_layer_shell::Edge;
 
 use super::event;
-use super::event::Direction;
 use super::pre_draw::SlidePredraw;
+use crate::config::widgets::slide::Direction;
 
 pub fn setup_draw(window: &gtk::ApplicationWindow, cfg: Config) -> Result<DrawingArea, String> {
     let darea = DrawingArea::new();
