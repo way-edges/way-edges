@@ -75,8 +75,7 @@ fn create_widgets(
         .into_iter()
         .map(|w| {
             log::debug!("Final Config: {:?}", w.cfg);
-            let window = ui::new_window(app, w.cfg)?;
-            window.set_monitor(&w.monitor);
+            let window = ui::new_window(app, w.cfg, &w.monitor)?;
             window.set_namespace("way-edges-widget");
             Ok(window)
         })

@@ -1,12 +1,19 @@
 use crate::config::Config;
 
-use gtk::{prelude::*, Application, CssProvider, STYLE_PROVIDER_PRIORITY_APPLICATION};
+use gtk::{
+    gdk::Monitor, prelude::*, Application, CssProvider, STYLE_PROVIDER_PRIORITY_APPLICATION,
+};
 use gtk4_layer_shell::LayerShell;
 
 use super::widgets;
 
-pub fn new_window(app: &Application, mut config: Config) -> Result<gtk::ApplicationWindow, String> {
+pub fn new_window(
+    app: &Application,
+    mut config: Config,
+    monitor: &Monitor,
+) -> Result<gtk::ApplicationWindow, String> {
     let window = gtk::ApplicationWindow::new(app);
+    window.set_monitor(monitor);
 
     // init layer
     window.init_layer_shell();
