@@ -9,6 +9,8 @@ use gtk::prelude::*;
 use gtk::DrawingArea;
 use gtk4_layer_shell::Edge;
 
+use super::frame_manager;
+
 pub const Z: f64 = 0.;
 
 pub fn from_angel(a: f64) -> f64 {
@@ -129,6 +131,88 @@ pub fn draw_rotation(edge: Edge, size: (f64, f64)) -> Box<dyn Fn(&Context)> {
             ctx.rotate(270.0_f64.to_radians());
             ctx.translate(-size.0, 0.);
         }),
+        _ => unreachable!(),
+    }
+}
+
+pub fn draw_motion_now(
+    ctx: &Context,
+    visible_y: f64,
+    edge: Edge,
+    range: (f64, f64),
+    extra_trigger_size: f64,
+) {
+    let offset: f64 = match edge {
+        Edge::Right | Edge::Bottom => extra_trigger_size,
+        _ => 0.,
+    };
+    ctx.translate(-range.1 + visible_y - offset, 0.);
+}
+
+pub fn draw_frame_manager_now(
+    darea: &DrawingArea,
+    frame_manager: &mut FrameManager,
+    visible_y: f64,
+    is_forward: bool,
+    range: (f64, f64),
+) -> Result<(), String> {
+    if (is_forward && visible_y < range.1) || (!is_forward && visible_y > range.0) {
+        frame_manager.start(darea)?;
+    } else {
+        frame_manager.stop()?;
+    }
+    Ok(())
+}
+
+pub fn draw_input_region_now(
+    window: &gtk::ApplicationWindow,
+    visible_y: f64,
+    size: (f64, f64),
+    edge: Edge,
+    extra_trigger_size: f64,
+) -> Result<(), String> {
+    let region = {
+        let (x, y, w, h) = match edge {
+            Edge::Left => (0, 0, (visible_y + extra_trigger_size) as i32, size.1 as i32),
+            Edge::Right => (
+                (size.0 - visible_y) as i32,
+                0,
+                (visible_y + extra_trigger_size).ceil() as i32,
+                size.1 as i32,
+            ),
+            Edge::Top => (0, 0, size.1 as i32, (visible_y + extra_trigger_size) as i32),
+            Edge::Bottom => (
+                0,
+                (size.0 - visible_y) as i32,
+                size.1 as i32,
+                (visible_y + extra_trigger_size).ceil() as i32,
+            ),
+            _ => unreachable!(),
+        };
+        Region::create_rectangle(&RectangleInt::new(x, y, w, h))
+    };
+    window
+        .surface()
+        .ok_or("Input region surface not found")?
+        .set_input_region(&region);
+    Ok(())
+}
+
+pub fn draw_rotation_now(ctx: &Context, edge: Edge, size: (f64, f64)) {
+    match edge {
+        Edge::Left => {}
+        Edge::Right => {
+            ctx.rotate(180_f64.to_radians());
+            ctx.translate(-size.0, -size.1);
+        }
+        Edge::Top => {
+            ctx.rotate(90.0_f64.to_radians());
+            ctx.translate(0., -size.1);
+        }
+        Edge::Bottom => {
+            ctx.rotate(270.0_f64.to_radians());
+            ctx.translate(-size.0, 0.);
+        }
         _ => unreachable!(),
     }
 }

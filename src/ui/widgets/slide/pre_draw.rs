@@ -14,6 +14,7 @@ pub struct SlidePredraw {
     pub path: Path,
     pub shade: ImageSurface,
     pub stroke: ImageSurface,
+    pub slope_position: f64,
 }
 
 fn predraw_err_handle(e: cairo::Error) -> String {
@@ -24,7 +25,7 @@ fn draw_slide_path(
     radius: f64,
     size: (f64, f64),
     map_size: (i32, i32),
-) -> Result<Path, String> {
+) -> Result<(Path, f64), String> {
     let ctx = cairo::Context::new(&new_surface((map_size.0, map_size.1), predraw_err_handle)?)
         .map_err(predraw_err_handle)?;
 
@@ -70,8 +71,11 @@ fn draw_slide_path(
         ctx.arc(center.0, center.1, radius, Z, acute_angel / 180. * PI);
         ctx.line_to(Z, size.1);
         ctx.close_path();
-    };
-    ctx.copy_path().map_err(predraw_err_handle)
+        Ok((
+            ctx.copy_path().map_err(predraw_err_handle)?,
+            full_y + stop_width,
+        ))
+    }
 }
 
 pub fn draw(size: (f64, f64), map_size: (i32, i32)) -> Result<SlidePredraw, String> {
@@ -83,13 +87,13 @@ pub fn draw(size: (f64, f64), map_size: (i32, i32)) -> Result<SlidePredraw, Stri
     let border_color = RGBA::from_str("#646464").unwrap();
     let new_surface = move || new_surface((map_size.0, map_size.1), predraw_err_handle);
 
-    let path = draw_slide_path(obtuse_angle, radius, size, map_size)?;
+    let (path, slope_position) = draw_slide_path(obtuse_angle, radius, size, map_size)?;
 
     let bg_surf = {
         let surf = new_surface()?;
         let ctx = cairo::Context::new(&surf).map_err(predraw_err_handle)?;
-        ctx.rectangle(Z, Z, size.0, size.1);
         ctx.set_source_color(&bg);
+        ctx.append_path(&path);
         ctx.fill().map_err(predraw_err_handle)?;
         surf
     };
@@ -135,5 +139,6 @@ pub fn draw(size: (f64, f64), map_size: (i32, i32)) -> Result<SlidePredraw, Stri
         path,
         shade: mask,
         stroke,
+        slope_position,
     })
 }

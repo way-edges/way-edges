@@ -275,6 +275,7 @@ checksum = "b2ac2a4d0e69036cf0062976f6efcba1aaee3e448594e6514bb2ddf87acce562"
 dependencies = [
  "bitflags 2.6.0",
  "cairo-sys-rs",
+ "freetype-rs",
  "glib",
  "libc",
  "thiserror",
@@ -604,6 +605,28 @@ dependencies = [
  "libc",
  "redox_syscall",
  "windows-sys 0.52.0",
+]
+
+[[package]]
+name = "freetype-rs"
+version = "0.35.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b1fad2be0bf06af23adddcf6cd143c94ff0ba3b329691f92d1a38dae5c5aeebf"
+dependencies = [
+ "bitflags 2.6.0",
+ "freetype-sys",
+ "libc",
+]
+
+[[package]]
+name = "freetype-sys"
+version = "0.20.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0e7edc5b9669349acfda99533e9e0bcf26a51862ab43b08ee7745c55d28eb134"
+dependencies = [
+ "cc",
+ "libc",
+ "pkg-config",
 ]
 
 [[package]]
@@ -1025,6 +1048,7 @@ name = "gtk4-test"
 version = "0.1.0"
 dependencies = [
  "async-channel",
+ "cairo-rs",
  "clap",
  "educe",
  "env_logger",
