@@ -1,4 +1,4 @@
-use std::{f64::consts::PI, str::FromStr};
+use std::f64::consts::PI;
 
 use gtk::{
     cairo::{self, ImageSurface, LinearGradient, Path},
@@ -81,13 +81,19 @@ fn draw_slide_path(
     }
 }
 
-pub fn draw(size: (f64, f64), map_size: (i32, i32)) -> Result<SlidePredraw, String> {
+pub fn draw(
+    size: (f64, f64),
+    map_size: (i32, i32),
+    bg: RGBA,
+    fg: RGBA,
+    border_color: RGBA,
+) -> Result<SlidePredraw, String> {
     // provide
     let obtuse_angle = 120.;
     let radius = 20.;
-    let fg = RGBA::from_str("#FFB847").unwrap();
-    let bg = RGBA::from_str("#808080").unwrap();
-    let border_color = RGBA::from_str("#646464").unwrap();
+    // let fg = RGBA::from_str("#FFB847").unwrap();
+    // let bg = RGBA::from_str("#808080").unwrap();
+    // let border_color = RGBA::from_str("#646464").unwrap();
     let new_surface = move || new_surface((map_size.0, map_size.1), predraw_err_handle);
 
     let (path, slope_position) = draw_slide_path(obtuse_angle, radius, size, map_size)?;

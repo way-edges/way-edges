@@ -1,6 +1,7 @@
 use std::fs::File;
 use std::time::Duration;
 
+use crate::config::widgets::slide::SlideConfig;
 use crate::config::Config;
 use crate::ui::draws::blur::blur_image_surface;
 use crate::ui::draws::font::get_font_face;
@@ -16,6 +17,7 @@ use crate::ui::draws::util::Z;
 use cairo::ImageSurface;
 use gtk::cairo;
 use gtk::cairo::Context;
+use gtk::gdk::RGBA;
 use gtk::glib;
 use gtk::prelude::*;
 use gtk::DrawingArea;
@@ -25,12 +27,16 @@ use super::event;
 use super::pre_draw::SlidePredraw;
 use crate::config::widgets::slide::Direction;
 
-pub fn setup_draw(window: &gtk::ApplicationWindow, cfg: Config) -> Result<DrawingArea, String> {
+pub fn setup_draw(
+    window: &gtk::ApplicationWindow,
+    cfg: Config,
+    slide_cfg: SlideConfig,
+) -> Result<DrawingArea, String> {
     let darea = DrawingArea::new();
-    let size = cfg.get_size_into()?;
+    let size = slide_cfg.get_size()?;
     let edge = cfg.edge;
-    let direction = Direction::Forward;
-    let extra_trigger_size = 5.;
+    let direction = slide_cfg.progress_direction;
+    let extra_trigger_size = slide_cfg.extra_trigger_size.get_num()?;
     let f_map_size = (size.0 + extra_trigger_size, size.1);
     let map_size = (f_map_size.0 as i32, f_map_size.1 as i32);
     match edge {
@@ -45,12 +51,27 @@ pub fn setup_draw(window: &gtk::ApplicationWindow, cfg: Config) -> Result<Drawin
         _ => unreachable!(),
     };
 
-    let transition_range = (3., size.0);
-    let ts = TransitionState::new(Duration::from_millis(100), transition_range);
-    let progress = event::setup_event(&darea, &ts, edge.into(), direction, size.1);
-    let is_start = false;
+    let transition_range = (slide_cfg.preview_size, size.0);
+    let ts = TransitionState::new(
+        Duration::from_millis(slide_cfg.transition_duration),
+        transition_range,
+    );
+    let progress = event::setup_event(
+        &darea,
+        &ts,
+        edge.into(),
+        direction,
+        size.1,
+        slide_cfg.on_change,
+    );
 
-    let predraw = super::pre_draw::draw(size, map_size)?;
+    let predraw = super::pre_draw::draw(
+        size,
+        map_size,
+        slide_cfg.bg_color,
+        slide_cfg.fg_color,
+        slide_cfg.border_color,
+    )?;
     let dc = DrawCore {
         predraw,
         edge,
@@ -59,9 +80,10 @@ pub fn setup_draw(window: &gtk::ApplicationWindow, cfg: Config) -> Result<Drawin
         f_map_size,
         map_size,
         extra_trigger_size,
-        is_start,
+        is_start: slide_cfg.is_text_position_start,
+        text_color: slide_cfg.text_color,
     };
-    let mut frame_manager = FrameManager::new(30);
+    let mut frame_manager = FrameManager::new(slide_cfg.frame_rate, &darea, window);
     // let set_rotate = draw_rotation(edge, size);
     // let mut set_motion = draw_motion(edge, transition_range, extra_trigger_size);
     // let set_input_region = draw_input_region(size, edge, extra_trigger_size);
@@ -69,7 +91,7 @@ pub fn setup_draw(window: &gtk::ApplicationWindow, cfg: Config) -> Result<Drawin
     darea.set_draw_func(glib::clone!(
         @weak window,
         @strong progress,
-        => move |darea, context, _, _| {
+        => move |_, context, _, _| {
             draw_rotation_now(context, dc.edge, dc.size);
             // draw_rotation_now(context, Edge::Top, dc.size);
             let visible_y = ts.get_y();
@@ -87,7 +109,6 @@ pub fn setup_draw(window: &gtk::ApplicationWindow, cfg: Config) -> Result<Drawin
                         dc.extra_trigger_size
                     ).and_then(|_| {
                         draw_frame_manager_now(
-                            darea,
                             &mut frame_manager,
                             visible_y,
                             ts.is_forward.get(),
@@ -115,6 +136,7 @@ struct DrawCore {
     map_size: (i32, i32),
     extra_trigger_size: f64,
     is_start: bool,
+    text_color: RGBA,
 }
 impl DrawCore {
     fn draw(&self, ctx: &Context, progress: f64) -> Result<(), String> {
@@ -192,7 +214,7 @@ impl DrawCore {
             ctx.move_to(0., y * 0.9);
             ctx.set_font_face(&a);
             ctx.set_font_size(f_size);
-            ctx.set_source_rgb(0., 0., 0.);
+            ctx.set_source_color(&self.text_color);
             ctx.show_text(format!("{}%", f64::floor(progress * 100.)).as_str())
                 .unwrap();
             let w = ctx.current_point().unwrap().0;

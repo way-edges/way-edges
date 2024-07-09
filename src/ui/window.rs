@@ -47,8 +47,8 @@ pub fn new_window(
             Ok(())
         })
         .and_then(|_| match config.widget.take().ok_or("Widget is None")? {
-            crate::config::Widget::Btn(cfg) => widgets::button::init_widget(&window, config, *cfg),
-            crate::config::Widget::Slider => widgets::slide::init_widget(&window, config),
+            crate::config::Widget::Btn(c) => widgets::button::init_widget(&window, config, *c),
+            crate::config::Widget::Slider(c) => widgets::slide::init_widget(&window, config, *c),
             _ => unreachable!(),
         })?;
 

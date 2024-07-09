@@ -7,29 +7,33 @@ use gtk::{glib, EventControllerMotion};
 use gtk::{DrawingArea, GestureClick};
 use gtk4_layer_shell::Edge;
 
-use crate::config::widgets::slide::Direction;
+use crate::config::widgets::slide::{Direction, Task};
 use crate::ui::draws::util::Z;
 use crate::ui::draws::{mouse_state::BaseMouseState, transition_state::TransitionState};
 
-#[derive(Clone)]
 pub struct ProgressState {
     pub max: f64,
     /// 0 ~ 1
     pub current: Rc<Cell<f64>>,
     pub direction: Direction,
+    pub on_change: Option<Task>,
 }
 impl ProgressState {
-    pub fn new(max: f64, direction: Direction) -> Self {
+    pub fn new(max: f64, direction: Direction, on_change: Option<Task>) -> Self {
         Self {
             max,
             current: Rc::new(Cell::new(0.0)),
             direction,
+            on_change,
         }
     }
-    pub fn set_progress_raw(&self, c: f64) {
+    pub fn set_progress_raw(&mut self, c: f64) {
+        if let Some(ref mut f) = &mut self.on_change {
+            f(c);
+        };
         self.current.set(c);
     }
-    pub fn set_progress(&self, mut c: f64) {
+    pub fn set_progress(&mut self, mut c: f64) {
         if c < Z {
             c = Z;
         } else if c > self.max {
@@ -64,9 +68,10 @@ pub(super) fn setup_event(
     xory: XorY,
     direction: Direction,
     max: f64,
+    on_change: Option<Task>,
 ) -> Rc<Cell<f64>> {
     let mouse_state = Rc::new(RefCell::new(BaseMouseState::new(ts)));
-    let progress_state = Rc::new(RefCell::new(ProgressState::new(max, direction)));
+    let progress_state = Rc::new(RefCell::new(ProgressState::new(max, direction, on_change)));
     set_event_mouse_click(darea, mouse_state.clone(), progress_state.clone(), xory);
     set_event_mouse_move(darea, mouse_state.clone(), progress_state.clone(), xory);
     let progress = progress_state.borrow().current.clone();
@@ -112,7 +117,7 @@ fn set_event_mouse_click(
                     XorY::X => x,
                     XorY::Y => y,
                 };
-                progress_state.borrow().set_progress(progress);
+                progress_state.borrow_mut().set_progress(progress);
             }
             darea.queue_draw();
         }),
@@ -159,7 +164,7 @@ fn set_event_mouse_move(
                     XorY::Y => y,
                 };
                 log::debug!("Change progress: {progress}");
-                progress_state.borrow().set_progress(progress);
+                progress_state.borrow_mut().set_progress(progress);
                 darea.queue_draw();
             }
         }),

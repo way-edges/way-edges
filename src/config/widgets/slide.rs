@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{process::Command, str::FromStr, thread};
 
 use educe::Educe;
 use gtk::gdk::RGBA;
@@ -6,9 +6,11 @@ use serde::{Deserialize, Deserializer};
 use serde_jsonrc::Value;
 use way_edges_derive::GetSize;
 
-use crate::config::{widgets::common::create_task, NumOrRelative, Widget};
+use crate::config::{NumOrRelative, Widget};
 
-use super::common::{self, Task};
+use super::common::{self};
+
+pub type Task = Box<dyn FnMut(f64) + Send + Sync>;
 
 #[derive(Clone, Copy, Debug, Deserialize, Default)]
 pub enum Direction {
@@ -105,4 +107,21 @@ where
         }
     }
     d.deserialize_any(EventMapVisitor)
+}
+
+pub fn create_task(value: String) -> Task {
+    Box::new(move |progress| {
+        let value = value
+            .clone()
+            .replace("{progress}", progress.to_string().as_str());
+        thread::spawn(move || {
+            let mut cmd = Command::new("/bin/sh");
+            let res = cmd.arg("-c").arg(&value).output();
+            if let Err(e) = res {
+                let msg = format!("error running command: {value}\nError: {e}");
+                log::error!("{msg}");
+                crate::notify_send("Way-Edges command error", &msg, true);
+            }
+        });
+    })
 }
