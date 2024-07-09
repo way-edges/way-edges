@@ -7,16 +7,12 @@ use super::NumOrRelative;
 #[serde(default)]
 pub struct RawMargins {
     #[serde(default)]
-    #[serde(deserialize_with = "super::transform_num_or_relative")]
     pub top: NumOrRelative,
     #[serde(default)]
-    #[serde(deserialize_with = "super::transform_num_or_relative")]
     pub left: NumOrRelative,
     #[serde(default)]
-    #[serde(deserialize_with = "super::transform_num_or_relative")]
     pub right: NumOrRelative,
     #[serde(default)]
-    #[serde(deserialize_with = "super::transform_num_or_relative")]
     pub bottom: NumOrRelative,
 }
 
