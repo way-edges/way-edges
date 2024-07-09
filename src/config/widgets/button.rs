@@ -6,10 +6,11 @@ use serde::{Deserialize, Deserializer};
 use serde_jsonrc::Value;
 use std::collections::HashMap;
 use std::str::FromStr;
+use way_edges_derive::GetSize;
 
 pub type EventMap = HashMap<u32, Task>;
 
-#[derive(Educe, Deserialize)]
+#[derive(Educe, Deserialize, GetSize)]
 #[educe(Debug)]
 pub struct BtnConfig {
     pub width: NumOrRelative,
@@ -39,11 +40,6 @@ fn dt_event_map() -> Option<EventMap> {
     Some(EventMap::new())
 }
 
-impl BtnConfig {
-    pub fn get_size(&self) -> Result<(f64, f64), String> {
-        Ok((self.width.get_num()?, self.height.get_num()?))
-    }
-}
 pub fn visit_btn_config(d: Value) -> Result<Widget, String> {
     let c = serde_jsonrc::from_value::<BtnConfig>(d)
         .map_err(|e| format!("Fail to parse btn config: {}", e))?;

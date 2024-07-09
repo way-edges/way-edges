@@ -1,8 +1,10 @@
 use educe::Educe;
 use gtk::gdk::RGBA;
 use serde::{Deserialize, Deserializer};
+use serde_jsonrc::Value;
+use way_edges_derive::GetSize;
 
-use crate::config::{widgets::common::create_task, NumOrRelative};
+use crate::config::{widgets::common::create_task, NumOrRelative, Widget};
 
 use super::common::{self, Task};
 
@@ -13,9 +15,12 @@ pub enum Direction {
     Backward,
 }
 
-#[derive(Educe, Deserialize)]
+#[derive(Educe, Deserialize, GetSize)]
 #[educe(Debug)]
 pub struct SlideConfig {
+    pub width: NumOrRelative,
+    pub height: NumOrRelative,
+
     #[serde(default = "common::dt_transition_duration")]
     pub transition_duration: u64,
     #[serde(default = "common::dt_frame_rate")]
@@ -44,6 +49,12 @@ pub struct SlideConfig {
 
 fn dt_preview_size() -> f64 {
     3.
+}
+
+pub fn visit_slide_config(d: Value) -> Result<Widget, String> {
+    let c = serde_jsonrc::from_value::<SlideConfig>(d)
+        .map_err(|e| format!("Fail to parse btn config: {}", e))?;
+    Ok(Widget::Slider(Box::new(c)))
 }
 
 pub fn on_change_translate<'de, D>(d: D) -> Result<Task, D::Error>
