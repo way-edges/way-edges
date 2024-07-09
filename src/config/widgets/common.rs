@@ -1,9 +1,26 @@
-use std::str::FromStr;
+use std::{process::Command, str::FromStr, thread};
 
 use gtk::gdk::RGBA;
 use serde::{self, Deserializer};
 
 use crate::config::NumOrRelative;
+
+pub type Task = Box<dyn FnMut() + Send + Sync>;
+
+pub fn create_task(value: String) -> Task {
+    Box::new(move || {
+        let value = value.clone();
+        thread::spawn(move || {
+            let mut cmd = Command::new("/bin/sh");
+            let res = cmd.arg("-c").arg(&value).output();
+            if let Err(e) = res {
+                let msg = format!("error running command: {value}\nError: {e}");
+                log::error!("{msg}");
+                crate::notify_send("Way-Edges command error", &msg, true);
+            }
+        });
+    })
+}
 
 pub const DEFAULT_TRANSITION_DURATION: u64 = 100;
 pub const DEFAULT_FRAME_RATE: u32 = 60;

@@ -1,13 +1,13 @@
-use super::common;
+use super::common::{self, create_task, Task};
 use crate::config::{NumOrRelative, Widget};
 use educe::Educe;
 use gtk::gdk::RGBA;
 use serde::{Deserialize, Deserializer};
 use serde_jsonrc::Value;
 use std::collections::HashMap;
-use std::{process::Command, str::FromStr, thread};
+use std::str::FromStr;
 
-pub type EventMap = HashMap<u32, Box<dyn FnMut() + Send + Sync>>;
+pub type EventMap = HashMap<u32, Task>;
 
 #[derive(Educe, Deserialize)]
 #[educe(Debug)]
@@ -53,21 +53,7 @@ pub fn visit_btn_config(d: Value) -> Result<Widget, String> {
 fn _event_map_translate(event_map: Vec<(u32, String)>) -> EventMap {
     let mut map = EventMap::new();
     for (key, value) in event_map {
-        map.insert(
-            key,
-            Box::new(move || {
-                let value = value.clone();
-                thread::spawn(move || {
-                    let mut cmd = Command::new("/bin/sh");
-                    let res = cmd.arg("-c").arg(&value).output();
-                    if let Err(e) = res {
-                        let msg = format!("error running command: {value}\nError: {e}");
-                        log::error!("{msg}");
-                        crate::notify_send("Way-Edges command error", &msg, true);
-                    }
-                });
-            }),
-        );
+        map.insert(key, create_task(value));
     }
     map
 }
