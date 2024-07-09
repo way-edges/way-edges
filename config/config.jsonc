@@ -4,17 +4,28 @@
   "$schema": "https://raw.githubusercontent.com/ogios/way-edges/master/config/config.schema.json",
   "groups": [
     {
-      "name": "test",
+      "name": "slidetest",
       "widgets": [
         {
           "edge": "top",
           "position": "left",
-          "width": 15,
-          "height": "25%",
+          "widget": {
+            "type": "slide",
+            "width": 20,
+            "height": "25%",
+            "frame_rate": 60,
+            "on_change": "notify-send {progress}",
+          },
+        },
+        {
+          "edge": "top",
+          "position": "left",
           "margin": {
             "left": "25%",
           },
           "widget": {
+            "width": 15,
+            "height": "25%",
             "type": "btn",
             "frame_rate": 60,
             "event_map": [
@@ -26,12 +37,12 @@
         {
           "edge": "top",
           "position": "right",
-          "width": 15,
-          "height": "25%",
           "margin": {
             "right": "25%",
           },
           "widget": {
+            "width": 15,
+            "height": "25%",
             "type": "btn",
             "frame_rate": 60,
             "event_map": [

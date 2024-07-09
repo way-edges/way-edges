@@ -4,14 +4,90 @@
     "numOrPercentage": {
       "anyOf": [{ "type": "number", "minimum": 0 }, { "type": "string" }]
     },
+    "SlideWidget": {
+      "type": "object",
+      "description": "Slide widget specific properties",
+      "required": ["width", "height"],
+      "properties": {
+        "type": {
+          "description": "button widget type",
+          "type": "string",
+          "const": "slide"
+        },
+        "width": {
+          "description": "width of the Slide widget. Can be either a number or a percentage.\nExample: 15",
+          "$ref": "#/definitions/numOrPercentage"
+        },
+        "height": {
+          "description": "height of the Slide widget. Can be either a number or a percentage.\nExample: \"25%\"",
+          "$ref": "#/definitions/numOrPercentage"
+        },
+        "transition_duration": {
+          "description": "button show/hide in `transition_duration` ms.\n Default 100ms",
+          "type": "integer",
+          "minimum": 0
+        },
+        "frame_rate": {
+          "description": "button frame rate.\nDefault 30",
+          "type": "integer",
+          "minimum": 1
+        },
+        "extra_trigger_size": {
+          "description": "transparent extra trigger area, must > 0 or else the button will not be triggered.\nDefault 5",
+          "$ref": "#/definitions/numOrPercentage"
+        },
+        "bg_color": {
+          "description": "background color of the widget: pattern: `#rgb`/`#rrggbb`/`#rrrgggbbb`/`rgb(r, g, b)`/`rgba(r, g, b, a)`.\nFor additional notes, please refer to: https://gtk-rs.org/gtk4-rs/stable/latest/docs/src/gdk4/rgba.rs.html#205\nDefault `#7B98FF`",
+          "type": "string"
+        },
+        "fg_color": {
+          "description": "foreground color of the widget: pattern: `#rgb`/`#rrggbb`/`#rrrgggbbb`/`rgb(r, g, b)`/`rgba(r, g, b, a)`.\nFor additional notes, please refer to: https://gtk-rs.org/gtk4-rs/stable/latest/docs/src/gdk4/rgba.rs.html#205\nDefault `#7B98FF`",
+          "type": "string"
+        },
+        "border_color": {
+          "description": "border color of the widget: pattern: `#rgb`/`#rrggbb`/`#rrrgggbbb`/`rgb(r, g, b)`/`rgba(r, g, b, a)`.\nFor additional notes, please refer to: https://gtk-rs.org/gtk4-rs/stable/latest/docs/src/gdk4/rgba.rs.html#205\nDefault `#7B98FF`",
+          "type": "string"
+        },
+        "text_color": {
+          "description": "text color of the widget: pattern: `#rgb`/`#rrggbb`/`#rrrgggbbb`/`rgb(r, g, b)`/`rgba(r, g, b, a)`.\nFor additional notes, please refer to: https://gtk-rs.org/gtk4-rs/stable/latest/docs/src/gdk4/rgba.rs.html#205\nDefault `#7B98FF`",
+          "type": "string"
+        },
+        "preview_size": {
+          "description": "how much area should the widget reveal when hidden\nDefault 3",
+          "type": "number"
+        },
+        "progress_direction": {
+          "description": "progress bar left/down -> right/up : Forward/Backward\nDefault Forward",
+          "type": "string",
+          "const": ["Forward", "Backward"]
+        },
+        "on_change": {
+          "description": "command to execute, replace '{progress}' with the progress from 0-1",
+          "type": "string"
+        },
+        "is_text_position_start": {
+          "description": "which side percentage info at, start or end\nDefault true",
+          "type": "boolean"
+        }
+      }
+    },
     "BtnWidget": {
       "type": "object",
       "description": "Button widget specific properties",
+      "required": ["width", "height"],
       "properties": {
         "type": {
           "description": "button widget type",
           "type": "string",
           "const": "btn"
+        },
+        "width": {
+          "description": "width of the button. Can be either a number or a percentage.\nExample: 15",
+          "$ref": "#/definitions/numOrPercentage"
+        },
+        "height": {
+          "description": "height of the button. Can be either a number or a percentage.\nExample: \"25%\"",
+          "$ref": "#/definitions/numOrPercentage"
         },
         "color": {
           "description": "main color of the button: pattern: `#rgb`/`#rrggbb`/`#rrrgggbbb`/`rgb(r, g, b)`/`rgba(r, g, b, a)`.\nFor additional notes, please refer to: https://gtk-rs.org/gtk4-rs/stable/latest/docs/src/gdk4/rgba.rs.html#205\nDefault `#7B98FF`",
@@ -64,7 +140,6 @@
             "type": "array",
             "items": {
               "type": "object",
-              "required": ["width", "height"],
               "properties": {
                 "edge": {
                   "type": "string",
@@ -80,14 +155,6 @@
                   "type": "string",
                   "description": "layer of the screen: background/bottom/top/overlay.\nDefault `top`",
                   "enum": ["top", "bottom", "background", "overlay"]
-                },
-                "width": {
-                  "description": "width of the button. Can be either a number or a percentage.\nExample: 15",
-                  "$ref": "#/definitions/numOrPercentage"
-                },
-                "height": {
-                  "description": "height of the button. Can be either a number or a percentage.\nExample: \"25%\"",
-                  "$ref": "#/definitions/numOrPercentage"
                 },
                 "margin": {
                   "description": "margin of the button, relative to the `position`.\nDefault all 0.",
