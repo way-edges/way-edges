@@ -2,10 +2,12 @@ mod draw;
 mod event;
 mod pre_draw;
 
-use crate::activate::get_working_area_size;
+use crate::activate::{get_monior_size, get_working_area_size};
 use crate::config::{widgets::button::BtnConfig, Config, NumOrRelative};
 use gtk::ApplicationWindow;
 use gtk4_layer_shell::Edge;
+
+use super::common;
 
 pub fn init_widget(
     window: &ApplicationWindow,
@@ -17,10 +19,12 @@ pub fn init_widget(
 }
 
 fn calculate_rel(config: &Config, btn_config: &mut BtnConfig) -> Result<(), String> {
+    let index = config.monitor.to_index()?;
+    let size =
+        // get_working_area_size(index)?.ok_or(format!("Failed to get working area size: {index}"))?;
+        get_monior_size(index)?.ok_or(format!("Failed to get working area size: {index}"))?;
+
     if let NumOrRelative::Relative(_) = &mut btn_config.extra_trigger_size {
-        let index = config.monitor.to_index()?;
-        let size = get_working_area_size(index)?
-            .ok_or(format!("Failed to get working area size: {index}"))?;
         let max = match config.edge {
             Edge::Left | Edge::Right => size.0,
             Edge::Top | Edge::Bottom => size.1,
@@ -28,5 +32,12 @@ fn calculate_rel(config: &Config, btn_config: &mut BtnConfig) -> Result<(), Stri
         };
         btn_config.extra_trigger_size.calculate_relative(max as f64);
     };
+
+    common::calculate_rel_width_height(
+        &mut btn_config.width,
+        &mut btn_config.height,
+        size,
+        config.edge,
+    )?;
     Ok(())
 }

@@ -30,12 +30,6 @@ pub struct RawConfig {
     #[serde(default = "dt_layer")]
     pub layer: String,
     #[serde(default)]
-    #[serde(deserialize_with = "super::transform_num_or_relative")]
-    pub width: NumOrRelative,
-    #[serde(default)]
-    #[serde(deserialize_with = "super::transform_num_or_relative")]
-    pub height: NumOrRelative,
-    #[serde(default)]
     pub monitor_id: usize,
     #[serde(default)]
     pub monitor_name: String,

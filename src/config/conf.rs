@@ -1,11 +1,11 @@
 use crate::activate::MonitorSpecifier;
 use educe::Educe;
 use gtk4_layer_shell::{Edge, Layer};
+use serde::Deserialize;
+use std::str::FromStr;
 
 use super::widgets::button::BtnConfig;
-// use std::collections::HashMap;
 
-// pub type GroupConfigMap = HashMap<String, GroupConfig>;
 pub type GroupConfig = Vec<Config>;
 
 #[derive(Debug, Clone, Copy)]
@@ -18,6 +18,74 @@ impl Default for NumOrRelative {
         Self::Num(f64::default())
     }
 }
+impl<'de> Deserialize<'de> for NumOrRelative {
+    fn deserialize<D>(d: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        struct F64OrRelativeVisitor;
+        impl<'de> serde::de::Visitor<'de> for F64OrRelativeVisitor {
+            type Value = NumOrRelative;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("a number or a string")
+            }
+
+            fn visit_i64<E>(self, v: i64) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                Ok(NumOrRelative::Num(v as f64))
+            }
+
+            fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                Ok(NumOrRelative::Num(v as f64))
+            }
+
+            fn visit_f64<E>(self, v: f64) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                Ok(NumOrRelative::Num(v))
+            }
+            fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                // just `unwrap`, it's ok
+                let re = regex::Regex::new(r"^(\d+(\.\d+)?)%\s*(.*)$").unwrap();
+
+                if let Some(captures) = re.captures(v) {
+                    let percentage_str = captures.get(1).map_or("", |m| m.as_str());
+                    let percentage = f64::from_str(percentage_str).map_err(E::custom)?;
+
+                    // // description
+                    // let description = captures
+                    //     .get(3)
+                    //     .map(|m| {
+                    //         let desc = m.as_str().trim();
+                    //         if desc.is_empty() {
+                    //             None
+                    //         } else {
+                    //             Some(desc.to_string())
+                    //         }
+                    //     })
+                    //     .flatten();
+
+                    Ok(NumOrRelative::Relative(percentage * 0.01))
+                } else {
+                    Err(E::custom(
+                        "Input does not match the expected format.".to_string(),
+                    ))
+                }
+            }
+        }
+        d.deserialize_any(F64OrRelativeVisitor)
+    }
+}
 
 #[allow(dead_code)]
 impl NumOrRelative {
@@ -25,10 +93,12 @@ impl NumOrRelative {
         if let Self::Num(r) = self {
             Ok(*r)
         } else {
+            println!("{self:?}");
             Err("relative, not num")
         }
     }
     pub fn get_num_into(self) -> Result<f64, &'static str> {
+        // println!("hrere");
         if let Self::Num(r) = self {
             Ok(r)
         } else {
@@ -85,8 +155,6 @@ pub struct Config {
     pub edge: Edge,
     pub position: Option<Edge>,
     pub layer: Layer,
-    pub width: NumOrRelative,
-    pub height: NumOrRelative,
     pub monitor: MonitorSpecifier,
     pub margins: Vec<(Edge, NumOrRelative)>,
 
@@ -99,15 +167,6 @@ pub struct Config {
     // pub extra_trigger_size: NumOrRelative<i32>,
 }
 
-#[allow(dead_code)]
-impl Config {
-    pub fn get_size(&self) -> Result<(f64, f64), &str> {
-        Ok((self.width.get_num()?, self.height.get_num()?))
-    }
-    pub fn get_size_into(&self) -> Result<(f64, f64), &str> {
-        Ok((self.width.get_num_into()?, self.height.get_num_into()?))
-    }
-}
 impl Drop for Config {
     fn drop(&mut self) {
         log::debug!("dropping config: {self:?}")

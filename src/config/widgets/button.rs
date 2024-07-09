@@ -1,92 +1,56 @@
+use super::common;
 use crate::config::{NumOrRelative, Widget};
 use educe::Educe;
 use gtk::gdk::RGBA;
-use serde::Deserializer;
+use serde::{Deserialize, Deserializer};
 use serde_jsonrc::Value;
 use std::collections::HashMap;
 use std::{process::Command, str::FromStr, thread};
 
 pub type EventMap = HashMap<u32, Box<dyn FnMut() + Send + Sync>>;
 
-#[derive(Educe)]
+#[derive(Educe, Deserialize)]
 #[educe(Debug)]
 pub struct BtnConfig {
+    pub width: NumOrRelative,
+    pub height: NumOrRelative,
+
     #[educe(Debug(ignore))]
+    #[serde(default = "dt_event_map")]
+    #[serde(deserialize_with = "event_map_translate")]
     pub event_map: Option<EventMap>,
+
+    #[serde(default = "dt_color")]
+    #[serde(deserialize_with = "common::color_translate")]
     pub color: RGBA,
+    #[serde(default = "common::dt_transition_duration")]
     pub transition_duration: u64,
-    pub frame_rate: u64,
+    #[serde(default = "common::dt_frame_rate")]
+    pub frame_rate: u32,
+    #[serde(default = "common::dt_extra_trigger_size")]
     pub extra_trigger_size: NumOrRelative,
 }
 
-pub fn visit_btn_config<'de, D>(d: D) -> Result<Widget, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    struct BtnConfigVisitor;
-    impl<'de> serde::de::Visitor<'de> for BtnConfigVisitor {
-        type Value = Widget;
-        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-            formatter.write_str("struct BtnConfig")
-        }
-        fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
-        where
-            A: serde::de::MapAccess<'de>,
-        {
-            let mut event_map = None;
-            let mut color = None;
-            let mut transition_duration = None;
-            let mut frame_rate = None;
-            let mut extra_trigger_size = None;
-            while let Some(key) = map.next_key::<String>()? {
-                match key.as_str() {
-                    "event_map" => {
-                        event_map = Some(event_map_translate(map.next_value()?));
-                    }
-                    "color" => {
-                        let c = map.next_value()?;
-                        color = Some(color_translate(c).map_err(serde::de::Error::custom)?);
-                    }
-                    "transition_duration" => {
-                        transition_duration = Some(map.next_value()?);
-                    }
-                    "frame_rate" => {
-                        let fps = map.next_value()?;
-                        if fps < 1 {
-                            return Err(serde::de::Error::custom("Frame rate must be >= 1"));
-                        }
-                        frame_rate = Some(fps);
-                    }
-                    "extra_trigger_size" => {
-                        let v: Value = map.next_value()?;
-                        let res = crate::config::transform_num_or_relative(v)
-                            .map_err(serde::de::Error::custom)?;
-                        extra_trigger_size = Some(res);
-                    }
-                    _ => {}
-                };
-            }
-            let w = Widget::Btn(Box::new(BtnConfig {
-                event_map: Some(event_map.unwrap_or_default()),
-                color: color.unwrap_or(RGBA::from_str("#7B98FF").unwrap()),
-                transition_duration: transition_duration.unwrap_or(100),
-                frame_rate: frame_rate.unwrap_or(60),
-                extra_trigger_size: extra_trigger_size.unwrap_or(NumOrRelative::Num(5.)),
-            }));
-            Ok(w)
-        }
-    }
-    d.deserialize_any(BtnConfigVisitor)
+fn dt_color() -> RGBA {
+    RGBA::from_str("#7B98FF").unwrap()
 }
 
-fn color_translate(color: String) -> Result<RGBA, String> {
-    match RGBA::from_str(&color) {
-        Ok(c) => Ok(c),
-        Err(e) => Err(format!("invalid color {}", e)),
-    }
+fn dt_event_map() -> Option<EventMap> {
+    Some(EventMap::new())
 }
 
-fn event_map_translate(event_map: Vec<(u32, String)>) -> EventMap {
+impl BtnConfig {
+    pub fn get_size(&self) -> Result<(f64, f64), String> {
+        Ok((self.width.get_num()?, self.height.get_num()?))
+    }
+}
+pub fn visit_btn_config(d: Value) -> Result<Widget, String> {
+    let c = serde_jsonrc::from_value::<BtnConfig>(d)
+        .map_err(|e| format!("Fail to parse btn config: {}", e))?;
+    Ok(Widget::Btn(Box::new(c)))
+}
+
+fn _event_map_translate(event_map: Vec<(u32, String)>) -> EventMap {
     let mut map = EventMap::new();
     for (key, value) in event_map {
         map.insert(
@@ -106,4 +70,30 @@ fn event_map_translate(event_map: Vec<(u32, String)>) -> EventMap {
         );
     }
     map
+}
+
+pub fn event_map_translate<'de, D>(d: D) -> Result<Option<EventMap>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    struct EventMapVisitor;
+    impl<'de> serde::de::Visitor<'de> for EventMapVisitor {
+        type Value = Option<EventMap>;
+
+        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            formatter.write_str("vec of tuples: (key: number, command: string)")
+        }
+
+        fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+        where
+            A: serde::de::SeqAccess<'de>,
+        {
+            let mut event_map = Vec::new();
+            while let Some(v) = seq.next_element::<(u32, String)>()? {
+                event_map.push(v);
+            }
+            Ok(Some(_event_map_translate(event_map)))
+        }
+    }
+    d.deserialize_any(EventMapVisitor)
 }

@@ -27,13 +27,6 @@ fn find_monitor<'a>(
 }
 
 fn calculate_config_relative(cfg: &mut Config, max_size_raw: (i32, i32)) -> Result<(), String> {
-    let max_size = match cfg.edge {
-        Edge::Left | Edge::Right => (max_size_raw.0, max_size_raw.1),
-        Edge::Top | Edge::Bottom => (max_size_raw.1, max_size_raw.0),
-        _ => unreachable!(),
-    };
-    cfg.width.calculate_relative(max_size.0 as f64);
-    cfg.height.calculate_relative(max_size.1 as f64);
     cfg.margins.iter_mut().for_each(|(e, n)| {
         match e {
             Edge::Left | Edge::Right => n.calculate_relative(max_size_raw.0 as f64),
@@ -41,18 +34,7 @@ fn calculate_config_relative(cfg: &mut Config, max_size_raw: (i32, i32)) -> Resu
             _ => unreachable!(),
         };
     });
-
-    // remember to check height since we didn't do it in `parse_config`
-    // when passing only `rel_height`
-    let w = cfg.width.get_num()?;
-    let h = cfg.height.get_num()?;
-    if w * 2. > h {
-        Err(format!(
-            "relative height detect: width * 2 must be <= height: {w} * 2 <= {h}",
-        ))
-    } else {
-        Ok(())
-    }
+    Ok(())
 }
 
 pub trait WindowInitializer: Clone {

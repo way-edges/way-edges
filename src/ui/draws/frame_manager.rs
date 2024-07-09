@@ -10,10 +10,10 @@ pub struct FrameManager {
     frame_gap: Duration,
 }
 impl FrameManager {
-    pub fn new(frame_rate: u64) -> Self {
+    pub fn new(frame_rate: u32) -> Self {
         Self {
             runner: None,
-            frame_gap: Duration::from_micros(1_000_000 / frame_rate),
+            frame_gap: Duration::from_micros(1_000_000 / frame_rate as u64),
         }
     }
     pub fn start(&mut self, darea: &DrawingArea) -> Result<(), String> {

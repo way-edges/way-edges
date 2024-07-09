@@ -23,7 +23,7 @@ pub fn setup_draw(
     mut btn_cfg: BtnConfig,
 ) -> Result<DrawingArea, String> {
     let darea = DrawingArea::new();
-    let size = cfg.get_size_into()?;
+    let size = btn_cfg.get_size()?;
     let edge = cfg.edge;
     let extra_trigger_size = btn_cfg.extra_trigger_size.get_num_into()?;
     let map_size = ((size.0 + extra_trigger_size) as i32, size.1 as i32);

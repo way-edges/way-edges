@@ -53,18 +53,6 @@ pub fn raw_2_conf(raw: RawGroup) -> Result<GroupConfig, String> {
                     return Err(format!("invalid layer {}", raw.layer));
                 }
             };
-            let width = {
-                if !raw.width.is_valid_length() {
-                    return Err("width must be > 0".to_string());
-                }
-                raw.width
-            };
-            let height = {
-                if !raw.height.is_valid_length() {
-                    return Err(format!("height must be >= 0: {:#?}", raw.height).to_string());
-                }
-                raw.height
-            };
             let monitor = {
                 if raw.monitor_name.is_empty() {
                     MonitorSpecifier::ID(raw.monitor_id)
@@ -94,8 +82,6 @@ pub fn raw_2_conf(raw: RawGroup) -> Result<GroupConfig, String> {
                 edge,
                 position,
                 layer,
-                width,
-                height,
                 monitor,
                 margins,
                 widget: Some(widget),

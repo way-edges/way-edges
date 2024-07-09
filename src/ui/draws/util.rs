@@ -53,7 +53,7 @@ pub fn draw_motion(
 }
 
 pub fn draw_frame_manager(
-    frame_rate: u64,
+    frame_rate: u32,
     range: (f64, f64),
 ) -> impl FnMut(&DrawingArea, f64, bool) -> Result<(), String> {
     let mut frame_manager = FrameManager::new(frame_rate);
