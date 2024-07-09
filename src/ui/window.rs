@@ -13,10 +13,10 @@ pub fn new_window(
     monitor: &Monitor,
 ) -> Result<gtk::ApplicationWindow, String> {
     let window = gtk::ApplicationWindow::new(app);
-    window.set_monitor(monitor);
 
     // init layer
     window.init_layer_shell();
+    window.set_monitor(monitor);
     window.set_layer(config.layer);
 
     // edge and position
