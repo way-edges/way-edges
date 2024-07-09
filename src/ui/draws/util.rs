@@ -9,8 +9,6 @@ use gtk::prelude::*;
 use gtk::DrawingArea;
 use gtk4_layer_shell::Edge;
 
-use super::frame_manager;
-
 pub const Z: f64 = 0.;
 
 pub fn from_angel(a: f64) -> f64 {
@@ -55,11 +53,13 @@ pub fn draw_motion(
 pub fn draw_frame_manager(
     frame_rate: u32,
     range: (f64, f64),
-) -> impl FnMut(&DrawingArea, f64, bool) -> Result<(), String> {
-    let mut frame_manager = FrameManager::new(frame_rate);
-    move |darea: &DrawingArea, visible_y: f64, is_forward: bool| {
+    darea: &DrawingArea,
+    window: &gtk::ApplicationWindow,
+) -> impl FnMut(f64, bool) -> Result<(), String> {
+    let mut frame_manager = FrameManager::new(frame_rate, darea, window);
+    move |visible_y: f64, is_forward: bool| {
         if (is_forward && visible_y < range.1) || (!is_forward && visible_y > range.0) {
-            frame_manager.start(darea)?;
+            frame_manager.start()?;
         } else {
             frame_manager.stop()?;
         }
@@ -150,14 +150,13 @@ pub fn draw_motion_now(
 }
 
 pub fn draw_frame_manager_now(
-    darea: &DrawingArea,
     frame_manager: &mut FrameManager,
     visible_y: f64,
     is_forward: bool,
     range: (f64, f64),
 ) -> Result<(), String> {
     if (is_forward && visible_y < range.1) || (!is_forward && visible_y > range.0) {
-        frame_manager.start(darea)?;
+        frame_manager.start()?;
     } else {
         frame_manager.stop()?;
     }

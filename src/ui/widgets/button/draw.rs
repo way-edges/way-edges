@@ -57,14 +57,15 @@ pub fn setup_draw(
     let mut set_motion = draw_motion(edge, transition_range, extra_trigger_size);
     let set_core = draw_core(map_size, size, btn_cfg.color, extra_trigger_size)?;
     let set_input_region = draw_input_region(size, edge, extra_trigger_size);
-    let mut set_frame_manger = draw_frame_manager(btn_cfg.frame_rate, transition_range);
-    darea.set_draw_func(glib::clone!(@weak window =>move |darea, context, _, _| {
+    let mut set_frame_manger =
+        draw_frame_manager(btn_cfg.frame_rate, transition_range, &darea, window);
+    darea.set_draw_func(glib::clone!(@weak window =>move |_, context, _, _| {
         set_rotate(context);
         let visible_y = ts.get_y();
         set_motion(context, visible_y);
         let res = set_core(context, is_pressing.get().is_some()).and_then(|_| {
             set_input_region(&window, visible_y).and_then(|_| {
-                set_frame_manger(darea, visible_y, ts.is_forward.get())
+                set_frame_manger(visible_y, ts.is_forward.get())
             })
         });
         if let Err(e) = res {
