@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use educe::Educe;
 use gtk::gdk::RGBA;
 use serde::{Deserialize, Deserializer};
@@ -15,6 +17,7 @@ pub enum Direction {
     Backward,
 }
 
+// TODO: serde_valid
 #[derive(Educe, Deserialize, GetSize)]
 #[educe(Debug)]
 pub struct SlideConfig {
@@ -28,12 +31,16 @@ pub struct SlideConfig {
     #[serde(default = "common::dt_extra_trigger_size")]
     pub extra_trigger_size: NumOrRelative,
 
+    #[serde(default = "dt_bg_color")]
     #[serde(deserialize_with = "common::color_translate")]
     pub bg_color: RGBA,
+    #[serde(default = "dt_fg_color")]
     #[serde(deserialize_with = "common::color_translate")]
     pub fg_color: RGBA,
+    #[serde(default = "dt_border_color")]
     #[serde(deserialize_with = "common::color_translate")]
     pub border_color: RGBA,
+    #[serde(default = "dt_text_color")]
     #[serde(deserialize_with = "common::color_translate")]
     pub text_color: RGBA,
     #[serde(default)]
@@ -43,8 +50,22 @@ pub struct SlideConfig {
     #[serde(default)]
     pub progress_direction: Direction,
     #[educe(Debug(ignore))]
+    #[serde(default)]
     #[serde(deserialize_with = "on_change_translate")]
-    pub on_change: Task,
+    pub on_change: Option<Task>,
+}
+
+fn dt_bg_color() -> RGBA {
+    RGBA::from_str("#808080").unwrap()
+}
+fn dt_fg_color() -> RGBA {
+    RGBA::from_str("#FFB847").unwrap()
+}
+fn dt_border_color() -> RGBA {
+    RGBA::from_str("#646464").unwrap()
+}
+fn dt_text_color() -> RGBA {
+    RGBA::from_str("#000000").unwrap()
 }
 
 fn dt_preview_size() -> f64 {
@@ -57,13 +78,13 @@ pub fn visit_slide_config(d: Value) -> Result<Widget, String> {
     Ok(Widget::Slider(Box::new(c)))
 }
 
-pub fn on_change_translate<'de, D>(d: D) -> Result<Task, D::Error>
+pub fn on_change_translate<'de, D>(d: D) -> Result<Option<Task>, D::Error>
 where
     D: Deserializer<'de>,
 {
     struct EventMapVisitor;
     impl<'de> serde::de::Visitor<'de> for EventMapVisitor {
-        type Value = Task;
+        type Value = Option<Task>;
 
         fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
             formatter.write_str("vec of tuples: (key: number, command: string)")
@@ -80,7 +101,7 @@ where
         where
             E: serde::de::Error,
         {
-            Ok(create_task(v))
+            Ok(Some(create_task(v)))
         }
     }
     d.deserialize_any(EventMapVisitor)
