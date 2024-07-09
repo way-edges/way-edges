@@ -1,3 +1,5 @@
+use std::cell::Cell;
+use std::rc::Rc;
 use std::time::Duration;
 
 use gio::glib::clone::Downgrade;
@@ -5,18 +7,23 @@ use gio::glib::WeakRef;
 use gtk::prelude::{GtkWindowExt, WidgetExt};
 use gtk::DrawingArea;
 use gtk::{glib, ApplicationWindow};
-use interval_task::runner::{self, ExternalRunnerExt};
+use interval_task::runner::{ExternalRunnerExt, Runner, Task};
 
 pub struct FrameManager {
-    runner: Option<runner::Runner<runner::Task>>,
+    runner: Rc<Cell<Option<Runner<Task>>>>,
     frame_gap: Duration,
     darea: WeakRef<DrawingArea>,
     appwindow: WeakRef<ApplicationWindow>,
 }
 impl FrameManager {
     pub fn new(frame_rate: u32, darea: &DrawingArea, appwindow: &ApplicationWindow) -> Self {
+        let runner = Rc::new(Cell::new(None));
+        darea.connect_destroy(glib::clone!(@strong runner => move|_| {
+            log::debug!("frame manager close");
+            runner.take().map(|r: Runner<Task>| r.close());
+        }));
         Self {
-            runner: None,
+            runner,
             frame_gap: Duration::from_micros(1_000_000 / frame_rate as u64),
             darea: darea.downgrade(),
             appwindow: appwindow.downgrade(),
@@ -24,11 +31,16 @@ impl FrameManager {
     }
     pub fn start(&mut self) -> Result<(), String> {
         log::debug!("start frame manager");
-        if self.runner.is_none() {
+        let have_runner = unsafe {
+            let ptr = self.runner.as_ptr();
+            let runner = ptr.as_ref().unwrap();
+            runner.is_none()
+        };
+        if have_runner {
             log::debug!("new runner");
             let (r, mut runner) = interval_task::channel::new(self.frame_gap);
             runner.start()?;
-            self.runner = Some(runner);
+            self.runner.set(Some(runner));
             log::debug!("runner started");
             glib::spawn_future_local(glib::clone!(@strong self.darea as darea => async move {
                 log::debug!("start wait runner signal");
