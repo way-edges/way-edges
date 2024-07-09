@@ -10,7 +10,7 @@
       "required": ["width", "height"],
       "properties": {
         "type": {
-          "description": "button widget type",
+          "description": "slide widget type",
           "type": "string",
           "const": "slide"
         },
@@ -37,19 +37,19 @@
           "$ref": "#/definitions/numOrPercentage"
         },
         "bg_color": {
-          "description": "background color of the widget: pattern: `#rgb`/`#rrggbb`/`#rrrgggbbb`/`rgb(r, g, b)`/`rgba(r, g, b, a)`.\nFor additional notes, please refer to: https://gtk-rs.org/gtk4-rs/stable/latest/docs/src/gdk4/rgba.rs.html#205\nDefault `#7B98FF`",
+          "description": "background color of the widget: pattern: `#rgb`/`#rrggbb`/`#rrrgggbbb`/`rgb(r, g, b)`/`rgba(r, g, b, a)`.\nFor additional notes, please refer to: https://gtk-rs.org/gtk4-rs/stable/latest/docs/src/gdk4/rgba.rs.html#205\nDefault `#808080`",
           "type": "string"
         },
         "fg_color": {
-          "description": "foreground color of the widget: pattern: `#rgb`/`#rrggbb`/`#rrrgggbbb`/`rgb(r, g, b)`/`rgba(r, g, b, a)`.\nFor additional notes, please refer to: https://gtk-rs.org/gtk4-rs/stable/latest/docs/src/gdk4/rgba.rs.html#205\nDefault `#7B98FF`",
+          "description": "foreground color of the widget: pattern: `#rgb`/`#rrggbb`/`#rrrgggbbb`/`rgb(r, g, b)`/`rgba(r, g, b, a)`.\nFor additional notes, please refer to: https://gtk-rs.org/gtk4-rs/stable/latest/docs/src/gdk4/rgba.rs.html#205\nDefault `#FFB847`",
           "type": "string"
         },
         "border_color": {
-          "description": "border color of the widget: pattern: `#rgb`/`#rrggbb`/`#rrrgggbbb`/`rgb(r, g, b)`/`rgba(r, g, b, a)`.\nFor additional notes, please refer to: https://gtk-rs.org/gtk4-rs/stable/latest/docs/src/gdk4/rgba.rs.html#205\nDefault `#7B98FF`",
+          "description": "border color of the widget: pattern: `#rgb`/`#rrggbb`/`#rrrgggbbb`/`rgb(r, g, b)`/`rgba(r, g, b, a)`.\nFor additional notes, please refer to: https://gtk-rs.org/gtk4-rs/stable/latest/docs/src/gdk4/rgba.rs.html#205\nDefault `#646464`",
           "type": "string"
         },
         "text_color": {
-          "description": "text color of the widget: pattern: `#rgb`/`#rrggbb`/`#rrrgggbbb`/`rgb(r, g, b)`/`rgba(r, g, b, a)`.\nFor additional notes, please refer to: https://gtk-rs.org/gtk4-rs/stable/latest/docs/src/gdk4/rgba.rs.html#205\nDefault `#7B98FF`",
+          "description": "text color of the widget: pattern: `#rgb`/`#rrggbb`/`#rrrgggbbb`/`rgb(r, g, b)`/`rgba(r, g, b, a)`.\nFor additional notes, please refer to: https://gtk-rs.org/gtk4-rs/stable/latest/docs/src/gdk4/rgba.rs.html#205\nDefault `#000000`",
           "type": "string"
         },
         "preview_size": {
