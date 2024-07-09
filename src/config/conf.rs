@@ -93,12 +93,10 @@ impl NumOrRelative {
         if let Self::Num(r) = self {
             Ok(*r)
         } else {
-            println!("{self:?}");
             Err("relative, not num")
         }
     }
     pub fn get_num_into(self) -> Result<f64, &'static str> {
-        // println!("hrere");
         if let Self::Num(r) = self {
             Ok(r)
         } else {

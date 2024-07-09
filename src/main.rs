@@ -4,7 +4,6 @@ mod config;
 mod file_watch;
 mod ui;
 
-use std::sync::{Arc, RwLock};
 use std::{process, thread};
 
 use activate::WindowDestroyer;
@@ -31,10 +30,9 @@ fn main() {
 
     let (reload_signal_sender, reload_signal_receiver) = async_channel::bounded::<i32>(1);
     let (continue_sender, continue_receiver) = async_channel::bounded(1);
-    let sync_signal = Arc::new(RwLock::new(0));
-    let sync_signal_clone = sync_signal.clone();
 
     thread::spawn(move || loop {
+        debug!("wait for config file change");
         if let Err(e) = file_change_signal_receiver.recv_blocking() {
             let msg = format!("File change signal Error: {e}");
             log::error!("{msg}");
@@ -42,9 +40,10 @@ fn main() {
             process::exit(1);
         } else {
             debug!("Receive file change signal");
-            let signal = sync_signal_clone.read().unwrap();
-            reload_signal_sender.try_send(*signal).ok();
-            drop(signal);
+            if let Err(e) = reload_signal_sender.try_send(0) {
+                log::error!("Reload signal send Error: {e}");
+            };
+            debug!("send continue signal");
             if let Err(e) = continue_sender.send_blocking(()) {
                 let msg = format!("Reload conitnue siganl Error: {e}");
                 log::error!("{msg}");
@@ -71,15 +70,15 @@ fn main() {
 
             // when args passed, `open` will be signaled instead of `activate`
             application.connect_open(
-                glib::clone!(@strong reload_signal_receiver as r, @strong sync_signal  =>  move |app, _, _| {
+                glib::clone!(@strong reload_signal_receiver as r=>  move |app, _, _| {
                     debug!("connect open");
-                    init_app(app, &r, &sync_signal);
+                    init_app(app, &r);
                 }),
             );
             application.connect_activate(
-                glib::clone!(@strong reload_signal_receiver as r, @strong sync_signal  =>  move |app| {
+                glib::clone!(@strong reload_signal_receiver as r=>  move |app| {
                     debug!("connect activate");
-                    init_app(app, &r, &sync_signal);
+                    init_app(app, &r);
                 }),
             );
             if application.run_with_args::<String>(&[]).value() == 1 {
@@ -103,17 +102,13 @@ fn main() {
         }
         log::debug!("Reload!!!");
         notify_send("Way-edges", "App Reload", false);
-        let mut reload_signal = sync_signal.write().unwrap();
-        *reload_signal += 1;
-        drop(reload_signal)
+
+        // clear reload channel
+        reload_signal_receiver.try_recv().ok();
     }
 }
 
-fn init_app(
-    app: &Application,
-    reload_signal_receiver: &Receiver<i32>,
-    reload_signal: &Arc<RwLock<i32>>,
-) {
+fn init_app(app: &Application, reload_signal_receiver: &Receiver<i32>) {
     let args = args::get_args();
     debug!("Parsed Args: {:?}", args);
     let cfgs = match config::take_config() {
@@ -124,21 +119,20 @@ fn init_app(
                 &format!("Failed to load config: {e}"),
                 true,
             );
+            app.quit();
             return;
         }
     };
     // let cfgs = config::match_group_config(group_map, &args.group);
     debug!("Parsed Config: {cfgs:?}");
-    match activate::init_monitor() {
-        Ok(_) => {}
-        Err(e) => {
-            notify_send(
-                "Way-edges monitor",
-                &format!("Failed to init monitor: {e}"),
-                true,
-            );
-            return;
-        }
+    if let Err(e) = activate::init_monitor() {
+        notify_send(
+            "Way-edges monitor",
+            &format!("Failed to init monitor: {e}"),
+            true,
+        );
+        app.quit();
+        return;
     };
     let res = {
         #[cfg(feature = "hyprland")]
@@ -157,22 +151,23 @@ fn init_app(
         Err(e) => {
             log::error!("{e}");
             crate::notify_send("Way-edges app error", &e, true);
+            app.quit();
             return;
         }
     };
 
     glib::spawn_future_local(
-        glib::clone!(@weak app, @strong reload_signal_receiver as r, @strong reload_signal  => async move {
+        glib::clone!(@weak-allow-none app, @strong reload_signal_receiver as r => async move {
             if let Ok(s) = r.recv().await {
-                if s != *reload_signal.read().unwrap() {
-                    return
-                }
+                debug!("receive reload signal: {s}");
                 log::info!("Received reload signal, quiting..");
-                window_destroyer.close_window();
-                idle_add_local_once(glib::clone!(@weak app => move || {
-                    debug!("Quit app");
-                    app.quit();
-                }));
+                if let Some(app) = app {
+                    window_destroyer.close_window();
+                    idle_add_local_once(glib::clone!(@weak app => move || {
+                        debug!("Quit app");
+                        app.quit();
+                    }));
+                }
             }
         }),
     );
