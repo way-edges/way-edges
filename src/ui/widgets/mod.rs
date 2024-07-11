@@ -1,5 +1,6 @@
 pub mod button;
 pub mod slide;
+pub mod speaker;
 
 mod common {
     use gtk4_layer_shell::Edge;

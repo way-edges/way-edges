@@ -28,6 +28,7 @@ impl ProgressState {
         }
     }
     pub fn set_progress_raw(&mut self, c: f64) {
+        println!("set_progress_raw: {c}");
         if let Some(ref mut f) = &mut self.on_change {
             f(c);
         };
