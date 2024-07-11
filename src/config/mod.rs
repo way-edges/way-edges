@@ -1,7 +1,6 @@
 pub mod conf;
 mod parse;
 mod raw;
-pub mod test;
 pub mod widgets;
 
 pub use conf::*;
