@@ -15,6 +15,7 @@ use crate::ui::draws::util::new_surface;
 use crate::ui::draws::util::Z;
 
 use cairo::ImageSurface;
+use gio::glib::clone::Downgrade;
 use gtk::cairo;
 use gtk::cairo::Context;
 use gtk::gdk::RGBA;
@@ -25,13 +26,14 @@ use gtk4_layer_shell::Edge;
 
 use super::event;
 use super::pre_draw::SlidePredraw;
+use super::SlideExpose;
 use crate::config::widgets::slide::Direction;
 
 pub fn setup_draw(
     window: &gtk::ApplicationWindow,
     cfg: Config,
     slide_cfg: SlideConfig,
-) -> Result<DrawingArea, String> {
+) -> Result<SlideExpose, String> {
     let darea = DrawingArea::new();
     let size = slide_cfg.get_size()?;
     let edge = cfg.edge;
@@ -124,7 +126,10 @@ pub fn setup_draw(
             }
     }));
     window.set_child(Some(&darea));
-    Ok(darea)
+    Ok(SlideExpose {
+        darea: Downgrade::downgrade(&darea), // darea.downgrade(),
+        progress: progress.downgrade(),
+    })
 }
 
 struct DrawCore {

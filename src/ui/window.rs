@@ -42,13 +42,17 @@ pub fn new_window(
     // margin
     std::mem::take(&mut config.margins)
         .into_iter()
-        .try_for_each(|(e, m)| {
+        .try_for_each(|(e, m)| -> Result<(), String> {
             window.set_margin(e, m.get_num_into()? as i32);
             Ok(())
         })
         .and_then(|_| match config.widget.take().ok_or("Widget is None")? {
-            crate::config::Widget::Btn(c) => widgets::button::init_widget(&window, config, *c),
-            crate::config::Widget::Slider(c) => widgets::slide::init_widget(&window, config, *c),
+            crate::config::Widget::Btn(c) => {
+                widgets::button::init_widget(&window, config, *c).map(|_| ())
+            }
+            crate::config::Widget::Slider(c) => {
+                widgets::slide::init_widget(&window, config, *c).map(|_| ())
+            }
             _ => unreachable!(),
         })?;
 

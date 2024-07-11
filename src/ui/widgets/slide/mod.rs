@@ -2,19 +2,27 @@ mod draw;
 mod event;
 mod pre_draw;
 
+use std::{cell::Cell, rc::Weak};
+
 use crate::{
     activate::get_monior_size,
     config::{widgets::slide::SlideConfig, Config},
 };
+use gio::glib::WeakRef;
 use gtk::ApplicationWindow;
 
 use super::common;
+
+pub struct SlideExpose {
+    pub darea: WeakRef<gtk::DrawingArea>,
+    pub progress: Weak<Cell<f64>>,
+}
 
 pub fn init_widget(
     window: &ApplicationWindow,
     config: Config,
     mut slide_cfg: SlideConfig,
-) -> Result<gtk::DrawingArea, String> {
+) -> Result<SlideExpose, String> {
     calculate_rel(&config, &mut slide_cfg)?;
     draw::setup_draw(window, config, slide_cfg)
 }
