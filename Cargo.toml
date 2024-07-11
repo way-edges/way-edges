@@ -26,6 +26,7 @@ notify = "6.1.1"
 async-channel = "2.3.1"
 notify-debouncer-mini = "0.4.1"
 cairo-rs = { version = "0.19.4", features = ["freetype", "freetype-rs", "png"] }
+libpulse-binding = "2.28.1"
 
 [dependencies.way-edges-derive]
 path = "way-edges-derive"

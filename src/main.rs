@@ -2,6 +2,7 @@ mod activate;
 mod args;
 mod config;
 mod file_watch;
+mod plug;
 mod ui;
 
 use std::{process, thread};
