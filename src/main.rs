@@ -19,7 +19,8 @@ use log::debug;
 use notify_rust::Notification;
 
 fn main() {
-    env_logger::builder().format_suffix("\n\n").init();
+    // env_logger::builder().format_suffix("\n\n").init();
+    env_logger::init();
     // for cmd line help msg.
     // or else it will show help from `gtk` other than `clap`
     args::get_args();
