@@ -8,7 +8,7 @@ use way_edges_derive::GetSize;
 
 use crate::config::{NumOrRelative, Widget};
 
-use super::common::{self};
+use super::common::{self, from_value};
 
 pub type Task = Box<dyn FnMut(f64) + Send + Sync>;
 
@@ -74,9 +74,8 @@ fn dt_preview_size() -> f64 {
     3.
 }
 
-pub fn visit_slide_config(d: Value) -> Result<Widget, String> {
-    let c = serde_jsonrc::from_value::<SlideConfig>(d)
-        .map_err(|e| format!("Fail to parse btn config: {}", e))?;
+pub fn visit_config(d: Value) -> Result<Widget, String> {
+    let c = from_value::<SlideConfig>(d)?;
     Ok(Widget::Slider(Box::new(c)))
 }
 

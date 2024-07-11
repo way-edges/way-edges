@@ -100,8 +100,9 @@ fn parse_widget(raw: Value) -> Result<Widget, String> {
         .as_str()
         .ok_or("widget type must be string")?;
     let w = match t {
-        "btn" => widgets::button::visit_btn_config(raw)?,
-        "slide" => widgets::slide::visit_slide_config(raw)?,
+        "btn" => widgets::button::visit_config(raw)?,
+        "slide" => widgets::slide::visit_config(raw)?,
+        "speaker" => widgets::speaker::visit_config(raw)?,
         _ => return Err(format!("unknown widget type: {t}")),
     };
     Ok(w)

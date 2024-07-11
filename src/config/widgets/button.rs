@@ -1,4 +1,4 @@
-use super::common::{self, create_task, Task};
+use super::common::{self, create_task, from_value, Task};
 use crate::config::{NumOrRelative, Widget};
 use educe::Educe;
 use gtk::gdk::RGBA;
@@ -40,9 +40,8 @@ fn dt_event_map() -> Option<EventMap> {
     Some(EventMap::new())
 }
 
-pub fn visit_btn_config(d: Value) -> Result<Widget, String> {
-    let c = serde_jsonrc::from_value::<BtnConfig>(d)
-        .map_err(|e| format!("Fail to parse btn config: {}", e))?;
+pub fn visit_config(d: Value) -> Result<Widget, String> {
+    let c = from_value::<BtnConfig>(d)?;
     Ok(Widget::Btn(Box::new(c)))
 }
 

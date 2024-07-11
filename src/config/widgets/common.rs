@@ -2,6 +2,7 @@ use std::{process::Command, str::FromStr, thread};
 
 use gtk::gdk::RGBA;
 use serde::{self, Deserializer};
+use serde_jsonrc::Value;
 
 use crate::config::NumOrRelative;
 
@@ -72,4 +73,11 @@ pub fn to_color<T: serde::de::Error>(color: &str) -> Result<RGBA, T> {
         Err(e) => Err(format!("invalid color {}", e)),
     }
     .map_err(serde::de::Error::custom)
+}
+
+pub fn from_value<T>(v: Value) -> Result<T, String>
+where
+    T: serde::de::DeserializeOwned,
+{
+    serde_jsonrc::from_value::<T>(v).map_err(|e| format!("Fail to parse config: {e}"))
 }
