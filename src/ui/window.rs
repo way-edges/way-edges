@@ -53,6 +53,9 @@ pub fn new_window(
             crate::config::Widget::Slider(c) => {
                 widgets::slide::init_widget(&window, config, *c).map(|_| ())
             }
+            crate::config::Widget::Speaker(c) => {
+                widgets::speaker::init_widget(&window, config, *c).map(|_| ())
+            }
             _ => unreachable!(),
         })?;
 
