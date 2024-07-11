@@ -59,9 +59,15 @@ fn call_pa(res: SubscribeResult) {
         PA_CONTEXT.as_mut().unwrap().call(res);
     }
 }
+fn add_cb(cb: Box<dyn FnMut(SubscribeResult)>) {
+    unsafe { PA_CONTEXT.as_mut().unwrap().cbs.push(cb) }
+}
+fn add_error_cb(cb: Box<dyn FnMut(String)>) {
+    unsafe { PA_CONTEXT.as_mut().unwrap().on_error_cbs.push(cb) }
+}
 
 #[derive(Debug, Clone)]
-enum SubscribeResult {
+pub enum SubscribeResult {
     Sink(f64),
     Source(f64),
 }
@@ -93,6 +99,18 @@ pub fn try_init_pulseaudio() -> Result<(), String> {
                 }
             }
         });
+    }
+    Ok(())
+}
+
+pub fn register_callback(
+    cb: impl FnMut(SubscribeResult) + 'static,
+    error_cb: Option<impl FnMut(String) + 'static>,
+) -> Result<(), String> {
+    try_init_pulseaudio()?;
+    add_cb(Box::new(cb));
+    if let Some(cb) = error_cb {
+        add_error_cb(Box::new(cb));
     }
     Ok(())
 }
