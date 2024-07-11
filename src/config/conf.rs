@@ -4,7 +4,7 @@ use gtk4_layer_shell::{Edge, Layer};
 use serde::Deserialize;
 use std::str::FromStr;
 
-use super::widgets::{button::BtnConfig, slide::SlideConfig};
+use super::widgets::{button::BtnConfig, slide::SlideConfig, speaker::SpeakerConfig};
 
 pub type GroupConfig = Vec<Config>;
 
@@ -141,8 +141,8 @@ impl NumOrRelative {
 #[educe(Debug)]
 pub enum Widget {
     Btn(Box<BtnConfig>),
-    ToggleBtn,
     Slider(Box<SlideConfig>),
+    Speaker(Box<SpeakerConfig>),
     Combo,
     SpinBtn,
 }
