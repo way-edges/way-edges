@@ -1,25 +1,16 @@
-use std::{process::Command, str::FromStr, thread};
+use std::str::FromStr;
 
 use gtk::gdk::RGBA;
 use serde::{self, Deserializer};
 use serde_jsonrc::Value;
 
-use crate::config::NumOrRelative;
+use crate::{config::NumOrRelative, plug::common::shell_cmd_non_block};
 
 pub type Task = Box<dyn FnMut() + Send + Sync>;
 
 pub fn create_task(value: String) -> Task {
     Box::new(move || {
-        let value = value.clone();
-        thread::spawn(move || {
-            let mut cmd = Command::new("/bin/sh");
-            let res = cmd.arg("-c").arg(&value).output();
-            if let Err(e) = res {
-                let msg = format!("error running command: {value}\nError: {e}");
-                log::error!("{msg}");
-                crate::notify_send("Way-Edges command error", &msg, true);
-            }
-        });
+        shell_cmd_non_block(value.clone());
     })
 }
 
