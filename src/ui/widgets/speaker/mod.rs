@@ -6,7 +6,7 @@ use crate::{
         widgets::{slide::SlideConfig, speaker::SpeakerConfig},
         Config,
     },
-    plug::pulseaudio::register_callback,
+    plug::pulseaudio::{register_callback, unregister_callback},
 };
 use gio::glib::WeakRef;
 use gtk::{
@@ -24,7 +24,7 @@ pub fn init_widget(
     speaker_cfg: SpeakerConfig,
 ) -> Result<(), String> {
     let exposed = slide::init_widget(window, config, speaker_cfg.slide)?;
-    register_callback(
+    let cb_key = register_callback(
         move |vinfo, _| {
             if let Some(p) = exposed.progress.upgrade() {
                 log::debug!("update speaker progress: {vinfo:?}");
@@ -38,5 +38,11 @@ pub fn init_widget(
         })),
         InterestMaskSet::SINK,
     )?;
+    log::debug!("register pa callback for speaker: {cb_key}");
+
+    window.connect_destroy(move |_| {
+        log::debug!("unregister pa callback for speaker: {cb_key}");
+        unregister_callback(cb_key);
+    });
     Ok(())
 }

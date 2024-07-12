@@ -1,5 +1,6 @@
 use std::{
     cell::{Cell, RefCell},
+    collections::HashMap,
     ops::DerefMut,
     rc::{Rc, Weak},
     sync::{
@@ -33,12 +34,12 @@ pub type PaCallback = dyn FnMut(VInfo, InterestMaskSet);
 pub type PaErrCallback = dyn FnMut(String);
 
 struct PA {
-    // sink_cbs: Vec<Box<PaCallback>>,
-    // source_cbs: Vec<Box<PaCallback>>,
-    // sink_cbs: Vec<Rc<PaCallback>>,
-    // source_cbs: Vec<Rc<PaCallback>>,
-    sink_cbs: Vec<Rc<RefCell<PaCallback>>>,
-    source_cbs: Vec<Rc<RefCell<PaCallback>>>,
+    count: i32,
+    // sink_cbs: Vec<Rc<RefCell<PaCallback>>>,
+    // source_cbs: Vec<Rc<RefCell<PaCallback>>>,
+    // on_error_cbs: Vec<Box<PaErrCallback>>,
+    sink_cbs: HashMap<i32, Rc<RefCell<PaCallback>>>,
+    source_cbs: HashMap<i32, Rc<RefCell<PaCallback>>>,
     on_error_cbs: Vec<Box<PaErrCallback>>,
 }
 
@@ -46,13 +47,13 @@ impl PA {
     fn call(&mut self, sink_or_source: InterestMaskSet) {
         if sink_or_source.contains(InterestMaskSet::SINK) {
             log::debug!("call sink cb");
-            self.sink_cbs.iter_mut().for_each(|f| {
+            self.sink_cbs.iter_mut().for_each(|(_, f)| {
                 let mut f = f.borrow_mut();
                 f(get_global_pa_sink().unwrap(), sink_or_source);
             });
         } else if sink_or_source.contains(InterestMaskSet::SOURCE) {
             log::debug!("call source cb");
-            self.source_cbs.iter_mut().for_each(|f| {
+            self.source_cbs.iter_mut().for_each(|(_, f)| {
                 let mut f = f.borrow_mut();
                 f(get_global_pa_source().unwrap(), sink_or_source);
             });
@@ -63,22 +64,28 @@ impl PA {
         cb: Box<PaCallback>,
         error_cb: Option<impl FnMut(String) + 'static>,
         sink_or_source: InterestMaskSet,
-    ) {
+    ) -> i32 {
         let cb = Rc::new(RefCell::new(cb));
-
+        let key = self.count;
         if sink_or_source.contains(InterestMaskSet::SINK) {
             log::debug!("add sink cb");
             cb.borrow_mut()(get_global_pa_sink().unwrap(), InterestMaskSet::SINK);
-            self.sink_cbs.push(cb.clone());
+            self.sink_cbs.insert(key, cb.clone());
         }
         if sink_or_source.contains(InterestMaskSet::SOURCE) {
             log::debug!("add source cb");
             cb.borrow_mut()(get_global_pa_source().unwrap(), InterestMaskSet::SOURCE);
-            self.source_cbs.push(cb);
+            self.source_cbs.insert(key, cb.clone());
         }
         if let Some(error_cb) = error_cb {
             self.on_error_cbs.push(Box::new(error_cb));
-        }
+        };
+        self.count += 1;
+        key
+    }
+    fn remove_cb(&mut self, key: i32) {
+        self.sink_cbs.remove_entry(&key);
+        self.source_cbs.remove_entry(&key);
     }
     fn error(self, e: String) {
         log::error!("Pulseaudio error(quit mainloop because of this): {e}");
@@ -93,8 +100,11 @@ fn init_pa() {
     IS_PA_INITIALIZED.store(true, Ordering::Release);
     PA_CONTEXT.store(
         Box::into_raw(Box::new(PA {
-            sink_cbs: vec![],
-            source_cbs: vec![],
+            count: 0,
+            // sink_cbs: vec![],
+            // source_cbs: vec![],
+            sink_cbs: HashMap::new(),
+            source_cbs: HashMap::new(),
             on_error_cbs: vec![],
         })),
         Ordering::Release,
@@ -129,13 +139,22 @@ fn add_cb(
     cb: Box<PaCallback>,
     error_cb: Option<impl FnMut(String) + 'static>,
     sink_or_source: InterestMaskSet,
-) {
+) -> i32 {
     unsafe {
         PA_CONTEXT
             .load(Ordering::Acquire)
             .as_mut()
             .unwrap()
-            .add_cb(cb, error_cb, sink_or_source);
+            .add_cb(cb, error_cb, sink_or_source)
+    }
+}
+fn rm_cb(key: i32) {
+    unsafe {
+        PA_CONTEXT
+            .load(Ordering::Acquire)
+            .as_mut()
+            .unwrap()
+            .remove_cb(key);
     }
 }
 
@@ -181,10 +200,15 @@ pub fn register_callback(
     cb: impl FnMut(VInfo, InterestMaskSet) + 'static,
     error_cb: Option<impl FnMut(String) + 'static>,
     sink_or_source: InterestMaskSet,
-) -> Result<(), String> {
+) -> Result<i32, String> {
     try_init_pulseaudio()?;
-    add_cb(Box::new(cb), error_cb, sink_or_source);
-    Ok(())
+    Ok(add_cb(Box::new(cb), error_cb, sink_or_source))
+}
+
+pub fn unregister_callback(key: i32) {
+    if !is_pa_empty() {
+        rm_cb(key);
+    }
 }
 
 fn get_avg_volume(cv: ChannelVolumes) -> f64 {
