@@ -10,7 +10,7 @@ use crate::config::{NumOrRelative, Widget};
 
 use super::common::{self, from_value};
 
-pub type Task = Box<dyn FnMut(f64) + Send + Sync>;
+pub type Task = Box<dyn Send + Sync + FnMut(f64) -> bool>;
 
 #[derive(Clone, Copy, Debug, Deserialize, Default)]
 pub enum Direction {
@@ -122,5 +122,6 @@ pub fn create_task(value: String) -> Task {
                 crate::notify_send("Way-Edges command error", &msg, true);
             }
         });
+        true
     })
 }

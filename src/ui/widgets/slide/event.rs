@@ -27,14 +27,17 @@ impl ProgressState {
             on_change,
         }
     }
-    pub fn set_progress_raw(&mut self, c: f64) {
+    pub fn set_progress_raw(&mut self, c: f64) -> bool {
         println!("set_progress_raw: {c}");
         if let Some(ref mut f) = &mut self.on_change {
-            f(c);
+            if !f(c) {
+                return false;
+            };
         };
         self.current.set(c);
+        true
     }
-    pub fn set_progress(&mut self, mut c: f64) {
+    pub fn set_progress(&mut self, mut c: f64) -> bool {
         if c < Z {
             c = Z;
         } else if c > self.max {
@@ -44,7 +47,7 @@ impl ProgressState {
             Direction::Forward => c,
             Direction::Backward => self.max - c,
         };
-        self.set_progress_raw(c / self.max);
+        self.set_progress_raw(c / self.max)
     }
 }
 
@@ -118,7 +121,9 @@ fn set_event_mouse_click(
                     XorY::X => x,
                     XorY::Y => y,
                 };
-                progress_state.borrow_mut().set_progress(progress);
+                if !progress_state.borrow_mut().set_progress(progress) {
+                    return;
+                }
             }
             darea.queue_draw();
         }),
@@ -165,8 +170,9 @@ fn set_event_mouse_move(
                     XorY::Y => y,
                 };
                 log::debug!("Change progress: {progress}");
-                progress_state.borrow_mut().set_progress(progress);
-                darea.queue_draw();
+                if progress_state.borrow_mut().set_progress(progress) {
+                    darea.queue_draw();
+                };
             }
         }),
     );
