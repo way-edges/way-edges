@@ -30,13 +30,13 @@ impl FrameManager {
         }
     }
     pub fn start(&mut self) -> Result<(), String> {
-        log::debug!("start frame manager");
-        let have_runner = unsafe {
+        let is_no_runner = unsafe {
             let ptr = self.runner.as_ptr();
             let runner = ptr.as_ref().unwrap();
             runner.is_none()
         };
-        if have_runner {
+        if is_no_runner {
+            log::debug!("start frame manager");
             log::debug!("new runner");
             let (r, mut runner) = interval_task::channel::new(self.frame_gap);
             runner.start()?;
@@ -59,9 +59,8 @@ impl FrameManager {
         Ok(())
     }
     pub fn stop(&mut self) -> Result<(), String> {
-        log::debug!("stop frame manager");
         if let Some(runner) = self.runner.take() {
-            log::debug!("close runner start");
+            log::debug!("stop frame manager");
             glib::spawn_future_local(
                 glib::clone!(@strong self.appwindow as window => async move {
                     if let Err(s) = runner.close() {
