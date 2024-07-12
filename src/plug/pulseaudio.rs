@@ -7,7 +7,7 @@ use std::{
         atomic::{AtomicBool, AtomicPtr, Ordering},
         Arc, OnceLock, RwLock,
     },
-    thread,
+    thread::{self},
 };
 
 use async_channel::Sender;
@@ -30,17 +30,18 @@ use pulse::{
     mainloop::standard::Mainloop,
 };
 
+use super::common::shell_cmd;
+
 pub type PaCallback = dyn FnMut(VInfo, InterestMaskSet);
 pub type PaErrCallback = dyn FnMut(String);
 
 struct PA {
     count: i32,
-    // sink_cbs: Vec<Rc<RefCell<PaCallback>>>,
-    // source_cbs: Vec<Rc<RefCell<PaCallback>>>,
-    // on_error_cbs: Vec<Box<PaErrCallback>>,
     sink_cbs: HashMap<i32, Rc<RefCell<PaCallback>>>,
     source_cbs: HashMap<i32, Rc<RefCell<PaCallback>>>,
     on_error_cbs: Vec<Box<PaErrCallback>>,
+
+    pamixser_send: Sender<PaMixerSignal>,
 }
 
 impl PA {
@@ -91,6 +92,16 @@ impl PA {
         log::error!("Pulseaudio error(quit mainloop because of this): {e}");
         self.on_error_cbs.into_iter().for_each(|mut f| f(e.clone()));
     }
+    fn pamixser_set_vol(&self, sink_or_source: InterestMaskSet, f: f64) {
+        self.pamixser_send
+            .force_send((sink_or_source, PaMixerSignalInfo::Volume(f)))
+            .ok();
+    }
+    fn pamixser_set_mute(&self, sink_or_source: InterestMaskSet, m: bool) {
+        self.pamixser_send
+            .force_send((sink_or_source, PaMixerSignalInfo::Mute(m)))
+            .ok();
+    }
 }
 
 static IS_PA_INITIALIZED: AtomicBool = AtomicBool::new(false);
@@ -106,6 +117,7 @@ fn init_pa() {
             sink_cbs: HashMap::new(),
             source_cbs: HashMap::new(),
             on_error_cbs: vec![],
+            pamixser_send: init_pamixser_thread(),
         })),
         Ordering::Release,
     );
@@ -211,24 +223,91 @@ pub fn unregister_callback(key: i32) {
     }
 }
 
-fn get_avg_volume(cv: ChannelVolumes) -> f64 {
-    cv.avg().0 as f64 / Volume::NORMAL.0 as f64
-}
-
-fn iter_loop(ml: &mut Mainloop) -> Result<(), String> {
-    match ml.iterate(true) {
-        IterateResult::Quit(r) => Err(format!("mainloop quit: with status: {r:?}")),
-        IterateResult::Err(e) => Err(format!("mainloop iterate Error: {e}")),
-        IterateResult::Success(_) => Ok(()),
+// i don't know how to set it with pulseaudio api
+pub fn set_sink_vol(v: f64) {
+    unsafe {
+        PA_CONTEXT
+            .load(Ordering::Acquire)
+            .as_mut()
+            .unwrap()
+            .pamixser_set_vol(InterestMaskSet::SINK, v);
     }
 }
+pub fn set_sink_mute(mute: bool) {
+    unsafe {
+        PA_CONTEXT
+            .load(Ordering::Acquire)
+            .as_mut()
+            .unwrap()
+            .pamixser_set_mute(InterestMaskSet::SINK, mute);
+    }
+}
+pub fn set_source_vol(v: f64) {
+    unsafe {
+        PA_CONTEXT
+            .load(Ordering::Acquire)
+            .as_mut()
+            .unwrap()
+            .pamixser_set_vol(InterestMaskSet::SOURCE, v);
+    }
+}
+pub fn set_source_mute(mute: bool) {
+    unsafe {
+        PA_CONTEXT
+            .load(Ordering::Acquire)
+            .as_mut()
+            .unwrap()
+            .pamixser_set_mute(InterestMaskSet::SOURCE, mute);
+    }
+}
+
+// pamixser thread
+type PaMixerSignal = (InterestMaskSet, PaMixerSignalInfo);
+enum PaMixerSignalInfo {
+    Volume(f64),
+    Mute(bool),
+}
+
+fn init_pamixser_thread() -> Sender<PaMixerSignal> {
+    let (s, r) = async_channel::bounded(1);
+    thread::spawn(move || loop {
+        let res = r.recv_blocking();
+        match res {
+            Ok((sink_or_source, info)) => {
+                let mut cmd = vec!["pamixer".to_string()];
+                if sink_or_source == InterestMaskSet::SOURCE {
+                    cmd.push("--default-source".to_string());
+                };
+                match info {
+                    PaMixerSignalInfo::Volume(f) => {
+                        cmd.push(format!("--set-volume {}", (f * 100.) as u32));
+                    }
+                    PaMixerSignalInfo::Mute(m) => cmd.push(
+                        match m {
+                            true => "--mute",
+                            false => "--unmute",
+                        }
+                        .to_string(),
+                    ),
+                };
+                shell_cmd(cmd.join(" "));
+            }
+            Err(e) => {
+                log::error!("Error receiving pamixser signal, quiting: {e}");
+                break;
+            }
+        }
+    });
+    s
+}
+
+// every thing donw below is pulseaudio related
 
 #[derive(Debug, Clone)]
 pub struct VInfo {
     pub vol: f64,
     pub is_muted: bool,
 }
-
 static GLOBAL_PA_SINK: OnceLock<Arc<RwLock<Option<VInfo>>>> = OnceLock::new();
 fn get_global_pa_sink_ptr() -> &'static Arc<RwLock<Option<VInfo>>> {
     GLOBAL_PA_SINK.get_or_init(|| Arc::new(RwLock::new(None)))
@@ -506,4 +585,16 @@ fn init_mainloop() -> Result<async_channel::Receiver<Signal>, String> {
         pr.recv_blocking().unwrap()?;
     };
     Ok(sr)
+}
+
+fn get_avg_volume(cv: ChannelVolumes) -> f64 {
+    cv.avg().0 as f64 / Volume::NORMAL.0 as f64
+}
+
+fn iter_loop(ml: &mut Mainloop) -> Result<(), String> {
+    match ml.iterate(true) {
+        IterateResult::Quit(r) => Err(format!("mainloop quit: with status: {r:?}")),
+        IterateResult::Err(e) => Err(format!("mainloop iterate Error: {e}")),
+        IterateResult::Success(_) => Ok(()),
+    }
 }

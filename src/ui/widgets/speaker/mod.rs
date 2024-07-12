@@ -1,14 +1,7 @@
-use std::{cell::Cell, rc::Weak};
-
 use crate::{
-    activate::get_monior_size,
-    config::{
-        widgets::{slide::SlideConfig, speaker::SpeakerConfig},
-        Config,
-    },
-    plug::pulseaudio::{register_callback, unregister_callback},
+    config::{widgets::speaker::SpeakerConfig, Config},
+    plug::pulseaudio::{register_callback, set_sink_vol, unregister_callback},
 };
-use gio::glib::WeakRef;
 use gtk::{
     glib,
     prelude::{GtkWindowExt, WidgetExt},
@@ -16,13 +9,18 @@ use gtk::{
 };
 use libpulse_binding::context::subscribe::InterestMaskSet;
 
-use super::{common, slide};
+use super::slide;
 
 pub fn init_widget(
     window: &ApplicationWindow,
     config: Config,
-    speaker_cfg: SpeakerConfig,
+    mut speaker_cfg: SpeakerConfig,
 ) -> Result<(), String> {
+    // do not let itself queue_draw, but pulseaudio callback
+    speaker_cfg.slide.on_change = Some(Box::new(|f| {
+        set_sink_vol(f);
+        true
+    }));
     let exposed = slide::init_widget(window, config, speaker_cfg.slide)?;
     let cb_key = register_callback(
         move |vinfo, _| {
