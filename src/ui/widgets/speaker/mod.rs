@@ -21,11 +21,11 @@ use super::{common, slide};
 pub fn init_widget(
     window: &ApplicationWindow,
     config: Config,
-    mut speaker_cfg: SpeakerConfig,
+    speaker_cfg: SpeakerConfig,
 ) -> Result<(), String> {
     let exposed = slide::init_widget(window, config, speaker_cfg.slide)?;
     register_callback(
-        move |vinfo| {
+        move |vinfo, _| {
             if let Some(p) = exposed.progress.upgrade() {
                 log::debug!("update speaker progress: {vinfo:?}");
                 p.set(vinfo.vol);

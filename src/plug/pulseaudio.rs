@@ -29,12 +29,16 @@ use pulse::{
     mainloop::standard::Mainloop,
 };
 
-pub type PaCallback = dyn FnMut(VInfo);
+pub type PaCallback = dyn FnMut(VInfo, InterestMaskSet);
 pub type PaErrCallback = dyn FnMut(String);
 
 struct PA {
-    sink_cbs: Vec<Box<PaCallback>>,
-    source_cbs: Vec<Box<PaCallback>>,
+    // sink_cbs: Vec<Box<PaCallback>>,
+    // source_cbs: Vec<Box<PaCallback>>,
+    // sink_cbs: Vec<Rc<PaCallback>>,
+    // source_cbs: Vec<Rc<PaCallback>>,
+    sink_cbs: Vec<Rc<RefCell<PaCallback>>>,
+    source_cbs: Vec<Rc<RefCell<PaCallback>>>,
     on_error_cbs: Vec<Box<PaErrCallback>>,
 }
 
@@ -43,28 +47,33 @@ impl PA {
         if sink_or_source.contains(InterestMaskSet::SINK) {
             log::debug!("call sink cb");
             self.sink_cbs.iter_mut().for_each(|f| {
-                f(get_global_pa_sink().unwrap());
+                let mut f = f.borrow_mut();
+                f(get_global_pa_sink().unwrap(), sink_or_source);
             });
         } else if sink_or_source.contains(InterestMaskSet::SOURCE) {
             log::debug!("call source cb");
             self.source_cbs.iter_mut().for_each(|f| {
-                f(get_global_pa_source().unwrap());
+                let mut f = f.borrow_mut();
+                f(get_global_pa_source().unwrap(), sink_or_source);
             });
         };
     }
     fn add_cb(
         &mut self,
-        mut cb: Box<PaCallback>,
+        cb: Box<PaCallback>,
         error_cb: Option<impl FnMut(String) + 'static>,
         sink_or_source: InterestMaskSet,
     ) {
+        let cb = Rc::new(RefCell::new(cb));
+
         if sink_or_source.contains(InterestMaskSet::SINK) {
             log::debug!("add sink cb");
-            cb(get_global_pa_sink().unwrap());
-            self.sink_cbs.push(cb);
-        } else if sink_or_source.contains(InterestMaskSet::SOURCE) {
+            cb.borrow_mut()(get_global_pa_sink().unwrap(), InterestMaskSet::SINK);
+            self.sink_cbs.push(cb.clone());
+        }
+        if sink_or_source.contains(InterestMaskSet::SOURCE) {
             log::debug!("add source cb");
-            cb(get_global_pa_source().unwrap());
+            cb.borrow_mut()(get_global_pa_source().unwrap(), InterestMaskSet::SOURCE);
             self.source_cbs.push(cb);
         }
         if let Some(error_cb) = error_cb {
@@ -169,7 +178,7 @@ pub fn try_init_pulseaudio() -> Result<(), String> {
 }
 
 pub fn register_callback(
-    cb: impl FnMut(VInfo) + 'static,
+    cb: impl FnMut(VInfo, InterestMaskSet) + 'static,
     error_cb: Option<impl FnMut(String) + 'static>,
     sink_or_source: InterestMaskSet,
 ) -> Result<(), String> {
