@@ -21,9 +21,14 @@ https://github.com/ogios/way-edges/assets/96933655/98219132-b37e-4d8d-9b4a-01c64
 - [x] watch file & hot reload
 - [ ] ease-in & ease-out button motion curve
 - [ ] modulize mouse event
-- [ ] multiple click & long press & release event
+- [ ] multiple click & long press & release event(Buttom widget)
 - [ ] add some customized widgets
-  - Slider(for volume, brightness, etc.)
+  - [x] Slider(for volume, brightness, etc.)
+  - [ ] Speaker
+  - [ ] Microphone
+  - [ ] Brightness
+  - [ ] HyprlandWorkspace
+  - [ ] Ring progress(for cpu/ram... status)
 - [ ] ?hover event(only bind with transition, not necessary - for now)
 - [ ] ?button click effects optimization(gradience)
 - [ ] ~~?buttom size calculation, arrangement and overlap(should this be considered?)~~
