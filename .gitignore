@@ -1,3 +1,4 @@
 /target
 
 .neoconf.json
+config/.prettierrc
