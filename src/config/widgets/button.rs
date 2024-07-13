@@ -1,16 +1,13 @@
-use super::common::{self, create_task, from_value, Task};
+use super::common::{self, from_value, EventMap};
 use crate::config::{NumOrRelative, Widget};
 use educe::Educe;
 use gtk::gdk::RGBA;
-use serde::{Deserialize, Deserializer};
+use serde::Deserialize;
 use serde_jsonrc::Value;
-use std::collections::HashMap;
 use std::str::FromStr;
 use way_edges_derive::GetSize;
 
 pub const NAME: &str = "btn";
-
-pub type EventMap = HashMap<u32, Task>;
 
 #[derive(Educe, Deserialize, GetSize)]
 #[educe(Debug)]
@@ -19,8 +16,8 @@ pub struct BtnConfig {
     pub height: NumOrRelative,
 
     #[educe(Debug(ignore))]
-    #[serde(default = "dt_event_map")]
-    #[serde(deserialize_with = "event_map_translate")]
+    #[serde(default = "common::dt_event_map")]
+    #[serde(deserialize_with = "common::event_map_translate")]
     pub event_map: Option<EventMap>,
 
     #[serde(default = "dt_color")]
@@ -38,45 +35,7 @@ fn dt_color() -> RGBA {
     RGBA::from_str("#7B98FF").unwrap()
 }
 
-fn dt_event_map() -> Option<EventMap> {
-    Some(EventMap::new())
-}
-
 pub fn visit_config(d: Value) -> Result<Widget, String> {
     let c = from_value::<BtnConfig>(d)?;
     Ok(Widget::Btn(Box::new(c)))
-}
-
-fn _event_map_translate(event_map: Vec<(u32, String)>) -> EventMap {
-    let mut map = EventMap::new();
-    for (key, value) in event_map {
-        map.insert(key, create_task(value));
-    }
-    map
-}
-
-pub fn event_map_translate<'de, D>(d: D) -> Result<Option<EventMap>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    struct EventMapVisitor;
-    impl<'de> serde::de::Visitor<'de> for EventMapVisitor {
-        type Value = Option<EventMap>;
-
-        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-            formatter.write_str("vec of tuples: (key: number, command: string)")
-        }
-
-        fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
-        where
-            A: serde::de::SeqAccess<'de>,
-        {
-            let mut event_map = Vec::new();
-            while let Some(v) = seq.next_element::<(u32, String)>()? {
-                event_map.push(v);
-            }
-            Ok(Some(_event_map_translate(event_map)))
-        }
-    }
-    d.deserialize_any(EventMapVisitor)
 }

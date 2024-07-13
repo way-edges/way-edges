@@ -6,9 +6,12 @@ use serde::{Deserialize, Deserializer};
 use serde_jsonrc::Value;
 use way_edges_derive::GetSize;
 
-use crate::config::{NumOrRelative, Widget};
+use crate::{
+    config::{NumOrRelative, Widget},
+    plug::common::shell_cmd_non_block,
+};
 
-use super::common::{self, from_value};
+use super::common::{self, from_value, EventMap};
 
 pub const NAME: &str = "slide";
 
@@ -57,6 +60,11 @@ pub struct SlideConfig {
     #[serde(default)]
     #[serde(deserialize_with = "on_change_translate")]
     pub on_change: Option<Task>,
+
+    #[educe(Debug(ignore))]
+    #[serde(default = "common::dt_event_map")]
+    #[serde(deserialize_with = "common::event_map_translate")]
+    pub event_map: Option<EventMap>,
 }
 
 fn dt_bg_color() -> RGBA {
@@ -77,7 +85,15 @@ fn dt_preview_size() -> f64 {
 }
 
 pub fn visit_config(d: Value) -> Result<Widget, String> {
-    let c = from_value::<SlideConfig>(d)?;
+    let mut c = from_value::<SlideConfig>(d)?;
+
+    // remove mouse event for primary and middle button
+    // as for `change progress` and `pin widget`
+    {
+        let em = c.event_map.as_mut().unwrap();
+        em.remove_entry(&1);
+        em.remove_entry(&2);
+    };
     Ok(Widget::Slider(Box::new(c)))
 }
 
@@ -115,15 +131,7 @@ pub fn create_task(value: String) -> Task {
         let value = value
             .clone()
             .replace("{progress}", progress.to_string().as_str());
-        thread::spawn(move || {
-            let mut cmd = Command::new("/bin/sh");
-            let res = cmd.arg("-c").arg(&value).output();
-            if let Err(e) = res {
-                let msg = format!("error running command: {value}\nError: {e}");
-                log::error!("{msg}");
-                crate::notify_send("Way-Edges command error", &msg, true);
-            }
-        });
+        shell_cmd_non_block(value);
         true
     })
 }

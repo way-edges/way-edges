@@ -1,4 +1,4 @@
-use crate::config::widgets::button::EventMap;
+use crate::config::widgets::common::EventMap;
 use crate::ui::draws::transition_state::TransitionState;
 
 use gtk::glib;

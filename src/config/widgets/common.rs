@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{collections::HashMap, str::FromStr};
 
 use gtk::gdk::RGBA;
 use serde::{self, Deserializer};
@@ -6,6 +6,7 @@ use serde_jsonrc::Value;
 
 use crate::{config::NumOrRelative, plug::common::shell_cmd_non_block};
 
+pub type EventMap = HashMap<u32, Task>;
 pub type Task = Box<dyn FnMut() + Send + Sync>;
 
 pub fn create_task(value: String) -> Task {
@@ -14,20 +15,20 @@ pub fn create_task(value: String) -> Task {
     })
 }
 
-pub const DEFAULT_TRANSITION_DURATION: u64 = 100;
-pub const DEFAULT_FRAME_RATE: u32 = 60;
-pub const DEFAULT_EXTRA_TRIGGER_SIZE: NumOrRelative = NumOrRelative::Num(5.0);
-
 pub fn dt_transition_duration() -> u64 {
-    DEFAULT_TRANSITION_DURATION
+    100
 }
 
 pub fn dt_frame_rate() -> u32 {
-    DEFAULT_FRAME_RATE
+    60
 }
 
 pub fn dt_extra_trigger_size() -> NumOrRelative {
-    DEFAULT_EXTRA_TRIGGER_SIZE
+    NumOrRelative::Num(5.0)
+}
+
+pub fn dt_event_map() -> Option<EventMap> {
+    Some(EventMap::new())
 }
 
 pub fn color_translate<'de, D>(d: D) -> Result<RGBA, D::Error>
@@ -56,6 +57,39 @@ where
         }
     }
     d.deserialize_any(ColorVisitor)
+}
+
+pub fn event_map_translate<'de, D>(d: D) -> Result<Option<EventMap>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    fn _event_map_translate(event_map: Vec<(u32, String)>) -> EventMap {
+        let mut map = EventMap::new();
+        for (key, value) in event_map {
+            map.insert(key, create_task(value));
+        }
+        map
+    }
+    struct EventMapVisitor;
+    impl<'de> serde::de::Visitor<'de> for EventMapVisitor {
+        type Value = Option<EventMap>;
+
+        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            formatter.write_str("vec of tuples: (key: number, command: string)")
+        }
+
+        fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+        where
+            A: serde::de::SeqAccess<'de>,
+        {
+            let mut event_map = Vec::new();
+            while let Some(v) = seq.next_element::<(u32, String)>()? {
+                event_map.push(v);
+            }
+            Ok(Some(_event_map_translate(event_map)))
+        }
+    }
+    d.deserialize_any(EventMapVisitor)
 }
 
 pub fn to_color<T: serde::de::Error>(color: &str) -> Result<RGBA, T> {
