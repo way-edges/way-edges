@@ -10,7 +10,7 @@ use crate::ui::draws::util::{from_angel, new_surface, Z};
 
 pub struct SlidePredraw {
     pub bg: ImageSurface,
-    pub fg: ImageSurface,
+    // pub fg: ImageSurface,
     pub path: Path,
     pub shade: ImageSurface,
     pub stroke: ImageSurface,
@@ -91,9 +91,6 @@ pub fn draw(
     // provide
     let obtuse_angle = 120.;
     let radius = 20.;
-    // let fg = RGBA::from_str("#FFB847").unwrap();
-    // let bg = RGBA::from_str("#808080").unwrap();
-    // let border_color = RGBA::from_str("#646464").unwrap();
     let new_surface = move || new_surface((map_size.0, map_size.1), predraw_err_handle);
 
     let (path, slope_position) = draw_slide_path(obtuse_angle, radius, size, map_size)?;
@@ -107,14 +104,14 @@ pub fn draw(
         surf
     };
 
-    let fg_surf = {
-        let surf = new_surface()?;
-        let ctx = cairo::Context::new(&surf).map_err(predraw_err_handle)?;
-        ctx.set_source_color(&fg);
-        ctx.append_path(&path);
-        ctx.fill().map_err(predraw_err_handle)?;
-        surf
-    };
+    // let fg_surf = {
+    //     let surf = new_surface()?;
+    //     let ctx = cairo::Context::new(&surf).map_err(predraw_err_handle)?;
+    //     ctx.set_source_color(&fg);
+    //     ctx.append_path(&path);
+    //     ctx.fill().map_err(predraw_err_handle)?;
+    //     surf
+    // };
 
     let mask = {
         let start_point = (0., size.1 / 2.);
@@ -144,7 +141,7 @@ pub fn draw(
 
     Ok(SlidePredraw {
         bg: bg_surf,
-        fg: fg_surf,
+        // fg: fg_surf,
         path,
         shade: mask,
         stroke,

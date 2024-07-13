@@ -32,7 +32,7 @@ impl BaseMouseState {
 
             t: ts.t.clone(),
             is_forward: ts.is_forward.clone(),
-            max_time: ts.duration,
+            max_time: ts.duration.get(),
         }
     }
     pub fn set_hovering(&mut self, h: bool) {

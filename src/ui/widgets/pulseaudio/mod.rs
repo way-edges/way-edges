@@ -1,3 +1,10 @@
+use std::{
+    cell::Cell,
+    rc::Rc,
+    sync::{Arc, RwLock},
+    time::Duration,
+};
+
 use crate::{
     config::{
         widgets::pulseaudio::{PAConfig, NAME_SINK, NAME_SOUCE},
@@ -7,6 +14,7 @@ use crate::{
         register_callback, set_sink_mute, set_sink_vol, set_source_mute, set_source_vol,
         unregister_callback,
     },
+    ui::draws::transition_state::TransitionState,
 };
 use gtk::{
     glib,
@@ -44,12 +52,37 @@ pub fn init_widget(
         on_change_func(f);
         !pa_conf.pa_conf.redraw_only_on_pa_change
     }));
-    let exposed = slide::init_widget(window, config, pa_conf.slide)?;
+    let is_mute = Arc::new(RwLock::new(false));
+    let is_mute_clone = is_mute.clone();
+    pa_conf.slide.event_map.as_mut().unwrap().insert(
+        3,
+        Box::new(move || {
+            mute_func(!*is_mute_clone.read().unwrap());
+        }),
+    );
+    let mute_transition = TransitionState::<f64>::new(Duration::from_millis(200), (0.0, 1.0));
+    let mute_color = Rc::new(Cell::new(pa_conf.slide.fg_color));
+    let exposed = slide::init_widget_as_plug(
+        window,
+        config,
+        pa_conf.slide,
+        slide::SlideAdditionalConfig {
+            fg_color: mute_color,
+            additional_transitions: vec![mute_transition.clone()],
+            on_draw: Some(Box::new(move || {
+                // calculate color
+            })),
+        },
+    )?;
     let cb_key = register_callback(
         move |vinfo, _| {
             if let Some(p) = exposed.progress.upgrade() {
                 log::debug!("update {debug_name} progress: {vinfo:?}");
                 p.set(vinfo.vol);
+                if *is_mute.read().unwrap() != vinfo.is_muted {
+                    *is_mute.write().unwrap() = vinfo.is_muted;
+                    mute_transition.set_direction_self(vinfo.is_muted);
+                }
                 exposed.darea.upgrade().unwrap().queue_draw();
             }
         },

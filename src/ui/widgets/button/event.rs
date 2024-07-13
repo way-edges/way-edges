@@ -37,7 +37,7 @@ impl MouseState {
             pressing: Rc::new(Cell::new(None)),
             t: ts.t.clone(),
             is_forward: ts.is_forward.clone(),
-            max_time: ts.duration,
+            max_time: ts.duration.get(),
         }
     }
     fn set_transition(&self, open: bool) {

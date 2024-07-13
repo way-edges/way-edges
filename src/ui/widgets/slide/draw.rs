@@ -1,4 +1,7 @@
+use std::cell::Cell;
+use std::cell::RefCell;
 use std::fs::File;
+use std::rc::Rc;
 use std::time::Duration;
 
 use crate::config::widgets::slide::SlideConfig;
@@ -26,6 +29,7 @@ use gtk4_layer_shell::Edge;
 
 use super::event;
 use super::pre_draw::SlidePredraw;
+use super::SlideAdditionalConfig;
 use super::SlideExpose;
 use crate::config::widgets::slide::Direction;
 
@@ -33,6 +37,7 @@ pub fn setup_draw(
     window: &gtk::ApplicationWindow,
     cfg: Config,
     slide_cfg: SlideConfig,
+    mut additional: SlideAdditionalConfig,
 ) -> Result<SlideExpose, String> {
     let darea = DrawingArea::new();
     let size = slide_cfg.get_size()?;
@@ -84,6 +89,7 @@ pub fn setup_draw(
         extra_trigger_size,
         is_start: slide_cfg.is_text_position_start,
         text_color: slide_cfg.text_color,
+        fg_color: additional.fg_color,
     };
     let mut frame_manager = FrameManager::new(slide_cfg.frame_rate, &darea, window);
     // let set_rotate = draw_rotation(edge, size);
@@ -94,8 +100,10 @@ pub fn setup_draw(
         @weak window,
         @strong progress,
         => move |_, context, _, _| {
+            if let Some(f) = additional.on_draw.as_mut() {
+                f()
+            }
             draw_rotation_now(context, dc.edge, dc.size);
-            // draw_rotation_now(context, Edge::Top, dc.size);
             let visible_y = ts.get_y();
             draw_motion_now(context, visible_y, dc.edge, transition_range, dc.extra_trigger_size);
 
@@ -110,11 +118,17 @@ pub fn setup_draw(
                         dc.edge,
                         dc.extra_trigger_size
                     ).and_then(|_| {
-                        draw_frame_manager_now(
+                        draw_frame_manager_multiple_transition(
                             &mut frame_manager,
+                            &additional.additional_transitions,
+                            &ts,
                             visible_y,
-                            &ts
                         )
+                        // draw_frame_manager_now(
+                        //     &mut frame_manager,
+                        //     visible_y,
+                        //     &ts
+                        // )
                     })
             });
 
@@ -126,9 +140,24 @@ pub fn setup_draw(
     }));
     window.set_child(Some(&darea));
     Ok(SlideExpose {
-        darea: Downgrade::downgrade(&darea), // darea.downgrade(),
+        darea: Downgrade::downgrade(&darea),
         progress: progress.downgrade(),
     })
+}
+
+pub fn draw_frame_manager_multiple_transition(
+    frame_manager: &mut FrameManager,
+    tss: &[TransitionState<f64>],
+    position_transition: &TransitionState<f64>,
+    visible_y: f64,
+) -> Result<(), String> {
+    if position_transition._is_in_transition(visible_y) || tss.iter().any(|f| f.is_in_transition())
+    {
+        frame_manager.start()?;
+    } else {
+        frame_manager.stop()?;
+    }
+    Ok(())
 }
 
 struct DrawCore {
@@ -141,6 +170,7 @@ struct DrawCore {
     extra_trigger_size: f64,
     is_start: bool,
     text_color: RGBA,
+    fg_color: Rc<Cell<RGBA>>,
 }
 impl DrawCore {
     fn draw(&self, ctx: &Context, progress: f64) -> Result<(), String> {
@@ -167,7 +197,15 @@ impl DrawCore {
                     }
                     _ => {}
                 }
-                ctx.set_source_surface(&self.predraw.fg, Z, (progress - 1.) * self.size.1)
+                let fg_surf = {
+                    let surf = self.new_surface()?;
+                    let ctx = cairo::Context::new(&surf).map_err(error_handle)?;
+                    ctx.set_source_color(&self.fg_color.get());
+                    ctx.append_path(&self.predraw.path);
+                    ctx.fill().map_err(error_handle)?;
+                    surf
+                };
+                ctx.set_source_surface(fg_surf, Z, (progress - 1.) * self.size.1)
                     .unwrap();
                 ctx.append_path(&self.predraw.path);
                 ctx.fill().map_err(error_handle)?;
