@@ -1,4 +1,4 @@
-use crate::config::Config;
+use crate::config::{self, Config};
 
 use gtk::{
     gdk::Monitor, prelude::*, Application, CssProvider, STYLE_PROVIDER_PRIORITY_APPLICATION,
@@ -47,14 +47,12 @@ pub fn new_window(
             Ok(())
         })
         .and_then(|_| match config.widget.take().ok_or("Widget is None")? {
-            crate::config::Widget::Btn(c) => {
-                widgets::button::init_widget(&window, config, *c).map(|_| ())
-            }
-            crate::config::Widget::Slider(c) => {
+            config::Widget::Btn(c) => widgets::button::init_widget(&window, config, *c).map(|_| ()),
+            config::Widget::Slider(c) => {
                 widgets::slide::init_widget(&window, config, *c).map(|_| ())
             }
-            crate::config::Widget::Speaker(c) => {
-                widgets::speaker::init_widget(&window, config, *c).map(|_| ())
+            config::Widget::PulseAudio(c) => {
+                widgets::pulseaudio::init_widget(&window, config, *c).map(|_| ())
             }
             _ => unreachable!(),
         })?;
