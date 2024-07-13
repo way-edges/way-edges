@@ -10,6 +10,8 @@ use crate::config::{NumOrRelative, Widget};
 
 use super::common::{self, from_value};
 
+pub const NAME: &str = "slide";
+
 pub type Task = Box<dyn Send + Sync + FnMut(f64) -> bool>;
 
 #[derive(Clone, Copy, Debug, Deserialize, Default)]

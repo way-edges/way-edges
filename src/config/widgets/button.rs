@@ -8,6 +8,8 @@ use std::collections::HashMap;
 use std::str::FromStr;
 use way_edges_derive::GetSize;
 
+pub const NAME: &str = "btn";
+
 pub type EventMap = HashMap<u32, Task>;
 
 #[derive(Educe, Deserialize, GetSize)]
