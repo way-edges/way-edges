@@ -14,14 +14,14 @@
             "width": 20,
             "height": "25%",
             "frame_rate": 60,
-            "on_change": "notify-send {progress}",
-          },
+            "on_change": "notify-send {progress}"
+          }
         },
         {
           "edge": "top",
           "position": "left",
           "margin": {
-            "left": "25%",
+            "left": "25%"
           },
           "widget": {
             "width": 15,
@@ -30,15 +30,15 @@
             "frame_rate": 60,
             "event_map": [
               [1, "hyprctl dispatch scroller:movefocus l"],
-              [3, "hyprctl dispatch 'workspace -1'"],
-            ],
-          },
+              [3, "hyprctl dispatch 'workspace -1'"]
+            ]
+          }
         },
         {
           "edge": "top",
           "position": "right",
           "margin": {
-            "right": "25%",
+            "right": "25%"
           },
           "widget": {
             "width": 15,
@@ -47,11 +47,11 @@
             "frame_rate": 60,
             "event_map": [
               [1, "hyprctl dispatch scroller:movefocus r"],
-              [3, "hyprctl dispatch 'workspace +1'"],
-            ],
-          },
-        },
-      ],
-    },
-  ],
+              [3, "hyprctl dispatch 'workspace +1'"]
+            ]
+          }
+        }
+      ]
+    }
+  ]
 }
