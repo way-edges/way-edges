@@ -9,6 +9,8 @@ use gtk::prelude::*;
 use gtk::DrawingArea;
 use gtk4_layer_shell::Edge;
 
+use super::transition_state::TransitionState;
+
 pub const Z: f64 = 0.;
 
 pub fn from_angel(a: f64) -> f64 {
@@ -152,10 +154,9 @@ pub fn draw_motion_now(
 pub fn draw_frame_manager_now(
     frame_manager: &mut FrameManager,
     visible_y: f64,
-    is_forward: bool,
-    range: (f64, f64),
+    ts: &TransitionState<f64>,
 ) -> Result<(), String> {
-    if (is_forward && visible_y < range.1) || (!is_forward && visible_y > range.0) {
+    if ts._is_in_transition(visible_y) {
         frame_manager.start()?;
     } else {
         frame_manager.stop()?;

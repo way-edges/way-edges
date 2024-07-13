@@ -113,8 +113,7 @@ pub fn setup_draw(
                         draw_frame_manager_now(
                             &mut frame_manager,
                             visible_y,
-                            ts.is_forward.get(),
-                            transition_range
+                            &ts
                         )
                     })
             });

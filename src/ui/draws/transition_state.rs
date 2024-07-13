@@ -9,10 +9,11 @@ use std::time::{Duration, Instant};
 //     Forward,
 //     Backward,
 // }
+
 #[derive(Clone)]
 pub struct TransitionState<T>
 where
-    T: Add<Output = T> + Mul<Output = T> + Sub<Output = T> + From<f64> + Clone + Copy,
+    T: Add<Output = T> + Mul<Output = T> + Sub<Output = T> + From<f64> + PartialEq + Clone + Copy,
 {
     // change
     pub t: Rc<Cell<Instant>>,
@@ -24,7 +25,7 @@ where
 }
 impl<T> TransitionState<T>
 where
-    T: Add<Output = T> + Mul<Output = T> + Sub<Output = T> + From<f64> + Clone + Copy,
+    T: Add<Output = T> + Mul<Output = T> + Sub<Output = T> + From<f64> + PartialEq + Clone + Copy,
 {
     pub fn new(time_cost: Duration, (min_y, max_y): (T, T)) -> TransitionState<T> {
         Self {
@@ -64,7 +65,13 @@ where
             self.calculation(self.duration.as_secs_f64() - passed_duration.as_secs_f64())
         }
     }
-    // pub fn set_direction(&mut self, is_forward: bool) {
+    pub fn _is_in_transition(&self, y: T) -> bool {
+        y != self.min_y && y != self.max_y
+    }
+    pub fn is_in_transition(&self) -> bool {
+        let y = self.get_y();
+        self._is_in_transition(y)
+    }
     pub fn set_direction(
         t: &Rc<Cell<Instant>>,
         max_time: Duration,
