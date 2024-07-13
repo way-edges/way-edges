@@ -17,9 +17,9 @@ pub fn init_widget(
     mut speaker_cfg: SpeakerConfig,
 ) -> Result<(), String> {
     // do not let itself queue_draw, but pulseaudio callback
-    speaker_cfg.slide.on_change = Some(Box::new(|f| {
+    speaker_cfg.slide.on_change = Some(Box::new(move |f| {
         set_sink_vol(f);
-        true
+        !speaker_cfg.speaker.redraw_only_on_pa_change
     }));
     let exposed = slide::init_widget(window, config, speaker_cfg.slide)?;
     let cb_key = register_callback(

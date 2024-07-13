@@ -13,9 +13,13 @@ pub struct SpeakerConfig {
     pub speaker: SpeakerSpecificConfig,
 }
 
-#[derive(Educe, Deserialize)]
+#[derive(Educe, Deserialize, Default)]
 #[educe(Debug)]
-pub struct SpeakerSpecificConfig {}
+#[serde(default)]
+pub struct SpeakerSpecificConfig {
+    #[serde(default)]
+    pub redraw_only_on_pa_change: bool,
+}
 
 pub fn visit_config(d: Value) -> Result<Widget, String> {
     let slide_cfg = from_value::<SlideConfig>(d.clone())?;
