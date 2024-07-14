@@ -105,7 +105,6 @@ impl PA {
 }
 
 static IS_PA_INITIALIZED: AtomicBool = AtomicBool::new(false);
-// static mut PA_CONTEXT: Option<PA> = None;
 static PA_CONTEXT: AtomicPtr<PA> = AtomicPtr::new(std::ptr::null_mut());
 fn init_pa() {
     IS_PA_INITIALIZED.store(true, Ordering::Release);
@@ -368,6 +367,10 @@ fn init_mainloop() -> Result<async_channel::Receiver<Signal>, String> {
         match ls {
             pulse::callbacks::ListResult::Item(res) => {
                 let avg = get_avg_volume(res.volume);
+                if avg == 1. {
+                    println!("!!!!!!!!!!!!!!Source: {:#?}", res);
+                    println!("!!!!!!!!!!!!!!AVG Source: {}, {}", avg, res.volume.avg());
+                }
                 set_global_pa_source(avg, res.mute);
                 if ss.force_send(Ok(InterestMaskSet::SOURCE)).is_err() {
                     close_mainloop(mc);
