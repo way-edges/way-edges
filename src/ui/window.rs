@@ -54,6 +54,9 @@ pub fn new_window(
             config::Widget::PulseAudio(c) => {
                 widgets::pulseaudio::init_widget(&window, config, *c).map(|_| ())
             }
+            config::Widget::Backlight(c) => {
+                widgets::backlight::init_widget(&window, config, *c).map(|_| ())
+            }
             _ => unreachable!(),
         })?;
 

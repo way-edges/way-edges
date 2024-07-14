@@ -261,7 +261,7 @@ impl DrawCore {
             let w = ctx.current_point().unwrap().0;
             let mut f = File::create("/tmp/test.png").unwrap();
             surf.write_to_png(&mut f).unwrap();
-            log::debug!("text size: {}", w);
+            // log::debug!("text size: {}", w);
             (surf, w)
         };
 

@@ -105,6 +105,7 @@ fn parse_widget(raw: Value) -> Result<Widget, String> {
         widgets::pulseaudio::NAME_SOUCE | widgets::pulseaudio::NAME_SINK => {
             widgets::pulseaudio::visit_config(raw)?
         }
+        widgets::backlight::NAME => widgets::backlight::visit_config(raw)?,
         _ => return Err(format!("unknown widget type: {t}")),
     };
     Ok(w)

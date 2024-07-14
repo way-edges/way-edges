@@ -6,6 +6,7 @@ use std::str::FromStr;
 
 use super::widgets::{
     // button::BtnConfig, pulseaudio::PAConfig, slide::SlideConfig, speaker::SpeakerConfig,
+    backlight::BLConfig,
     button::BtnConfig,
     pulseaudio::PAConfig,
     slide::SlideConfig,
@@ -148,6 +149,7 @@ pub enum Widget {
     Btn(Box<BtnConfig>),
     Slider(Box<SlideConfig>),
     PulseAudio(Box<PAConfig>),
+    Backlight(Box<BLConfig>),
     Combo,
     SpinBtn,
 }
@@ -162,12 +164,6 @@ pub struct Config {
     pub margins: Vec<(Edge, NumOrRelative)>,
 
     pub widget: Option<Widget>,
-    // #[educe(Debug(ignore))]
-    // pub event_map: Option<EventMap>,
-    // pub color: RGBA,
-    // pub transition_duration: u64,
-    // pub frame_rate: u64,
-    // pub extra_trigger_size: NumOrRelative<i32>,
 }
 
 impl Drop for Config {

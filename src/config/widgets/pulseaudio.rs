@@ -35,10 +35,10 @@ fn default_mute_color() -> RGBA {
 pub fn visit_config(d: Value) -> Result<Widget, String> {
     let key = d.get("type").unwrap().as_str().unwrap().to_string();
     let slide_cfg = from_value::<SlideConfig>(d.clone())?;
-    let speaker_cfg = from_value::<PASpecificConfig>(d)?;
+    let pa_conf = from_value::<PASpecificConfig>(d)?;
     Ok(Widget::PulseAudio(Box::new(PAConfig {
         slide: slide_cfg,
-        pa_conf: speaker_cfg,
+        pa_conf,
         is_sink: key.as_str().eq(NAME_SINK),
     })))
 }

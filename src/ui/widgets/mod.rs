@@ -1,3 +1,4 @@
+pub mod backlight;
 pub mod button;
 pub mod pulseaudio;
 pub mod slide;
