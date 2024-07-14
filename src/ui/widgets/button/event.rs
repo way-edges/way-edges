@@ -73,20 +73,22 @@ fn set_event_mouse_click(
 ) {
     let show_mouse_debug = crate::args::get_args().mouse_debug;
     let click_control = GestureClick::builder().button(0).exclusive(true).build();
-    let cbs = Rc::new(RefCell::new(event_map));
-    let click_done_cb = move |mouse_state: &Rc<RefCell<MouseState>>,
-                              darea: &DrawingArea,
-                              event_map: &Rc<RefCell<EventMap>>| {
-        if let Some(btn) = mouse_state.borrow_mut().take_pressing() {
-            if show_mouse_debug {
-                notify(&format!("key released: {}", btn));
-            };
-            if let Some(cb) = event_map.borrow_mut().get_mut(&btn) {
-                cb();
-            };
-            darea.queue_draw();
-        } else {
-            log::debug!("No pressing button in mouse_state");
+
+    let click_done_cb = {
+        let cbs = Rc::new(RefCell::new(event_map));
+        let mouse_state = mouse_state.clone();
+        move |darea: &DrawingArea| {
+            if let Some(btn) = mouse_state.borrow_mut().take_pressing() {
+                if show_mouse_debug {
+                    notify(&format!("key released: {}", btn));
+                };
+                if let Some(cb) = cbs.borrow_mut().get_mut(&btn) {
+                    cb();
+                };
+                darea.queue_draw();
+            } else {
+                log::debug!("No pressing button in mouse_state");
+            }
         }
     };
 
@@ -101,14 +103,14 @@ fn set_event_mouse_click(
         }),
     );
     click_control.connect_released(
-        glib::clone!(@strong mouse_state, @strong cbs, @weak darea => move |_, _, _, _| {
-            click_done_cb(&mouse_state, &darea, &cbs);
+        glib::clone!(@strong click_done_cb, @weak darea => move |_, _, _, _| {
+            click_done_cb(&darea);
         }),
     );
     click_control.connect_unpaired_release(
-        glib::clone!(@strong mouse_state, @strong cbs, @weak darea => move |_, _, _, d, _| {
+        glib::clone!(@strong mouse_state, @weak darea => move |_, _, _, d, _| {
             if mouse_state.borrow().pressing.get() == Some(d) {
-                click_done_cb(&mouse_state, &darea, &cbs);
+                click_done_cb(&darea);
             }
         }),
     );
