@@ -1,8 +1,9 @@
 use educe::Educe;
+use gtk::gdk::RGBA;
 use serde::Deserialize;
 use serde_jsonrc::Value;
 
-use crate::config::Widget;
+use crate::config::{widgets::common, Widget};
 
 use super::{common::from_value, slide::SlideConfig};
 
@@ -17,12 +18,18 @@ pub struct PAConfig {
     pub is_sink: bool,
 }
 
-#[derive(Educe, Deserialize, Default)]
+#[derive(Educe, Deserialize)]
 #[educe(Debug)]
-#[serde(default)]
 pub struct PASpecificConfig {
     #[serde(default)]
     pub redraw_only_on_pa_change: bool,
+    #[serde(default = "default_mute_color")]
+    #[serde(deserialize_with = "common::color_translate")]
+    pub mute_color: RGBA,
+}
+
+fn default_mute_color() -> RGBA {
+    RGBA::BLACK
 }
 
 pub fn visit_config(d: Value) -> Result<Widget, String> {
