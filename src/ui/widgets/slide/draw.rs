@@ -1,5 +1,4 @@
 use std::cell::Cell;
-use std::cell::RefCell;
 use std::fs::File;
 use std::rc::Rc;
 use std::time::Duration;
@@ -10,7 +9,6 @@ use crate::ui::draws::blur::blur_image_surface;
 use crate::ui::draws::font::get_font_face;
 use crate::ui::draws::frame_manager::FrameManager;
 use crate::ui::draws::transition_state::TransitionState;
-use crate::ui::draws::util::draw_frame_manager_now;
 use crate::ui::draws::util::draw_input_region_now;
 use crate::ui::draws::util::draw_motion_now;
 use crate::ui::draws::util::draw_rotation_now;
@@ -70,6 +68,7 @@ pub fn setup_draw(
         direction,
         size.1,
         slide_cfg.on_change,
+        slide_cfg.event_map.unwrap(),
     );
 
     let predraw = super::pre_draw::draw(

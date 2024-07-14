@@ -7,6 +7,7 @@ use gtk::{glib, EventControllerMotion};
 use gtk::{DrawingArea, GestureClick};
 use gtk4_layer_shell::Edge;
 
+use crate::config::widgets::common::EventMap;
 use crate::config::widgets::slide::{Direction, Task};
 use crate::ui::draws::util::Z;
 use crate::ui::draws::{mouse_state::BaseMouseState, transition_state::TransitionState};
@@ -72,10 +73,17 @@ pub(super) fn setup_event(
     direction: Direction,
     max: f64,
     on_change: Option<Task>,
+    event_map: EventMap,
 ) -> Rc<Cell<f64>> {
     let mouse_state = Rc::new(RefCell::new(BaseMouseState::new(ts)));
     let progress_state = Rc::new(RefCell::new(ProgressState::new(max, direction, on_change)));
-    set_event_mouse_click(darea, mouse_state.clone(), progress_state.clone(), xory);
+    set_event_mouse_click(
+        darea,
+        mouse_state.clone(),
+        progress_state.clone(),
+        xory,
+        event_map,
+    );
     set_event_mouse_move(darea, mouse_state.clone(), progress_state.clone(), xory);
     let progress = progress_state.borrow().current.clone();
     progress
@@ -86,21 +94,30 @@ fn set_event_mouse_click(
     mouse_state: Rc<RefCell<BaseMouseState>>,
     progress_state: Rc<RefCell<ProgressState>>,
     xory: XorY,
+    event_map: EventMap,
 ) {
     let show_mouse_debug = crate::args::get_args().mouse_debug;
     let click_control = GestureClick::builder().button(0).exclusive(true).build();
-    let click_done_cb = move |mouse_state: &Rc<RefCell<BaseMouseState>>, darea: &DrawingArea| {
-        if let Some(btn) = mouse_state.borrow_mut().set_pressing(None) {
-            if show_mouse_debug {
-                crate::notify_send(
-                    "Way-edges mouse button debug message",
-                    &format!("key released: {}", btn),
-                    false,
-                );
-            };
-            darea.queue_draw();
-        } else {
-            log::debug!("No pressing button in mouse_state");
+
+    let click_done_cb = {
+        let cbs = Rc::new(RefCell::new(event_map));
+        let mouse_state = mouse_state.clone();
+        move |darea: &DrawingArea| {
+            if let Some(btn) = mouse_state.borrow_mut().set_pressing(None) {
+                if show_mouse_debug {
+                    crate::notify_send(
+                        "Way-edges mouse button debug message",
+                        &format!("key released: {}", btn),
+                        false,
+                    );
+                };
+                if let Some(cb) = cbs.borrow_mut().get_mut(&btn) {
+                    cb();
+                };
+                darea.queue_draw();
+            } else {
+                log::debug!("No pressing button in mouse_state");
+            }
         }
     };
 
@@ -128,14 +145,14 @@ fn set_event_mouse_click(
         }),
     );
     click_control.connect_released(
-        glib::clone!(@strong mouse_state, @weak darea => move |_, _, _, _| {
-            click_done_cb(&mouse_state, &darea);
+        glib::clone!(@strong click_done_cb, @weak darea => move |_, _, _, _| {
+            click_done_cb(&darea);
         }),
     );
     click_control.connect_unpaired_release(
         glib::clone!(@strong mouse_state, @weak darea => move |_, _, _, d, _| {
             if mouse_state.borrow().pressing.get() == Some(d) {
-                click_done_cb(&mouse_state, &darea);
+                click_done_cb(&darea);
             }
         }),
     );
