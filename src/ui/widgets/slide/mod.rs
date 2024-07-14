@@ -3,7 +3,7 @@ mod event;
 mod pre_draw;
 
 use std::{
-    cell::{Cell, RefCell},
+    cell::Cell,
     rc::{Rc, Weak},
 };
 

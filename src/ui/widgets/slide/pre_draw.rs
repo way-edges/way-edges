@@ -85,7 +85,7 @@ pub fn draw(
     size: (f64, f64),
     map_size: (i32, i32),
     bg: RGBA,
-    fg: RGBA,
+    // fg: RGBA,
     border_color: RGBA,
 ) -> Result<SlidePredraw, String> {
     // provide

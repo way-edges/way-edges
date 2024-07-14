@@ -1,4 +1,4 @@
-use std::{process::Command, str::FromStr, thread};
+use std::str::FromStr;
 
 use educe::Educe;
 use gtk::gdk::RGBA;

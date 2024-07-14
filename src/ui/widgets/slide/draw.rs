@@ -75,7 +75,7 @@ pub fn setup_draw(
         size,
         map_size,
         slide_cfg.bg_color,
-        slide_cfg.fg_color,
+        // slide_cfg.fg_color,
         slide_cfg.border_color,
     )?;
     let dc = DrawCore {
