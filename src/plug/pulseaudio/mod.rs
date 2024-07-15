@@ -14,9 +14,12 @@ use std::{
 use gtk::glib;
 use pa::{
     get_default_sink, get_default_source, get_sink_vol_by_name, get_source_vol_by_name,
-    SinkOrSource, VInfo,
+    reload_device_vinfo_blocking, SinkOrSource, SinkOrSourceIndex, VInfo,
 };
-use pamixer::{init_pamixser_thread, send_pamixer_signal, PaMixerSignalInfo};
+use pamixer::{
+    init_pamixser_thread, match_name_index_sink, match_name_index_source, send_pamixer_signal,
+    PaMixerSignalInfo,
+};
 
 pub type PaCallback = dyn FnMut(&VInfo);
 // pub type PaErrCallback = dyn FnMut(String);
@@ -228,15 +231,29 @@ pub fn register_callback(
     try_init_pulseaudio()?;
     // Ok(add_cb(Box::new(cb), error_cb, sink_or_source))
     let sos = match sos.0.as_ref() {
-        OptionalSinkOrSourceDevice::Sink(s) => SinkOrSource::Sink(match s {
-            Some(s) => s.clone(),
-            None => get_default_sink().ok_or("no default sink")?.to_string(),
-        }),
-        OptionalSinkOrSourceDevice::Source(s) => SinkOrSource::Source(match s {
-            Some(s) => s.clone(),
-            None => get_default_source().ok_or("no default source")?.to_string(),
-        }),
+        OptionalSinkOrSourceDevice::Sink(s) => {
+            let s = match s {
+                Some(s) => s.clone(),
+                None => get_default_sink().ok_or("no default sink")?.to_string(),
+            };
+            SinkOrSource::Sink(s)
+        }
+        OptionalSinkOrSourceDevice::Source(s) => {
+            let s = match s {
+                Some(s) => s.clone(),
+                None => get_default_source().ok_or("no default source")?.to_string(),
+            };
+            SinkOrSource::Source(s)
+        }
     };
+    let ind = match &sos {
+        // SinkOrSource::Sink(s) => (true, match_name_index_sink(s)?),
+        // SinkOrSource::Source(s) => (false, match_name_index_source(s)?),
+        SinkOrSource::Sink(s) => SinkOrSourceIndex::Sink(match_name_index_sink(s)?),
+        SinkOrSource::Source(s) => SinkOrSourceIndex::Source(match_name_index_source(s)?),
+    };
+    log::debug!("device index: {ind:?}");
+    reload_device_vinfo_blocking(ind, None)?;
     Ok(add_cb(cb, sos))
 }
 
