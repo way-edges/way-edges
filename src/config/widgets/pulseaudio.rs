@@ -26,6 +26,7 @@ pub struct PASpecificConfig {
     #[serde(default = "default_mute_color")]
     #[serde(deserialize_with = "common::color_translate")]
     pub mute_color: RGBA,
+    pub device: Option<String>,
 }
 
 fn default_mute_color() -> RGBA {
