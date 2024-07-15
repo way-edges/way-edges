@@ -1,4 +1,7 @@
 use std::{
+    cell::Cell,
+    hint::spin_loop,
+    rc::Rc,
     sync::atomic::{AtomicPtr, Ordering},
     thread,
     time::Instant,
@@ -6,7 +9,7 @@ use std::{
 
 use async_channel::Sender;
 
-use crate::plug::common::shell_cmd;
+use crate::plug::{common::shell_cmd, pulseaudio::pa::get_introspector};
 
 use super::{OptionalSinkOrSource, OptionalSinkOrSourceDevice};
 
@@ -47,6 +50,7 @@ pub fn init_pamixser_thread() {
         match res {
             Ok((sink_or_source, info)) => {
                 let mut cmd = vec!["pamixer".to_string()];
+                let start = Instant::now();
                 match sink_or_source.0.as_ref() {
                     OptionalSinkOrSourceDevice::Sink(os) => {
                         if let Some(s) = os {
@@ -75,6 +79,7 @@ pub fn init_pamixser_thread() {
                         }
                     }
                 };
+                println!("elipsed: {}", start.elapsed().as_micros());
                 match info {
                     PaMixerSignalInfo::Volume(f) => {
                         cmd.push(format!("--set-volume {}", (f * 100.) as u32));
@@ -102,30 +107,96 @@ pub fn init_pamixser_thread() {
 }
 
 pub fn match_name_index_sink(s: &str) -> Result<u32, String> {
-    let cmd = format!("pamixer --list-sinks | grep \"\\\"{s}\\\"\" | awk '{{print $1}}'");
-    let o = shell_cmd(cmd.to_string())?;
-    log::debug!("match sink name result: {o}");
+    let index = Rc::new(Cell::new(None));
+    let is_done = Rc::new(Cell::new(false));
+    use gtk::glib;
+    let ss = s.to_string();
+    get_introspector().get_sink_info_list(
+        glib::clone!(@strong is_done, @strong index => move |l| {
+            if is_done.get() {
+                return;
+            }
+            match l {
+                libpulse_binding::callbacks::ListResult::Item(si) => {
+                    let a: &str = si.description.as_ref().unwrap();
+                    if a.eq(&ss) {
+                        index.set(Some(si.index));
+                        is_done.set(true)
+                    };
+                }
+                libpulse_binding::callbacks::ListResult::End => {
+                    is_done.set(true)
+                }
+                libpulse_binding::callbacks::ListResult::Error => {}
+            };
+        }),
+    );
+
+    while !is_done.get() {
+        spin_loop();
+    }
+    if let Some(i) = index.get() {
+        Ok(i)
+    } else {
+        Err(format!("no sink with name: {s}"))
+    }
+    // let cmd = format!("pamixer --list-sinks | grep \"\\\"{s}\\\"\" | awk '{{print $1}}'");
+    // let o = shell_cmd(cmd.to_string())?;
+    // log::debug!("match sink name result: {o}");
     // let i = match_index(o.lines(), &s).ok_or(format!("no sink with name: {s}"))?;
-    let i = to_index(&o).map_err(|_| "fail to parse sink index: {o}")?;
-    Ok(i)
+    // let i = to_index(&o).map_err(|_| "fail to parse sink index: {o}")?;
+    // Ok(i)
 }
 pub fn match_name_index_source(s: &str) -> Result<u32, String> {
-    let cmd = format!("pamixer --list-sources | grep \"\\\"{s}\\\"\" | awk '{{print $1}}'");
-    let o = shell_cmd(cmd.to_string())?;
-    log::debug!("match source name result: {o}");
-    // let i = match_index(o.lines(), &s).ok_or(format!("no source with name: {s}"))?;
-    let i = to_index(&o).map_err(|_| "fail to parse source index: {o}")?;
-    Ok(i)
+    let index = Rc::new(Cell::new(None));
+    let is_done = Rc::new(Cell::new(false));
+    use gtk::glib;
+    let ss = s.to_string();
+    get_introspector().get_source_info_list(
+        glib::clone!(@strong is_done, @strong index => move |l| {
+            if is_done.get() {
+                return;
+            }
+            match l {
+                libpulse_binding::callbacks::ListResult::Item(si) => {
+                    let a: &str = si.description.as_ref().unwrap();
+                    if a.eq(&ss) {
+                        index.set(Some(si.index));
+                        is_done.set(true)
+                    };
+                }
+                libpulse_binding::callbacks::ListResult::End => {
+                    is_done.set(true)
+                }
+                libpulse_binding::callbacks::ListResult::Error => {}
+            };
+        }),
+    );
+    while !is_done.get() {
+        spin_loop();
+    }
+    if let Some(i) = index.get() {
+        Ok(i)
+    } else {
+        Err(format!("no source with name: {s}"))
+    }
+
+    // let cmd = format!("pamixer --list-sources | grep \"\\\"{s}\\\"\" | awk '{{print $1}}'");
+    // let o = shell_cmd(cmd.to_string())?;
+    // log::debug!("match source name result: {o}");
+    // // let i = match_index(o.lines(), &s).ok_or(format!("no source with name: {s}"))?;
+    // let i = to_index(&o).map_err(|_| "fail to parse source index: {o}")?;
+    // Ok(i)
 }
 
-fn to_index(inp: &str) -> Result<u32, std::num::ParseIntError> {
-    let a = inp
-        .strip_suffix("\r\n")
-        .or(inp.strip_suffix('\n'))
-        .unwrap_or(inp);
-    use std::str::FromStr;
-    u32::from_str(a)
-}
+// fn to_index(inp: &str) -> Result<u32, std::num::ParseIntError> {
+//     let a = inp
+//         .strip_suffix("\r\n")
+//         .or(inp.strip_suffix('\n'))
+//         .unwrap_or(inp);
+//     use std::str::FromStr;
+//     u32::from_str(a)
+// }
 
 // fn match_index(lines: Lines, s: &str) -> Option<u32> {
 //     let mut index = 0;

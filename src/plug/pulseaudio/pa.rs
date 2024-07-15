@@ -17,7 +17,7 @@ use libpulse_binding::{
     self as pulse,
     callbacks::ListResult,
     context::{
-        introspect::{SinkInfo, SourceInfo},
+        introspect::{Introspector, SinkInfo, SourceInfo},
         subscribe::InterestMaskSet,
         Context, FlagSet,
     },
@@ -96,48 +96,44 @@ fn get_context_mut() -> &'static mut Context {
     let a = CONTEXT.load(Ordering::Acquire);
     unsafe { &mut *a }
 }
-// pub fn reload_device_vinfo(is_sink: bool, noi: NameOrIndex) -> Result<(), String> {
+pub fn get_introspector() -> Introspector {
+    get_context().introspect()
+}
 pub fn _reload_device_vinfo(
     sosi: SinkOrSourceIndex,
-    // mut f: Option<impl FnMut(&SinkOrSourceInfo) + 'static>,
     mut f: Option<ReloadCallback>,
-    // mut f: Option<Box<dyn FnOnce(&SinkInfo)>>,
 ) -> Result<Rc<Cell<bool>>, String> {
-    if let Some(ctx) = unsafe { CONTEXT.load(Ordering::Acquire).as_ref() } {
-        let ins = ctx.introspect();
-        let is_done = Rc::new(Cell::new(false));
+    let ins = get_introspector();
+    let is_done = Rc::new(Cell::new(false));
 
-        let _is_done = is_done.clone();
-        match sosi {
-            SinkOrSourceIndex::Sink(i) => {
-                let cb = move |ls: ListResult<&SinkInfo>| {
-                    if let Some(s) = process_sink(ls) {
-                        if let Some(f) = f.take() {
-                            let a = SinkOrSourceInfo::Sink(s);
-                            f(a);
-                        };
+    let _is_done = is_done.clone();
+    match sosi {
+        SinkOrSourceIndex::Sink(i) => {
+            let cb = move |ls: ListResult<&SinkInfo>| {
+                if let Some(s) = process_sink(ls) {
+                    if let Some(f) = f.take() {
+                        let a = SinkOrSourceInfo::Sink(s);
+                        f(a);
                     };
-                    _is_done.set(true);
                 };
-                ins.get_sink_info_by_index(i, cb);
-            }
-            SinkOrSourceIndex::Source(i) => {
-                let cb = move |ls: ListResult<&SourceInfo>| {
-                    if let Some(s) = process_source(ls) {
-                        if let Some(f) = f.take() {
-                            f(SinkOrSourceInfo::Source(s));
-                        };
-                    };
-                    _is_done.set(true);
-                };
-                ins.get_source_info_by_index(i, cb);
-            }
+                _is_done.set(true);
+            };
+            ins.get_sink_info_by_index(i, cb);
         }
-
-        Ok(is_done)
-    } else {
-        Err("Introspector not initialized".to_string())
+        SinkOrSourceIndex::Source(i) => {
+            let cb = move |ls: ListResult<&SourceInfo>| {
+                if let Some(s) = process_source(ls) {
+                    if let Some(f) = f.take() {
+                        f(SinkOrSourceInfo::Source(s));
+                    };
+                };
+                _is_done.set(true);
+            };
+            ins.get_source_info_by_index(i, cb);
+        }
     }
+
+    Ok(is_done)
 }
 pub fn reload_device_vinfo(
     sosi: SinkOrSourceIndex,
