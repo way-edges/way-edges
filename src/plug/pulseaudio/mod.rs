@@ -117,10 +117,10 @@ impl PA {
 }
 
 static IS_PA_INITIALIZED: AtomicBool = AtomicBool::new(false);
-static PA_CONTEXT: AtomicPtr<PA> = AtomicPtr::new(std::ptr::null_mut());
+static GLOBAL_PA: AtomicPtr<PA> = AtomicPtr::new(std::ptr::null_mut());
 fn init_pa() {
     IS_PA_INITIALIZED.store(true, Ordering::Release);
-    PA_CONTEXT.store(Box::into_raw(Box::new(PA::new())), Ordering::Release);
+    GLOBAL_PA.store(Box::into_raw(Box::new(PA::new())), Ordering::Release);
 }
 // fn on_pa_error(e: String) {
 //     unsafe {
@@ -136,11 +136,11 @@ fn is_pa_inited() -> bool {
     IS_PA_INITIALIZED.load(Ordering::Acquire)
 }
 fn is_pa_empty() -> bool {
-    PA_CONTEXT.load(Ordering::Acquire).is_null()
+    GLOBAL_PA.load(Ordering::Acquire).is_null()
 }
 fn call_pa(sink_or_source: SinkOrSource) {
     unsafe {
-        PA_CONTEXT
+        GLOBAL_PA
             .load(Ordering::Acquire)
             .as_mut()
             .unwrap()
@@ -153,7 +153,7 @@ fn add_cb(
     sink_or_source: SinkOrSource,
 ) -> i32 {
     unsafe {
-        PA_CONTEXT
+        GLOBAL_PA
             .load(Ordering::Acquire)
             .as_mut()
             .unwrap()
@@ -163,7 +163,7 @@ fn add_cb(
 }
 fn rm_cb(key: i32) {
     unsafe {
-        PA_CONTEXT
+        GLOBAL_PA
             .load(Ordering::Acquire)
             .as_mut()
             .unwrap()
