@@ -1,7 +1,7 @@
 use std::{
-    str::Lines,
     sync::atomic::{AtomicPtr, Ordering},
     thread,
+    time::Instant,
 };
 
 use async_channel::Sender;
@@ -87,7 +87,9 @@ pub fn init_pamixser_thread() {
                         .to_string(),
                     ),
                 };
-                shell_cmd(cmd.join(" "));
+                gio::spawn_blocking(move || {
+                    shell_cmd(cmd.join(" "));
+                });
             }
             Err(e) => {
                 log::error!("Error receiving pamixser signal, quiting: {e}");
@@ -99,7 +101,7 @@ pub fn init_pamixser_thread() {
     PAMIXER_SIGNAL_SENDER.store(Box::into_raw(Box::new(s)), Ordering::Release);
 }
 
-fn match_name_index_sink(s: &str) -> Result<u32, String> {
+pub fn match_name_index_sink(s: &str) -> Result<u32, String> {
     let cmd = format!("pamixer --list-sinks | grep \"\\\"{s}\\\"\" | awk '{{print $1}}'");
     let o = shell_cmd(cmd.to_string())?;
     log::debug!("match sink name result: {o}");
@@ -107,7 +109,7 @@ fn match_name_index_sink(s: &str) -> Result<u32, String> {
     let i = to_index(&o).map_err(|_| "fail to parse sink index: {o}")?;
     Ok(i)
 }
-fn match_name_index_source(s: &str) -> Result<u32, String> {
+pub fn match_name_index_source(s: &str) -> Result<u32, String> {
     let cmd = format!("pamixer --list-sources | grep \"\\\"{s}\\\"\" | awk '{{print $1}}'");
     let o = shell_cmd(cmd.to_string())?;
     log::debug!("match source name result: {o}");
