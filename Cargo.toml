@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 gtk4-layer-shell = "0.3.0"
 gtk = { package = "gtk4", version = "0.8", features = ["v4_12", "v4_14"] }
-gio = "0.19"
+gio = "0.20"
 interval-task = "0.2.0"
 serde_jsonrc = "0.1"
 serde = { version = "1.0", features = ["derive"] }
