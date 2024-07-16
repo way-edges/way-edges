@@ -1,5 +1,5 @@
+mod change;
 mod pa;
-mod pamixer;
 
 use std::{
     cell::RefCell,
@@ -11,14 +11,12 @@ use std::{
     },
 };
 
+use change::{init_painfo_changer, send_painfo_change_signal, VolOrMute};
 use gtk::glib;
 use pa::{
     get_default_sink, get_default_source, get_sink_vol_by_name, get_source_vol_by_name,
-    reload_device_vinfo_blocking, SinkOrSource, SinkOrSourceIndex, VInfo,
-};
-use pamixer::{
-    init_pamixser_thread, match_name_index_sink, match_name_index_source, send_pamixer_signal,
-    PaMixerSignalInfo,
+    match_name_index_sink, match_name_index_source, reload_device_vinfo_blocking, SinkOrSource,
+    SinkOrSourceIndex, VInfo,
 };
 
 pub type PaCallback = dyn FnMut(&VInfo);
@@ -175,7 +173,7 @@ pub fn try_init_pulseaudio() -> Result<(), String> {
     if !is_pa_inited() {
         let sr = pa::init_mainloop()?;
         init_pa();
-        init_pamixser_thread();
+        init_painfo_changer();
         glib::spawn_future_local(async move {
             log::info!("start pulseaudio signal receiver on glib main thread");
             loop {
@@ -213,6 +211,8 @@ pub enum OptionalSinkOrSourceDevice {
 
 #[derive(Debug, Clone)]
 pub struct OptionalSinkOrSource(Arc<OptionalSinkOrSourceDevice>);
+unsafe impl Send for OptionalSinkOrSource {}
+unsafe impl Sync for OptionalSinkOrSource {}
 impl OptionalSinkOrSource {
     pub fn sink(s: Option<String>) -> Self {
         Self(Arc::new(OptionalSinkOrSourceDevice::Sink(s)))
@@ -265,8 +265,8 @@ pub fn unregister_callback(key: i32) {
 
 // i don't know how to set it with pulseaudio api
 pub fn set_vol(os: OptionalSinkOrSource, v: f64) {
-    send_pamixer_signal((os, PaMixerSignalInfo::vol(v)));
+    send_painfo_change_signal((os, VolOrMute::vol(v)));
 }
 pub fn set_mute(os: OptionalSinkOrSource, mute: bool) {
-    send_pamixer_signal((os, PaMixerSignalInfo::mute(mute)));
+    send_painfo_change_signal((os, VolOrMute::mute(mute)));
 }

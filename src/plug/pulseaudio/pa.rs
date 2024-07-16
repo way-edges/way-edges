@@ -1,12 +1,11 @@
 use std::{
-    cell::{Cell, RefCell},
+    cell::{Cell, RefCell, RefMut},
     collections::HashMap,
     hint::spin_loop,
-    ops::DerefMut,
     rc::{Rc, Weak},
     sync::{
         atomic::{AtomicPtr, Ordering},
-        Arc, OnceLock, RwLock,
+        Arc, Mutex, MutexGuard, OnceLock, RwLock,
     },
     thread::{self},
 };
@@ -17,7 +16,7 @@ use libpulse_binding::{
     self as pulse,
     callbacks::ListResult,
     context::{
-        introspect::{Introspector, SinkInfo, SourceInfo},
+        introspect::{SinkInfo, SourceInfo},
         subscribe::InterestMaskSet,
         Context, FlagSet,
     },
@@ -30,6 +29,12 @@ use libpulse_binding::{
 pub struct VInfo {
     pub vol: f64,
     pub is_muted: bool,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum SinkOrSource {
+    Sink(String),
+    Source(String),
 }
 
 static DEFAULT_SINK: AtomicPtr<String> = AtomicPtr::new(std::ptr::null_mut());
@@ -90,79 +95,68 @@ pub enum SinkOrSourceInfo<'a, 'b: 'a> {
 
 type ReloadCallback = Box<dyn FnOnce(SinkOrSourceInfo)>;
 
-// static INTORSPECTOR: AtomicPtr<Context> = AtomicPtr::new(std::ptr::null_mut());
-static CONTEXT: AtomicPtr<Context> = AtomicPtr::new(std::ptr::null_mut());
+// static CONTEXT: AtomicPtr<Arc<Mutex<Context>>> = AtomicPtr::new(std::ptr::null_mut());
+static CONTEXT: AtomicPtr<Mutex<Context>> = AtomicPtr::new(std::ptr::null_mut());
 fn set_context(i: Context) {
-    let boxed = Box::new(i);
+    // let boxed = Box::new(Arc::new(Mutex::new(i)));
+    let boxed = Box::new(Mutex::new(i));
     let raw_ptr = Box::into_raw(boxed);
     CONTEXT.store(raw_ptr, Ordering::Release);
-    // INTORSPECTOR.store(Box::into_raw(Box::new(i)), Ordering::Release)
 }
-fn get_context() -> &'static Context {
-    let a = CONTEXT.load(Ordering::Acquire);
-    unsafe { &*a }
-}
-fn get_context_mut() -> &'static mut Context {
-    let a = CONTEXT.load(Ordering::Acquire);
-    unsafe { &mut *a }
-}
-pub fn get_introspector() -> Introspector {
-    get_context().introspect()
+fn with_context<T>(f: impl FnOnce(MutexGuard<Context>) -> T) -> T {
+    let a = unsafe { CONTEXT.load(Ordering::Acquire).as_ref().unwrap() };
+    let ctx = a.lock().unwrap();
+    f(ctx)
 }
 pub fn _reload_device_vinfo(
     sosi: SinkOrSourceIndex,
     mut f: Option<ReloadCallback>,
-) -> Rc<Cell<bool>> {
+) -> Arc<RwLock<bool>> {
     log::debug!("start reload device vinfo");
-    let ins = get_introspector();
-    let is_done = Rc::new(Cell::new(false));
+    with_context(|ctx| {
+        let ins = ctx.introspect();
+        let is_done = Arc::new(RwLock::new(false));
 
-    log::debug!("start match device");
-    let _is_done = is_done.clone();
-    match sosi {
-        SinkOrSourceIndex::Sink(i) => {
-            let cb = move |ls: ListResult<&SinkInfo>| {
-                log::debug!("start process sink");
-                if let Some(s) = process_sink(ls) {
-                    if let Some(f) = f.take() {
-                        let a = SinkOrSourceInfo::Sink(s);
-                        f(a);
+        log::debug!("start match device");
+        let _is_done = is_done.clone();
+        match sosi {
+            SinkOrSourceIndex::Sink(i) => {
+                let cb = move |ls: ListResult<&SinkInfo>| {
+                    log::debug!("start process sink");
+                    if let Some(s) = process_sink(ls) {
+                        if let Some(f) = f.take() {
+                            let a = SinkOrSourceInfo::Sink(s);
+                            f(a);
+                        };
                     };
+                    *_is_done.write().unwrap() = true;
                 };
-                _is_done.set(true);
-            };
-            ins.get_sink_info_by_index(i, cb);
-        }
-        SinkOrSourceIndex::Source(i) => {
-            let cb = move |ls: ListResult<&SourceInfo>| {
-                log::debug!("start process source");
-                if let Some(s) = process_source(ls) {
-                    if let Some(f) = f.take() {
-                        f(SinkOrSourceInfo::Source(s));
+                ins.get_sink_info_by_index(i, cb);
+            }
+            SinkOrSourceIndex::Source(i) => {
+                let cb = move |ls: ListResult<&SourceInfo>| {
+                    log::debug!("start process source");
+                    if let Some(s) = process_source(ls) {
+                        if let Some(f) = f.take() {
+                            f(SinkOrSourceInfo::Source(s));
+                        };
                     };
+                    *_is_done.write().unwrap() = true;
                 };
-                _is_done.set(true);
-            };
-            ins.get_source_info_by_index(i, cb);
+                ins.get_source_info_by_index(i, cb);
+            }
         }
-    }
-
-    is_done
+        is_done
+    })
 }
 pub fn reload_device_vinfo(sosi: SinkOrSourceIndex, f: Option<ReloadCallback>) {
     _reload_device_vinfo(sosi, f);
 }
 pub fn reload_device_vinfo_blocking(sosi: SinkOrSourceIndex, f: Option<ReloadCallback>) {
     let is_done = _reload_device_vinfo(sosi, f);
-    while !is_done.get() {
+    while !*is_done.read().unwrap() {
         spin_loop();
     }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub enum SinkOrSource {
-    Sink(String),
-    Source(String),
 }
 
 pub type Signal = Result<SinkOrSource, String>;
@@ -209,6 +203,89 @@ fn process_source<'a>(ls: ListResult<&'a SourceInfo>) -> Option<&'a SourceInfo<'
     None
 }
 
+pub fn match_name_index_sink(s: &str) -> Result<u32, String> {
+    let index = Rc::new(Cell::new(None));
+    let is_done = Rc::new(Cell::new(false));
+    use gtk::glib;
+    let ss = s.to_string();
+    with_context(|ctx| {
+        ctx.introspect().get_sink_info_list(glib::clone!(
+            #[strong]
+            is_done,
+            #[strong]
+            index,
+            move |l| {
+                if is_done.get() {
+                    return;
+                }
+                match l {
+                    libpulse_binding::callbacks::ListResult::Item(si) => {
+                        let a: &str = si.description.as_ref().unwrap();
+                        if a.eq(&ss) {
+                            index.set(Some(si.index));
+                            is_done.set(true)
+                        };
+                    }
+                    libpulse_binding::callbacks::ListResult::End => is_done.set(true),
+                    libpulse_binding::callbacks::ListResult::Error => {
+                        log::error!("Get source info error");
+                        is_done.set(true)
+                    }
+                };
+            }
+        ));
+    });
+
+    log::debug!("wait for match name index sink");
+    while !is_done.get() {
+        spin_loop();
+    }
+    log::debug!("wait for match name index sink done");
+    if let Some(i) = index.get() {
+        Ok(i)
+    } else {
+        Err(format!("no sink with name: {s}"))
+    }
+}
+pub fn match_name_index_source(s: &str) -> Result<u32, String> {
+    let index = Rc::new(Cell::new(None));
+    let is_done = Rc::new(Cell::new(false));
+    use gtk::glib;
+    let ss = s.to_string();
+    with_context(|ctx| {
+        ctx.introspect().get_source_info_list(glib::clone!(
+            #[strong]
+            is_done,
+            #[strong]
+            index,
+            move |l| {
+                if is_done.get() {
+                    return;
+                }
+                match l {
+                    libpulse_binding::callbacks::ListResult::Item(si) => {
+                        let a: &str = si.description.as_ref().unwrap();
+                        if a.eq(&ss) {
+                            index.set(Some(si.index));
+                            is_done.set(true)
+                        };
+                    }
+                    libpulse_binding::callbacks::ListResult::End => is_done.set(true),
+                    libpulse_binding::callbacks::ListResult::Error => is_done.set(true),
+                };
+            }
+        ));
+    });
+    while !is_done.get() {
+        spin_loop();
+    }
+    if let Some(i) = index.get() {
+        Ok(i)
+    } else {
+        Err(format!("no source with name: {s}"))
+    }
+}
+
 pub fn init_mainloop() -> Result<async_channel::Receiver<Signal>, String> {
     // subscribe
     let (ss, sr) = async_channel::bounded::<Signal>(1);
@@ -231,6 +308,7 @@ pub fn init_mainloop() -> Result<async_channel::Receiver<Signal>, String> {
                 Some(Box::new(move |res| {
                     log::debug!("run reload sink vinfo cb");
                     if let SinkOrSourceInfo::Sink(res) = res {
+                        // println!("{res:#?}");
                         if ss
                             .force_send(Ok(SinkOrSource::Sink(
                                 res.description.clone().unwrap().to_string(),
@@ -300,29 +378,31 @@ pub fn init_mainloop() -> Result<async_channel::Receiver<Signal>, String> {
                 let mainloop_clone = Rc::downgrade(&mainloop);
                 {
                     let ss = ss_clone.clone();
-                    // context
-                    //     .borrow_mut()
-                    get_context_mut().set_state_callback(Some(Box::new(move || {
-                        // let state = context_clone.borrow().get_state();
-                        let state = get_context().get_state();
-                        match state {
-                            pulse::context::State::Unconnected => {
-                                close_mainloop(&mainloop_clone);
-                                ss.force_send(Err("PulseAudio callback error".to_string()))
-                                    .unwrap();
-                            }
-                            pulse::context::State::Ready => {
-                                ready_clone.set(true);
-                            }
-                            _ => {
-                                log::warn!("Unknow state");
-                            }
-                        }
-                    })));
+                    with_context(|mut ctx| {
+                        ctx.set_state_callback(Some(Box::new(move || {
+                            // let state = context_clone.borrow().get_state();
+                            with_context(|ctx| match ctx.get_state() {
+                                pulse::context::State::Unconnected
+                                | pulse::context::State::Failed
+                                | pulse::context::State::Terminated => {
+                                    log::error!("Unconnected state");
+                                    close_mainloop(&mainloop_clone);
+                                    ss.force_send(Err("PulseAudio callback error".to_string()))
+                                        .unwrap();
+                                }
+                                pulse::context::State::Ready => {
+                                    ready_clone.set(true);
+                                }
+                                _ => {
+                                    log::warn!("Unknow state");
+                                }
+                            });
+                        })));
+                    })
                 }
 
                 while !ready.get() {
-                    iter_loop(mainloop.borrow_mut().deref_mut())?;
+                    iter_loop(mainloop.borrow_mut())?;
                 }
 
                 log::debug!("start subscribe pulseaudio sink and source");
@@ -331,15 +411,16 @@ pub fn init_mainloop() -> Result<async_channel::Receiver<Signal>, String> {
                     {
                         let res = Rc::new(Cell::new(None));
                         let res_clone = res.clone();
-                        // ctx.subscribe(InterestMaskSet::SINK | InterestMaskSet::SOURCE, move |s| {
-                        get_context_mut().subscribe(
-                            InterestMaskSet::SINK | InterestMaskSet::SOURCE,
-                            move |s| {
-                                res_clone.set(Some(s));
-                            },
-                        );
+                        with_context(|mut ctx| {
+                            ctx.subscribe(
+                                InterestMaskSet::SINK | InterestMaskSet::SOURCE,
+                                move |s| {
+                                    res_clone.set(Some(s));
+                                },
+                            );
+                        });
                         while res.get().is_none() {
-                            iter_loop(mainloop.borrow_mut().deref_mut())?;
+                            iter_loop(mainloop.borrow_mut())?;
                         }
                         let res = res.get().unwrap();
                         if !res {
@@ -349,35 +430,34 @@ pub fn init_mainloop() -> Result<async_channel::Receiver<Signal>, String> {
                     {
                         // let context_clone = context.clone();
                         let mainloop_clone = Rc::downgrade(&mainloop);
-                        // ctx.set_subscribe_callback(Some(Box::new(
-                        get_context_mut().set_subscribe_callback(Some(Box::new(
-                            move |facility, operation, index| {
-                                log::debug!(
-                                    "{facility:?} event occurred: {:?}, index: {}",
-                                    operation,
-                                    index
-                                );
-                                // let ins = context_clone.borrow().introspect();
-                                let mc = mainloop_clone.clone();
-                                match facility.unwrap() {
-                                    pulse::context::subscribe::Facility::Sink => {
-                                        // update_sink_by_index(ins, index, mc);
-                                        update_sink_by_index(index, mc);
-                                    }
-                                    pulse::context::subscribe::Facility::Source => {
-                                        // update_source_by_index(ins, index, mc);
-                                        update_source_by_index(index, mc);
-                                    }
-                                    _ => {}
-                                };
-                            },
-                        )));
+                        with_context(|mut ctx| {
+                            ctx.set_subscribe_callback(Some(Box::new(
+                                move |facility, operation, index| {
+                                    log::debug!(
+                                        "{facility:?} event occurred: {:?}, index: {}",
+                                        operation,
+                                        index
+                                    );
+                                    // let ins = context_clone.borrow().introspect();
+                                    let mc = mainloop_clone.clone();
+                                    match facility.unwrap() {
+                                        pulse::context::subscribe::Facility::Sink => {
+                                            // update_sink_by_index(ins, index, mc);
+                                            update_sink_by_index(index, mc);
+                                        }
+                                        pulse::context::subscribe::Facility::Source => {
+                                            // update_source_by_index(ins, index, mc);
+                                            update_source_by_index(index, mc);
+                                        }
+                                        _ => {}
+                                    };
+                                },
+                            )));
+                        });
                     }
                 };
-                // Ok((mainloop, context))
                 Ok(mainloop)
             }();
-            // let (mainloop, context) = match res {
             let mainloop = match res {
                 Ok(r) => r,
                 Err(e) => {
@@ -389,57 +469,58 @@ pub fn init_mainloop() -> Result<async_channel::Receiver<Signal>, String> {
             // let data_res = Rc::new(Cell::new(None::<Result<(), &str>>));
             let data_res = Rc::new(RefCell::new(Ok((false, false))));
             let data_res_clone = data_res.clone();
-            // let ins = Rc::new(RefCell::new(context.borrow().introspect()));
-            let ins = Rc::new(RefCell::new(get_context().introspect()));
-            let ins_clone = ins.clone();
-            log::debug!("Getting default sink and source info");
-            ins.borrow().get_server_info(move |s| {
-                let (sink_name, source_name) =
-                    (s.default_sink_name.as_ref(), s.default_source_name.as_ref());
+            with_context(|ctx| {
+                let ins = Rc::new(RefCell::new(ctx.introspect()));
+                let ins_clone = ins.clone();
+                log::debug!("Getting default sink and source info");
+                ins.borrow().get_server_info(move |s| {
+                    let (sink_name, source_name) =
+                        (s.default_sink_name.as_ref(), s.default_source_name.as_ref());
 
-                if let Some(sink_name) = sink_name {
-                    ins_clone.borrow().get_sink_info_by_name(
-                        sink_name,
-                        glib::clone!(
-                            #[strong]
-                            data_res_clone,
-                            move |ls| {
-                                if let ListResult::Item(s) = ls {
-                                    let desc = s.description.clone().unwrap().to_string();
-                                    log::debug!("Set default sink: {desc}");
-                                    set_default_sink(desc);
+                    if let Some(sink_name) = sink_name {
+                        ins_clone.borrow().get_sink_info_by_name(
+                            sink_name,
+                            glib::clone!(
+                                #[strong]
+                                data_res_clone,
+                                move |ls| {
+                                    if let ListResult::Item(s) = ls {
+                                        let desc = s.description.clone().unwrap().to_string();
+                                        log::debug!("Set default sink: {desc}");
+                                        set_default_sink(desc);
+                                    }
+                                    process_sink(ls);
+                                    data_res_clone.borrow_mut().as_mut().unwrap().0 = true;
                                 }
-                                process_sink(ls);
-                                data_res_clone.borrow_mut().as_mut().unwrap().0 = true;
-                            }
-                        ),
-                    );
-                } else {
-                    log::warn!("Did not get default sink device");
-                    data_res_clone.borrow_mut().as_mut().unwrap().0 = true;
-                }
+                            ),
+                        );
+                    } else {
+                        log::warn!("Did not get default sink device");
+                        data_res_clone.borrow_mut().as_mut().unwrap().0 = true;
+                    }
 
-                if let Some(source_name) = source_name {
-                    ins_clone.borrow().get_source_info_by_name(
-                        source_name,
-                        glib::clone!(
-                            #[strong]
-                            data_res_clone,
-                            move |ls| {
-                                if let ListResult::Item(s) = ls {
-                                    let desc = s.description.clone().unwrap().to_string();
-                                    log::debug!("Set default source: {desc}");
-                                    set_default_source(desc);
+                    if let Some(source_name) = source_name {
+                        ins_clone.borrow().get_source_info_by_name(
+                            source_name,
+                            glib::clone!(
+                                #[strong]
+                                data_res_clone,
+                                move |ls| {
+                                    if let ListResult::Item(s) = ls {
+                                        let desc = s.description.clone().unwrap().to_string();
+                                        log::debug!("Set default source: {desc}");
+                                        set_default_source(desc);
+                                    }
+                                    process_source(ls);
+                                    data_res_clone.borrow_mut().as_mut().unwrap().1 = true;
                                 }
-                                process_source(ls);
-                                data_res_clone.borrow_mut().as_mut().unwrap().1 = true;
-                            }
-                        ),
-                    );
-                } else {
-                    log::warn!("Did not get default source device");
-                    data_res_clone.borrow_mut().as_mut().unwrap().1 = true;
-                }
+                            ),
+                        );
+                    } else {
+                        log::warn!("Did not get default source device");
+                        data_res_clone.borrow_mut().as_mut().unwrap().1 = true;
+                    }
+                });
             });
             while {
                 let temp = data_res.borrow();
@@ -449,7 +530,7 @@ pub fn init_mainloop() -> Result<async_channel::Receiver<Signal>, String> {
                     false
                 }
             } {
-                if let Err(e) = iter_loop(mainloop.borrow_mut().deref_mut()) {
+                if let Err(e) = iter_loop(mainloop.borrow_mut()) {
                     *data_res.borrow_mut() = Err(e);
                 };
             }
@@ -470,10 +551,26 @@ pub fn init_mainloop() -> Result<async_channel::Receiver<Signal>, String> {
             log::info!("start running pulseaudio mainloop");
 
             // loop {
-            //     if let Err(e) = iter_loop(mainloop.borrow_mut().deref_mut()) {
-            //         ss.force_send(Err(format!("Error running mainloop: {e:?}")))
-            //             .ok();
+            //     let a = mainloop.borrow_mut();
+            //     if a._inner.get_ptr().is_null() {
+            //         println!("null ptr mainloop");
+            //         // return false;
             //         break;
+            //     }
+            //     match iter_loop(a) {
+            //         Ok(i) => {
+            //             if i == 0 {
+            //                 println!("receive 0 success");
+            //                 thread::sleep(Duration::from_millis(1));
+            //             }
+            //             // true
+            //         }
+            //         Err(e) => {
+            //             ss.force_send(Err(format!("Error running mainloop: {e:?}")))
+            //                 .ok();
+            //             // false
+            //             break;
+            //         }
             //     }
             // }
             // log::info!("quit pulseaudio mainloop");
@@ -492,10 +589,10 @@ fn get_avg_volume(cv: ChannelVolumes) -> f64 {
     cv.avg().0 as f64 / Volume::NORMAL.0 as f64
 }
 
-fn iter_loop(ml: &mut Mainloop) -> Result<(), String> {
+fn iter_loop(mut ml: RefMut<Mainloop>) -> Result<u32, String> {
     match ml.iterate(true) {
         IterateResult::Quit(r) => Err(format!("mainloop quit: with status: {r:?}")),
         IterateResult::Err(e) => Err(format!("mainloop iterate Error: {e}")),
-        IterateResult::Success(_) => Ok(()),
+        IterateResult::Success(r) => Ok(r),
     }
 }
