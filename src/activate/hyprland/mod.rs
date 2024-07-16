@@ -103,11 +103,11 @@ fn connect(
     let instance = Rc::new(Cell::new(Some(instance_ref.clone())));
 
     // used to setup realize event for each window
-    let connect = gtk::glib::clone!(@weak app, @strong counter, @strong cfgs, @strong needed_monitors, @strong instance => move |w: &ApplicationWindow| {
-        w.connect_realize(gtk::glib::clone!(@weak app, @strong counter, @strong cfgs, @strong needed_monitors, @strong instance => move |_| {
+    let connect = gtk::glib::clone!(#[weak] app, #[strong] counter, #[strong] cfgs, #[strong] needed_monitors, #[strong] instance ,, move |w: &ApplicationWindow| {
+        w.connect_realize(gtk::glib::clone!(#[weak] app, #[strong] counter, #[strong] cfgs, #[strong] needed_monitors, #[strong] instance , move |_| {
             // calculate after all window rendered(windows are not actually rendered when realize signaled)
             idle_add_local_once(
-                gtk::glib::clone!(@weak counter, @weak app, @weak cfgs, @weak needed_monitors, @weak instance  => move || {
+                gtk::glib::clone!(#[weak] counter, #[weak] app, #[weak] cfgs, #[weak] needed_monitors, #[weak] instance  , move || {
                     // we need to get all layer info of windows
                     // we are going to do it after the last window rendered
                     // and we use counter to do it
@@ -154,7 +154,7 @@ fn connect(
                         if let Err(e) = res {
                             notify_app_error(format!("Failed to initialize app: get_monitor_map(): {e}").as_str());
                             // defer close windows, so we only quit app here
-                            idle_add_local_once(glib::clone!(@weak app => move|| {
+                            idle_add_local_once(glib::clone!(#[weak] app , move|| {
                                 app.quit();
                             }));
                             return;

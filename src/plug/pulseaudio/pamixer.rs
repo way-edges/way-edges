@@ -113,8 +113,12 @@ pub fn match_name_index_sink(s: &str) -> Result<u32, String> {
     let is_done = Rc::new(Cell::new(false));
     use gtk::glib;
     let ss = s.to_string();
-    get_introspector().get_sink_info_list(
-        glib::clone!(@strong is_done, @strong index => move |l| {
+    get_introspector().get_sink_info_list(glib::clone!(
+        #[strong]
+        is_done,
+        #[strong]
+        index,
+        move |l| {
             if is_done.get() {
                 return;
             }
@@ -126,16 +130,14 @@ pub fn match_name_index_sink(s: &str) -> Result<u32, String> {
                         is_done.set(true)
                     };
                 }
-                libpulse_binding::callbacks::ListResult::End => {
-                    is_done.set(true)
-                }
+                libpulse_binding::callbacks::ListResult::End => is_done.set(true),
                 libpulse_binding::callbacks::ListResult::Error => {
                     log::error!("Get source info error");
                     is_done.set(true)
                 }
             };
-        }),
-    );
+        }
+    ));
 
     log::debug!("wait for match name index sink");
     while !is_done.get() {
@@ -153,8 +155,12 @@ pub fn match_name_index_source(s: &str) -> Result<u32, String> {
     let is_done = Rc::new(Cell::new(false));
     use gtk::glib;
     let ss = s.to_string();
-    get_introspector().get_source_info_list(
-        glib::clone!(@strong is_done, @strong index => move |l| {
+    get_introspector().get_source_info_list(glib::clone!(
+        #[strong]
+        is_done,
+        #[strong]
+        index,
+        move |l| {
             if is_done.get() {
                 return;
             }
@@ -166,15 +172,11 @@ pub fn match_name_index_source(s: &str) -> Result<u32, String> {
                         is_done.set(true)
                     };
                 }
-                libpulse_binding::callbacks::ListResult::End => {
-                    is_done.set(true)
-                }
-                libpulse_binding::callbacks::ListResult::Error => {
-                    is_done.set(true)
-                }
+                libpulse_binding::callbacks::ListResult::End => is_done.set(true),
+                libpulse_binding::callbacks::ListResult::Error => is_done.set(true),
             };
-        }),
-    );
+        }
+    ));
     while !is_done.get() {
         spin_loop();
     }

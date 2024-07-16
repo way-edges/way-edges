@@ -11,7 +11,7 @@ use std::{
     thread::{self},
 };
 
-use gio::glib::{clone::Downgrade, subclass::shared::RefCounted};
+use gio::glib::subclass::shared::RefCounted;
 use gtk::glib;
 use libpulse_binding::{
     self as pulse,
@@ -392,19 +392,18 @@ pub fn init_mainloop() -> Result<async_channel::Receiver<Signal>, String> {
             // let ins = Rc::new(RefCell::new(context.borrow().introspect()));
             let ins = Rc::new(RefCell::new(get_context().introspect()));
             let ins_clone = ins.clone();
-            let mainloop_clone = mainloop.downgrade();
-            let ss_clone = ss.clone();
             log::debug!("Getting default sink and source info");
             ins.borrow().get_server_info(move |s| {
-                let ( sink_name, source_name ) = (s
-                    .default_sink_name.as_ref(), s.default_source_name.as_ref());
+                let (sink_name, source_name) =
+                    (s.default_sink_name.as_ref(), s.default_source_name.as_ref());
 
                 if let Some(sink_name) = sink_name {
-                    ins_clone
-                        .borrow()
-                        .get_sink_info_by_name(
-                            sink_name,
-                            glib::clone!(@strong ss_clone, @strong mainloop_clone, @strong data_res_clone => move |ls| {
+                    ins_clone.borrow().get_sink_info_by_name(
+                        sink_name,
+                        glib::clone!(
+                            #[strong]
+                            data_res_clone,
+                            move |ls| {
                                 if let ListResult::Item(s) = ls {
                                     let desc = s.description.clone().unwrap().to_string();
                                     log::debug!("Set default sink: {desc}");
@@ -412,18 +411,21 @@ pub fn init_mainloop() -> Result<async_channel::Receiver<Signal>, String> {
                                 }
                                 process_sink(ls);
                                 data_res_clone.borrow_mut().as_mut().unwrap().0 = true;
-                            }));
-                }else {
+                            }
+                        ),
+                    );
+                } else {
                     log::warn!("Did not get default sink device");
                     data_res_clone.borrow_mut().as_mut().unwrap().0 = true;
                 }
 
-                if let Some(source_name) = source_name{
-                    ins_clone
-                        .borrow()
-                        .get_source_info_by_name(
-                            source_name,
-                            glib::clone!(@strong ss_clone, @strong mainloop_clone, @strong data_res_clone => move |ls| {
+                if let Some(source_name) = source_name {
+                    ins_clone.borrow().get_source_info_by_name(
+                        source_name,
+                        glib::clone!(
+                            #[strong]
+                            data_res_clone,
+                            move |ls| {
                                 if let ListResult::Item(s) = ls {
                                     let desc = s.description.clone().unwrap().to_string();
                                     log::debug!("Set default source: {desc}");
@@ -431,8 +433,10 @@ pub fn init_mainloop() -> Result<async_channel::Receiver<Signal>, String> {
                                 }
                                 process_source(ls);
                                 data_res_clone.borrow_mut().as_mut().unwrap().1 = true;
-                            }));
-                }else {
+                            }
+                        ),
+                    );
+                } else {
                     log::warn!("Did not get default source device");
                     data_res_clone.borrow_mut().as_mut().unwrap().1 = true;
                 }

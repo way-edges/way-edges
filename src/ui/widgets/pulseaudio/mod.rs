@@ -87,7 +87,7 @@ pub fn init_widget(
                 exposed.darea.upgrade().unwrap().queue_draw();
             }
         }),
-        // Some(glib::clone!(@strong window => move |s| {
+        // Some(glib::clone!(#[strong] window , move |s| {
         //     log::error!("Received error from pulseaudio, closing window: {s}");
         //     window.close();
         // })),

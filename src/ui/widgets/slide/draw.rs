@@ -96,9 +96,9 @@ pub fn setup_draw(
     // let set_input_region = draw_input_region(size, edge, extra_trigger_size);
     // let mut set_frame_manger = draw_frame_manager(60, transition_range);
     darea.set_draw_func(glib::clone!(
-        @weak window,
-        @strong progress,
-        => move |_, context, _, _| {
+        #[weak] window,
+        #[strong] progress,
+        move |_, context, _, _| {
             if let Some(f) = additional.on_draw.as_mut() {
                 f()
             }

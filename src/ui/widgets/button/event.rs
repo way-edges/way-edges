@@ -92,43 +92,65 @@ fn set_event_mouse_click(
         }
     };
 
-    click_control.connect_pressed(
-        glib::clone!(@strong mouse_state, @weak darea => move |g, _, _, _| {
+    click_control.connect_pressed(glib::clone!(
+        #[strong]
+        mouse_state,
+        #[weak]
+        darea,
+        move |g, _, _, _| {
             let btn = g.current_button();
             if show_mouse_debug {
                 notify(&format!("key pressed: {}", btn));
             };
             mouse_state.borrow_mut().set_pressing(btn);
             darea.queue_draw();
-        }),
-    );
-    click_control.connect_released(
-        glib::clone!(@strong click_done_cb, @weak darea => move |_, _, _, _| {
+        }
+    ));
+    click_control.connect_released(glib::clone!(
+        #[strong]
+        click_done_cb,
+        #[weak]
+        darea,
+        move |_, _, _, _| {
             click_done_cb(&darea);
-        }),
-    );
-    click_control.connect_unpaired_release(
-        glib::clone!(@strong mouse_state, @weak darea => move |_, _, _, d, _| {
+        }
+    ));
+    click_control.connect_unpaired_release(glib::clone!(
+        #[strong]
+        mouse_state,
+        #[weak]
+        darea,
+        move |_, _, _, d, _| {
             if mouse_state.borrow().pressing.get() == Some(d) {
                 click_done_cb(&darea);
             }
-        }),
-    );
+        }
+    ));
     darea.add_controller(click_control);
 }
 
 fn set_event_mouse_move(darea: &DrawingArea, mouse_state: Rc<RefCell<MouseState>>) {
     let motion = EventControllerMotion::new();
-    motion.connect_enter(
-        glib::clone!(@strong mouse_state, @weak darea => move |_, _, _| {
+    motion.connect_enter(glib::clone!(
+        #[strong]
+        mouse_state,
+        #[weak]
+        darea,
+        move |_, _, _| {
             mouse_state.borrow_mut().set_hovering(true);
             darea.queue_draw();
-        }),
-    );
-    motion.connect_leave(glib::clone!(@strong mouse_state, @weak darea=> move |_,| {
-        mouse_state.borrow_mut().set_hovering(false);
-        darea.queue_draw();
-    }));
+        }
+    ));
+    motion.connect_leave(glib::clone!(
+        #[strong]
+        mouse_state,
+        #[weak]
+        darea,
+        move |_| {
+            mouse_state.borrow_mut().set_hovering(false);
+            darea.queue_draw();
+        }
+    ));
     darea.add_controller(motion);
 }
 

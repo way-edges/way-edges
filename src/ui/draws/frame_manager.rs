@@ -18,10 +18,14 @@ pub struct FrameManager {
 impl FrameManager {
     pub fn new(frame_rate: u32, darea: &DrawingArea, appwindow: &ApplicationWindow) -> Self {
         let runner = Rc::new(Cell::new(None));
-        darea.connect_destroy(glib::clone!(@strong runner => move|_| {
-            log::debug!("frame manager close");
-            runner.take().map(|r: Runner<Task>| r.close());
-        }));
+        darea.connect_destroy(glib::clone!(
+            #[strong]
+            runner,
+            move |_| {
+                log::debug!("frame manager close");
+                runner.take().map(|r: Runner<Task>| r.close());
+            }
+        ));
         Self {
             runner,
             frame_gap: Duration::from_micros(1_000_000 / frame_rate as u64),
@@ -42,35 +46,41 @@ impl FrameManager {
             runner.start()?;
             self.runner.set(Some(runner));
             log::debug!("runner started");
-            glib::spawn_future_local(glib::clone!(@strong self.darea as darea => async move {
-                log::debug!("start wait runner signal");
-                while r.recv().await.is_ok() {
-                    if let Some(darea) = darea.upgrade() {
-                        darea.queue_draw();
-                    } else {
-                        log::info!("drawing area is cleared");
-                        r.close();
-                        break;
-                    };
+            glib::spawn_future_local(glib::clone!(
+                #[strong(rename_to=darea)]
+                self.darea,
+                async move {
+                    log::debug!("start wait runner signal");
+                    while r.recv().await.is_ok() {
+                        if let Some(darea) = darea.upgrade() {
+                            darea.queue_draw();
+                        } else {
+                            log::info!("drawing area is cleared");
+                            r.close();
+                            break;
+                        };
+                    }
+                    log::debug!("stop wait runner signal");
                 }
-                log::debug!("stop wait runner signal");
-            }));
+            ));
         }
         Ok(())
     }
     pub fn stop(&mut self) -> Result<(), String> {
         if let Some(runner) = self.runner.take() {
             log::debug!("stop frame manager");
-            glib::spawn_future_local(
-                glib::clone!(@strong self.appwindow as window => async move {
+            glib::spawn_future_local(glib::clone!(
+                #[strong(rename_to=window)]
+                self.appwindow,
+                async move {
                     if let Err(s) = runner.close() {
                         log::error!("Error closing runner: {s}");
                         if let Some(window) = window.upgrade() {
                             window.close();
                         };
                     };
-                }),
-            );
+                }
+            ));
             log::debug!("runner closed");
         }
         Ok(())

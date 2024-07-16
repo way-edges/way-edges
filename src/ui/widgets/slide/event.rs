@@ -122,7 +122,7 @@ fn set_event_mouse_click(
     };
 
     click_control.connect_pressed(
-        glib::clone!(@strong mouse_state, @strong progress_state, @weak darea => move |g, _, x, y| {
+        glib::clone!(#[strong] mouse_state, #[strong] progress_state, #[weak] darea , move |g, _, x, y| {
             let btn = g.current_button();
             if show_mouse_debug {
                 crate::notify_send("Way-edges mouse button debug message", &format!("key pressed: {}", btn), false);
@@ -145,12 +145,12 @@ fn set_event_mouse_click(
         }),
     );
     click_control.connect_released(
-        glib::clone!(@strong click_done_cb, @weak darea => move |_, _, _, _| {
+        glib::clone!(#[strong] click_done_cb, #[weak] darea , move |_, _, _, _| {
             click_done_cb(&darea);
         }),
     );
     click_control.connect_unpaired_release(
-        glib::clone!(@strong mouse_state, @weak darea => move |_, _, _, d, _| {
+        glib::clone!(#[strong] mouse_state, #[weak] darea , move |_, _, _, d, _| {
             if mouse_state.borrow().pressing.get() == Some(d) {
                 click_done_cb(&darea);
             }
@@ -167,19 +167,19 @@ fn set_event_mouse_move(
 ) {
     let motion = EventControllerMotion::new();
     motion.connect_enter(
-        glib::clone!(@strong mouse_state, @weak darea => move |_, _, _| {
+        glib::clone!(#[strong] mouse_state, #[weak] darea , move |_, _, _| {
             log::debug!("Mouse enter slide widget");
             mouse_state.borrow_mut().set_hovering(true);
             darea.queue_draw();
         }),
     );
-    motion.connect_leave(glib::clone!(@strong mouse_state, @weak darea=> move |_,| {
+    motion.connect_leave(glib::clone!(#[strong] mouse_state, #[weak] darea, move |_,| {
         log::debug!("Mouse leave slide widget");
         mouse_state.borrow_mut().set_hovering(false);
         darea.queue_draw();
     }));
     motion.connect_motion(
-        glib::clone!(@strong mouse_state, @strong progress_state, @weak darea => move |_, x, y| {
+        glib::clone!(#[strong] mouse_state, #[strong] progress_state, #[weak] darea , move |_, x, y| {
             if mouse_state.borrow().pressing.get() == Some(BUTTON_PRIMARY) {
                 let progress = match xory {
                     XorY::X => x,

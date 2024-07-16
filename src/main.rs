@@ -71,18 +71,22 @@ fn main() {
             gtk::Application::new(None::<String>, ApplicationFlags::HANDLES_OPEN);
 
             // when args passed, `open` will be signaled instead of `activate`
-            application.connect_open(
-                glib::clone!(@strong reload_signal_receiver as r=>  move |app, _, _| {
+            application.connect_open(glib::clone!(
+                #[strong(rename_to = r)]
+                reload_signal_receiver,
+                move |app, _, _| {
                     debug!("connect open");
                     init_app(app, &r);
-                }),
-            );
-            application.connect_activate(
-                glib::clone!(@strong reload_signal_receiver as r=>  move |app| {
+                }
+            ));
+            application.connect_activate(glib::clone!(
+                #[strong(rename_to = r)]
+                reload_signal_receiver,
+                move |app| {
                     debug!("connect activate");
                     init_app(app, &r);
-                }),
-            );
+                }
+            ));
             if application.run_with_args::<String>(&[]).value() == 1 {
                 notify_send(
                     "Way-edges",
@@ -158,21 +162,29 @@ fn init_app(app: &Application, reload_signal_receiver: &Receiver<i32>) {
         }
     };
 
-    glib::spawn_future_local(
-        glib::clone!(@weak-allow-none app, @strong reload_signal_receiver as r => async move {
+    glib::spawn_future_local(glib::clone!(
+        #[weak_allow_none]
+        app,
+        #[strong(rename_to = r)]
+        reload_signal_receiver,
+        async move {
             if let Ok(s) = r.recv().await {
                 debug!("receive reload signal: {s}");
                 log::info!("Received reload signal, quiting..");
                 if let Some(app) = app {
                     window_destroyer.close_window();
-                    idle_add_local_once(glib::clone!(@weak app => move || {
-                        debug!("Quit app");
-                        app.quit();
-                    }));
+                    idle_add_local_once(glib::clone!(
+                        #[weak]
+                        app,
+                        move || {
+                            debug!("Quit app");
+                            app.quit();
+                        }
+                    ));
                 }
             }
-        }),
-    );
+        }
+    ));
 }
 pub fn notify_send(summary: &str, body: &str, is_critical: bool) {
     let mut n = Notification::new();
