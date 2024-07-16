@@ -41,5 +41,5 @@ normal = []
 
 [profile.release]
 opt-level = 3 # Optimize for size
-lto = "fat"
-strip = true  # Strip symbols from binary*
+# lto = "fat"
+strip = true # Strip symbols from binary*
