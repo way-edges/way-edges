@@ -4,7 +4,6 @@ use std::{
     rc::Rc,
     sync::atomic::{AtomicPtr, Ordering},
     thread,
-    time::Instant,
 };
 
 use async_channel::Sender;
@@ -19,13 +18,16 @@ static PAMIXER_SIGNAL_SENDER: AtomicPtr<Sender<PaMixerSignal>> =
 pub fn send_pamixer_signal(
     msg: PaMixerSignal,
 ) -> Result<(), async_channel::SendError<PaMixerSignal>> {
-    unsafe {
+    log::debug!("send signal");
+    let r = unsafe {
         PAMIXER_SIGNAL_SENDER
             .load(Ordering::Acquire)
             .as_ref()
             .unwrap()
             .send_blocking(msg)
-    }
+    };
+    log::debug!("send signal done");
+    r
 }
 
 // pamixser thread
@@ -47,10 +49,10 @@ pub fn init_pamixser_thread() {
     let (s, r) = async_channel::bounded::<PaMixerSignal>(1);
     thread::spawn(move || loop {
         let res = r.recv_blocking();
+        log::debug!("process pamixer signal");
         match res {
             Ok((sink_or_source, info)) => {
                 let mut cmd = vec!["pamixer".to_string()];
-                let start = Instant::now();
                 match sink_or_source.0.as_ref() {
                     OptionalSinkOrSourceDevice::Sink(os) => {
                         if let Some(s) = os {
@@ -79,7 +81,6 @@ pub fn init_pamixser_thread() {
                         }
                     }
                 };
-                println!("elipsed: {}", start.elapsed().as_micros());
                 match info {
                     PaMixerSignalInfo::Volume(f) => {
                         cmd.push(format!("--set-volume {}", (f * 100.) as u32));
@@ -92,9 +93,10 @@ pub fn init_pamixser_thread() {
                         .to_string(),
                     ),
                 };
-                gio::spawn_blocking(move || {
-                    shell_cmd(cmd.join(" "));
-                });
+                log::debug!("execute pamixer cmd");
+                shell_cmd(cmd.join(" "));
+                // gio::spawn_blocking(move || {
+                // });
             }
             Err(e) => {
                 log::error!("Error receiving pamixser signal, quiting: {e}");
@@ -127,25 +129,24 @@ pub fn match_name_index_sink(s: &str) -> Result<u32, String> {
                 libpulse_binding::callbacks::ListResult::End => {
                     is_done.set(true)
                 }
-                libpulse_binding::callbacks::ListResult::Error => {}
+                libpulse_binding::callbacks::ListResult::Error => {
+                    log::error!("Get source info error");
+                    is_done.set(true)
+                }
             };
         }),
     );
 
+    log::debug!("wait for match name index sink");
     while !is_done.get() {
         spin_loop();
     }
+    log::debug!("wait for match name index sink done");
     if let Some(i) = index.get() {
         Ok(i)
     } else {
         Err(format!("no sink with name: {s}"))
     }
-    // let cmd = format!("pamixer --list-sinks | grep \"\\\"{s}\\\"\" | awk '{{print $1}}'");
-    // let o = shell_cmd(cmd.to_string())?;
-    // log::debug!("match sink name result: {o}");
-    // let i = match_index(o.lines(), &s).ok_or(format!("no sink with name: {s}"))?;
-    // let i = to_index(&o).map_err(|_| "fail to parse sink index: {o}")?;
-    // Ok(i)
 }
 pub fn match_name_index_source(s: &str) -> Result<u32, String> {
     let index = Rc::new(Cell::new(None));
@@ -168,7 +169,9 @@ pub fn match_name_index_source(s: &str) -> Result<u32, String> {
                 libpulse_binding::callbacks::ListResult::End => {
                     is_done.set(true)
                 }
-                libpulse_binding::callbacks::ListResult::Error => {}
+                libpulse_binding::callbacks::ListResult::Error => {
+                    is_done.set(true)
+                }
             };
         }),
     );
@@ -180,31 +183,4 @@ pub fn match_name_index_source(s: &str) -> Result<u32, String> {
     } else {
         Err(format!("no source with name: {s}"))
     }
-
-    // let cmd = format!("pamixer --list-sources | grep \"\\\"{s}\\\"\" | awk '{{print $1}}'");
-    // let o = shell_cmd(cmd.to_string())?;
-    // log::debug!("match source name result: {o}");
-    // // let i = match_index(o.lines(), &s).ok_or(format!("no source with name: {s}"))?;
-    // let i = to_index(&o).map_err(|_| "fail to parse source index: {o}")?;
-    // Ok(i)
 }
-
-// fn to_index(inp: &str) -> Result<u32, std::num::ParseIntError> {
-//     let a = inp
-//         .strip_suffix("\r\n")
-//         .or(inp.strip_suffix('\n'))
-//         .unwrap_or(inp);
-//     use std::str::FromStr;
-//     u32::from_str(a)
-// }
-
-// fn match_index(lines: Lines, s: &str) -> Option<u32> {
-//     let mut index = 0;
-//     for line in lines {
-//         if line.contains(s) {
-//             return Some(index);
-//         }
-//         index += 1;
-//     }
-//     None
-// }

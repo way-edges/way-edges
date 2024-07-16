@@ -55,16 +55,26 @@ fn get_vinfos() -> &'static Arc<RwLock<(VInfoMap, VInfoMap)>> {
 }
 
 pub fn get_sink_vol_by_name(n: &str) -> Option<VInfo> {
-    get_vinfos().read().unwrap().0.get(n).cloned()
+    log::debug!("get_sink_vol_by_name {}", n);
+    let a = get_vinfos().read().unwrap().0.get(n).cloned();
+    log::debug!("get_sink_vol_by_name done {}", n);
+    a
 }
 pub fn get_source_vol_by_name(n: &str) -> Option<VInfo> {
-    get_vinfos().read().unwrap().1.get(n).cloned()
+    log::debug!("get_source_vol_by_name {}", n);
+    let a = get_vinfos().read().unwrap().1.get(n).cloned();
+    log::debug!("get_source_vol_by_name done {}", n);
+    a
 }
 pub fn set_sink_vol_by_name(n: String, v: VInfo) {
+    log::debug!("set_sink_vol_by_name {}", n);
     get_vinfos().write().unwrap().0.insert(n, v);
+    log::debug!("set_sink_vol_by_name done");
 }
 pub fn set_source_vol_by_name(n: String, v: VInfo) {
+    log::debug!("set_source_vol_by_name {}", n);
     get_vinfos().write().unwrap().1.insert(n, v);
+    log::debug!("set_source_vol_by_name done");
 }
 
 #[derive(Debug, Clone)]
@@ -102,14 +112,17 @@ pub fn get_introspector() -> Introspector {
 pub fn _reload_device_vinfo(
     sosi: SinkOrSourceIndex,
     mut f: Option<ReloadCallback>,
-) -> Result<Rc<Cell<bool>>, String> {
+) -> Rc<Cell<bool>> {
+    log::debug!("start reload device vinfo");
     let ins = get_introspector();
     let is_done = Rc::new(Cell::new(false));
 
+    log::debug!("start match device");
     let _is_done = is_done.clone();
     match sosi {
         SinkOrSourceIndex::Sink(i) => {
             let cb = move |ls: ListResult<&SinkInfo>| {
+                log::debug!("start process sink");
                 if let Some(s) = process_sink(ls) {
                     if let Some(f) = f.take() {
                         let a = SinkOrSourceInfo::Sink(s);
@@ -122,6 +135,7 @@ pub fn _reload_device_vinfo(
         }
         SinkOrSourceIndex::Source(i) => {
             let cb = move |ls: ListResult<&SourceInfo>| {
+                log::debug!("start process source");
                 if let Some(s) = process_source(ls) {
                     if let Some(f) = f.take() {
                         f(SinkOrSourceInfo::Source(s));
@@ -133,23 +147,16 @@ pub fn _reload_device_vinfo(
         }
     }
 
-    Ok(is_done)
+    is_done
 }
-pub fn reload_device_vinfo(
-    sosi: SinkOrSourceIndex,
-    f: Option<ReloadCallback>,
-) -> Result<(), String> {
-    _reload_device_vinfo(sosi, f).map(|_| ())
+pub fn reload_device_vinfo(sosi: SinkOrSourceIndex, f: Option<ReloadCallback>) {
+    _reload_device_vinfo(sosi, f);
 }
-pub fn reload_device_vinfo_blocking(
-    sosi: SinkOrSourceIndex,
-    f: Option<ReloadCallback>,
-) -> Result<(), String> {
-    _reload_device_vinfo(sosi, f).map(|is_done| {
-        while !is_done.get() {
-            spin_loop();
-        }
-    })
+pub fn reload_device_vinfo_blocking(sosi: SinkOrSourceIndex, f: Option<ReloadCallback>) {
+    let is_done = _reload_device_vinfo(sosi, f);
+    while !is_done.get() {
+        spin_loop();
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -222,6 +229,7 @@ pub fn init_mainloop() -> Result<async_channel::Receiver<Signal>, String> {
             reload_device_vinfo(
                 SinkOrSourceIndex::Sink(index),
                 Some(Box::new(move |res| {
+                    log::debug!("run reload sink vinfo cb");
                     if let SinkOrSourceInfo::Sink(res) = res {
                         if ss
                             .force_send(Ok(SinkOrSource::Sink(
@@ -235,6 +243,7 @@ pub fn init_mainloop() -> Result<async_channel::Receiver<Signal>, String> {
                             close_mainloop(&mc);
                         }
                     }
+                    log::debug!("run reload sink vinfo done");
                 })),
             );
         }
@@ -249,7 +258,7 @@ pub fn init_mainloop() -> Result<async_channel::Receiver<Signal>, String> {
                 Some(Box::new(move |res| {
                     if let SinkOrSourceInfo::Source(res) = res {
                         if ss
-                            .force_send(Ok(SinkOrSource::Sink(
+                            .force_send(Ok(SinkOrSource::Source(
                                 res.description.clone().unwrap().to_string(),
                             )))
                             .is_err()
@@ -305,7 +314,9 @@ pub fn init_mainloop() -> Result<async_channel::Receiver<Signal>, String> {
                             pulse::context::State::Ready => {
                                 ready_clone.set(true);
                             }
-                            _ => {}
+                            _ => {
+                                log::warn!("Unknow state");
+                            }
                         }
                     })));
                 }
@@ -454,6 +465,14 @@ pub fn init_mainloop() -> Result<async_channel::Receiver<Signal>, String> {
 
             log::info!("start running pulseaudio mainloop");
 
+            // loop {
+            //     if let Err(e) = iter_loop(mainloop.borrow_mut().deref_mut()) {
+            //         ss.force_send(Err(format!("Error running mainloop: {e:?}")))
+            //             .ok();
+            //         break;
+            //     }
+            // }
+            // log::info!("quit pulseaudio mainloop");
             if let Err(e) = mainloop.borrow_mut().run() {
                 ss.force_send(Err(format!("Error running mainloop: {e:?}")))
                     .ok();

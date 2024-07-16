@@ -253,7 +253,7 @@ pub fn register_callback(
         SinkOrSource::Source(s) => SinkOrSourceIndex::Source(match_name_index_source(s)?),
     };
     log::debug!("device index: {ind:?}");
-    reload_device_vinfo_blocking(ind, None)?;
+    reload_device_vinfo_blocking(ind, None);
     Ok(add_cb(cb, sos))
 }
 
