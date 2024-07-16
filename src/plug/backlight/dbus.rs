@@ -33,7 +33,7 @@ async fn get_proxy() -> Result<&'static mut BackLightProxy<'static>> {
             Ordering::Release,
         );
     };
-    unsafe { Ok(p.as_mut().unwrap()) }
+    unsafe { Ok(get_proxy_pointer().as_mut().unwrap()) }
 }
 
 pub async fn set_brightness(device_name: &str, p: u32) -> Result<()> {
