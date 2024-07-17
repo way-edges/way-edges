@@ -95,13 +95,9 @@ pub enum SinkOrSourceInfo<'a, 'b: 'a> {
 
 type ReloadCallback = Box<dyn FnOnce(SinkOrSourceInfo)>;
 
-// static CONTEXT: AtomicPtr<Arc<Mutex<Context>>> = AtomicPtr::new(std::ptr::null_mut());
 static CONTEXT: AtomicPtr<Mutex<Context>> = AtomicPtr::new(std::ptr::null_mut());
 fn set_context(i: Context) {
-    // let boxed = Box::new(Arc::new(Mutex::new(i)));
-    let boxed = Box::new(Mutex::new(i));
-    let raw_ptr = Box::into_raw(boxed);
-    CONTEXT.store(raw_ptr, Ordering::Release);
+    CONTEXT.store(Box::into_raw(Box::new(Mutex::new(i))), Ordering::Release);
 }
 fn with_context<T>(f: impl FnOnce(MutexGuard<Context>) -> T) -> T {
     let a = unsafe { CONTEXT.load(Ordering::Acquire).as_ref().unwrap() };
