@@ -2,127 +2,203 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "#root",
   "properties": {
+    "color": {
+      "$id": "#UtilColor",
+      "description": "main color of the button: pattern: `#rgb`/`#rrggbb`/`#rrrgggbbb`/`rgb(r, g, b)`/`rgba(r, g, b, a)`.\nFor additional notes, please refer to: https://gtk-rs.org/gtk4-rs/stable/latest/docs/src/gdk4/rgba.rs.html#205",
+      "type": "string"
+    },
+    "common": {
+      "$id": "#UtilCommon",
+      "required": ["width", "height"],
+      "properties": {
+        "width": {
+          "description": "width of the widget. Can be either a number or a percentage.\nExample: 15",
+          "$ref": "#UtilNumOrPercentage"
+        },
+        "height": {
+          "description": "height of the widget. Can be either a number or a percentage.\nExample: \"25%\"",
+          "$ref": "#UtilNumOrPercentage"
+        },
+        "transition_duration": {
+          "description": "widget show/hide in `transition_duration` ms.\n Default 100ms",
+          "type": "integer",
+          "minimum": 0
+        },
+        "frame_rate": {
+          "description": "widget frame rate.\nDefault 30",
+          "type": "integer",
+          "minimum": 1
+        },
+        "extra_trigger_size": {
+          "description": "transparent extra trigger area, must > 0 or else the widget will not be triggered.\nDefault 5",
+          "$ref": "#UtilNumOrPercentage"
+        }
+      }
+    },
     "numOrPercentage": {
-      "$id": "#numOrPercentage",
+      "$id": "#UtilNumOrPercentage",
       "anyOf": [{ "type": "number", "minimum": 0 }, { "type": "string" }]
+    },
+    "eventMap": {
+      "$id": "#UtilEventMap",
+      "description": "array of tuples(int, string), int refers for the mouse button id.\n if you don't know what id your extra mouse button is, please run with `way-edges [group_name] --mouse-debug`: example [[1, \"kitty #open up kitty console\"],]",
+      "type": "array",
+      "items": {
+        "type": "array",
+        "prefixItems": [
+          { "type": "integer", "minimum": 1 },
+          { "type": "string" }
+        ]
+      }
+    },
+    "pulseAudio": {
+      "$id": "#UtilPulseAudio",
+      "properties": {
+        "redraw_only_on_pa_change": {
+          "description": "redraw only on pulseaudio sink or source info change",
+          "type": "boolean"
+        },
+        "mute_color": {
+          "$ref": "#UtilColor",
+          "default": "#000000"
+        },
+        "device": {
+          "type": "string",
+          "description": "Can empty(default sink or source), just don't include this key. Device description for sink or source. you can find it with `pamixer --list-sinks/--list-sources` at the end of each line"
+        }
+      }
+    },
+
+    "BtnWidget": {
+      "$id": "#BtnWidget",
+      "description": "Button widget specific properties",
+      "allOf": [
+        {
+          "$ref": "#UtilCommon",
+          "required": ["width", "height"]
+        },
+        {
+          "properties": {
+            "type": {
+              "description": "button widget type",
+              "type": "string",
+              "const": "btn"
+            },
+            "color": {
+              "$ref": "#UtilColor",
+              "default": "#7B98FF"
+            },
+            "event_map": {
+              "$ref": "#UtilEventMap"
+            }
+          }
+        }
+      ]
+    },
+    "BaseSlideWidget": {
+      "$id": "#BaseSlideWidget",
+      "allOf": [
+        {
+          "$ref": "#UtilCommon",
+          "required": ["width", "height"]
+        },
+        {
+          "properties": {
+            "bg_color": {
+              "$ref": "#UtilColor",
+              "default": "#808080"
+            },
+            "fg_color": {
+              "$ref": "#UtilColor",
+              "default": "#FFB847"
+            },
+            "border_color": {
+              "$ref": "#UtilColor",
+              "default": "#646464"
+            },
+            "text_color": {
+              "$ref": "#UtilColor",
+              "default": "#000000"
+            },
+            "preview_size": {
+              "description": "how much area should the widget reveal when hidden\nDefault 3",
+              "type": "number"
+            },
+            "progress_direction": {
+              "description": "progress bar left/down -> right/up : Forward/Backward\nDefault Forward",
+              "type": "string",
+              "const": ["Forward", "Backward"]
+            },
+            "on_change": {
+              "description": "command to execute, replace '{progress}' with the progress from 0-1",
+              "type": "string"
+            },
+            "is_text_position_start": {
+              "description": "which side percentage info at, start or end\nDefault true",
+              "type": "boolean"
+            },
+            "event_map": {
+              "$ref": "#UtilEventMap"
+            }
+          }
+        }
+      ]
     },
     "SlideWidget": {
       "$id": "#SlideWidget",
-      "type": "object",
       "description": "Slide widget specific properties",
-      "required": ["width", "height"],
-      "properties": {
-        "type": {
-          "description": "slide widget type",
-          "type": "string",
-          "const": "slide"
+      "allOf": [
+        {
+          "$ref": "#BaseSlideWidget"
         },
-        "width": {
-          "description": "width of the Slide widget. Can be either a number or a percentage.\nExample: 15",
-          "$ref": "#numOrPercentage"
-        },
-        "height": {
-          "description": "height of the Slide widget. Can be either a number or a percentage.\nExample: \"25%\"",
-          "$ref": "#numOrPercentage"
-        },
-        "transition_duration": {
-          "description": "button show/hide in `transition_duration` ms.\n Default 100ms",
-          "type": "integer",
-          "minimum": 0
-        },
-        "frame_rate": {
-          "description": "button frame rate.\nDefault 30",
-          "type": "integer",
-          "minimum": 1
-        },
-        "extra_trigger_size": {
-          "description": "transparent extra trigger area, must > 0 or else the button will not be triggered.\nDefault 5",
-          "$ref": "#numOrPercentage"
-        },
-        "bg_color": {
-          "description": "background color of the widget: pattern: `#rgb`/`#rrggbb`/`#rrrgggbbb`/`rgb(r, g, b)`/`rgba(r, g, b, a)`.\nFor additional notes, please refer to: https://gtk-rs.org/gtk4-rs/stable/latest/docs/src/gdk4/rgba.rs.html#205\nDefault `#808080`",
-          "type": "string"
-        },
-        "fg_color": {
-          "description": "foreground color of the widget: pattern: `#rgb`/`#rrggbb`/`#rrrgggbbb`/`rgb(r, g, b)`/`rgba(r, g, b, a)`.\nFor additional notes, please refer to: https://gtk-rs.org/gtk4-rs/stable/latest/docs/src/gdk4/rgba.rs.html#205\nDefault `#FFB847`",
-          "type": "string"
-        },
-        "border_color": {
-          "description": "border color of the widget: pattern: `#rgb`/`#rrggbb`/`#rrrgggbbb`/`rgb(r, g, b)`/`rgba(r, g, b, a)`.\nFor additional notes, please refer to: https://gtk-rs.org/gtk4-rs/stable/latest/docs/src/gdk4/rgba.rs.html#205\nDefault `#646464`",
-          "type": "string"
-        },
-        "text_color": {
-          "description": "text color of the widget: pattern: `#rgb`/`#rrggbb`/`#rrrgggbbb`/`rgb(r, g, b)`/`rgba(r, g, b, a)`.\nFor additional notes, please refer to: https://gtk-rs.org/gtk4-rs/stable/latest/docs/src/gdk4/rgba.rs.html#205\nDefault `#000000`",
-          "type": "string"
-        },
-        "preview_size": {
-          "description": "how much area should the widget reveal when hidden\nDefault 3",
-          "type": "number"
-        },
-        "progress_direction": {
-          "description": "progress bar left/down -> right/up : Forward/Backward\nDefault Forward",
-          "type": "string",
-          "const": ["Forward", "Backward"]
-        },
-        "on_change": {
-          "description": "command to execute, replace '{progress}' with the progress from 0-1",
-          "type": "string"
-        },
-        "is_text_position_start": {
-          "description": "which side percentage info at, start or end\nDefault true",
-          "type": "boolean"
-        }
-      }
-    },
-    "BtnWidget": {
-      "$id": "#BtnWidget",
-      "type": "object",
-      "description": "Button widget specific properties",
-      "required": ["width", "height"],
-      "properties": {
-        "type": {
-          "description": "button widget type",
-          "type": "string",
-          "const": "btn"
-        },
-        "width": {
-          "description": "width of the button. Can be either a number or a percentage.\nExample: 15",
-          "$ref": "#numOrPercentage"
-        },
-        "height": {
-          "description": "height of the button. Can be either a number or a percentage.\nExample: \"25%\"",
-          "$ref": "#numOrPercentage"
-        },
-        "color": {
-          "description": "main color of the button: pattern: `#rgb`/`#rrggbb`/`#rrrgggbbb`/`rgb(r, g, b)`/`rgba(r, g, b, a)`.\nFor additional notes, please refer to: https://gtk-rs.org/gtk4-rs/stable/latest/docs/src/gdk4/rgba.rs.html#205\nDefault `#7B98FF`",
-          "type": "string"
-        },
-        "transition_duration": {
-          "description": "button show/hide in `transition_duration` ms.\n Default 100ms",
-          "type": "integer",
-          "minimum": 0
-        },
-        "frame_rate": {
-          "description": "button frame rate.\nDefault 30",
-          "type": "integer",
-          "minimum": 1
-        },
-        "extra_trigger_size": {
-          "description": "transparent extra trigger area, must > 0 or else the button will not be triggered.\nDefault 5",
-          "$ref": "#numOrPercentage"
-        },
-        "event_map": {
-          "description": "array of tuples(int, string), int refers for the mouse button id.\n if you don't know what id your extra mouse button is, please run with `way-edges [group_name] --mouse-debug`: example [[1, \"kitty #open up kitty console\"],]",
-          "type": "array",
-          "items": {
-            "type": "array",
-            "prefixItems": [
-              { "type": "integer", "minimum": 1 },
-              { "type": "string" }
-            ]
+        {
+          "properties": {
+            "type": {
+              "description": "slide widget type",
+              "type": "string",
+              "const": "slide"
+            }
           }
         }
-      }
+      ]
+    },
+    "Speaker": {
+      "$id": "#Speaker",
+      "description": "Speaker(sink) widget specific properties",
+      "allOf": [
+        {
+          "properties": {
+            "type": {
+              "description": "Speaker widget type",
+              "type": "string",
+              "const": "speaker"
+            }
+          }
+        },
+        { "$ref": "#BaseSlideWidget" },
+        {
+          "$ref": "#UtilPulseAudio"
+        }
+      ]
+    },
+    "Microphone": {
+      "$id": "#Microphone",
+      "description": "Microphone(source) widget specific properties",
+      "allOf": [
+        { "$ref": "#BaseSlideWidget" },
+        {
+          "$ref": "#UtilPulseAudio"
+        },
+        {
+          "properties": {
+            "type": {
+              "description": "Microphone widget type",
+              "type": "string",
+              "const": "microphone"
+            }
+          }
+        }
+      ]
     }
   }
 }

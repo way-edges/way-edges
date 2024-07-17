@@ -10,11 +10,26 @@
           "edge": "top",
           "position": "left",
           "widget": {
-            "type": "slide",
+            "type": "speaker",
             "width": 20,
-            "height": "25%",
+            "height": "12.5%",
+            "frame_rate": 60
+            // "device": "EDIFIER W860NB Pro Analog Stereo",
+            // "device": "Family 17h/19h HD Audio Controller Analog Stereo",
+          }
+        },
+        {
+          "edge": "top",
+          "position": "left",
+          "margin": {
+            "left": "12.5%"
+          },
+          "widget": {
+            "type": "microphone",
+            "width": 20,
+            "height": "12.5%",
             "frame_rate": 60,
-            "on_change": "notify-send {progress}"
+            "fg_color": "#BD93F9"
           }
         },
         {

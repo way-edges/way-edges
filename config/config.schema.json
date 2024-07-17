@@ -2,13 +2,19 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "definitions": {
     "numOrPercentage": {
-      "$ref": "https://raw.githubusercontent.com/ogios/way-edges/master/config/defs.schema.json#numOrPercentage"
+      "$ref": "https://raw.githubusercontent.com/ogios/way-edges/master/config/defs.schema.json#UtilNumOrPercentage"
+    },
+    "BtnWidget": {
+      "$ref": "https://raw.githubusercontent.com/ogios/way-edges/master/config/defs.schema.json#BtnWidget"
     },
     "SlideWidget": {
       "$ref": "https://raw.githubusercontent.com/ogios/way-edges/master/config/defs.schema.json#SlideWidget"
     },
-    "BtnWidget": {
-      "$ref": "https://raw.githubusercontent.com/ogios/way-edges/master/config/defs.schema.json#BtnWidget"
+    "SpeakerWidget": {
+      "$ref": "https://raw.githubusercontent.com/ogios/way-edges/master/config/defs.schema.json#Speaker"
+    },
+    "MicrophoneWidget": {
+      "$ref": "https://raw.githubusercontent.com/ogios/way-edges/master/config/defs.schema.json#Microphone"
     }
   },
   "title": "way-edges config",
@@ -82,6 +88,12 @@
                   "oneOf": [
                     {
                       "$ref": "#/definitions/BtnWidget"
+                    },
+                    {
+                      "$ref": "#/definitions/SpeakerWidget"
+                    },
+                    {
+                      "$ref": "#/definitions/MicrophoneWidget"
                     },
                     {
                       "$ref": "#/definitions/SlideWidget"
