@@ -15,6 +15,9 @@
     },
     "MicrophoneWidget": {
       "$ref": "https://raw.githubusercontent.com/ogios/way-edges/master/config/defs.schema.json#Microphone"
+    },
+    "BacklightWidget": {
+      "$ref": "https://raw.githubusercontent.com/ogios/way-edges/master/config/defs.schema.json#Backlight"
     }
   },
   "title": "way-edges config",
@@ -97,6 +100,9 @@
                     },
                     {
                       "$ref": "#/definitions/SlideWidget"
+                    },
+                    {
+                      "$ref": "#/definitions/BacklightWidget"
                     }
                   ]
                 }

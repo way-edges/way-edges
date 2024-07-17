@@ -199,6 +199,30 @@
           }
         }
       ]
+    },
+    "Backlight": {
+      "$id": "#Microphone",
+      "description": "Monitor Brightness widget specific properties",
+      "allOf": [
+        { "$ref": "#BaseSlideWidget" },
+        {
+          "properties": {
+            "type": {
+              "description": "Backlight widget type",
+              "type": "string",
+              "const": "backlight"
+            },
+            "device_name": {
+              "description": "remove this key to use default. monitor name, you can find it under `/sys/class/backlight.\nExample: amdgpu-bl2",
+              "type": "string"
+            },
+            "redraw_only_on_change": {
+              "description": "redraw only when monitor brightness change",
+              "type": "boolean"
+            }
+          }
+        }
+      ]
     }
   }
 }
