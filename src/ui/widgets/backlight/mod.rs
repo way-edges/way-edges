@@ -26,7 +26,7 @@ pub fn init_widget(
                     log::error!("Error setting backlight, closing window: {e}");
                     s.try_send(()).ok();
                 };
-                !bl_conf.bl_conf.redraw_only_on_pa_change
+                !bl_conf.bl_conf.redraw_only_on_change
             }
         )));
 

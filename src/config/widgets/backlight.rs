@@ -21,7 +21,7 @@ pub struct BLSpecificConfig {
     #[serde(default)]
     pub device_name: Option<String>,
     #[serde(default)]
-    pub redraw_only_on_pa_change: bool,
+    pub redraw_only_on_change: bool,
 }
 
 pub fn visit_config(d: Value) -> Result<Widget, String> {
