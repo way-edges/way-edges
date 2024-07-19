@@ -26,7 +26,7 @@ https://github.com/ogios/way-edges/assets/96933655/98219132-b37e-4d8d-9b4a-01c64
   - [x] Button
   - [x] Slider(for volume, brightness, etc.)
   - [x] PulseAudio(Speaker, Microphone)
-    - [ ] allow specify device(only default for now)
+    - [x] allow specify device(only default for now)
   - [x] Brightness
   - [ ] Hyprland Workspaces
   - [ ] Ring progress(for cpu/ram... status)
