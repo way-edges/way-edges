@@ -139,6 +139,16 @@
             },
             "event_map": {
               "$ref": "#UtilEventMap"
+            },
+            "obtuse_angle": {
+              "description": "The 2 obtuse angle in trapezoid, set it within 90-180",
+              "type": "number",
+              "default": 120
+            },
+            "radius": {
+              "description": "Radius of the rounded corners for 2 obtuse angle in trapezoid, default 20",
+              "type": "number",
+              "default": 20
             }
           }
         }

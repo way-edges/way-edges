@@ -75,8 +75,9 @@ pub fn setup_draw(
         size,
         map_size,
         slide_cfg.bg_color,
-        // slide_cfg.fg_color,
         slide_cfg.border_color,
+        slide_cfg.obtuse_angle,
+        slide_cfg.radius,
     )?;
     let dc = DrawCore {
         predraw,
@@ -96,27 +97,27 @@ pub fn setup_draw(
     // let set_input_region = draw_input_region(size, edge, extra_trigger_size);
     // let mut set_frame_manger = draw_frame_manager(60, transition_range);
     darea.set_draw_func(glib::clone!(
-        #[weak] window,
-        #[strong] progress,
+        #[weak]
+        window,
+        #[strong]
+        progress,
         move |_, context, _, _| {
             if let Some(f) = additional.on_draw.as_mut() {
                 f()
             }
             draw_rotation_now(context, dc.edge, dc.size);
             let visible_y = ts.get_y();
-            draw_motion_now(context, visible_y, dc.edge, transition_range, dc.extra_trigger_size);
-
-            let res = dc.draw(
+            draw_motion_now(
                 context,
-                progress.get(),
-            ).and_then(|_| {
-                draw_input_region_now(
-                        &window,
-                        visible_y,
-                        dc.size,
-                        dc.edge,
-                        dc.extra_trigger_size
-                    ).and_then(|_| {
+                visible_y,
+                dc.edge,
+                transition_range,
+                dc.extra_trigger_size,
+            );
+
+            let res = dc.draw(context, progress.get()).and_then(|_| {
+                draw_input_region_now(&window, visible_y, dc.size, dc.edge, dc.extra_trigger_size)
+                    .and_then(|_| {
                         draw_frame_manager_multiple_transition(
                             &mut frame_manager,
                             &additional.additional_transitions,
@@ -136,7 +137,8 @@ pub fn setup_draw(
                 log::error!("{e}");
                 crate::notify_send("Way-edges widget draw error", &e, true);
             }
-    }));
+        }
+    ));
     window.set_child(Some(&darea));
     Ok(SlideExpose {
         darea: Downgrade::downgrade(&darea),

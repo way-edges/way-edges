@@ -65,6 +65,11 @@ pub struct SlideConfig {
     #[serde(default = "common::dt_event_map")]
     #[serde(deserialize_with = "common::event_map_translate")]
     pub event_map: Option<EventMap>,
+
+    #[serde(default = "dt_obtuse_angle")]
+    pub obtuse_angle: f64,
+    #[serde(default = "dt_radius")]
+    pub radius: f64,
 }
 
 fn dt_bg_color() -> RGBA {
@@ -79,9 +84,14 @@ fn dt_border_color() -> RGBA {
 fn dt_text_color() -> RGBA {
     RGBA::from_str("#000000").unwrap()
 }
-
 fn dt_preview_size() -> f64 {
     3.
+}
+fn dt_obtuse_angle() -> f64 {
+    120.
+}
+fn dt_radius() -> f64 {
+    20.
 }
 
 pub fn visit_config(d: Value) -> Result<Widget, String> {

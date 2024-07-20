@@ -85,12 +85,13 @@ pub fn draw(
     size: (f64, f64),
     map_size: (i32, i32),
     bg: RGBA,
-    // fg: RGBA,
     border_color: RGBA,
+    obtuse_angle: f64,
+    radius: f64,
 ) -> Result<SlidePredraw, String> {
     // provide
-    let obtuse_angle = 120.;
-    let radius = 20.;
+    // let obtuse_angle = 120.;
+    // let radius = 20.;
     let new_surface = move || new_surface((map_size.0, map_size.1), predraw_err_handle);
 
     let (path, slope_position) = draw_slide_path(obtuse_angle, radius, size, map_size)?;
