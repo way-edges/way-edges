@@ -34,7 +34,7 @@ use crate::config::widgets::slide::Direction;
 pub fn setup_draw(
     window: &gtk::ApplicationWindow,
     cfg: Config,
-    slide_cfg: SlideConfig,
+    mut slide_cfg: SlideConfig,
     mut additional: SlideAdditionalConfig,
 ) -> Result<SlideExpose, String> {
     let darea = DrawingArea::new();
@@ -61,15 +61,7 @@ pub fn setup_draw(
         Duration::from_millis(slide_cfg.transition_duration),
         transition_range,
     );
-    let progress = event::setup_event(
-        &darea,
-        &ts,
-        edge.into(),
-        direction,
-        size.1,
-        slide_cfg.on_change,
-        slide_cfg.event_map.unwrap(),
-    );
+    let progress = event::setup_event(&darea, &ts, &cfg, &mut slide_cfg);
 
     let predraw = super::pre_draw::draw(
         size,
@@ -92,10 +84,6 @@ pub fn setup_draw(
         fg_color: additional.fg_color,
     };
     let mut frame_manager = FrameManager::new(slide_cfg.frame_rate, &darea, window);
-    // let set_rotate = draw_rotation(edge, size);
-    // let mut set_motion = draw_motion(edge, transition_range, extra_trigger_size);
-    // let set_input_region = draw_input_region(size, edge, extra_trigger_size);
-    // let mut set_frame_manger = draw_frame_manager(60, transition_range);
     darea.set_draw_func(glib::clone!(
         #[weak]
         window,
@@ -124,11 +112,6 @@ pub fn setup_draw(
                             &ts,
                             visible_y,
                         )
-                        // draw_frame_manager_now(
-                        //     &mut frame_manager,
-                        //     visible_y,
-                        //     &ts
-                        // )
                     })
             });
 
