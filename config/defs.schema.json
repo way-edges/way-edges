@@ -134,7 +134,7 @@
               "type": "string"
             },
             "is_text_position_start": {
-              "description": "which side percentage info at, start or end\nDefault true",
+              "description": "which side percentage info at, start or end of the widget\nDefault true",
               "type": "boolean"
             },
             "event_map": {
@@ -149,6 +149,19 @@
               "description": "Radius of the rounded corners for 2 obtuse angle in trapezoid, default 20",
               "type": "number",
               "default": 20
+            },
+            "draggable": {
+              "description": "Is progress changable by dragging and clicking\nDefault true",
+              "type": "boolean",
+              "default": true
+            },
+            "update_with_interval_ms": {
+              "description": "update progress with command given milliseconds, Please be noted that the return value of the command must be between 0 and 1.\nExample: [1000, \"echo 0.2333\"]",
+              "type": "array",
+              "prefixItems": [
+                { "type": "integer", "minimum": 1 },
+                { "type": "string" }
+              ]
             }
           }
         }
