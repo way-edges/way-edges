@@ -2,6 +2,7 @@ pub mod backlight;
 pub mod button;
 pub mod pulseaudio;
 pub mod slide;
+pub mod wrapbox;
 
 mod common {
     use gtk4_layer_shell::Edge;
