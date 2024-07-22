@@ -1,4 +1,5 @@
 use crate::ui::draws;
+use crate::ui::draws::shape::draw_fan_no_close;
 use crate::ui::draws::util::new_surface;
 use gtk::cairo::{self, Context, Format, ImageSurface, LinearGradient};
 use gtk::gdk::prelude::*;
@@ -12,10 +13,10 @@ fn predraw_err_handle(e: cairo::Error) -> String {
 fn draw_2(context: &Context, radius: f64, h: f64) {
     let lg_height = h - radius * 2.;
 
-    draws::draw_fan_no_close(context, (0., radius), radius, 1., 2.);
+    draw_fan_no_close(context, (0., radius), radius, 1., 2.);
     context.move_to(radius, radius);
     context.rel_line_to(0., lg_height);
-    draws::draw_fan_no_close(context, (0., h - radius), radius, 0., 1.);
+    draw_fan_no_close(context, (0., h - radius), radius, 0., 1.);
     context.rel_line_to(0., -lg_height);
 }
 
