@@ -1,11 +1,8 @@
 use core::fmt::Debug;
-use std::{cell::RefCell, rc::Rc, str::FromStr};
+use std::{cell::RefCell, rc::Rc};
 
-use crate::ui::{draws::util::Z, widgets::ring::init_ring};
-use gtk::gdk::{
-    cairo::{self, Context, Format, ImageSurface},
-    RGBA,
-};
+use crate::ui::draws::util::Z;
+use gtk::gdk::cairo::{self, Format, ImageSurface};
 
 pub trait DisplayWidget {
     fn get_size(&mut self) -> (f64, f64);
@@ -21,7 +18,7 @@ impl Debug for dyn DisplayWidget {
 pub type BoxWidgetIndex = (usize, usize);
 pub type GridMap = Vec<Vec<Option<Rc<RefCell<dyn DisplayWidget>>>>>;
 
-pub struct BoxWidgets {
+pub struct GridBox {
     /// first row, second col
     /// [
     ///   [a, b ,c],
@@ -31,7 +28,7 @@ pub struct BoxWidgets {
     pub row_col_num: (usize, usize),
     pub gap: f64,
 }
-impl BoxWidgets {
+impl GridBox {
     pub fn new(gap: f64) -> Self {
         Self {
             ws: vec![],
@@ -108,7 +105,7 @@ impl BoxWidgets {
             }
 
             {
-                let width = &mut size.1;
+                let width = &mut size.0;
                 let max_width = {
                     let col_widths = &mut map[1];
                     while col_widths.len() < pos.1 + 1 {
@@ -195,10 +192,9 @@ impl BoxWidgets {
 
                 {
                     ctx.save().unwrap();
-                    ctx.translate(pos.0, pos.1);
+                    ctx.translate(pos.0.ceil(), pos.1.ceil());
                     ctx.set_source_surface(content, Z, Z).unwrap();
-                    ctx.rectangle(Z, Z, content_size.0, content_size.1);
-                    ctx.fill().unwrap();
+                    ctx.paint().unwrap();
                     ctx.restore().unwrap();
                 }
 
@@ -212,49 +208,49 @@ impl BoxWidgets {
     }
 }
 
-fn draw(ctx: &Context) {
-    let map_size = (200., 200.);
-    // let map_size = (40., 200.);
-    let size_factors = (0.75, 0.85);
-    let margins = Some([3., 3., 3., 3.]);
-    let mut bws = BoxWidgets::new(10.);
-    for i in 0..9 {
-        let ring = Rc::new(RefCell::new(init_ring(
-            5.,
-            5. + i as f64 * 2.,
-            RGBA::from_str("#9F9F9F").unwrap(),
-            RGBA::from_str("#F1FA8C").unwrap(),
-        )));
-
-        let r_idx = i / 3;
-        let c_idx = i % 3;
-        bws.add(ring, (r_idx, c_idx));
-    }
-    println!("{:?}", bws.ws);
-    let content = bws.draw_content();
-
-    ctx.set_source_surface(&content, Z, Z).unwrap();
-    ctx.rectangle(Z, Z, map_size.0, map_size.1);
-    ctx.fill().unwrap();
-
-    // let max_size_map = bws.gen_max_row_cols_map();
-    // let total_size = (max_size_map[0].iter().sum(), max_size_map[1].iter().sum());
-    //
-    // let content = { bws.ws.iter_mut() };
-    //
-    // let border_color = RGBA::from_str("#C18F4A").unwrap();
-    // let radius_percentage = 0.3;
-    // let b = BoxDrawsCache::new(
-    //     content_size,
-    //     margins,
-    //     border_color,
-    //     // Some(RGBA::GREEN),
-    //     None,
-    //     radius_percentage,
-    //     size_factors,
-    // );
-
-    // ctx.set_source_surface(b.with_box(content), Z, Z).unwrap();
-    // ctx.rectangle(Z, Z, b.size.0, b.size.1);
-    // ctx.fill().unwrap();
-}
+// fn draw(ctx: &Context) {
+//     let map_size = (200., 200.);
+//     // let map_size = (40., 200.);
+//     let size_factors = (0.75, 0.85);
+//     let margins = Some([3., 3., 3., 3.]);
+//     let mut bws = GridBox::new(10.);
+//     for i in 0..9 {
+//         let ring = Rc::new(RefCell::new(init_ring(
+//             5.,
+//             5. + i as f64 * 2.,
+//             RGBA::from_str("#9F9F9F").unwrap(),
+//             RGBA::from_str("#F1FA8C").unwrap(),
+//         )));
+//
+//         let r_idx = i / 3;
+//         let c_idx = i % 3;
+//         bws.add(ring, (r_idx, c_idx));
+//     }
+//     println!("{:?}", bws.ws);
+//     let content = bws.draw_content();
+//
+//     ctx.set_source_surface(&content, Z, Z).unwrap();
+//     ctx.rectangle(Z, Z, map_size.0, map_size.1);
+//     ctx.fill().unwrap();
+//
+//     // let max_size_map = bws.gen_max_row_cols_map();
+//     // let total_size = (max_size_map[0].iter().sum(), max_size_map[1].iter().sum());
+//     //
+//     // let content = { bws.ws.iter_mut() };
+//     //
+//     // let border_color = RGBA::from_str("#C18F4A").unwrap();
+//     // let radius_percentage = 0.3;
+//     // let b = BoxDrawsCache::new(
+//     //     content_size,
+//     //     margins,
+//     //     border_color,
+//     //     // Some(RGBA::GREEN),
+//     //     None,
+//     //     radius_percentage,
+//     //     size_factors,
+//     // );
+//
+//     // ctx.set_source_surface(b.with_box(content), Z, Z).unwrap();
+//     // ctx.rectangle(Z, Z, b.size.0, b.size.1);
+//     // ctx.fill().unwrap();
+// }

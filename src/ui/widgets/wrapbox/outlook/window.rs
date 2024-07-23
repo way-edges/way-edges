@@ -200,15 +200,13 @@ impl BoxDrawsCache {
 
         // border
         ctx.set_source_surface(&self.border, Z, Z).unwrap();
-        ctx.rectangle(Z, Z, self.size.0, self.size.1);
-        ctx.fill().unwrap();
+        ctx.paint().unwrap();
 
         ctx.translate(self.startoff_point.0, self.startoff_point.1);
 
         // content background
         ctx.set_source_surface(&self.window, Z, Z).unwrap();
-        ctx.rectangle(Z, Z, self.content_box_size.0, self.content_box_size.1);
-        ctx.fill().unwrap();
+        ctx.paint().unwrap();
 
         // content
         ctx.set_source_surface(&content, self.margins[0], self.margins[1])
@@ -218,8 +216,7 @@ impl BoxDrawsCache {
 
         // shadow
         ctx.set_source_surface(&self.window_shadow, Z, Z).unwrap();
-        ctx.rectangle(Z, Z, self.content_box_size.0, self.content_box_size.1);
-        ctx.fill().unwrap();
+        ctx.paint().unwrap();
 
         surf
     }
