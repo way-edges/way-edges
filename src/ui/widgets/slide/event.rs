@@ -2,18 +2,18 @@ use std::cell::Cell;
 use std::time::Duration;
 use std::{cell::RefCell, rc::Rc};
 
-use gtk::gdk::{BUTTON_MIDDLE, BUTTON_PRIMARY};
-use gtk::prelude::{GestureSingleExt, WidgetExt};
-use gtk::{glib, EventControllerMotion};
-use gtk::{DrawingArea, GestureClick};
+use gtk::gdk::BUTTON_PRIMARY;
+use gtk::glib;
+use gtk::prelude::WidgetExt;
+use gtk::DrawingArea;
 use gtk4_layer_shell::Edge;
 use interval_task::runner::ExternalRunnerExt;
 
-use crate::config::widgets::common::EventMap;
 use crate::config::widgets::slide::{Direction, SlideConfig, Task};
 use crate::config::Config;
+use crate::ui::draws::mouse_state::{new_mouse_state, new_translate_mouse_state};
+use crate::ui::draws::transition_state::TransitionStateRc;
 use crate::ui::draws::util::Z;
-use crate::ui::draws::{mouse_state::BaseMouseState, transition_state::TransitionState};
 
 pub struct ProgressState {
     pub max: f64,
@@ -71,7 +71,7 @@ impl From<Edge> for XorY {
 
 pub(super) fn setup_event(
     darea: &DrawingArea,
-    ts: &TransitionState<f64>,
+    ts: TransitionStateRc,
     cfg: &Config,
     slide_cfg: &mut SlideConfig,
 ) -> Rc<Cell<f64>> {
@@ -79,27 +79,95 @@ pub(super) fn setup_event(
     let direction = slide_cfg.progress_direction;
     let max = slide_cfg.get_size().unwrap().1;
     let on_change = slide_cfg.on_change.take();
-    let event_map = slide_cfg.event_map.take().unwrap();
+    let mut event_map = slide_cfg.event_map.take().unwrap();
     let update_with_interval_ms = slide_cfg.update_with_interval_ms.take();
     let draggable = slide_cfg.draggable;
 
-    let mouse_state = Rc::new(RefCell::new(BaseMouseState::new(ts)));
+    let ms = new_mouse_state(darea);
     let progress_state = Rc::new(RefCell::new(ProgressState::new(max, direction, on_change)));
-    set_event_mouse_click(
-        darea,
-        mouse_state.clone(),
-        progress_state.clone(),
-        xory,
-        event_map,
-        draggable,
-    );
-    set_event_mouse_move(
-        darea,
-        mouse_state.clone(),
-        progress_state.clone(),
-        xory,
-        draggable,
-    );
+
+    let mut cbs = new_translate_mouse_state(ts, ms.clone(), None, false);
+    {
+        let mut old_f = cbs.hover_enter_cb.take().unwrap();
+        cbs.set_hover_enter_cb(glib::clone!(
+            #[weak]
+            darea,
+            move |pos| {
+                println!("heeee");
+                old_f(pos);
+                darea.queue_draw();
+            }
+        ));
+    }
+    {
+        let mut old_f = cbs.hover_leave_cb.take().unwrap();
+        cbs.set_hover_leave_cb(glib::clone!(
+            #[weak]
+            darea,
+            move || {
+                old_f();
+                darea.queue_draw();
+            }
+        ));
+    }
+    {
+        cbs.set_press_cb(glib::clone!(
+            #[strong]
+            progress_state,
+            #[weak]
+            darea,
+            move |pos, k| {
+                if k == BUTTON_PRIMARY && draggable {
+                    let progress = match xory {
+                        XorY::X => pos.0,
+                        XorY::Y => pos.1,
+                    };
+                    if !progress_state.borrow_mut().set_progress(progress) {
+                        return;
+                    }
+                }
+                darea.queue_draw();
+            }
+        ));
+    }
+    {
+        let mut old_release = cbs.unpress_cb.take().unwrap();
+        cbs.set_unpress_cb(glib::clone!(
+            #[weak]
+            darea,
+            move |pos, k| {
+                old_release(pos, k);
+                if let Some(f) = event_map.get_mut(&k) {
+                    f()
+                }
+                darea.queue_draw();
+            }
+        ));
+    }
+    if draggable {
+        cbs.set_hover_motion_cb(glib::clone!(
+            #[weak]
+            ms,
+            #[weak]
+            darea,
+            #[strong]
+            progress_state,
+            move |pos| {
+                if unsafe { ms.as_ptr().as_ref().unwrap().pressing } == Some(BUTTON_PRIMARY) {
+                    let progress = match xory {
+                        XorY::X => pos.0,
+                        XorY::Y => pos.1,
+                    };
+                    log::debug!("Change progress: {progress}");
+                    if progress_state.borrow_mut().set_progress(progress) {
+                        darea.queue_draw();
+                    };
+                }
+            }
+        ));
+    }
+    ms.borrow_mut().set_cbs(cbs);
+
     let progress = progress_state.borrow().current.clone();
 
     // update progress interval
@@ -142,148 +210,4 @@ pub(super) fn setup_event(
         };
     };
     progress
-}
-
-fn set_event_mouse_click(
-    darea: &DrawingArea,
-    mouse_state: Rc<RefCell<BaseMouseState>>,
-    progress_state: Rc<RefCell<ProgressState>>,
-    xory: XorY,
-    event_map: EventMap,
-    draggable: bool,
-) {
-    let show_mouse_debug = crate::args::get_args().mouse_debug;
-    let click_control = GestureClick::builder().button(0).exclusive(true).build();
-
-    let click_done_cb = {
-        let cbs = Rc::new(RefCell::new(event_map));
-        let mouse_state = mouse_state.clone();
-        move |darea: &DrawingArea| {
-            if let Some(btn) = mouse_state.borrow_mut().set_pressing(None) {
-                if show_mouse_debug {
-                    crate::notify_send(
-                        "Way-edges mouse button debug message",
-                        &format!("key released: {}", btn),
-                        false,
-                    );
-                };
-                if let Some(cb) = cbs.borrow_mut().get_mut(&btn) {
-                    cb();
-                };
-                darea.queue_draw();
-            } else {
-                log::debug!("No pressing button in mouse_state");
-            }
-        }
-    };
-
-    click_control.connect_pressed(glib::clone!(
-        #[strong]
-        mouse_state,
-        #[strong]
-        progress_state,
-        #[weak]
-        darea,
-        move |g, _, x, y| {
-            let btn = g.current_button();
-            if show_mouse_debug {
-                crate::notify_send(
-                    "Way-edges mouse button debug message",
-                    &format!("key pressed: {}", btn),
-                    false,
-                );
-            };
-            // middle clike to pin
-            if btn == BUTTON_MIDDLE {
-                mouse_state.borrow().toggle_pin();
-            }
-            mouse_state.borrow_mut().set_pressing(Some(btn));
-            if btn == BUTTON_PRIMARY && draggable {
-                let progress = match xory {
-                    XorY::X => x,
-                    XorY::Y => y,
-                };
-                if !progress_state.borrow_mut().set_progress(progress) {
-                    return;
-                }
-            }
-            darea.queue_draw();
-        }
-    ));
-    click_control.connect_released(glib::clone!(
-        #[strong]
-        click_done_cb,
-        #[weak]
-        darea,
-        move |_, _, _, _| {
-            click_done_cb(&darea);
-        }
-    ));
-    click_control.connect_unpaired_release(glib::clone!(
-        #[strong]
-        mouse_state,
-        #[weak]
-        darea,
-        move |_, _, _, d, _| {
-            if mouse_state.borrow().pressing.get() == Some(d) {
-                click_done_cb(&darea);
-            }
-        }
-    ));
-    darea.add_controller(click_control);
-}
-
-fn set_event_mouse_move(
-    darea: &DrawingArea,
-    mouse_state: Rc<RefCell<BaseMouseState>>,
-    progress_state: Rc<RefCell<ProgressState>>,
-    xory: XorY,
-    draggable: bool,
-) {
-    let motion = EventControllerMotion::new();
-    motion.connect_enter(glib::clone!(
-        #[strong]
-        mouse_state,
-        #[weak]
-        darea,
-        move |_, _, _| {
-            log::debug!("Mouse enter slide widget");
-            mouse_state.borrow_mut().set_hovering(true);
-            darea.queue_draw();
-        }
-    ));
-    motion.connect_leave(glib::clone!(
-        #[strong]
-        mouse_state,
-        #[weak]
-        darea,
-        move |_| {
-            log::debug!("Mouse leave slide widget");
-            mouse_state.borrow_mut().set_hovering(false);
-            darea.queue_draw();
-        }
-    ));
-    if draggable {
-        motion.connect_motion(glib::clone!(
-            #[strong]
-            mouse_state,
-            #[strong]
-            progress_state,
-            #[weak]
-            darea,
-            move |_, x, y| {
-                if mouse_state.borrow().pressing.get() == Some(BUTTON_PRIMARY) {
-                    let progress = match xory {
-                        XorY::X => x,
-                        XorY::Y => y,
-                    };
-                    log::debug!("Change progress: {progress}");
-                    if progress_state.borrow_mut().set_progress(progress) {
-                        darea.queue_draw();
-                    };
-                }
-            }
-        ));
-    }
-    darea.add_controller(motion);
 }

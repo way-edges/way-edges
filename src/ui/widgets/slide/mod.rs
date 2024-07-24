@@ -10,7 +10,7 @@ use std::{
 use crate::{
     activate::get_monior_size,
     config::{widgets::slide::SlideConfig, Config},
-    ui::draws::transition_state::TransitionState,
+    ui::draws::transition_state::TransitionStateRc,
 };
 use gio::glib::WeakRef;
 use gtk::{gdk::RGBA, ApplicationWindow};
@@ -25,7 +25,7 @@ pub struct SlideExpose {
 // this is actually for pulseaudio specific, idk how do design this
 pub struct SlideAdditionalConfig {
     pub fg_color: Rc<Cell<RGBA>>,
-    pub additional_transitions: Vec<TransitionState<f64>>,
+    pub additional_transitions: Vec<TransitionStateRc>,
     pub on_draw: Option<Box<dyn FnMut()>>,
 }
 

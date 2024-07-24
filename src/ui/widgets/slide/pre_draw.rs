@@ -26,8 +26,7 @@ fn draw_slide_path(
     size: (f64, f64),
     map_size: (i32, i32),
 ) -> Result<(Path, f64), String> {
-    let ctx = cairo::Context::new(&new_surface((map_size.0, map_size.1), predraw_err_handle)?)
-        .map_err(predraw_err_handle)?;
+    let ctx = cairo::Context::new(&new_surface((map_size.0, map_size.1))).unwrap();
 
     // calculate
     let acute_angel = 180. - obtuse_angle;
@@ -74,10 +73,7 @@ fn draw_slide_path(
         ctx.arc(center.0, center.1, radius, Z, acute_angel / 180. * PI);
         ctx.line_to(Z, size.1);
         ctx.close_path();
-        Ok((
-            ctx.copy_path().map_err(predraw_err_handle)?,
-            full_y + stop_width,
-        ))
+        Ok((ctx.copy_path().unwrap(), full_y + stop_width))
     }
 }
 
@@ -92,25 +88,25 @@ pub fn draw(
     // provide
     // let obtuse_angle = 120.;
     // let radius = 20.;
-    let new_surface = move || new_surface((map_size.0, map_size.1), predraw_err_handle);
+    let new_surface = move || new_surface((map_size.0, map_size.1));
 
     let (path, slope_position) = draw_slide_path(obtuse_angle, radius, size, map_size)?;
 
     let bg_surf = {
-        let surf = new_surface()?;
-        let ctx = cairo::Context::new(&surf).map_err(predraw_err_handle)?;
+        let surf = new_surface();
+        let ctx = cairo::Context::new(&surf).unwrap();
         ctx.set_source_color(&bg);
         ctx.append_path(&path);
-        ctx.fill().map_err(predraw_err_handle)?;
+        ctx.fill().unwrap();
         surf
     };
 
     // let fg_surf = {
     //     let surf = new_surface()?;
-    //     let ctx = cairo::Context::new(&surf).map_err(predraw_err_handle)?;
+    //     let ctx = cairo::Context::new(&surf).unwrap();
     //     ctx.set_source_color(&fg);
     //     ctx.append_path(&path);
-    //     ctx.fill().map_err(predraw_err_handle)?;
+    //     ctx.fill().unwrap();
     //     surf
     // };
 
@@ -118,25 +114,25 @@ pub fn draw(
         let start_point = (0., size.1 / 2.);
         let end_point = (size.0, size.1 / 2.);
 
-        let surf = new_surface()?;
-        let ctx = cairo::Context::new(&surf).map_err(predraw_err_handle)?;
+        let surf = new_surface();
+        let ctx = cairo::Context::new(&surf).unwrap();
         let lg = LinearGradient::new(start_point.0, start_point.1, end_point.0, end_point.1);
         lg.add_color_stop_rgba(0., Z, Z, Z, 0.);
         lg.add_color_stop_rgba(0.4, Z, Z, Z, 0.);
         lg.add_color_stop_rgba(1., Z, Z, Z, 0.7);
-        ctx.set_source(&lg).map_err(predraw_err_handle)?;
+        ctx.set_source(&lg).unwrap();
         ctx.append_path(&path);
-        ctx.fill().map_err(predraw_err_handle)?;
+        ctx.fill().unwrap();
         surf
     };
 
     let stroke = {
-        let surf = new_surface()?;
-        let ctx = cairo::Context::new(&surf).map_err(predraw_err_handle)?;
+        let surf = new_surface();
+        let ctx = cairo::Context::new(&surf).unwrap();
         ctx.append_path(&path);
         ctx.set_source_color(&border_color);
         ctx.set_line_width(3.);
-        ctx.stroke().map_err(predraw_err_handle)?;
+        ctx.stroke().unwrap();
         surf
     };
 

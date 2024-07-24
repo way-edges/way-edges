@@ -1,4 +1,5 @@
 use std::cell::Cell;
+use std::cell::RefCell;
 use std::fs::File;
 use std::rc::Rc;
 use std::time::Duration;
@@ -8,7 +9,10 @@ use crate::config::Config;
 use crate::ui::draws::blur::blur_image_surface;
 use crate::ui::draws::font::get_font_face;
 use crate::ui::draws::frame_manager::FrameManager;
+use crate::ui::draws::transition_state;
+use crate::ui::draws::transition_state::is_in_transition;
 use crate::ui::draws::transition_state::TransitionState;
+use crate::ui::draws::transition_state::TransitionStateRc;
 use crate::ui::draws::util::draw_input_region_now;
 use crate::ui::draws::util::draw_motion_now;
 use crate::ui::draws::util::draw_rotation_now;
@@ -57,11 +61,11 @@ pub fn setup_draw(
     };
 
     let transition_range = (slide_cfg.preview_size, size.0);
-    let ts = TransitionState::new(
-        Duration::from_millis(slide_cfg.transition_duration),
-        transition_range,
-    );
-    let progress = event::setup_event(&darea, &ts, &cfg, &mut slide_cfg);
+    println!("transition_range: {transition_range:?}");
+    let ts = Rc::new(RefCell::new(TransitionState::new(Duration::from_millis(
+        slide_cfg.transition_duration,
+    ))));
+    let progress = event::setup_event(&darea, ts.clone(), &cfg, &mut slide_cfg);
 
     let predraw = super::pre_draw::draw(
         size,
@@ -94,7 +98,9 @@ pub fn setup_draw(
                 f()
             }
             draw_rotation_now(context, dc.edge, dc.size);
-            let visible_y = ts.get_y();
+            let y = ts.borrow().get_y();
+            let visible_y = transition_state::calculate_transition(y, transition_range);
+            println!("{ts:?}");
             draw_motion_now(
                 context,
                 visible_y,
@@ -109,8 +115,7 @@ pub fn setup_draw(
                         draw_frame_manager_multiple_transition(
                             &mut frame_manager,
                             &additional.additional_transitions,
-                            &ts,
-                            visible_y,
+                            y,
                         )
                     })
             });
@@ -131,12 +136,10 @@ pub fn setup_draw(
 
 pub fn draw_frame_manager_multiple_transition(
     frame_manager: &mut FrameManager,
-    tss: &[TransitionState<f64>],
-    position_transition: &TransitionState<f64>,
+    tss: &[TransitionStateRc],
     visible_y: f64,
 ) -> Result<(), String> {
-    if position_transition._is_in_transition(visible_y) || tss.iter().any(|f| f.is_in_transition())
-    {
+    if is_in_transition(visible_y) || tss.iter().any(|f| f.borrow().is_in_transition()) {
         frame_manager.start()?;
     } else {
         frame_manager.stop()?;
@@ -162,7 +165,7 @@ impl DrawCore {
             format!("Draw core error: {:?}", e)
         }
         let base_surf = {
-            let surf = self.new_surface()?;
+            let surf = self.new_surface();
             let ctx = cairo::Context::new(&surf).map_err(error_handle)?;
             {
                 ctx.set_source_surface(&self.predraw.bg, Z, Z).unwrap();
@@ -182,7 +185,7 @@ impl DrawCore {
                     _ => {}
                 }
                 let fg_surf = {
-                    let surf = self.new_surface()?;
+                    let surf = self.new_surface();
                     let ctx = cairo::Context::new(&surf).map_err(error_handle)?;
                     ctx.set_source_color(&self.fg_color.get());
                     ctx.append_path(&self.predraw.path);
@@ -198,7 +201,7 @@ impl DrawCore {
         };
 
         let blur_surface = {
-            let mut surf = self.new_surface()?;
+            let mut surf = self.new_surface();
             let ctx = cairo::Context::new(&surf).map_err(error_handle)?;
             ctx.set_source_surface(&base_surf, Z, Z)
                 .map_err(error_handle)?;
@@ -225,12 +228,8 @@ impl DrawCore {
         Ok(())
     }
     fn draw_text(&self, ctx: &Context, progress: f64) -> Result<(), String> {
-        use crate::ui::draws::util::new_surface;
         let (text_surf, text_width) = {
-            fn e(e: cairo::Error) -> String {
-                format!("Error create surface for text: {e}")
-            }
-            let surf = new_surface((self.map_size.0, self.map_size.1), e)?;
+            let surf = self.new_surface();
             let ctx = Context::new(&surf).unwrap();
             let a = get_font_face()?;
             let f_size = self.size.0 * 0.8;
@@ -244,9 +243,6 @@ impl DrawCore {
             ctx.show_text(format!("{}%", f64::floor(progress * 100.)).as_str())
                 .unwrap();
             let w = ctx.current_point().unwrap().0;
-            // let mut f = File::create("/tmp/test.png").unwrap();
-            // surf.write_to_png(&mut f).unwrap();
-            // log::debug!("text size: {}", w);
             (surf, w)
         };
 
@@ -303,10 +299,7 @@ impl DrawCore {
         ctx.rectangle(Z, Z, self.f_map_size.0, self.f_map_size.1);
         ctx.fill().unwrap();
     }
-    fn new_surface(&self) -> Result<ImageSurface, String> {
-        fn e(e: cairo::Error) -> String {
-            format!("Draw core new_surface error: {:?}", e)
-        }
-        new_surface(self.map_size, e)
+    fn new_surface(&self) -> ImageSurface {
+        new_surface(self.map_size)
     }
 }

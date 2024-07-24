@@ -2,7 +2,7 @@ mod draw;
 mod event;
 mod pre_draw;
 
-use crate::activate::{get_monior_size, get_working_area_size};
+use crate::activate::get_monior_size;
 use crate::config::{widgets::button::BtnConfig, Config, NumOrRelative};
 use gtk::ApplicationWindow;
 use gtk4_layer_shell::Edge;

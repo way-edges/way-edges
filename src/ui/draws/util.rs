@@ -9,7 +9,7 @@ use gtk::prelude::*;
 use gtk::DrawingArea;
 use gtk4_layer_shell::Edge;
 
-use super::transition_state::TransitionState;
+use super::transition_state::{self};
 
 pub const Z: f64 = 0.;
 
@@ -30,11 +30,8 @@ pub fn copy_surface_to_context(dst: &Context, src: &ImageSurface) {
     dst.fill().unwrap();
 }
 
-pub fn new_surface(
-    size: (i32, i32),
-    error_func: impl Copy + Fn(cairo::Error) -> String,
-) -> Result<ImageSurface, String> {
-    ImageSurface::create(Format::ARgb32, size.0, size.1).map_err(error_func)
+pub fn new_surface(size: (i32, i32)) -> ImageSurface {
+    ImageSurface::create(Format::ARgb32, size.0, size.1).unwrap()
 }
 
 pub fn draw_motion(
@@ -48,19 +45,31 @@ pub fn draw_motion(
     };
     move |ctx: &Context, visible_y: f64| {
         ctx.translate(-range.1 + visible_y - offset, 0.);
-        // ctx.translate(range.1 - visible_y, 0.);
     }
+}
+
+pub fn draw_motion_now(
+    ctx: &Context,
+    visible_y: f64,
+    edge: Edge,
+    range: (f64, f64),
+    extra_trigger_size: f64,
+) {
+    let offset: f64 = match edge {
+        Edge::Right | Edge::Bottom => extra_trigger_size,
+        _ => 0.,
+    };
+    ctx.translate(-range.1 + visible_y - offset, 0.);
 }
 
 pub fn draw_frame_manager(
     frame_rate: u32,
-    range: (f64, f64),
     darea: &DrawingArea,
     window: &gtk::ApplicationWindow,
-) -> impl FnMut(f64, bool) -> Result<(), String> {
+) -> impl FnMut(f64) -> Result<(), String> {
     let mut frame_manager = FrameManager::new(frame_rate, darea, window);
-    move |visible_y: f64, is_forward: bool| {
-        if (is_forward && visible_y < range.1) || (!is_forward && visible_y > range.0) {
+    move |visible_y: f64| {
+        if transition_state::is_in_transition(visible_y) {
             frame_manager.start()?;
         } else {
             frame_manager.stop()?;
@@ -135,33 +144,6 @@ pub fn draw_rotation(edge: Edge, size: (f64, f64)) -> Box<dyn Fn(&Context)> {
         }),
         _ => unreachable!(),
     }
-}
-
-pub fn draw_motion_now(
-    ctx: &Context,
-    visible_y: f64,
-    edge: Edge,
-    range: (f64, f64),
-    extra_trigger_size: f64,
-) {
-    let offset: f64 = match edge {
-        Edge::Right | Edge::Bottom => extra_trigger_size,
-        _ => 0.,
-    };
-    ctx.translate(-range.1 + visible_y - offset, 0.);
-}
-
-pub fn draw_frame_manager_now(
-    frame_manager: &mut FrameManager,
-    visible_y: f64,
-    ts: &TransitionState<f64>,
-) -> Result<(), String> {
-    if ts._is_in_transition(visible_y) {
-        frame_manager.start()?;
-    } else {
-        frame_manager.stop()?;
-    }
-    Ok(())
 }
 
 pub fn draw_input_region_now(

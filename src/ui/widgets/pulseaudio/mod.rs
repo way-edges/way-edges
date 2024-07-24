@@ -1,5 +1,5 @@
 use std::{
-    cell::Cell,
+    cell::{Cell, RefCell},
     rc::Rc,
     sync::{Arc, RwLock},
     time::Duration,
@@ -36,7 +36,9 @@ pub fn init_widget(
     };
 
     let is_mute = Arc::new(RwLock::new(false));
-    let mute_transition = TransitionState::<f64>::new(Duration::from_millis(200), (0.0, 1.0));
+    let mute_transition = Rc::new(RefCell::new(TransitionState::new(Duration::from_millis(
+        200,
+    ))));
     let exposed = {
         // do not let itself queue_draw, but pulseaudio callback
         let _sos = sos.clone();
@@ -69,7 +71,7 @@ pub fn init_widget(
                     mute_color.set(color_transition(
                         start_color,
                         stop_color,
-                        mute_transition_clone.get_y() as f32,
+                        mute_transition_clone.borrow().get_y() as f32,
                     ));
                 })),
             },
@@ -82,7 +84,9 @@ pub fn init_widget(
                 p.set(vinfo.vol);
                 if *is_mute.read().unwrap() != vinfo.is_muted {
                     *is_mute.write().unwrap() = vinfo.is_muted;
-                    mute_transition.set_direction_self(vinfo.is_muted);
+                    mute_transition
+                        .borrow_mut()
+                        .set_direction_self(vinfo.is_muted.into());
                 }
                 exposed.darea.upgrade().unwrap().queue_draw();
             }
