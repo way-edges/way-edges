@@ -39,6 +39,10 @@ pub fn new_window(
         );
     });
 
+    // TEST:
+    widgets::wrapbox::init_widget(&window);
+    return Ok(window);
+
     // margin
     std::mem::take(&mut config.margins)
         .into_iter()

@@ -1,7 +1,10 @@
 use core::fmt::Debug;
-use std::{cell::RefCell, rc::Rc};
+use std::{
+    cell::{Cell, RefCell},
+    rc::Rc,
+};
 
-use crate::ui::draws::util::Z;
+use crate::ui::{draws::util::Z, widgets::wrapbox::MousePosition};
 use gtk::gdk::cairo::{self, Format, ImageSurface};
 
 pub trait DisplayWidget {
@@ -15,8 +18,26 @@ impl Debug for dyn DisplayWidget {
     }
 }
 
+pub type FilteredGridItemMapRc = Rc<Cell<FilteredGridItemMap>>;
+pub type FilteredGridMap = Vec<Vec<BoxedWidgetRc>>;
+pub struct FilteredGridItemMap {
+    pub ws: FilteredGridMap,
+}
+impl FilteredGridItemMap {
+    fn new(ws: FilteredGridMap) -> Self {
+        Self { ws }
+    }
+}
+pub fn get_item_from_filtered_grid_map_rc(
+    r: &FilteredGridItemMapRc,
+    idx: BoxWidgetIndex,
+) -> BoxedWidgetRc {
+    unsafe { r.as_ptr().as_ref().unwrap().ws[idx.0][idx.1].clone() }
+}
+
 pub type BoxWidgetIndex = (usize, usize);
-pub type GridMap = Vec<Vec<Option<Rc<RefCell<dyn DisplayWidget>>>>>;
+pub type BoxedWidgetRc = Rc<RefCell<dyn DisplayWidget>>;
+pub type GridMap = Vec<Vec<Option<BoxedWidgetRc>>>;
 
 pub struct GridBox {
     /// first row, second col
@@ -41,7 +62,7 @@ impl GridBox {
         &mut self,
         w: Rc<RefCell<dyn DisplayWidget + 'static>>,
         position: (isize, isize),
-    ) -> (usize, usize) {
+    ) -> BoxWidgetIndex {
         let mut pos: (usize, usize) = (0, 0);
         pos.0 = if position.0 == -1 {
             self.row_col_num.0
@@ -83,7 +104,7 @@ impl GridBox {
     /// 0 -> each row max height
     /// 1 -> each col max width
     /// return: row_col_max_map, total_size
-    pub fn draw_content(&mut self) -> ImageSurface {
+    pub fn draw_content(&mut self) -> (ImageSurface, GridItemSizeMap, FilteredGridItemMap) {
         let mut map = [
             Vec::with_capacity(self.row_col_num.0),
             Vec::with_capacity(self.row_col_num.1),
@@ -168,10 +189,6 @@ impl GridBox {
         .unwrap();
         let ctx = cairo::Context::new(&surf).unwrap();
 
-        println!("total size: {:?}", total_size);
-        println!("map: {:?}", map);
-        println!("existed_widgets: {:?}", existed_widgets);
-
         let mut position_y = 0.;
         for (row_idx, row) in existed_widgets.iter().enumerate() {
             let row_height = map[0][row_idx];
@@ -188,7 +205,6 @@ impl GridBox {
                     position_y + (size.1 - content_size.1) / 2.,
                 );
                 let content = w.content();
-                println!("pos: {:?}", pos);
 
                 {
                     ctx.save().unwrap();
@@ -204,53 +220,66 @@ impl GridBox {
             position_y += row_height + self.gap;
         }
 
-        surf
+        let gm = GridItemSizeMap::new(map, self.gap, total_size);
+        let filtered = FilteredGridItemMap::new(existed_widgets);
+        (surf, gm, filtered)
     }
 }
 
-// fn draw(ctx: &Context) {
-//     let map_size = (200., 200.);
-//     // let map_size = (40., 200.);
-//     let size_factors = (0.75, 0.85);
-//     let margins = Some([3., 3., 3., 3.]);
-//     let mut bws = GridBox::new(10.);
-//     for i in 0..9 {
-//         let ring = Rc::new(RefCell::new(init_ring(
-//             5.,
-//             5. + i as f64 * 2.,
-//             RGBA::from_str("#9F9F9F").unwrap(),
-//             RGBA::from_str("#F1FA8C").unwrap(),
-//         )));
-//
-//         let r_idx = i / 3;
-//         let c_idx = i % 3;
-//         bws.add(ring, (r_idx, c_idx));
-//     }
-//     println!("{:?}", bws.ws);
-//     let content = bws.draw_content();
-//
-//     ctx.set_source_surface(&content, Z, Z).unwrap();
-//     ctx.rectangle(Z, Z, map_size.0, map_size.1);
-//     ctx.fill().unwrap();
-//
-//     // let max_size_map = bws.gen_max_row_cols_map();
-//     // let total_size = (max_size_map[0].iter().sum(), max_size_map[1].iter().sum());
-//     //
-//     // let content = { bws.ws.iter_mut() };
-//     //
-//     // let border_color = RGBA::from_str("#C18F4A").unwrap();
-//     // let radius_percentage = 0.3;
-//     // let b = BoxDrawsCache::new(
-//     //     content_size,
-//     //     margins,
-//     //     border_color,
-//     //     // Some(RGBA::GREEN),
-//     //     None,
-//     //     radius_percentage,
-//     //     size_factors,
-//     // );
-//
-//     // ctx.set_source_surface(b.with_box(content), Z, Z).unwrap();
-//     // ctx.rectangle(Z, Z, b.size.0, b.size.1);
-//     // ctx.fill().unwrap();
-// }
+pub struct GridItemSizeMap {
+    map: [Vec<f64>; 2],
+    gap: f64,
+    total_size: (f64, f64),
+}
+impl GridItemSizeMap {
+    fn new(map: [Vec<f64>; 2], gap: f64, total_size: (f64, f64)) -> Self {
+        Self {
+            map,
+            gap,
+            total_size,
+        }
+    }
+    pub fn match_item(&self, pos: MousePosition) -> Option<(usize, usize)> {
+        if pos.0 < 0. || pos.1 < 0. || pos.0 > self.total_size.0 || pos.1 > self.total_size.1 {
+            None
+        } else {
+            let row = {
+                let mut start = 0.;
+                let mut row_idx = None;
+                for (i, h) in self.map[0].iter().enumerate() {
+                    let s = *h;
+                    let y = pos.1 - start;
+                    let range = s + self.gap;
+                    if y <= s {
+                        row_idx = Some(i);
+                        break;
+                    } else if y < range {
+                        return None;
+                    };
+
+                    start += range;
+                }
+                row_idx.unwrap()
+            };
+            let col = {
+                let mut start = 0.;
+                let mut col_idx = None;
+                for (i, w) in self.map[1].iter().enumerate() {
+                    let s = *w;
+                    let y = pos.0 - start;
+                    let range = s + self.gap;
+                    if y <= s {
+                        col_idx = Some(i);
+                        break;
+                    } else if y < range {
+                        return None;
+                    };
+
+                    start += range;
+                }
+                col_idx.unwrap()
+            };
+            Some((row, col))
+        }
+    }
+}

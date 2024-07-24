@@ -1,9 +1,10 @@
+use std::cell::Cell;
 /// NOTE: This widget can not be used directly
 use std::{cell::RefCell, rc::Rc, time::Duration};
 
 use cairo::{Format, ImageSurface};
-use gtk::{gdk::RGBA, prelude::GdkCairoContextExt, DrawingArea};
-use gtk::{glib, pango};
+use gtk::glib;
+use gtk::{gdk::RGBA, prelude::GdkCairoContextExt};
 use interval_task::runner::{ExternalRunnerExt, Runner, Task};
 
 use crate::ui::draws::{shape::draw_fan, util::Z};
@@ -92,9 +93,9 @@ impl Ring {
             let pl = pangocairo::pango::Layout::new(&pc);
 
             pl.set_text(format!("Progress: {:.0}%", progress * 100.).as_str());
-            println!("size: {:?}", pl.size());
+            // println!("size: {:?}", pl.size());
             let size = pl.pixel_size();
-            println!("pixel size: {:?}", size);
+            // println!("pixel size: {:?}", size);
 
             let surf = ImageSurface::create(Format::ARgb32, size.0, size.1).unwrap();
             let ctx = cairo::Context::new(&surf).unwrap();
@@ -132,7 +133,8 @@ struct RingEvents {
 }
 
 pub struct RingCtx {
-    cache_content: ImageSurface,
+    // cache_content: ImageSurface,
+    cache_content: Rc<Cell<ImageSurface>>,
     inner: Rc<RefCell<Ring>>,
     runner: Option<Runner<Task>>,
 }
@@ -143,6 +145,10 @@ impl RingCtx {
         update_interval: Duration,
         mut update_func: Box<dyn Send + FnMut() -> f64>,
     ) -> Self {
+        let cache_content = {
+            let a = inner.borrow();
+            Rc::new(Cell::new(Self::_combine(&a.ring_surf, &a.text_surf)))
+        };
         let runner = {
             let mut runner = interval_task::runner::new_external_close_runner(update_interval);
             let (s, r) = async_channel::bounded(1);
@@ -151,6 +157,7 @@ impl RingCtx {
                 s.send_blocking(res);
             }));
             let mut queue_draw = events.queue_draw;
+            let cache_content = cache_content.clone();
             glib::spawn_future_local(glib::clone!(
                 // #[weak]
                 // darea,
@@ -159,18 +166,17 @@ impl RingCtx {
                 async move {
                     while let Ok(res) = r.recv().await {
                         inner.borrow_mut().update_progress(res);
-                        queue_draw();
-                        // darea.queue_draw();
+                        cache_content.set(Self::_combine(
+                            &inner.borrow().ring_surf,
+                            &inner.borrow().text_surf,
+                        ));
+                        // queue_draw();
                     }
                     log::warn!("ring update runner closed");
                 }
             ));
             runner.start();
             Some(runner)
-        };
-        let cache_content = {
-            let a = inner.borrow();
-            Self::_combine(&a.ring_surf, &a.text_surf)
         };
         Self {
             inner,
@@ -179,20 +185,20 @@ impl RingCtx {
         }
     }
 
-    fn combine(&mut self) {
-        self.cache_content = {
-            let a = self.inner.borrow();
-            Self::_combine(&a.ring_surf, &a.text_surf)
-        };
-    }
+    // fn combine(&mut self) {
+    //     self.cache_content = {
+    //         let a = self.inner.borrow();
+    //         Self::_combine(&a.ring_surf, &a.text_surf)
+    //     };
+    // }
     fn _combine(r: &ImageSurface, t: &ImageSurface) -> ImageSurface {
-        println!(
-            "{}, {}, {}, {}",
-            r.width(),
-            t.width(),
-            r.height(),
-            t.height(),
-        );
+        // println!(
+        //     "{}, {}, {}, {}",
+        //     r.width(),
+        //     t.width(),
+        //     r.height(),
+        //     t.height(),
+        // );
         let size = (r.width() + t.width(), r.height().max(t.height()));
         let surf = ImageSurface::create(Format::ARgb32, size.0, size.1).unwrap();
         let ctx = cairo::Context::new(&surf).unwrap();
@@ -208,13 +214,13 @@ impl RingCtx {
 
 impl DisplayWidget for RingCtx {
     fn get_size(&mut self) -> (f64, f64) {
-        let c = &self.cache_content;
-        println!("get_width: {:?}", c.width());
+        let c = &unsafe { self.cache_content.as_ptr().as_ref().unwrap() };
+        // println!("get_width: {:?}", c.width());
         (c.width() as f64, c.height() as f64)
     }
 
     fn content(&mut self) -> ImageSurface {
-        self.cache_content.clone()
+        unsafe { self.cache_content.as_ptr().as_ref().unwrap().clone() }
     }
 }
 impl Drop for RingCtx {
