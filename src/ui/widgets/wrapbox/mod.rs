@@ -5,11 +5,12 @@ use std::{cell::RefCell, rc::Rc};
 
 use async_channel::{Receiver, Sender};
 // use display::grid::{get_item_from_filtered_grid_map_rc, FilteredGridItemMapRc, GridItemSizeMap};
-use display::grid::{GridItemSizeMap, GridItemSizeMapRc};
+use display::grid::GridItemSizeMapRc;
 use gtk::gdk::RGBA;
 use gtk::glib;
 use gtk::prelude::{DrawingAreaExtManual, GtkWindowExt, WidgetExt};
 use gtk::DrawingArea;
+use outlook::window::BoxOutlookWindowRc;
 
 use crate::ui::draws::mouse_state::{
     new_mouse_event_func, new_mouse_state, new_translate_mouse_state, MouseEvent,
@@ -76,6 +77,13 @@ impl BoxExpose {
 
 pub fn init_widget(window: &gtk::ApplicationWindow) {
     let darea = DrawingArea::new();
+    let mut ol = outlook::window::BoxOutlookWindow::new(
+        None,
+        RGBA::from_str("#C18F4A").unwrap(),
+        None,
+        10.,
+        20.,
+    );
     let mut disp = display::grid::GridBox::new(10.);
     let (expose, update_signal_receiver) = BoxExpose::new();
     for i in 0..9 {
@@ -91,41 +99,55 @@ pub fn init_widget(window: &gtk::ApplicationWindow) {
         let c_idx = i % 3;
         disp.add(ring, (r_idx, c_idx));
     }
-    let (buf, filtered_grid_item_map) = {
+    let (outlook_rc, buf, filtered_grid_item_map) = {
         let (content, filtered_grid_item_map) = disp.draw_content();
+        ol.redraw((content.width() as f64, content.height() as f64));
+        let content = ol.with_box(content.clone());
         darea.set_size_request(content.width(), content.height());
         (
+            Rc::new(RefCell::new(ol)),
             Rc::new(Cell::new(Some(content))),
-            // Rc::new(RefCell::new(buf_grid_size_map)),
             Rc::new(Cell::new(filtered_grid_item_map)),
         )
     };
-    {
-        glib::spawn_future_local(glib::clone!(
-            #[weak]
-            darea,
-            #[weak]
-            buf,
-            #[weak]
-            filtered_grid_item_map,
-            async move {
-                while (update_signal_receiver.recv().await).is_ok() {
-                    let (content, filtered_map) = disp.draw_content();
-                    darea.set_size_request(content.width(), content.height());
-                    buf.set(Some(content));
-                    filtered_grid_item_map.set(filtered_map);
-                    darea.queue_draw();
-                }
+    glib::spawn_future_local(glib::clone!(
+        #[weak]
+        darea,
+        #[weak]
+        buf,
+        #[weak]
+        filtered_grid_item_map,
+        #[strong]
+        outlook_rc,
+        async move {
+            while (update_signal_receiver.recv().await).is_ok() {
+                let (content, filtered_map) = disp.draw_content();
+                let content_size = (content.width(), content.height());
+                let content = {
+                    let mut ol = outlook_rc.borrow_mut();
+                    let size = ol.cache.as_ref().unwrap().content_size;
+                    let size = (size.0 as i32, size.1 as i32);
+                    if size != content_size {
+                        ol.redraw((content_size.0 as f64, content_size.1 as f64));
+                    }
+                    ol.with_box(content)
+                };
+                darea.set_size_request(content.width(), content.height());
+                buf.set(Some(content));
+
+                filtered_grid_item_map.set(filtered_map);
+                darea.queue_draw();
             }
-        ));
-        darea.set_draw_func(move |_, ctx, _, _| {
-            if let Some(content) = buf.take() {
-                ctx.set_source_surface(&content, Z, Z).unwrap();
-                ctx.paint().unwrap()
-            }
-        });
-    }
-    event_handle(&darea, expose, filtered_grid_item_map);
+        }
+    ));
+    darea.set_draw_func(move |_, ctx, _, _| {
+        if let Some(content) = buf.take() {
+            ctx.set_source_surface(&content, Z, Z).unwrap();
+            ctx.paint().unwrap()
+        }
+    });
+
+    event_handle(&darea, expose, filtered_grid_item_map, outlook_rc);
     window.set_child(Some(&darea));
 }
 
@@ -133,6 +155,7 @@ fn event_handle(
     darea: &DrawingArea,
     expose: BoxExposeRc,
     filtered_grid_item_map: GridItemSizeMapRc,
+    outlook_rc: BoxOutlookWindowRc,
 ) {
     let ms = new_mouse_state(darea);
     let ts = Rc::new(RefCell::new(TransitionState::new(Duration::from_millis(
@@ -148,6 +171,7 @@ fn event_handle(
                 }
                 MouseEvent::Motion(pos) => {
                     f();
+                    let pos = outlook_rc.borrow().transform_mouse_pos(pos);
                     let matched = unsafe { filtered_grid_item_map.as_ptr().as_ref().unwrap() }
                         .match_item(pos);
                     if let Some((widget, pos)) = matched {

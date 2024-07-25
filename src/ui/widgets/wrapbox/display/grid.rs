@@ -210,8 +210,6 @@ impl GridBox {
         }
 
         let gm = GridItemSizeMap::new(map, self.gap, total_size, existed_widgets);
-        // let filtered = FilteredGridItemMap::new(existed_widgets);
-        // (surf, gm, filtered)
         (surf, gm)
     }
 }

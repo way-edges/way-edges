@@ -1,42 +1,55 @@
+use std::{cell::RefCell, rc::Rc};
+
 use cairo::{Format, ImageSurface, Path};
 use gtk::{gdk::RGBA, prelude::GdkCairoContextExt};
 
-use crate::ui::draws::{shape::draw_rect_path, util::Z};
+use crate::ui::{
+    draws::{shape::draw_rect_path, util::Z},
+    widgets::wrapbox::MousePosition,
+};
 
 /// cache
 #[derive(Debug)]
-pub struct BoxDrawsCache {
+pub struct Cache {
     pub border_path: Path,
     pub border: ImageSurface,
     pub window_path: Path,
     pub window: ImageSurface,
     pub window_shadow: ImageSurface,
-
-    pub content_size: (f64, f64),
-    pub size: (f64, f64),
-    pub margins: [f64; 4],
-
     pub content_box_size: (f64, f64),
     pub startoff_point: (f64, f64),
+    pub size: (f64, f64),
+    pub content_size: (f64, f64),
+    pub margins: [f64; 4],
 }
 
-impl BoxDrawsCache {
-    /// margins: left, top, right, bottom
-    pub fn new(
-        content_size: (f64, f64),
-        margins: Option<[f64; 4]>,
-        border_color: RGBA,
-        box_color: Option<RGBA>,
-        radius_percentage: f64,
-        size_factors: (f64, f64),
-    ) -> Self {
+#[derive(Debug)]
+struct Config {
+    margins: Option<[f64; 4]>,
+    border_color: RGBA,
+    box_color: Option<RGBA>,
+    radius: f64,
+    border_width: f64,
+}
+
+pub type BoxOutlookWindowRc = Rc<RefCell<BoxOutlookWindow>>;
+
+#[derive(Debug)]
+pub struct BoxOutlookWindow {
+    pub cache: Option<Cache>,
+    config: Config,
+}
+
+impl BoxOutlookWindow {
+    pub fn redraw(&mut self, content_size: (f64, f64)) {
+        let margins = self.config.margins;
+        let border_color = self.config.border_color;
+        let box_color = self.config.box_color;
+        let radius = self.config.radius;
+        let border_width = self.config.border_width;
+
         let ([content_box_size, size, startoff_point], margins) =
-            Self::calculate_info(content_size, margins, size_factors);
-        // let content_box_size = (
-        //     (content_size.0 + margins[0] + margins[2]),
-        //     (content_size.1 + margins[1] + margins[3]),
-        // );
-        // let size = ((content_box_size.0) / 0.75, (content_box_size.1) / 0.85);
+            Self::calculate_info(content_size, margins, border_width);
         let box_color = box_color.unwrap_or_else(|| {
             let mut shade = RGBA::BLACK;
             shade.set_alpha(0.2);
@@ -49,17 +62,12 @@ impl BoxDrawsCache {
             let b = (one.blue() * one.alpha() + two.blue() * two.alpha() * (1. - one.alpha())) / a;
             RGBA::new(r, g, b, a)
         });
-        println!(
-            "bg color: {:?}, border color: {:?}",
-            box_color, border_color
-        );
 
         let new_surface =
             move |s: (i32, i32)| ImageSurface::create(Format::ARgb32, s.0, s.1).unwrap();
 
         let (border_path, border) = {
-            let path = draw_rect_path(size.0 * radius_percentage, size, [false, true, true, false])
-                .unwrap();
+            let path = draw_rect_path(radius, size, [false, true, true, false]).unwrap();
             let map_size = (size.0.ceil() as i32, size.1.ceil() as i32);
             let surf = new_surface(map_size);
             let ctx = cairo::Context::new(&surf).unwrap();
@@ -74,12 +82,7 @@ impl BoxDrawsCache {
                 content_box_size.0.ceil() as i32,
                 content_box_size.1.ceil() as i32,
             );
-            let path = draw_rect_path(
-                content_box_size.0 * radius_percentage,
-                content_box_size,
-                [true, true, true, true],
-            )
-            .unwrap();
+            let path = draw_rect_path(radius, content_box_size, [true, true, true, true]).unwrap();
             let bg_surf = {
                 let surf = new_surface(map_size);
                 let ctx = cairo::Context::new(&surf).unwrap();
@@ -140,24 +143,45 @@ impl BoxDrawsCache {
 
             (path, bg_surf, shadow_surf)
         };
-        BoxDrawsCache {
-            border_path,
-            border,
+        let cache = Cache {
             window_path,
             window,
             window_shadow,
-            startoff_point,
-            content_size,
+            border_path,
+            border,
             content_box_size,
+            startoff_point,
             size,
+            content_size,
             margins,
+        };
+        self.cache = Some(cache);
+    }
+    /// margins: left, top, right, bottom
+    pub fn new(
+        margins: Option<[f64; 4]>,
+        border_color: RGBA,
+        box_color: Option<RGBA>,
+        radius: f64,
+        border_width: f64,
+    ) -> Self {
+        let config = Config {
+            margins,
+            border_color,
+            box_color,
+            radius,
+            border_width,
+        };
+        Self {
+            cache: None,
+            config,
         }
     }
 
     pub fn calculate_info(
         content_size: (f64, f64),
         margins: Option<[f64; 4]>,
-        size_factors: (f64, f64),
+        border_width: f64,
     ) -> ([(f64, f64); 3], [f64; 4]) {
         let margins = margins.unwrap_or([0., 0., 0., 0.]);
         let content_box_size = (
@@ -165,8 +189,8 @@ impl BoxDrawsCache {
             (content_size.1 + margins[1] + margins[3]),
         );
         let size = (
-            (content_box_size.0) / size_factors.0,
-            (content_box_size.1) / size_factors.1,
+            (content_box_size.0) + border_width * 2.,
+            (content_box_size.1) + border_width * 2.,
         );
         let startoff_point = (
             (size.0 - content_box_size.0) / 2.,
@@ -189,35 +213,41 @@ impl BoxDrawsCache {
     }
 
     pub fn with_box(&self, content: ImageSurface) -> ImageSurface {
-        println!("self: {self:?}");
+        let cache = self.cache.as_ref().unwrap();
         let surf = ImageSurface::create(
             Format::ARgb32,
-            self.size.0.ceil() as i32,
-            self.size.1.ceil() as i32,
+            cache.size.0.ceil() as i32,
+            cache.size.1.ceil() as i32,
         )
         .unwrap();
         let ctx = cairo::Context::new(&surf).unwrap();
 
         // border
-        ctx.set_source_surface(&self.border, Z, Z).unwrap();
+        ctx.set_source_surface(&cache.border, Z, Z).unwrap();
         ctx.paint().unwrap();
 
-        ctx.translate(self.startoff_point.0, self.startoff_point.1);
+        ctx.translate(cache.startoff_point.0, cache.startoff_point.1);
 
         // content background
-        ctx.set_source_surface(&self.window, Z, Z).unwrap();
+        ctx.set_source_surface(&cache.window, Z, Z).unwrap();
         ctx.paint().unwrap();
 
         // content
-        ctx.set_source_surface(&content, self.margins[0], self.margins[1])
+        ctx.set_source_surface(&content, cache.margins[0], cache.margins[1])
             .unwrap();
-        ctx.append_path(&self.window_path);
+        ctx.append_path(&cache.window_path);
         ctx.fill().unwrap();
 
         // shadow
-        ctx.set_source_surface(&self.window_shadow, Z, Z).unwrap();
+        ctx.set_source_surface(&cache.window_shadow, Z, Z).unwrap();
         ctx.paint().unwrap();
 
         surf
+    }
+
+    pub fn transform_mouse_pos(&self, pos: MousePosition) -> MousePosition {
+        let cache = self.cache.as_ref().unwrap();
+        let sp = cache.startoff_point;
+        (pos.0 - sp.0, pos.1 - sp.1)
     }
 }
