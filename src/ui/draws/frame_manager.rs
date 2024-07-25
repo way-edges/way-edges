@@ -1,4 +1,4 @@
-use std::cell::Cell;
+use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 use std::time::Duration;
 
@@ -9,28 +9,26 @@ use gtk::DrawingArea;
 use gtk::{glib, ApplicationWindow};
 use interval_task::runner::{ExternalRunnerExt, Runner, Task};
 
+pub type FrameManagerCb = Box<dyn FnMut() + 'static>;
+pub type FrameManagerCbRc = Rc<RefCell<FrameManagerCb>>;
+
 pub struct FrameManager {
     runner: Rc<Cell<Option<Runner<Task>>>>,
     frame_gap: Duration,
-    darea: WeakRef<DrawingArea>,
-    appwindow: WeakRef<ApplicationWindow>,
+    cb: FrameManagerCbRc,
+    // darea: WeakRef<DrawingArea>,
+    // appwindow: WeakRef<ApplicationWindow>,
 }
 impl FrameManager {
-    pub fn new(frame_rate: u32, darea: &DrawingArea, appwindow: &ApplicationWindow) -> Self {
+    pub fn new(frame_rate: u32, cb: impl FnMut() + 'static) -> Self {
         let runner = Rc::new(Cell::new(None));
-        darea.connect_destroy(glib::clone!(
-            #[strong]
-            runner,
-            move |_| {
-                log::debug!("frame manager close");
-                runner.take().map(|r: Runner<Task>| r.close());
-            }
-        ));
         Self {
             runner,
             frame_gap: Duration::from_micros(1_000_000 / frame_rate as u64),
-            darea: darea.downgrade(),
-            appwindow: appwindow.downgrade(),
+            // cb: Box::new(cb),
+            cb: Rc::new(RefCell::new(Box::new(cb))),
+            // darea: darea.downgrade(),
+            // appwindow: appwindow.downgrade(),
         }
     }
     pub fn start(&mut self) -> Result<(), String> {
@@ -47,18 +45,19 @@ impl FrameManager {
             self.runner.set(Some(runner));
             log::debug!("runner started");
             glib::spawn_future_local(glib::clone!(
-                #[strong(rename_to=darea)]
-                self.darea,
+                #[weak(rename_to=cb)]
+                self.cb,
                 async move {
                     log::debug!("start wait runner signal");
                     while r.recv().await.is_ok() {
-                        if let Some(darea) = darea.upgrade() {
-                            darea.queue_draw();
-                        } else {
-                            log::info!("drawing area is cleared");
-                            r.close();
-                            break;
-                        };
+                        cb.borrow_mut()();
+                        // if let Some(darea) = darea.upgrade() {
+                        //     darea.queue_draw();
+                        // } else {
+                        //     log::info!("drawing area is cleared");
+                        //     r.close();
+                        //     break;
+                        // };
                     }
                     log::debug!("stop wait runner signal");
                 }
@@ -68,21 +67,14 @@ impl FrameManager {
     }
     pub fn stop(&mut self) -> Result<(), String> {
         if let Some(runner) = self.runner.take() {
-            log::debug!("stop frame manager");
-            glib::spawn_future_local(glib::clone!(
-                #[strong(rename_to=window)]
-                self.appwindow,
-                async move {
-                    if let Err(s) = runner.close() {
-                        log::error!("Error closing runner: {s}");
-                        if let Some(window) = window.upgrade() {
-                            window.close();
-                        };
-                    };
-                }
-            ));
+            runner.close();
             log::debug!("runner closed");
         }
         Ok(())
+    }
+}
+impl Drop for FrameManager {
+    fn drop(&mut self) {
+        self.stop();
     }
 }

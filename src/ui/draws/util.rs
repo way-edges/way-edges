@@ -61,13 +61,23 @@ pub fn draw_motion_now(
     };
     ctx.translate(-range.1 + visible_y - offset, 0.);
 }
+use gtk::glib;
 
 pub fn draw_frame_manager(
     frame_rate: u32,
     darea: &DrawingArea,
     window: &gtk::ApplicationWindow,
 ) -> impl FnMut(f64) -> Result<(), String> {
-    let mut frame_manager = FrameManager::new(frame_rate, darea, window);
+    let mut frame_manager = FrameManager::new(
+        frame_rate,
+        glib::clone!(
+            #[weak]
+            darea,
+            move || {
+                darea.queue_draw();
+            }
+        ),
+    );
     move |visible_y: f64| {
         if transition_state::is_in_transition(visible_y) {
             frame_manager.start()?;

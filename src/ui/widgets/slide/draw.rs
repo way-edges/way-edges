@@ -86,7 +86,16 @@ pub fn setup_draw(
         text_color: slide_cfg.text_color,
         fg_color: additional.fg_color,
     };
-    let mut frame_manager = FrameManager::new(slide_cfg.frame_rate, &darea, window);
+    let mut frame_manager = FrameManager::new(
+        slide_cfg.frame_rate,
+        glib::clone!(
+            #[weak]
+            darea,
+            move || {
+                darea.queue_draw();
+            }
+        ),
+    );
     darea.set_draw_func(glib::clone!(
         #[weak]
         window,
