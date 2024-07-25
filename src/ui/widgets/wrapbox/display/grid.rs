@@ -4,12 +4,16 @@ use std::{
     rc::Rc,
 };
 
-use crate::ui::{draws::util::Z, widgets::wrapbox::MousePosition};
+use crate::ui::{
+    draws::{mouse_state::MouseEvent, util::Z},
+    widgets::wrapbox::MousePosition,
+};
 use gtk::gdk::cairo::{self, Format, ImageSurface};
 
 pub trait DisplayWidget {
     fn get_size(&mut self) -> (f64, f64);
     fn content(&mut self) -> ImageSurface;
+    fn on_mouse_event(&mut self, event: MouseEvent);
 }
 
 impl Debug for dyn DisplayWidget {
@@ -18,22 +22,7 @@ impl Debug for dyn DisplayWidget {
     }
 }
 
-pub type FilteredGridItemMapRc = Rc<Cell<FilteredGridItemMap>>;
 pub type FilteredGridMap = Vec<Vec<BoxedWidgetRc>>;
-pub struct FilteredGridItemMap {
-    pub ws: FilteredGridMap,
-}
-impl FilteredGridItemMap {
-    fn new(ws: FilteredGridMap) -> Self {
-        Self { ws }
-    }
-}
-pub fn get_item_from_filtered_grid_map_rc(
-    r: &FilteredGridItemMapRc,
-    idx: BoxWidgetIndex,
-) -> BoxedWidgetRc {
-    unsafe { r.as_ptr().as_ref().unwrap().ws[idx.0][idx.1].clone() }
-}
 
 pub type BoxWidgetIndex = (usize, usize);
 pub type BoxedWidgetRc = Rc<RefCell<dyn DisplayWidget>>;
@@ -104,7 +93,7 @@ impl GridBox {
     /// 0 -> each row max height
     /// 1 -> each col max width
     /// return: row_col_max_map, total_size
-    pub fn draw_content(&mut self) -> (ImageSurface, GridItemSizeMap, FilteredGridItemMap) {
+    pub fn draw_content(&mut self) -> (ImageSurface, GridItemSizeMap) {
         let mut map = [
             Vec::with_capacity(self.row_col_num.0),
             Vec::with_capacity(self.row_col_num.1),
@@ -220,30 +209,38 @@ impl GridBox {
             position_y += row_height + self.gap;
         }
 
-        let gm = GridItemSizeMap::new(map, self.gap, total_size);
-        let filtered = FilteredGridItemMap::new(existed_widgets);
-        (surf, gm, filtered)
+        let gm = GridItemSizeMap::new(map, self.gap, total_size, existed_widgets);
+        // let filtered = FilteredGridItemMap::new(existed_widgets);
+        // (surf, gm, filtered)
+        (surf, gm)
     }
 }
-
+pub type GridItemSizeMapRc = Rc<Cell<GridItemSizeMap>>;
 pub struct GridItemSizeMap {
     map: [Vec<f64>; 2],
     gap: f64,
     total_size: (f64, f64),
+    item_map: FilteredGridMap,
 }
 impl GridItemSizeMap {
-    fn new(map: [Vec<f64>; 2], gap: f64, total_size: (f64, f64)) -> Self {
+    fn new(
+        map: [Vec<f64>; 2],
+        gap: f64,
+        total_size: (f64, f64),
+        item_map: FilteredGridMap,
+    ) -> Self {
         Self {
             map,
             gap,
             total_size,
+            item_map,
         }
     }
-    pub fn match_item(&self, pos: MousePosition) -> Option<(usize, usize)> {
+    pub fn match_item(&self, pos: MousePosition) -> Option<(BoxedWidgetRc, MousePosition)> {
         if pos.0 < 0. || pos.1 < 0. || pos.0 > self.total_size.0 || pos.1 > self.total_size.1 {
             None
         } else {
-            let row = {
+            let (row, y) = {
                 let mut start = 0.;
                 let mut row_idx = None;
                 for (i, h) in self.map[0].iter().enumerate() {
@@ -251,7 +248,7 @@ impl GridItemSizeMap {
                     let y = pos.1 - start;
                     let range = s + self.gap;
                     if y <= s {
-                        row_idx = Some(i);
+                        row_idx = Some((i, y));
                         break;
                     } else if y < range {
                         return None;
@@ -261,17 +258,17 @@ impl GridItemSizeMap {
                 }
                 row_idx.unwrap()
             };
-            let col = {
+            let (col, x) = {
                 let mut start = 0.;
                 let mut col_idx = None;
                 for (i, w) in self.map[1].iter().enumerate() {
                     let s = *w;
-                    let y = pos.0 - start;
+                    let x = pos.0 - start;
                     let range = s + self.gap;
-                    if y <= s {
-                        col_idx = Some(i);
+                    if x <= s {
+                        col_idx = Some((i, x));
                         break;
-                    } else if y < range {
+                    } else if x < range {
                         return None;
                     };
 
@@ -279,7 +276,11 @@ impl GridItemSizeMap {
                 }
                 col_idx.unwrap()
             };
-            Some((row, col))
+            Some(((row, col), (x, y)))
         }
+        .map(|(idx, pos)| {
+            let item = self.item_map[idx.0][idx.1].clone();
+            (item, pos)
+        })
     }
 }

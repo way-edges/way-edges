@@ -7,6 +7,7 @@ use gtk::glib;
 use gtk::{gdk::RGBA, prelude::GdkCairoContextExt};
 use interval_task::runner::{ExternalRunnerExt, Runner, Task};
 
+use crate::ui::draws::mouse_state::MouseEvent;
 use crate::ui::draws::{shape::draw_fan, util::Z};
 
 use super::wrapbox::display::grid::DisplayWidget;
@@ -139,7 +140,7 @@ pub struct RingCtx {
     runner: Option<Runner<Task>>,
 }
 impl RingCtx {
-    pub fn new(
+    fn new(
         events: RingEvents,
         inner: Rc<RefCell<Ring>>,
         update_interval: Duration,
@@ -222,6 +223,7 @@ impl DisplayWidget for RingCtx {
     fn content(&mut self) -> ImageSurface {
         unsafe { self.cache_content.as_ptr().as_ref().unwrap().clone() }
     }
+    fn on_mouse_event(&mut self, event: MouseEvent) {}
 }
 impl Drop for RingCtx {
     fn drop(&mut self) {

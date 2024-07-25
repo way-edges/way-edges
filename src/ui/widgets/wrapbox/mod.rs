@@ -4,13 +4,16 @@ use std::time::Duration;
 use std::{cell::RefCell, rc::Rc};
 
 use async_channel::{Receiver, Sender};
-use display::grid::{get_item_from_filtered_grid_map_rc, FilteredGridItemMapRc, GridItemSizeMap};
+// use display::grid::{get_item_from_filtered_grid_map_rc, FilteredGridItemMapRc, GridItemSizeMap};
+use display::grid::{GridItemSizeMap, GridItemSizeMapRc};
 use gtk::gdk::RGBA;
 use gtk::glib;
 use gtk::prelude::{DrawingAreaExtManual, GtkWindowExt, WidgetExt};
 use gtk::DrawingArea;
 
-use crate::ui::draws::mouse_state::{new_mouse_state, new_translate_mouse_state, MouseStateCbs};
+use crate::ui::draws::mouse_state::{
+    new_mouse_event_func, new_mouse_state, new_translate_mouse_state, MouseEvent,
+};
 use crate::ui::draws::transition_state::TransitionState;
 use crate::ui::draws::util::Z;
 
@@ -88,12 +91,12 @@ pub fn init_widget(window: &gtk::ApplicationWindow) {
         let c_idx = i % 3;
         disp.add(ring, (r_idx, c_idx));
     }
-    let (buf, buf_grid_size_map, filtered_grid_item_map) = {
-        let (content, buf_grid_size_map, filtered_grid_item_map) = disp.draw_content();
+    let (buf, filtered_grid_item_map) = {
+        let (content, filtered_grid_item_map) = disp.draw_content();
         darea.set_size_request(content.width(), content.height());
         (
             Rc::new(Cell::new(Some(content))),
-            Rc::new(RefCell::new(buf_grid_size_map)),
+            // Rc::new(RefCell::new(buf_grid_size_map)),
             Rc::new(Cell::new(filtered_grid_item_map)),
         )
     };
@@ -104,16 +107,13 @@ pub fn init_widget(window: &gtk::ApplicationWindow) {
             #[weak]
             buf,
             #[weak]
-            buf_grid_size_map,
-            #[weak]
             filtered_grid_item_map,
             async move {
                 while (update_signal_receiver.recv().await).is_ok() {
-                    let (content, map, filtered_map) = disp.draw_content();
+                    let (content, filtered_map) = disp.draw_content();
                     darea.set_size_request(content.width(), content.height());
                     buf.set(Some(content));
                     filtered_grid_item_map.set(filtered_map);
-                    *buf_grid_size_map.borrow_mut() = map;
                     darea.queue_draw();
                 }
             }
@@ -125,59 +125,39 @@ pub fn init_widget(window: &gtk::ApplicationWindow) {
             }
         });
     }
-    event_handle(
-        &darea,
-        expose,
-        BoxMousePosTranslate {
-            content_size_map: buf_grid_size_map,
-        },
-        filtered_grid_item_map,
-    );
+    event_handle(&darea, expose, filtered_grid_item_map);
     window.set_child(Some(&darea));
-}
-
-struct BoxMousePosTranslate {
-    content_size_map: Rc<RefCell<GridItemSizeMap>>,
 }
 
 fn event_handle(
     darea: &DrawingArea,
     expose: BoxExposeRc,
-    mouse_pos_translate: BoxMousePosTranslate,
-    filtered_grid_item_map: FilteredGridItemMapRc,
+    filtered_grid_item_map: GridItemSizeMapRc,
 ) {
     let ms = new_mouse_state(darea);
     let ts = Rc::new(RefCell::new(TransitionState::new(Duration::from_millis(
         100,
     ))));
-    let mut cbs = MouseStateCbs::new();
     let f = expose.borrow().update_func();
-    {
+    let cb = {
         let f = f.clone();
-        cbs.set_hover_enter_cb(move |pos| {
-            f();
-        });
-    }
-    {
-        let f = f.clone();
-        cbs.set_hover_leave_cb(move || {
-            f();
-        });
-    }
-    let mut cbs = new_translate_mouse_state(ts, ms.clone(), Some(cbs), false);
-    {
-        let f = f.clone();
-        cbs.set_hover_motion_cb(move |pos| {
-            f();
-            if let Some(idx) = mouse_pos_translate
-                .content_size_map
-                .borrow()
-                .match_item(pos)
-            {
-                let widget = get_item_from_filtered_grid_map_rc(&filtered_grid_item_map, idx);
-                println!("{idx:?}, {widget:?}");
-            }
-        });
-    }
-    ms.borrow_mut().set_cbs(cbs);
+        new_mouse_event_func(move |e| {
+            match e {
+                MouseEvent::Enter(_) | MouseEvent::Leave => {
+                    f();
+                }
+                MouseEvent::Motion(pos) => {
+                    f();
+                    let matched = unsafe { filtered_grid_item_map.as_ptr().as_ref().unwrap() }
+                        .match_item(pos);
+                    if let Some((widget, pos)) = matched {
+                        println!("{pos:?}, {widget:?}");
+                    }
+                }
+                _ => {}
+            };
+        })
+    };
+    let cb = new_translate_mouse_state(ts, ms.clone(), Some(cb), false);
+    ms.borrow_mut().set_event_cb(cb);
 }
