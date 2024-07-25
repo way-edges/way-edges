@@ -14,64 +14,25 @@ use crate::ui::widgets::wrapbox::MousePosition;
 
 use super::transition_state::{TransitionDirection, TransitionStateRc};
 
-pub struct MouseStateCbs {
-    pub hover_enter_cb: Option<Box<dyn FnMut(MousePosition)>>,
-    pub hover_leave_cb: Option<Box<dyn FnMut()>>,
-    pub hover_motion_cb: Option<Box<dyn FnMut(MousePosition)>>,
-    pub press_cb: Option<Box<dyn FnMut(MousePosition, u32)>>,
-    pub unpress_cb: Option<Box<dyn FnMut(MousePosition, u32)>>,
+#[derive(Debug, Clone)]
+pub enum MouseEvent {
+    Press((f64, f64), u32),
+    Release((f64, f64), u32),
+    Enter((f64, f64)),
+    Leave,
+    Motion((f64, f64)),
 }
-impl MouseStateCbs {
-    pub fn new() -> Self {
-        Self {
-            hover_enter_cb: None,
-            hover_leave_cb: None,
-            hover_motion_cb: None,
-            press_cb: None,
-            unpress_cb: None,
-        }
-    }
-    pub fn set_hover_enter_cb<F>(&mut self, f: F)
-    where
-        F: FnMut(MousePosition) + 'static,
-    {
-        self.hover_enter_cb = Some(Box::new(f))
-    }
 
-    pub fn set_hover_leave_cb<F>(&mut self, f: F)
-    where
-        F: FnMut() + 'static,
-    {
-        self.hover_leave_cb = Some(Box::new(f))
-    }
-
-    pub fn set_hover_motion_cb<F>(&mut self, f: F)
-    where
-        F: FnMut(MousePosition) + 'static,
-    {
-        self.hover_motion_cb = Some(Box::new(f))
-    }
-
-    pub fn set_press_cb<F>(&mut self, f: F)
-    where
-        F: FnMut(MousePosition, u32) + 'static,
-    {
-        self.press_cb = Some(Box::new(f))
-    }
-
-    pub fn set_unpress_cb<F>(&mut self, f: F)
-    where
-        F: FnMut(MousePosition, u32) + 'static,
-    {
-        self.unpress_cb = Some(Box::new(f))
-    }
+pub type MouseEventFunc = Box<dyn FnMut(MouseEvent) + 'static>;
+pub fn new_mouse_event_func(f: impl FnMut(MouseEvent) + 'static) -> MouseEventFunc {
+    Box::new(f)
 }
 
 pub struct MouseState {
     pub hovering: bool,
     pub pressing: Option<u32>,
     pub mouse_debug: bool,
-    pub cbs: MouseStateCbs,
+    pub cb: Option<MouseEventFunc>,
 }
 
 impl MouseState {
@@ -79,8 +40,8 @@ impl MouseState {
         Self {
             hovering: false,
             pressing: None,
-            cbs: MouseStateCbs::new(),
             mouse_debug: crate::args::get_args().mouse_debug,
+            cb: None,
         }
     }
     fn press(&mut self, p: u32, pos: (f64, f64)) {
@@ -93,8 +54,8 @@ impl MouseState {
         };
         if self.pressing.is_none() {
             self.pressing = Some(p);
-            if let Some(f) = &mut self.cbs.press_cb {
-                f(pos, p)
+            if let Some(f) = &mut self.cb {
+                f(MouseEvent::Press(pos, p))
             }
         }
     }
@@ -109,34 +70,34 @@ impl MouseState {
 
         if self.pressing.eq(&Some(p)) {
             self.pressing = None;
-            if let Some(f) = &mut self.cbs.unpress_cb {
-                f(pos, p)
+            if let Some(f) = &mut self.cb {
+                f(MouseEvent::Release(pos, p))
             }
         }
     }
     fn hover_enter(&mut self, pos: (f64, f64)) {
         self.hovering = true;
-        if let Some(f) = &mut self.cbs.hover_enter_cb {
-            f(pos)
+        if let Some(f) = &mut self.cb {
+            f(MouseEvent::Enter(pos))
         }
     }
     fn hover_motion(&mut self, pos: (f64, f64)) {
-        if let Some(f) = &mut self.cbs.hover_motion_cb {
-            f(pos)
+        if let Some(f) = &mut self.cb {
+            f(MouseEvent::Motion(pos))
         }
     }
     fn hover_leave(&mut self) {
         self.hovering = false;
-        if let Some(f) = &mut self.cbs.hover_leave_cb {
-            f()
+        if let Some(f) = &mut self.cb {
+            f(MouseEvent::Leave)
         }
     }
 
-    pub fn set_cbs(&mut self, cbs: MouseStateCbs) {
-        self.cbs = cbs
+    pub fn set_event_cb(&mut self, cb: MouseEventFunc) {
+        self.cb.replace(cb);
     }
-    pub fn cbs(&mut self) -> &mut MouseStateCbs {
-        &mut self.cbs
+    pub fn take_event_cb(&mut self) -> Option<MouseEventFunc> {
+        self.cb.take()
     }
 }
 
@@ -200,75 +161,36 @@ pub fn new_mouse_state(darea: &DrawingArea) -> MouseStateRc {
 pub fn new_translate_mouse_state(
     ts: TransitionStateRc,
     ms: MouseStateRc,
-    mut additional_cbs: Option<MouseStateCbs>,
+    mut additional_cbs: Option<MouseEventFunc>,
     hidden_only: bool,
-) -> MouseStateCbs {
+) -> MouseEventFunc {
     let tls = Rc::new(RefCell::new(TranslateState::new()));
-    let mut cbs = MouseStateCbs::new();
-    // enter
-    {
-        let mut f = additional_cbs
-            .as_mut()
-            .and_then(|f| f.hover_enter_cb.take());
-        cbs.set_hover_enter_cb(glib::clone!(
-            #[strong(rename_to=tls)]
-            tls,
-            #[weak(rename_to=ts)]
-            ts,
-            #[weak(rename_to=ms)]
-            ms,
-            move |pos| {
-                let tls = if hidden_only { None } else { Some(&tls) };
-                ensure_transition_direction(&ts, &ms, tls);
-                if let Some(f) = f.as_mut() {
-                    f(pos)
+    new_mouse_event_func(glib::clone!(
+        #[strong(rename_to=tls)]
+        tls,
+        #[strong(rename_to=ts)]
+        ts,
+        #[weak(rename_to=ms)]
+        ms,
+        move |e| {
+            match e {
+                MouseEvent::Enter(_) | MouseEvent::Leave => {
+                    let tls = if hidden_only { None } else { Some(&tls) };
+                    ensure_transition_direction(&ts, &ms, tls);
                 }
+                MouseEvent::Release(_, k) => {
+                    if !hidden_only && k == BUTTON_MIDDLE {
+                        tls.borrow_mut().toggle_pin();
+                    }
+                    ensure_transition_direction(&ts, &ms, Some(&tls));
+                }
+                _ => {}
+            };
+            if let Some(f) = additional_cbs.as_mut() {
+                f(e)
             }
-        ));
-    }
-    // leave
-    {
-        let mut f = additional_cbs
-            .as_mut()
-            .and_then(|f| f.hover_leave_cb.take());
-        cbs.set_hover_leave_cb(glib::clone!(
-            #[strong(rename_to=tls)]
-            tls,
-            #[weak(rename_to=ts)]
-            ts,
-            #[weak(rename_to=ms)]
-            ms,
-            move || {
-                let tls = if hidden_only { None } else { Some(&tls) };
-                ensure_transition_direction(&ts, &ms, tls);
-                if let Some(f) = f.as_mut() {
-                    f()
-                }
-            }
-        ));
-    }
-    // release
-    {
-        let mut f = additional_cbs.as_mut().and_then(|f| f.unpress_cb.take());
-        cbs.set_unpress_cb(glib::clone!(
-            #[strong(rename_to=tls)]
-            tls,
-            #[weak(rename_to=ts)]
-            ts,
-            #[weak(rename_to=ms)]
-            ms,
-            move |pos, k| {
-                if !hidden_only && k == BUTTON_MIDDLE {
-                    tls.borrow_mut().toggle_pin();
-                }
-                ensure_transition_direction(&ts, &ms, Some(&tls));
-                if let Some(f) = f.as_mut() {
-                    f(pos, k)
-                }
-            }
-        ));
-    }
-    cbs
+        }
+    ))
 }
 
 pub type TranslateStateRc = Rc<RefCell<TranslateState>>;
@@ -290,7 +212,6 @@ impl TranslateState {
 
     // pin
     pub fn pin(&mut self) {
-        println!("hr");
         self.invalidate_pop();
         self.is_pinned = true;
     }

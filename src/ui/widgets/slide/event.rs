@@ -11,7 +11,9 @@ use interval_task::runner::ExternalRunnerExt;
 
 use crate::config::widgets::slide::{Direction, SlideConfig, Task};
 use crate::config::Config;
-use crate::ui::draws::mouse_state::{new_mouse_state, new_translate_mouse_state};
+use crate::ui::draws::mouse_state::{
+    new_mouse_event_func, new_mouse_state, new_translate_mouse_state, MouseEvent,
+};
 use crate::ui::draws::transition_state::TransitionStateRc;
 use crate::ui::draws::util::Z;
 
@@ -86,87 +88,60 @@ pub(super) fn setup_event(
     let ms = new_mouse_state(darea);
     let progress_state = Rc::new(RefCell::new(ProgressState::new(max, direction, on_change)));
 
-    let mut cbs = new_translate_mouse_state(ts, ms.clone(), None, false);
-    {
-        let mut old_f = cbs.hover_enter_cb.take().unwrap();
-        cbs.set_hover_enter_cb(glib::clone!(
-            #[weak]
-            darea,
-            move |pos| {
-                println!("heeee");
-                old_f(pos);
-                darea.queue_draw();
-            }
-        ));
-    }
-    {
-        let mut old_f = cbs.hover_leave_cb.take().unwrap();
-        cbs.set_hover_leave_cb(glib::clone!(
-            #[weak]
-            darea,
-            move || {
-                old_f();
-                darea.queue_draw();
-            }
-        ));
-    }
-    {
-        cbs.set_press_cb(glib::clone!(
-            #[strong]
-            progress_state,
-            #[weak]
-            darea,
-            move |pos, k| {
-                if k == BUTTON_PRIMARY && draggable {
-                    let progress = match xory {
-                        XorY::X => pos.0,
-                        XorY::Y => pos.1,
-                    };
-                    if !progress_state.borrow_mut().set_progress(progress) {
-                        return;
+    let cb = new_mouse_event_func(glib::clone!(
+        #[weak]
+        ms,
+        #[weak]
+        darea,
+        #[strong]
+        progress_state,
+        move |e| {
+            match e {
+                MouseEvent::Release(_, k) => {
+                    if let Some(f) = event_map.get_mut(&k) {
+                        f()
                     }
                 }
-                darea.queue_draw();
-            }
-        ));
-    }
-    {
-        let mut old_release = cbs.unpress_cb.take().unwrap();
-        cbs.set_unpress_cb(glib::clone!(
-            #[weak]
-            darea,
-            move |pos, k| {
-                old_release(pos, k);
-                if let Some(f) = event_map.get_mut(&k) {
-                    f()
+                MouseEvent::Press(pos, k) => {
+                    if k == BUTTON_PRIMARY && draggable {
+                        let progress = match xory {
+                            XorY::X => pos.0,
+                            XorY::Y => pos.1,
+                        };
+                        if !progress_state.borrow_mut().set_progress(progress) {
+                            return;
+                        }
+                    }
                 }
-                darea.queue_draw();
-            }
-        ));
-    }
-    if draggable {
-        cbs.set_hover_motion_cb(glib::clone!(
-            #[weak]
-            ms,
-            #[weak]
-            darea,
-            #[strong]
-            progress_state,
-            move |pos| {
-                if unsafe { ms.as_ptr().as_ref().unwrap().pressing } == Some(BUTTON_PRIMARY) {
-                    let progress = match xory {
-                        XorY::X => pos.0,
-                        XorY::Y => pos.1,
-                    };
-                    log::debug!("Change progress: {progress}");
-                    if progress_state.borrow_mut().set_progress(progress) {
-                        darea.queue_draw();
-                    };
+                MouseEvent::Motion(pos) => {
+                    if draggable {
+                        let is_middle = unsafe {
+                            ms.as_ptr()
+                                .as_ref()
+                                .unwrap()
+                                .pressing
+                                .is_some_and(|k| k == BUTTON_PRIMARY)
+                        };
+                        if is_middle {
+                            let progress = match xory {
+                                XorY::X => pos.0,
+                                XorY::Y => pos.1,
+                            };
+                            log::debug!("Change progress: {progress}");
+                            if progress_state.borrow_mut().set_progress(progress) {
+                                darea.queue_draw();
+                            };
+                        }
+                    }
                 }
-            }
-        ));
-    }
-    ms.borrow_mut().set_cbs(cbs);
+                _ => {}
+            };
+            darea.queue_draw();
+        }
+    ));
+
+    let cb = new_translate_mouse_state(ts, ms.clone(), Some(cb), false);
+    ms.borrow_mut().set_event_cb(cb);
 
     let progress = progress_state.borrow().current.clone();
 

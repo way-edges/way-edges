@@ -1,8 +1,9 @@
 use crate::config::widgets::common::EventMap;
+use crate::ui::draws::mouse_state::new_mouse_event_func;
 use crate::ui::draws::mouse_state::new_mouse_state;
 use crate::ui::draws::mouse_state::new_translate_mouse_state;
+use crate::ui::draws::mouse_state::MouseEvent;
 use crate::ui::draws::mouse_state::MouseState;
-use crate::ui::draws::mouse_state::MouseStateCbs;
 use crate::ui::draws::transition_state::TransitionStateRc;
 
 use gtk::glib;
@@ -17,39 +18,22 @@ pub(super) fn setup_event(
     ts: TransitionStateRc,
 ) -> Rc<RefCell<MouseState>> {
     let ms = new_mouse_state(darea);
-    let mut cbs = MouseStateCbs::new();
-    cbs.set_unpress_cb(glib::clone!(
+    let cb = new_mouse_event_func(glib::clone!(
         #[weak]
         darea,
-        move |_, k| {
-            if let Some(cb) = event_map.get_mut(&k) {
-                cb();
+        move |e| {
+            match e {
+                MouseEvent::Release(_, k) => {
+                    if let Some(cb) = event_map.get_mut(&k) {
+                        cb();
+                    };
+                }
+                _ => {}
             };
             darea.queue_draw();
         }
     ));
-    cbs.set_hover_enter_cb(glib::clone!(
-        #[weak]
-        darea,
-        move |_| {
-            darea.queue_draw();
-        }
-    ));
-    cbs.set_hover_leave_cb(glib::clone!(
-        #[weak]
-        darea,
-        move || {
-            darea.queue_draw();
-        }
-    ));
-    let mut cbs = new_translate_mouse_state(ts, ms.clone(), Some(cbs), true);
-    cbs.set_press_cb(glib::clone!(
-        #[weak]
-        darea,
-        move |_, _| {
-            darea.queue_draw();
-        }
-    ));
-    ms.borrow_mut().set_cbs(cbs);
+    let cb = new_translate_mouse_state(ts, ms.clone(), Some(cb), true);
+    ms.borrow_mut().set_event_cb(cb);
     ms
 }
