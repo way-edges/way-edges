@@ -8,6 +8,7 @@ use gtk::{gdk::RGBA, prelude::GdkCairoContextExt};
 use interval_task::runner::{ExternalRunnerExt, Runner, Task};
 
 use crate::ui::draws::mouse_state::MouseEvent;
+use crate::ui::draws::transition_state::{self, TransitionState, TransitionStateRc};
 use crate::ui::draws::{shape::draw_fan, util::Z};
 
 use super::wrapbox::display::grid::DisplayWidget;
@@ -130,7 +131,7 @@ impl Ring {
 }
 
 struct RingEvents {
-    queue_draw: Box<dyn FnMut()>,
+    queue_draw: Box<dyn FnMut() + 'static>,
 }
 
 pub struct RingCtx {
@@ -138,6 +139,8 @@ pub struct RingCtx {
     cache_content: Rc<Cell<ImageSurface>>,
     inner: Rc<RefCell<Ring>>,
     runner: Option<Runner<Task>>,
+    ts: TransitionStateRc,
+    events: RingEvents,
 }
 impl RingCtx {
     fn new(
@@ -146,9 +149,10 @@ impl RingCtx {
         update_interval: Duration,
         mut update_func: Box<dyn Send + FnMut() -> f64>,
     ) -> Self {
+        let ts = TransitionState::new(Duration::from_millis(100));
         let cache_content = {
             let a = inner.borrow();
-            Rc::new(Cell::new(Self::_combine(&a.ring_surf, &a.text_surf)))
+            Rc::new(Cell::new(Self::_combine(&a.ring_surf, &a.text_surf, &ts)))
         };
         let runner = {
             let mut runner = interval_task::runner::new_external_close_runner(update_interval);
@@ -157,7 +161,7 @@ impl RingCtx {
                 let res = update_func();
                 s.send_blocking(res);
             }));
-            let mut queue_draw = events.queue_draw;
+            let mut queue_draw = events.queue_draw.clone();
             let cache_content = cache_content.clone();
             glib::spawn_future_local(glib::clone!(
                 // #[weak]
@@ -183,6 +187,7 @@ impl RingCtx {
             inner,
             runner,
             cache_content,
+            ts: Rc::new(RefCell::new(ts)),
         }
     }
 
@@ -192,7 +197,7 @@ impl RingCtx {
     //         Self::_combine(&a.ring_surf, &a.text_surf)
     //     };
     // }
-    fn _combine(r: &ImageSurface, t: &ImageSurface) -> ImageSurface {
+    fn _combine(r: &ImageSurface, t: &ImageSurface, ts: &TransitionState) -> ImageSurface {
         // println!(
         //     "{}, {}, {}, {}",
         //     r.width(),
@@ -200,14 +205,35 @@ impl RingCtx {
         //     r.height(),
         //     t.height(),
         // );
-        let size = (r.width() + t.width(), r.height().max(t.height()));
+
+        let ring_size = (r.width(), r.height());
+        let text_size = (t.width(), t.height());
+        let y = ts.get_y();
+        let visible_text_width =
+            transition_state::calculate_transition(y, (text_size.0 as f64, text_size.1 as f64));
+        let size = (
+            ring_size.0 + visible_text_width.ceil() as i32,
+            ring_size.1.max(text_size.1),
+        );
+
         let surf = ImageSurface::create(Format::ARgb32, size.0, size.1).unwrap();
         let ctx = cairo::Context::new(&surf).unwrap();
         ctx.set_antialias(cairo::Antialias::None);
         ctx.set_source_surface(r, Z, Z).unwrap();
         ctx.paint().unwrap();
-        ctx.set_source_surface(t, r.width() as f64, Z).unwrap();
-        ctx.paint().unwrap();
+        ctx.set_source_surface(
+            t,
+            ring_size.0 as f64 - (text_size.0 as f64 - visible_text_width),
+            Z,
+        )
+        .unwrap();
+        ctx.rectangle(
+            ring_size.0 as f64,
+            Z,
+            text_size.0 as f64,
+            text_size.1 as f64,
+        );
+        ctx.fill().unwrap();
 
         surf
     }
@@ -245,11 +271,9 @@ pub fn init_ring(
     )));
     let re = {
         let expose = expose.borrow_mut();
-        let s = expose.update_signal();
+        let s = expose.update_func();
         RingEvents {
-            queue_draw: Box::new(move || {
-                s.force_send(());
-            }),
+            queue_draw: Box::new(s),
         }
     };
     RingCtx::new(re, ring, Duration::from_millis(1000), Box::new(|| 1.))
