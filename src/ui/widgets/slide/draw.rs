@@ -61,7 +61,6 @@ pub fn setup_draw(
     };
 
     let transition_range = (slide_cfg.preview_size, size.0);
-    println!("transition_range: {transition_range:?}");
     let ts = Rc::new(RefCell::new(TransitionState::new(Duration::from_millis(
         slide_cfg.transition_duration,
     ))));
@@ -100,7 +99,6 @@ pub fn setup_draw(
             draw_rotation_now(context, dc.edge, dc.size);
             let y = ts.borrow().get_y();
             let visible_y = transition_state::calculate_transition(y, transition_range);
-            println!("{ts:?}");
             draw_motion_now(
                 context,
                 visible_y,

@@ -26,7 +26,6 @@ pub fn draw_rect_path(radius: f64, size: (f64, f64), corners: [bool; 4]) -> Resu
 
     // calculate
     let acute_angel = 90.;
-    println!("acute angle: {}", acute_angel);
 
     // draw
     {

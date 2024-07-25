@@ -248,7 +248,6 @@ impl PulseAudioThing {
         if let Some(o) = self.ctx.borrow_mut().drain(move || {
             unsafe { (*ml_clone.as_ptr()).signal(false) };
         }) {
-            println!("drain");
             while o.get_state() != pulse::operation::State::Done {
                 self.ml.borrow_mut().wait();
             }
@@ -329,7 +328,6 @@ fn set_sink(pat: Rc<PulseAudioThing>, s: &str, info: VolOrMute) {
                         if !f {
                             log::error!("Fail to set sink volume");
                         } else {
-                            println!("success")
                         }
                     })),
                 );
@@ -356,14 +354,12 @@ fn set_sink(pat: Rc<PulseAudioThing>, s: &str, info: VolOrMute) {
     log::debug!("start with lock");
     let (is_list_end, is_matched) =
         pat.with_lock(move |pat_ref| _match_sink(pat_ref, s.to_string(), cb));
-    println!("wait");
     while !*is_list_end.read().unwrap() {
         spin_loop();
     }
     if *is_matched.read().unwrap() {
         while !*is_done.read().unwrap() {}
     }
-    println!("done");
 }
 
 fn _match_sink(
@@ -417,7 +413,6 @@ fn set_source(pat: Rc<PulseAudioThing>, s: &str, info: VolOrMute) {
                         if !f {
                             log::error!("Fail to set source volume");
                         } else {
-                            println!("success")
                         }
                     })),
                 );
@@ -444,14 +439,12 @@ fn set_source(pat: Rc<PulseAudioThing>, s: &str, info: VolOrMute) {
     log::debug!("start with lock");
     let (is_list_end, is_matched) =
         pat.with_lock(move |pat_ref| _match_source(pat_ref, s.to_string(), cb));
-    println!("wait");
     while !*is_list_end.read().unwrap() {
         spin_loop();
     }
     if *is_matched.read().unwrap() {
         while !*is_done.read().unwrap() {}
     }
-    println!("done");
 }
 
 fn _match_source(

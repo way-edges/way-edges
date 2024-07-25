@@ -109,7 +109,6 @@ impl DrawCore {
         (self.rotate)(context);
         (self.motion)(context, visible_y);
         let is_pressing = self.ms.borrow().pressing.is_some();
-        println!("is_pressing: {is_pressing}");
         (self.core)(context, is_pressing);
         let res = (self.input_region)(window, visible_y).and_then(|_| (self.frame_manger)(y));
         if let Err(e) = res {
