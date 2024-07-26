@@ -213,6 +213,12 @@ impl GridBox {
         (surf, gm)
     }
 }
+impl Drop for GridBox {
+    fn drop(&mut self) {
+        log::debug!("drop grid box");
+    }
+}
+
 pub type GridItemSizeMapRc = Rc<Cell<GridItemSizeMap>>;
 pub struct GridItemSizeMap {
     map: [Vec<f64>; 2],

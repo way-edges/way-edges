@@ -4,11 +4,11 @@ use std::time::Duration;
 use std::{cell::RefCell, rc::Rc};
 
 use async_channel::{Receiver, Sender};
-// use display::grid::{get_item_from_filtered_grid_map_rc, FilteredGridItemMapRc, GridItemSizeMap};
-use display::grid::GridItemSizeMapRc;
+use cairo::{RectangleInt, Region};
+use display::grid::{BoxedWidgetRc, GridItemSizeMapRc};
 use gtk::gdk::RGBA;
 use gtk::glib;
-use gtk::prelude::{DrawingAreaExtManual, GtkWindowExt, WidgetExt};
+use gtk::prelude::{DrawingAreaExtManual, GtkWindowExt, NativeExt, SurfaceExt, WidgetExt};
 use gtk::DrawingArea;
 use outlook::window::BoxOutlookWindowRc;
 
@@ -28,12 +28,7 @@ pub type MousePosition = (f64, f64);
 pub type BoxExposeRc = Rc<RefCell<BoxExpose>>;
 
 pub struct BoxExpose {
-    update_signal: Sender<UpdateSignal>,
-    motion_cbs: Vec<Box<dyn FnMut(MousePosition)>>,
-    enter_cbs: Vec<Box<dyn FnMut(MousePosition)>>,
-    leave_cbs: Vec<Box<dyn FnMut()>>,
-    press_cbs: Vec<Box<dyn FnMut(MousePosition)>>,
-    release_cbs: Vec<Box<dyn FnMut(MousePosition)>>,
+    pub update_signal: Sender<UpdateSignal>,
 }
 
 impl BoxExpose {
@@ -41,37 +36,17 @@ impl BoxExpose {
         let (update_signal_sender, update_signal_receiver) = async_channel::bounded(1);
         let se = Rc::new(RefCell::new(BoxExpose {
             update_signal: update_signal_sender,
-            motion_cbs: vec![],
-            enter_cbs: vec![],
-            leave_cbs: vec![],
-            press_cbs: vec![],
-            release_cbs: vec![],
         }));
         (se, update_signal_receiver)
     }
-    pub fn update_signal(&self) -> Sender<UpdateSignal> {
-        self.update_signal.clone()
-    }
     pub fn update_func(&self) -> impl Fn() + Clone {
-        let s = self.update_signal.clone();
+        let s = self.update_signal.downgrade();
         move || {
-            s.force_send(());
+            if let Some(s) = s.upgrade() {
+                // ignored result
+                s.force_send(()).ok();
+            }
         }
-    }
-    pub fn on_motion(&mut self, cb: impl FnMut(MousePosition) + 'static) {
-        self.motion_cbs.push(Box::new(cb));
-    }
-    pub fn on_enter(&mut self, cb: impl FnMut(MousePosition) + 'static) {
-        self.enter_cbs.push(Box::new(cb));
-    }
-    pub fn on_leave(&mut self, cb: impl FnMut() + 'static) {
-        self.leave_cbs.push(Box::new(cb));
-    }
-    pub fn on_press(&mut self, cb: impl FnMut(MousePosition) + 'static) {
-        self.press_cbs.push(Box::new(cb));
-    }
-    pub fn on_release(&mut self, cb: impl FnMut(MousePosition) + 'static) {
-        self.release_cbs.push(Box::new(cb));
     }
 }
 
@@ -99,11 +74,24 @@ pub fn init_widget(window: &gtk::ApplicationWindow) {
         let c_idx = i % 3;
         disp.add(ring, (r_idx, c_idx));
     }
+    let set_size = glib::clone!(
+        #[weak]
+        darea,
+        #[weak]
+        window,
+        move |size: (i32, i32)| {
+            darea.set_size_request(size.0, size.1);
+            if let Some(surf) = window.surface() {
+                let region = Region::create_rectangle(&RectangleInt::new(0, 0, size.0, size.1));
+                surf.set_input_region(&region);
+            }
+        }
+    );
     let (outlook_rc, buf, filtered_grid_item_map) = {
         let (content, filtered_grid_item_map) = disp.draw_content();
         ol.redraw((content.width() as f64, content.height() as f64));
         let content = ol.with_box(content.clone());
-        darea.set_size_request(content.width(), content.height());
+        set_size((content.width(), content.height()));
         (
             Rc::new(RefCell::new(ol)),
             Rc::new(Cell::new(Some(content))),
@@ -113,13 +101,14 @@ pub fn init_widget(window: &gtk::ApplicationWindow) {
     glib::spawn_future_local(glib::clone!(
         #[weak]
         darea,
-        #[weak]
+        #[strong]
         buf,
-        #[weak]
+        #[strong]
         filtered_grid_item_map,
         #[strong]
         outlook_rc,
         async move {
+            log::debug!("box draw signal receive loop start");
             while (update_signal_receiver.recv().await).is_ok() {
                 let (content, filtered_map) = disp.draw_content();
                 let content_size = (content.width(), content.height());
@@ -132,12 +121,13 @@ pub fn init_widget(window: &gtk::ApplicationWindow) {
                     }
                     ol.with_box(content)
                 };
-                darea.set_size_request(content.width(), content.height());
+                set_size((content.width(), content.height()));
                 buf.set(Some(content));
 
                 filtered_grid_item_map.set(filtered_map);
                 darea.queue_draw();
             }
+            log::debug!("box draw signal receive loop exit");
         }
     ));
     darea.set_draw_func(move |_, ctx, _, _| {
@@ -147,7 +137,21 @@ pub fn init_widget(window: &gtk::ApplicationWindow) {
         }
     });
 
-    event_handle(&darea, expose, filtered_grid_item_map, outlook_rc);
+    event_handle(
+        &darea,
+        expose.clone(),
+        filtered_grid_item_map.clone(),
+        outlook_rc.clone(),
+    );
+    darea.connect_destroy(move |_| {
+        log::debug!("DrawingArea destroyed");
+    });
+    window.connect_destroy(move |_| {
+        log::debug!("destroy window");
+        expose.borrow().update_signal.close();
+        let _ = &filtered_grid_item_map;
+        let _ = &outlook_rc;
+    });
     window.set_child(Some(&darea));
 }
 
@@ -161,22 +165,37 @@ fn event_handle(
     let ts = Rc::new(RefCell::new(TransitionState::new(Duration::from_millis(
         100,
     ))));
-    let f = expose.borrow().update_func();
+    let mut last_widget: Option<BoxedWidgetRc> = None;
     let cb = {
-        let f = f.clone();
+        let f = expose.borrow().update_func();
         new_mouse_event_func(move |e| {
             match e {
-                MouseEvent::Enter(_) | MouseEvent::Leave => {
-                    f();
-                }
-                MouseEvent::Motion(pos) => {
-                    f();
+                MouseEvent::Enter(pos) | MouseEvent::Motion(pos) => {
                     let pos = outlook_rc.borrow().transform_mouse_pos(pos);
                     let matched = unsafe { filtered_grid_item_map.as_ptr().as_ref().unwrap() }
                         .match_item(pos);
                     if let Some((widget, pos)) = matched {
-                        println!("{pos:?}, {widget:?}");
+                        if let Some(last) = last_widget.take() {
+                            if Rc::ptr_eq(&last, &widget) {
+                                widget.borrow_mut().on_mouse_event(MouseEvent::Motion(pos));
+                            } else {
+                                last.borrow_mut().on_mouse_event(MouseEvent::Leave);
+                                widget.borrow_mut().on_mouse_event(MouseEvent::Enter(pos));
+                            }
+                        } else {
+                            widget.borrow_mut().on_mouse_event(MouseEvent::Enter(pos));
+                        }
+                        last_widget = Some(widget);
+                    } else {
+                        if let Some(last) = last_widget.take() {
+                            last.borrow_mut().on_mouse_event(MouseEvent::Leave);
+                        }
                     }
+                    f();
+                }
+                MouseEvent::Leave => {
+                    last_widget = None;
+                    f();
                 }
                 _ => {}
             };

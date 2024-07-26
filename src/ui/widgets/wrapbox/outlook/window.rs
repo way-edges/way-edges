@@ -127,15 +127,11 @@ impl BoxOutlookWindow {
                     ctx.fill().unwrap();
                 };
 
-                g([Z, Z, content_box_size.0 * 0.3, Z], &RGBA::BLACK);
-                g([Z, Z, Z, content_box_size.0 * 0.3], &RGBA::BLACK);
+                let shadow_size = 10.0_f64.min(content_box_size.0 * 0.3);
+                g([Z, Z, shadow_size, Z], &RGBA::BLACK);
+                g([Z, Z, Z, shadow_size], &RGBA::BLACK);
                 g(
-                    [
-                        Z,
-                        content_box_size.1,
-                        Z,
-                        content_box_size.1 - content_box_size.0 * 0.3,
-                    ],
+                    [Z, content_box_size.1, Z, content_box_size.1 - shadow_size],
                     &RGBA::BLACK,
                 );
                 surf
