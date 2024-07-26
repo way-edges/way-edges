@@ -5,7 +5,7 @@ use std::{cell::RefCell, rc::Rc};
 
 use async_channel::{Receiver, Sender};
 use cairo::{RectangleInt, Region};
-use display::grid::{BoxedWidgetRc, GridItemSizeMapRc};
+use display::grid::{BoxedWidgetRc, GridBox, GridItemSizeMapRc};
 use gtk::gdk::RGBA;
 use gtk::glib;
 use gtk::prelude::{DrawingAreaExtManual, GtkWindowExt, NativeExt, SurfaceExt, WidgetExt};
@@ -15,8 +15,8 @@ use outlook::window::BoxOutlookWindowRc;
 use crate::ui::draws::mouse_state::{
     new_mouse_event_func, new_mouse_state, new_translate_mouse_state, MouseEvent,
 };
-use crate::ui::draws::transition_state::TransitionState;
-use crate::ui::draws::util::Z;
+use crate::ui::draws::transition_state::{self, TransitionState, TransitionStateRc};
+use crate::ui::draws::util::{draw_motion, Z};
 
 use super::ring::init_ring;
 
@@ -61,19 +61,7 @@ pub fn init_widget(window: &gtk::ApplicationWindow) {
     );
     let mut disp = display::grid::GridBox::new(10.);
     let (expose, update_signal_receiver) = BoxExpose::new();
-    for i in 0..9 {
-        let ring = Rc::new(RefCell::new(init_ring(
-            &expose,
-            5.,
-            5. + i as f64 * 2.,
-            RGBA::from_str("#9F9F9F").unwrap(),
-            RGBA::from_str("#F1FA8C").unwrap(),
-        )));
-
-        let r_idx = i / 3;
-        let c_idx = i % 3;
-        disp.add(ring, (r_idx, c_idx));
-    }
+    init_box_widgets(&mut disp, expose.clone());
     let set_size = glib::clone!(
         #[weak]
         darea,
@@ -98,6 +86,9 @@ pub fn init_widget(window: &gtk::ApplicationWindow) {
             Rc::new(Cell::new(filtered_grid_item_map)),
         )
     };
+    let ts = Rc::new(RefCell::new(TransitionState::new(Duration::from_millis(
+        100,
+    ))));
     glib::spawn_future_local(glib::clone!(
         #[weak]
         darea,
@@ -130,18 +121,27 @@ pub fn init_widget(window: &gtk::ApplicationWindow) {
             log::debug!("box draw signal receive loop exit");
         }
     ));
-    darea.set_draw_func(move |_, ctx, _, _| {
-        if let Some(content) = buf.take() {
-            ctx.set_source_surface(&content, Z, Z).unwrap();
-            ctx.paint().unwrap()
+    darea.set_draw_func(glib::clone!(
+        #[strong]
+        ts,
+        move |_, ctx, _, _| {
+            if let Some(content) = buf.take() {
+                let y = ts.borrow().get_y();
+                let range = (content.width() as f64, content.height() as f64);
+                let visible_y = transition_state::calculate_transition(y, range);
+                draw_motion(ctx, visible_y, edge, range, extra_trigger_size);
+                ctx.set_source_surface(&content, Z, Z).unwrap();
+                ctx.paint().unwrap()
+            }
         }
-    });
+    ));
 
     event_handle(
         &darea,
         expose.clone(),
-        filtered_grid_item_map.clone(),
-        outlook_rc.clone(),
+        filtered_grid_item_map,
+        outlook_rc,
+        ts,
     );
     darea.connect_destroy(move |_| {
         log::debug!("DrawingArea destroyed");
@@ -149,8 +149,6 @@ pub fn init_widget(window: &gtk::ApplicationWindow) {
     window.connect_destroy(move |_| {
         log::debug!("destroy window");
         expose.borrow().update_signal.close();
-        let _ = &filtered_grid_item_map;
-        let _ = &outlook_rc;
     });
     window.set_child(Some(&darea));
 }
@@ -160,11 +158,9 @@ fn event_handle(
     expose: BoxExposeRc,
     filtered_grid_item_map: GridItemSizeMapRc,
     outlook_rc: BoxOutlookWindowRc,
+    ts: TransitionStateRc,
 ) {
     let ms = new_mouse_state(darea);
-    let ts = Rc::new(RefCell::new(TransitionState::new(Duration::from_millis(
-        100,
-    ))));
     let mut last_widget: Option<BoxedWidgetRc> = None;
     let cb = {
         let f = expose.borrow().update_func();
@@ -203,4 +199,20 @@ fn event_handle(
     };
     let cb = new_translate_mouse_state(ts, ms.clone(), Some(cb), false);
     ms.borrow_mut().set_event_cb(cb);
+}
+
+fn init_box_widgets(bx: &mut GridBox, expose: BoxExposeRc) {
+    for i in 0..9 {
+        let ring = Rc::new(RefCell::new(init_ring(
+            &expose,
+            5.,
+            5. + i as f64 * 2.,
+            RGBA::from_str("#9F9F9F").unwrap(),
+            RGBA::from_str("#F1FA8C").unwrap(),
+        )));
+
+        let r_idx = i / 3;
+        let c_idx = i % 3;
+        bx.add(ring, (r_idx, c_idx));
+    }
 }
