@@ -10,8 +10,6 @@ use std::{
     time::Duration,
 };
 
-use crate::ui::widgets::wrapbox::MousePosition;
-
 use super::transition_state::{TransitionDirection, TransitionStateRc};
 
 #[derive(Debug, Clone)]
@@ -98,6 +96,11 @@ impl MouseState {
     }
     pub fn take_event_cb(&mut self) -> Option<MouseEventFunc> {
         self.cb.take()
+    }
+}
+impl Drop for MouseState {
+    fn drop(&mut self) {
+        log::debug!("drop mouse state");
     }
 }
 

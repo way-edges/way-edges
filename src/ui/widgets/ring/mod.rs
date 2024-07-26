@@ -7,6 +7,7 @@ use gtk::glib;
 use gtk::{gdk::RGBA, prelude::GdkCairoContextExt};
 use interval_task::runner::{ExternalRunnerExt, Runner, Task};
 
+use crate::ui::draws::frame_manager::FrameManager;
 use crate::ui::draws::mouse_state::MouseEvent;
 use crate::ui::draws::transition_state::{self, TransitionState, TransitionStateRc};
 use crate::ui::draws::{shape::draw_fan, util::Z};
@@ -95,9 +96,7 @@ impl Ring {
             let pl = pangocairo::pango::Layout::new(&pc);
 
             pl.set_text(format!("Progress: {:.0}%", progress * 100.).as_str());
-            // println!("size: {:?}", pl.size());
             let size = pl.pixel_size();
-            // println!("pixel size: {:?}", size);
 
             let surf = ImageSurface::create(Format::ARgb32, size.0, size.1).unwrap();
             let ctx = cairo::Context::new(&surf).unwrap();
@@ -129,13 +128,17 @@ impl Ring {
         (bg_surf, small_radius)
     }
 }
+impl Drop for Ring {
+    fn drop(&mut self) {
+        log::debug!("drop ring");
+    }
+}
 
 struct RingEvents {
     queue_draw: Box<dyn FnMut() + 'static>,
 }
 
 pub struct RingCtx {
-    // cache_content: ImageSurface,
     cache_content: Rc<Cell<ImageSurface>>,
     inner: Rc<RefCell<Ring>>,
     runner: Option<Runner<Task>>,
@@ -144,7 +147,7 @@ pub struct RingCtx {
 }
 impl RingCtx {
     fn new(
-        events: RingEvents,
+        mut events: RingEvents,
         inner: Rc<RefCell<Ring>>,
         update_interval: Duration,
         mut update_func: Box<dyn Send + FnMut() -> f64>,
@@ -152,65 +155,98 @@ impl RingCtx {
         let ts = TransitionState::new(Duration::from_millis(100));
         let cache_content = {
             let a = inner.borrow();
-            Rc::new(Cell::new(Self::_combine(&a.ring_surf, &a.text_surf, &ts)))
+            Rc::new(Cell::new(Self::_combine(
+                &a.ring_surf,
+                &a.text_surf,
+                ts.get_y(),
+            )))
         };
+        let ts = Rc::new(RefCell::new(ts));
+        let (ring_update_signal_sender, ring_update_signal_receiver) = async_channel::bounded(1);
+        let send_ring_redraw_signal_weak = {
+            let w = ring_update_signal_sender.downgrade();
+            Box::new(move || {
+                if let Some(s) = w.upgrade() {
+                    s.force_send(()).ok();
+                }
+            })
+        };
+        let send_ring_redraw_signal = Box::new(move || {
+            // ignored result
+            ring_update_signal_sender.force_send(()).ok();
+        });
         let runner = {
             let mut runner = interval_task::runner::new_external_close_runner(update_interval);
             let (s, r) = async_channel::bounded(1);
             runner.set_task(Box::new(move || {
                 let res = update_func();
-                s.send_blocking(res);
+                s.force_send(res).ok();
             }));
-            let mut queue_draw = events.queue_draw.clone();
-            let cache_content = cache_content.clone();
+            let redraw = send_ring_redraw_signal.clone();
             glib::spawn_future_local(glib::clone!(
-                // #[weak]
-                // darea,
                 #[weak]
                 inner,
                 async move {
                     while let Ok(res) = r.recv().await {
                         inner.borrow_mut().update_progress(res);
+                        redraw();
+                    }
+                    log::warn!("ring progress runner closed");
+                }
+            ));
+            runner.start().unwrap();
+            Some(runner)
+        };
+        {
+            let mut fm = {
+                let update_func = send_ring_redraw_signal_weak;
+                FrameManager::new(144, move || {
+                    update_func();
+                })
+            };
+            let mut queue_draw = events.queue_draw;
+            events.queue_draw = send_ring_redraw_signal;
+            glib::spawn_future_local(glib::clone!(
+                #[weak]
+                inner,
+                #[weak]
+                ts,
+                #[strong]
+                cache_content,
+                async move {
+                    while ring_update_signal_receiver.recv().await.is_ok() {
+                        let y = ts.borrow().get_y();
                         cache_content.set(Self::_combine(
                             &inner.borrow().ring_surf,
                             &inner.borrow().text_surf,
+                            y,
                         ));
-                        // queue_draw();
+                        if transition_state::is_in_transition(y) {
+                            fm.start().unwrap();
+                        } else {
+                            fm.stop().unwrap();
+                        }
+                        queue_draw()
                     }
                     log::warn!("ring update runner closed");
                 }
             ));
-            runner.start();
-            Some(runner)
         };
+
         Self {
             inner,
             runner,
             cache_content,
-            ts: Rc::new(RefCell::new(ts)),
+            ts,
+            events,
         }
     }
 
-    // fn combine(&mut self) {
-    //     self.cache_content = {
-    //         let a = self.inner.borrow();
-    //         Self::_combine(&a.ring_surf, &a.text_surf)
-    //     };
-    // }
-    fn _combine(r: &ImageSurface, t: &ImageSurface, ts: &TransitionState) -> ImageSurface {
-        // println!(
-        //     "{}, {}, {}, {}",
-        //     r.width(),
-        //     t.width(),
-        //     r.height(),
-        //     t.height(),
-        // );
-
+    fn _combine(r: &ImageSurface, t: &ImageSurface, y: f64) -> ImageSurface {
         let ring_size = (r.width(), r.height());
         let text_size = (t.width(), t.height());
-        let y = ts.get_y();
         let visible_text_width =
-            transition_state::calculate_transition(y, (text_size.0 as f64, text_size.1 as f64));
+            transition_state::calculate_transition(y, (0., text_size.0 as f64));
         let size = (
             ring_size.0 + visible_text_width.ceil() as i32,
             ring_size.1.max(text_size.1),
@@ -223,7 +259,7 @@ impl RingCtx {
         ctx.paint().unwrap();
         ctx.set_source_surface(
             t,
-            ring_size.0 as f64 - (text_size.0 as f64 - visible_text_width),
+            -text_size.0 as f64 + ring_size.0 as f64 + visible_text_width,
             Z,
         )
         .unwrap();
@@ -242,19 +278,37 @@ impl RingCtx {
 impl DisplayWidget for RingCtx {
     fn get_size(&mut self) -> (f64, f64) {
         let c = &unsafe { self.cache_content.as_ptr().as_ref().unwrap() };
-        // println!("get_width: {:?}", c.width());
         (c.width() as f64, c.height() as f64)
     }
 
     fn content(&mut self) -> ImageSurface {
         unsafe { self.cache_content.as_ptr().as_ref().unwrap().clone() }
     }
-    fn on_mouse_event(&mut self, event: MouseEvent) {}
+    fn on_mouse_event(&mut self, event: MouseEvent) {
+        match event {
+            MouseEvent::Enter(_) => {
+                self.ts
+                    .borrow_mut()
+                    .set_direction_self(transition_state::TransitionDirection::Forward);
+                (self.events.queue_draw)()
+            }
+            MouseEvent::Leave => {
+                self.ts
+                    .borrow_mut()
+                    .set_direction_self(transition_state::TransitionDirection::Backward);
+                (self.events.queue_draw)()
+            }
+            _ => {}
+        }
+    }
 }
 impl Drop for RingCtx {
     fn drop(&mut self) {
+        log::debug!("drop ring ctx");
         if let Some(r) = self.runner.take() {
-            r.close();
+            gio::spawn_blocking(move || {
+                r.close().unwrap();
+            });
         }
     }
 }
