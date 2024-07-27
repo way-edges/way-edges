@@ -13,9 +13,9 @@ use crate::ui::draws::transition_state;
 use crate::ui::draws::transition_state::is_in_transition;
 use crate::ui::draws::transition_state::TransitionState;
 use crate::ui::draws::transition_state::TransitionStateRc;
-use crate::ui::draws::util::draw_input_region;
 use crate::ui::draws::util::draw_motion;
 use crate::ui::draws::util::draw_rotation;
+use crate::ui::draws::util::ensure_input_region;
 use crate::ui::draws::util::new_surface;
 use crate::ui::draws::util::Z;
 
@@ -117,7 +117,7 @@ pub fn setup_draw(
             );
 
             let res = dc.draw(context, progress.get()).and_then(|_| {
-                draw_input_region(&window, visible_y, dc.size, dc.edge, dc.extra_trigger_size);
+                ensure_input_region(&window, visible_y, dc.size, dc.edge, dc.extra_trigger_size);
                 draw_frame_manager_multiple_transition(
                     &mut frame_manager,
                     &additional.additional_transitions,

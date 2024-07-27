@@ -3,10 +3,10 @@ use crate::ui::draws::frame_manager::FrameManager;
 use crate::ui::draws::mouse_state::MouseStateRc;
 use crate::ui::draws::transition_state;
 use crate::ui::draws::transition_state::TransitionState;
-use crate::ui::draws::util::draw_frame_manager;
-use crate::ui::draws::util::draw_input_region;
 use crate::ui::draws::util::draw_motion;
 use crate::ui::draws::util::draw_rotation;
+use crate::ui::draws::util::ensure_frame_manager;
+use crate::ui::draws::util::ensure_input_region;
 
 use super::event::*;
 use super::BtnConfig;
@@ -127,14 +127,14 @@ impl DrawCore {
         );
         let is_pressing = self.ms.borrow().pressing.is_some();
         (self.core)(context, is_pressing, self.f_map_size);
-        draw_input_region(
+        ensure_input_region(
             window,
             visible_y,
             self.size,
             self.edge,
             self.extra_trigger_size,
         );
-        draw_frame_manager(&mut self.frame_manager, visible_y);
+        ensure_frame_manager(&mut self.frame_manager, y);
     }
 }
 

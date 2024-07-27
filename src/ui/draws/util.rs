@@ -45,8 +45,8 @@ pub fn draw_motion(
     ctx.translate(-range.1 + visible_y - offset, 0.);
 }
 
-pub fn draw_frame_manager(frame_manager: &mut FrameManager, visible_y: f64) {
-    if transition_state::is_in_transition(visible_y) {
+pub fn ensure_frame_manager(frame_manager: &mut FrameManager, y: f64) {
+    if transition_state::is_in_transition(y) {
         frame_manager.start().unwrap();
     } else {
         frame_manager.stop().unwrap();
@@ -72,7 +72,7 @@ pub fn draw_rotation(ctx: &Context, edge: Edge, size: (f64, f64)) {
     }
 }
 
-pub fn draw_input_region(
+pub fn ensure_input_region(
     window: &gtk::ApplicationWindow,
     visible_y: f64,
     size: (f64, f64),
