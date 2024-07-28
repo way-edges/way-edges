@@ -6,7 +6,7 @@ use std::{cell::RefCell, rc::Rc};
 use async_channel::{Receiver, Sender};
 use cairo::{ImageSurface, RectangleInt, Region};
 use display::grid::{BoxedWidgetRc, GridBox, GridItemSizeMapRc};
-use gtk::gdk::{Rectangle, RGBA};
+use gtk::gdk::RGBA;
 use gtk::glib;
 use gtk::prelude::NativeExt;
 use gtk::prelude::{DrawingAreaExtManual, GtkWindowExt, SurfaceExt, WidgetExt};
@@ -19,9 +19,7 @@ use crate::ui::draws::mouse_state::{
     new_mouse_event_func, new_mouse_state, new_translate_mouse_state, MouseEvent,
 };
 use crate::ui::draws::transition_state::{self, TransitionState, TransitionStateRc};
-use crate::ui::draws::util::{
-    draw_motion, draw_rotation, ensure_frame_manager, ensure_input_region, new_surface, Z,
-};
+use crate::ui::draws::util::{draw_motion, draw_rotation, ensure_frame_manager, new_surface, Z};
 
 use super::ring::init_ring;
 
