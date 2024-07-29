@@ -28,7 +28,7 @@ notify-debouncer-mini = "0.4.1"
 cairo-rs = { version = "0.20", features = ["freetype", "freetype-rs", "png"] }
 libpulse-binding = "2.28.1"
 blight = "0.7.1"
-zbus = "4.3.1"
+zbus = "4.4.0"
 
 [dependencies.way-edges-derive]
 path = "way-edges-derive"
