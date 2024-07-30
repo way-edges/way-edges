@@ -14,6 +14,8 @@ use gtk::DrawingArea;
 use gtk4_layer_shell::Edge;
 use outlook::window::BoxOutlookWindowRc;
 
+use crate::config::widgets::wrapbox::{BoxConfig, BoxedWidgetConfig};
+use crate::config::Config;
 use crate::ui::draws::frame_manager::FrameManager;
 use crate::ui::draws::mouse_state::{
     new_mouse_event_func, new_mouse_state, new_translate_mouse_state, MouseEvent,
@@ -58,35 +60,37 @@ struct BoxBuffer {
     y: f64,
 }
 
-pub fn init_widget(window: &gtk::ApplicationWindow) {
-    let edge = Edge::Bottom;
-    let position = Edge::Bottom;
-    let extra_trigger_size = 5.;
+pub fn init_widget(
+    window: &gtk::ApplicationWindow,
+    conf: Config,
+    box_conf: BoxConfig,
+) -> Result<(), String> {
+    let edge = conf.edge;
+    let position = conf.position.unwrap();
+    let extra_trigger_size = box_conf.box_conf.extra_trigger_size.get_num_into().unwrap();
 
     let darea = DrawingArea::new();
 
     let (mut ol, expose, mut disp, update_signal_receiver) = {
-        let ol = outlook::window::BoxOutlookWindow::new(
-            None,
-            RGBA::from_str("#C18F4A").unwrap(),
-            None,
-            10.,
-            20.,
-        );
-        let mut disp = display::grid::GridBox::new(10.);
+        let mut disp = display::grid::GridBox::new(box_conf.box_conf.gap);
         let (expose, update_signal_receiver) = BoxExpose::new();
-        init_boxed_widgets(&mut disp, expose.clone());
+        init_boxed_widgets(&mut disp, expose.clone(), box_conf.widgets);
+        let ol = match box_conf.outlook {
+            crate::config::widgets::wrapbox::Outlook::Window(c) => {
+                outlook::window::BoxOutlookWindow::new(c)
+            }
+        };
         (ol, expose, disp, update_signal_receiver)
     };
 
     let (box_motion_transition, mut box_frame_manager) = {
         let ts = Rc::new(RefCell::new(TransitionState::new(Duration::from_millis(
-            100,
+            box_conf.box_conf.transition_duration,
         ))));
         let fm = {
             let up = expose.borrow().update_func();
             FrameManager::new(
-                90,
+                box_conf.box_conf.frame_rate,
                 glib::clone!(move || {
                     up();
                 }),
@@ -110,7 +114,7 @@ pub fn init_widget(window: &gtk::ApplicationWindow) {
                 _ => unreachable!(),
             }
         };
-        let match_rect = move |darea: &DrawingArea, wh: (i32, i32), y: f64| -> RectangleInt {
+        let match_rect = move |darea: &DrawingArea, wh: (i32, i32), ts_y: f64| -> RectangleInt {
             let x = match (edge, position) {
                 (Edge::Left, Edge::Left)
                 | (Edge::Left, Edge::Right)
@@ -131,11 +135,19 @@ pub fn init_widget(window: &gtk::ApplicationWindow) {
                 _ => unreachable!(),
             };
             let (y, h) = match edge {
-                Edge::Top => (Z as i32, (wh.1 as f64 * y) as i32),
-                Edge::Bottom => ((wh.1 as f64 * (1. - y)) as i32, (wh.1 as f64 * y) as i32),
+                Edge::Top => (Z as i32, (wh.1 as f64 * ts_y) as i32),
+                Edge::Bottom => (
+                    (wh.1 as f64 * (1. - ts_y)) as i32,
+                    (wh.1 as f64 * ts_y) as i32,
+                ),
                 _ => (Z as i32, wh.1),
             };
-            RectangleInt::new(x, y, wh.0, h)
+            let w = match edge {
+                Edge::Left | Edge::Right => (wh.0 as f64 * ts_y).ceil() as i32,
+                Edge::Top | Edge::Bottom => wh.0,
+                _ => unreachable!(),
+            };
+            RectangleInt::new(x, y, w, h)
         };
         let (outlook_rc, buf, filtered_grid_item_map, input_region) = {
             let (content, filtered_grid_item_map, rectint) = {
@@ -200,7 +212,9 @@ pub fn init_widget(window: &gtk::ApplicationWindow) {
 
                     let mut inr = match_rect(&darea, wh, y);
                     input_region.set(inr);
+                    println!("set input region: {inr:?}");
 
+                    // NOTE: INR ISSURE WITH LEFT AND RIGHT
                     match edge {
                         Edge::Top => {
                             inr.set_height(inr.height() + extra_trigger_size as i32);
@@ -279,6 +293,7 @@ pub fn init_widget(window: &gtk::ApplicationWindow) {
         expose.borrow().update_signal.close();
     });
     window.set_child(Some(&darea));
+    Ok(())
 }
 
 fn event_handle(
@@ -332,20 +347,14 @@ fn event_handle(
     ms.borrow_mut().set_event_cb(cb);
 }
 
-fn init_boxed_widgets(bx: &mut GridBox, expose: BoxExposeRc) {
-    for i in 0..9 {
-        let ring = Rc::new(RefCell::new(init_ring(
-            &expose,
-            5.,
-            5. + i as f64 * 2.,
-            RGBA::from_str("#9F9F9F").unwrap(),
-            RGBA::from_str("#F1FA8C").unwrap(),
-        )));
-
-        let r_idx = i / 3;
-        let c_idx = i % 3;
-        bx.add(ring, (r_idx, c_idx));
-    }
+fn init_boxed_widgets(bx: &mut GridBox, expose: BoxExposeRc, ws: Vec<BoxedWidgetConfig>) {
+    ws.into_iter().for_each(|w| match w.widget {
+        crate::config::Widget::Ring(r) => {
+            let ring = Rc::new(RefCell::new(init_ring(&expose, *r)));
+            bx.add(ring, (w.index[0], w.index[1]));
+        }
+        _ => unreachable!(),
+    });
 }
 
 fn rotate_content(edge: Edge, content: ImageSurface) -> ImageSurface {

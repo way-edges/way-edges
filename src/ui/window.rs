@@ -40,8 +40,8 @@ pub fn new_window(
     });
 
     // TEST:
-    widgets::wrapbox::init_widget(&window);
-    return Ok(window);
+    // widgets::wrapbox::init_widget(&window);
+    // return Ok(window);
 
     // margin
     std::mem::take(&mut config.margins)
@@ -61,6 +61,7 @@ pub fn new_window(
             config::Widget::Backlight(c) => {
                 widgets::backlight::init_widget(&window, config, *c).map(|_| ())
             }
+            config::Widget::WrapBox(c) => widgets::wrapbox::init_widget(&window, config, *c),
             _ => unreachable!(),
         })?;
 

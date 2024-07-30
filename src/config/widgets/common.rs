@@ -31,34 +31,6 @@ pub fn dt_event_map() -> Option<EventMap> {
     Some(EventMap::new())
 }
 
-pub fn color_translate<'de, D>(d: D) -> Result<RGBA, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    struct ColorVisitor;
-    impl<'de> serde::de::Visitor<'de> for ColorVisitor {
-        type Value = RGBA;
-        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-            formatter.write_str("A string")
-        }
-
-        fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-        where
-            E: serde::de::Error,
-        {
-            to_color(v)
-        }
-
-        fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
-        where
-            E: serde::de::Error,
-        {
-            self.visit_str(v.as_str())
-        }
-    }
-    d.deserialize_any(ColorVisitor)
-}
-
 pub fn event_map_translate<'de, D>(d: D) -> Result<Option<EventMap>, D::Error>
 where
     D: Deserializer<'de>,
@@ -90,6 +62,34 @@ where
         }
     }
     d.deserialize_any(EventMapVisitor)
+}
+
+pub fn color_translate<'de, D>(d: D) -> Result<RGBA, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    struct ColorVisitor;
+    impl<'de> serde::de::Visitor<'de> for ColorVisitor {
+        type Value = RGBA;
+        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            formatter.write_str("A string")
+        }
+
+        fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            to_color(v)
+        }
+
+        fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            self.visit_str(v.as_str())
+        }
+    }
+    d.deserialize_any(ColorVisitor)
 }
 
 pub fn to_color<T: serde::de::Error>(color: &str) -> Result<RGBA, T> {

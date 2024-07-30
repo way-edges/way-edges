@@ -9,7 +9,9 @@ use super::widgets::{
     backlight::BLConfig,
     button::BtnConfig,
     pulseaudio::PAConfig,
+    ring::RingConfig,
     slide::SlideConfig,
+    wrapbox::BoxConfig,
 };
 
 pub type GroupConfig = Vec<Config>;
@@ -150,8 +152,8 @@ pub enum Widget {
     Slider(Box<SlideConfig>),
     PulseAudio(Box<PAConfig>),
     Backlight(Box<BLConfig>),
-    Combo,
-    SpinBtn,
+    WrapBox(Box<BoxConfig>),
+    Ring(Box<RingConfig>),
 }
 
 #[derive(Educe)]

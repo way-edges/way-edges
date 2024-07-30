@@ -7,6 +7,7 @@ use gtk::glib;
 use gtk::{gdk::RGBA, prelude::GdkCairoContextExt};
 use interval_task::runner::{ExternalRunnerExt, Runner, Task};
 
+use crate::config::widgets::ring::RingConfig;
 use crate::ui::draws::frame_manager::FrameManager;
 use crate::ui::draws::mouse_state::MouseEvent;
 use crate::ui::draws::transition_state::{self, TransitionState, TransitionStateRc};
@@ -29,7 +30,11 @@ pub struct Ring {
     pub text_surf: ImageSurface,
 }
 impl Ring {
-    pub fn new(ring_width: f64, radius: f64, bg_color: RGBA, fg_color: RGBA) -> Self {
+    pub fn new(config: &RingConfig) -> Self {
+        let radius = config.radius;
+        let ring_width = config.ring_width;
+        let bg_color = config.bg_color;
+        let fg_color = config.fg_color;
         let progress = 0.5;
         let (bg_arc, inner_radius) = Self::draw_base(radius, ring_width, &bg_color);
         let (ring_surf, text_surf) =
@@ -146,22 +151,22 @@ pub struct RingCtx {
     events: RingEvents,
 }
 impl RingCtx {
-    fn new(
-        mut events: RingEvents,
-        inner: Rc<RefCell<Ring>>,
-        update_interval: Duration,
-        mut update_func: Box<dyn Send + FnMut() -> f64>,
-    ) -> Self {
-        let ts = TransitionState::new(Duration::from_millis(100));
+    fn new(mut events: RingEvents, mut config: RingConfig) -> Self {
+        let update_ctx = config
+            .update_with_interval_ms
+            .take()
+            .unwrap_or((999999, Box::new(|| Ok(0.))));
+        let inner = Rc::new(RefCell::new(Ring::new(&config)));
+        let text_ts = TransitionState::new(Duration::from_millis(config.text_transition_ms));
         let cache_content = {
             let a = inner.borrow();
             Rc::new(Cell::new(Self::_combine(
                 &a.ring_surf,
                 &a.text_surf,
-                ts.get_y(),
+                text_ts.get_y(),
             )))
         };
-        let ts = Rc::new(RefCell::new(ts));
+        let ts = Rc::new(RefCell::new(text_ts));
         let (ring_update_signal_sender, ring_update_signal_receiver) = async_channel::bounded(1);
         let send_ring_redraw_signal_weak = {
             let w = ring_update_signal_sender.downgrade();
@@ -176,10 +181,13 @@ impl RingCtx {
             ring_update_signal_sender.force_send(()).ok();
         });
         let runner = {
-            let mut runner = interval_task::runner::new_external_close_runner(update_interval);
+            let mut runner = interval_task::runner::new_external_close_runner(
+                Duration::from_millis(update_ctx.0),
+            );
             let (s, r) = async_channel::bounded(1);
+            let mut uf = update_ctx.1;
             runner.set_task(Box::new(move || {
-                let res = update_func();
+                let res = uf();
                 s.force_send(res).ok();
             }));
             let redraw = send_ring_redraw_signal.clone();
@@ -188,7 +196,7 @@ impl RingCtx {
                 inner,
                 async move {
                     while let Ok(res) = r.recv().await {
-                        inner.borrow_mut().update_progress(res);
+                        inner.borrow_mut().update_progress(res.unwrap());
                         redraw();
                     }
                     log::warn!("ring progress runner closed");
@@ -200,7 +208,7 @@ impl RingCtx {
         {
             let mut fm = {
                 let update_func = send_ring_redraw_signal_weak;
-                FrameManager::new(144, move || {
+                FrameManager::new(config.frame_rate, move || {
                     update_func();
                 })
             };
@@ -313,16 +321,7 @@ impl Drop for RingCtx {
     }
 }
 
-pub fn init_ring(
-    expose: &BoxExposeRc,
-    ring_width: f64,
-    radius: f64,
-    bg_color: RGBA,
-    fg_color: RGBA,
-) -> RingCtx {
-    let ring = Rc::new(RefCell::new(Ring::new(
-        ring_width, radius, bg_color, fg_color,
-    )));
+pub fn init_ring(expose: &BoxExposeRc, config: RingConfig) -> RingCtx {
     let re = {
         let expose = expose.borrow_mut();
         let s = expose.update_func();
@@ -330,5 +329,5 @@ pub fn init_ring(
             queue_draw: Box::new(s),
         }
     };
-    RingCtx::new(re, ring, Duration::from_millis(1000), Box::new(|| 1.))
+    RingCtx::new(re, config)
 }

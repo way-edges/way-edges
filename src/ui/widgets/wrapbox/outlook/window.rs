@@ -3,9 +3,12 @@ use std::{cell::RefCell, rc::Rc};
 use cairo::{Format, ImageSurface, Path};
 use gtk::{gdk::RGBA, prelude::GdkCairoContextExt};
 
-use crate::ui::{
-    draws::{shape::draw_rect_path, util::Z},
-    widgets::wrapbox::MousePosition,
+use crate::{
+    config::widgets::wrapbox::OutlookWindowConfig,
+    ui::{
+        draws::{shape::draw_rect_path, util::Z},
+        widgets::wrapbox::MousePosition,
+    },
 };
 
 /// cache
@@ -23,34 +26,24 @@ pub struct Cache {
     pub margins: [f64; 4],
 }
 
-#[derive(Debug)]
-struct Config {
-    margins: Option<[f64; 4]>,
-    border_color: RGBA,
-    box_color: Option<RGBA>,
-    radius: f64,
-    border_width: f64,
-}
-
 pub type BoxOutlookWindowRc = Rc<RefCell<BoxOutlookWindow>>;
 
 #[derive(Debug)]
 pub struct BoxOutlookWindow {
     pub cache: Option<Cache>,
-    config: Config,
+    config: OutlookWindowConfig,
 }
 
 impl BoxOutlookWindow {
     pub fn redraw(&mut self, content_size: (f64, f64)) {
         let margins = self.config.margins;
         let border_color = self.config.border_color;
-        let box_color = self.config.box_color;
         let radius = self.config.radius;
         let border_width = self.config.border_width;
 
         let ([content_box_size, size, startoff_point], margins) =
             Self::calculate_info(content_size, margins, border_width);
-        let box_color = box_color.unwrap_or_else(|| {
+        let box_color = {
             let mut shade = RGBA::BLACK;
             shade.set_alpha(0.2);
             let one = shade;
@@ -61,7 +54,7 @@ impl BoxOutlookWindow {
                 (one.green() * one.alpha() + two.green() * two.alpha() * (1. - one.alpha())) / a;
             let b = (one.blue() * one.alpha() + two.blue() * two.alpha() * (1. - one.alpha())) / a;
             RGBA::new(r, g, b, a)
-        });
+        };
 
         let new_surface =
             move |s: (i32, i32)| ImageSurface::create(Format::ARgb32, s.0, s.1).unwrap();
@@ -154,20 +147,7 @@ impl BoxOutlookWindow {
         self.cache = Some(cache);
     }
     /// margins: left, top, right, bottom
-    pub fn new(
-        margins: Option<[f64; 4]>,
-        border_color: RGBA,
-        box_color: Option<RGBA>,
-        radius: f64,
-        border_width: f64,
-    ) -> Self {
-        let config = Config {
-            margins,
-            border_color,
-            box_color,
-            radius,
-            border_width,
-        };
+    pub fn new(config: OutlookWindowConfig) -> Self {
         Self {
             cache: None,
             config,

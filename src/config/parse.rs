@@ -39,7 +39,7 @@ pub fn raw_2_conf(raw: RawGroup) -> Result<GroupConfig, String> {
                 "left" => Some(Edge::Left),
                 "bottom" => Some(Edge::Bottom),
                 "right" => Some(Edge::Right),
-                "" | "center" => None,
+                "" | "center" => Some(edge),
                 _ => {
                     return Err(format!("invalid position {}", raw.position));
                 }
@@ -90,7 +90,7 @@ pub fn raw_2_conf(raw: RawGroup) -> Result<GroupConfig, String> {
         .collect()
 }
 
-fn parse_widget(raw: Value) -> Result<Widget, String> {
+pub fn parse_widget(raw: Value) -> Result<Widget, String> {
     if !raw.is_object() {
         return Err("Widget must be object".to_string());
     }
@@ -106,6 +106,8 @@ fn parse_widget(raw: Value) -> Result<Widget, String> {
             widgets::pulseaudio::visit_config(raw)?
         }
         widgets::backlight::NAME => widgets::backlight::visit_config(raw)?,
+        widgets::wrapbox::NAME => widgets::wrapbox::visit_config(raw)?,
+        widgets::ring::NAME => widgets::ring::visit_config(raw)?,
         _ => return Err(format!("unknown widget type: {t}")),
     };
     Ok(w)
