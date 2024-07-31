@@ -27,8 +27,8 @@ https://github.com/ogios/way-edges/assets/96933655/98219132-b37e-4d8d-9b4a-01c64
   - [x] PulseAudio(Speaker, Microphone)
     - [x] allow specify device(only default for now)
   - [x] Brightness
-  - [x] Ring progress(for cpu/ram... status)
-  - [-] Box
+  - [-] Ring progress(for cpu/ram... status)
+  - [x] Box
   - [ ] Hyprland Workspaces
   - [ ] Time
   - [ ] Tray
