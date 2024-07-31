@@ -1,6 +1,6 @@
 use std::{
     collections::HashMap,
-    path::Path,
+    path::{Path, PathBuf},
     sync::atomic::{AtomicPtr, Ordering},
 };
 
@@ -34,7 +34,7 @@ fn notify_error(e: String) {
             .1
             .iter()
             .for_each(|(_, s)| {
-                s.force_send(Err(e.clone()));
+                s.force_send(Err(e.clone())).ok();
             });
     }
 }
@@ -65,13 +65,32 @@ fn get_watcher() -> Result<&'static mut (INotifyWatcher, HashMap<String, Sender<
     unsafe { Ok(get_watcher_ptr().as_mut().unwrap()) }
 }
 
-pub fn watch(p: &Path) -> Result<Receiver<Signal>, String> {
+#[derive(Debug)]
+pub struct WatchCtx {
+    pub path_buf: PathBuf,
+    pub r: Receiver<Signal>,
+}
+impl WatchCtx {
+    fn new(p: &Path, r: Receiver<Signal>) -> Self {
+        Self {
+            path_buf: p.to_path_buf(),
+            r,
+        }
+    }
+}
+impl Drop for WatchCtx {
+    fn drop(&mut self) {
+        unwatch(&self.path_buf).unwrap();
+    }
+}
+
+pub fn watch(p: &Path) -> Result<WatchCtx, String> {
     let (w, h) = get_watcher()?;
     w.watch(p, notify::RecursiveMode::NonRecursive)
         .map_err(|e| format!("Failed to watch path {p:?}: {e}"))?;
     let (s, r) = async_channel::bounded(1);
     h.insert(p.to_string_lossy().to_string(), s);
-    Ok(r)
+    Ok(WatchCtx::new(p, r))
 }
 
 pub fn unwatch(p: &Path) -> Result<(), String> {

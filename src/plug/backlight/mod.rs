@@ -84,10 +84,10 @@ impl BackLight {
             };
         }
     }
-    fn error(self, e: String) {
-        log::error!("Pulseaudio error(quit mainloop because of this): {e}");
-        self.on_error_cbs.into_iter().for_each(|mut f| f(e.clone()));
-    }
+    // fn error(self, e: String) {
+    //     log::error!("Pulseaudio error(quit mainloop because of this): {e}");
+    //     self.on_error_cbs.into_iter().for_each(|mut f| f(e.clone()));
+    // }
     fn update_v(&mut self, device_name: String, v: f64) {
         self.v.insert(device_name, v);
     }
@@ -115,16 +115,16 @@ fn init_pa() {
     IS_BL_INITED.store(true, Ordering::Release);
     BL_CTX.store(Box::into_raw(Box::new(BackLight::new())), Ordering::Release);
 }
-fn on_pa_error(e: String) {
-    unsafe {
-        let pa_ptr = BL_CTX.swap(std::ptr::null_mut(), Ordering::Release);
-        if pa_ptr.is_null() {
-            return;
-        }
-        let a = pa_ptr.read();
-        a.error(e);
-    }
-}
+// fn on_pa_error(e: String) {
+//     unsafe {
+//         let pa_ptr = BL_CTX.swap(std::ptr::null_mut(), Ordering::Release);
+//         if pa_ptr.is_null() {
+//             return;
+//         }
+//         let a = pa_ptr.read();
+//         a.error(e);
+//     }
+// }
 fn is_pa_inited() -> bool {
     IS_BL_INITED.load(Ordering::Acquire)
 }
@@ -178,10 +178,10 @@ pub fn set_backlight(device_name: Option<String>, v: f64) -> Result<(), String> 
 
 fn init_watcher(device: Device) -> Result<(), String> {
     let path_buf = device.device_path();
-    let r = watch::watch(&path_buf)?;
+    let ctx = watch::watch(&path_buf)?;
     update_backlight(&device);
     thread::spawn(move || loop {
-        let res = r.recv_blocking();
+        let res = ctx.r.recv_blocking();
         match res {
             Ok(s) => match s {
                 Ok(_) => update_backlight(&device),
