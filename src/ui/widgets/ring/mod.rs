@@ -10,7 +10,6 @@ use gtk::{gdk::RGBA, prelude::GdkCairoContextExt};
 use interval_task::runner::{ExternalRunnerExt, Runner, Task};
 
 use crate::config::widgets::ring::RingConfig;
-use crate::config::widgets::slide::UpdateTask;
 use crate::plug::system::{get_ram_info, get_swap_info};
 use crate::ui::draws::frame_manager::FrameManager;
 use crate::ui::draws::mouse_state::MouseEvent;
@@ -26,7 +25,7 @@ fn draw_text(size: (i32, i32), pl: &Layout, color: &RGBA) -> ImageSurface {
     let ctx = cairo::Context::new(&surf).unwrap();
     ctx.set_antialias(cairo::Antialias::None);
     ctx.set_source_color(color);
-    pangocairo::functions::show_layout(&ctx, &pl);
+    pangocairo::functions::show_layout(&ctx, pl);
     surf
 }
 
@@ -75,8 +74,7 @@ impl TextRender for RamTextRender {
 struct SwapTextRender;
 impl TextRender for SwapTextRender {
     fn draw_text(&self, _: f64, pl: &Layout, color: &RGBA) -> Option<ImageSurface> {
-        let a = get_swap_info().map(|p| RamTextRender.core(p, pl, color));
-        a
+        get_swap_info().map(|p| RamTextRender.core(p, pl, color))
     }
 }
 
@@ -197,7 +195,7 @@ impl Ring {
         );
     }
     #[allow(clippy::too_many_arguments)]
-    pub fn draw_progress(
+    fn draw_progress(
         bg_arc: &ImageSurface,
         inner_radius: f64,
         fg_color: &RGBA,
@@ -311,6 +309,7 @@ struct RingEvents {
 
 pub struct RingCtx {
     cache_content: Rc<Cell<ImageSurface>>,
+    #[allow(dead_code)]
     inner: Rc<RefCell<Ring>>,
     runner: Option<Runner<Task>>,
     ts: TransitionStateRc,
