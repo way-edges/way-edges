@@ -33,15 +33,16 @@ pub struct RingConfig {
     pub text_transition_ms: u64,
 
     #[educe(Debug(ignore))]
+    #[serde(default)]
     #[serde(deserialize_with = "update_task_interval")]
     pub update_with_interval_ms: Option<(u64, UpdateTask)>,
 }
 
 fn dt_r() -> f64 {
-    5.0
+    13.0
 }
 fn dt_rw() -> f64 {
-    13.0
+    5.0
 }
 fn dt_bg() -> RGBA {
     RGBA::from_str("#9F9F9F").unwrap()

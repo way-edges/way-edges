@@ -12,7 +12,7 @@ pub const NAME: &str = "box";
 
 #[derive(Debug, Deserialize)]
 pub struct OutlookWindowConfig {
-    #[serde(default)]
+    #[serde(default = "dt_margins")]
     pub margins: Option<[f64; 4]>,
     #[serde(default = "dt_color")]
     #[serde(deserialize_with = "common::color_translate")]
@@ -21,6 +21,9 @@ pub struct OutlookWindowConfig {
     pub radius: f64,
     #[serde(default = "dt_border_width")]
     pub border_width: f64,
+}
+fn dt_margins() -> Option<[f64; 4]> {
+    Some([5., 5., 5., 5.])
 }
 fn dt_color() -> RGBA {
     RGBA::from_str("#4d8080").unwrap()
@@ -84,7 +87,8 @@ pub fn visit_config(d: Value) -> Result<Widget, String> {
                     from_value::<[isize; 2]>(v)?
                 };
                 let widget = {
-                    let widget = parse_widget(v)?;
+                    let wv = v.get("widget").ok_or("widget must be specified")?.clone();
+                    let widget = parse_widget(wv)?;
                     match &widget {
                         Widget::Ring(_) => Ok(widget),
                         _ => Err("Unsupported boxed widget"),
