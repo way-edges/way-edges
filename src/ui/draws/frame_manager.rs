@@ -2,11 +2,7 @@ use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 use std::time::Duration;
 
-use gio::glib::clone::Downgrade;
-use gio::glib::WeakRef;
-use gtk::prelude::{GtkWindowExt, WidgetExt};
-use gtk::DrawingArea;
-use gtk::{glib, ApplicationWindow};
+use gtk::glib;
 use interval_task::runner::{ExternalRunnerExt, Runner, Task};
 
 pub type FrameManagerCb = Box<dyn FnMut() + 'static>;
@@ -67,7 +63,7 @@ impl FrameManager {
     }
     pub fn stop(&mut self) -> Result<(), String> {
         if let Some(runner) = self.runner.take() {
-            runner.close();
+            runner.close().unwrap();
             log::debug!("runner closed");
         }
         Ok(())
@@ -75,6 +71,6 @@ impl FrameManager {
 }
 impl Drop for FrameManager {
     fn drop(&mut self) {
-        self.stop();
+        self.stop().unwrap();
     }
 }

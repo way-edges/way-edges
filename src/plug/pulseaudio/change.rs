@@ -113,6 +113,7 @@ pub fn send_painfo_change_signal(msg: PaInfoSignal) {
                 // .send_blocking(msg)
                 .send(msg)
                 .await
+                .ok()
         };
         log::debug!("send signal done");
     });
@@ -327,7 +328,6 @@ fn set_sink(pat: Rc<PulseAudioThing>, s: &str, info: VolOrMute) {
                         *is_done.write().unwrap() = true;
                         if !f {
                             log::error!("Fail to set sink volume");
-                        } else {
                         }
                     })),
                 );
@@ -412,7 +412,6 @@ fn set_source(pat: Rc<PulseAudioThing>, s: &str, info: VolOrMute) {
                         *is_done.write().unwrap() = true;
                         if !f {
                             log::error!("Fail to set source volume");
-                        } else {
                         }
                     })),
                 );
