@@ -232,7 +232,6 @@ pub fn init_widget(
                         _ => {}
                     }
 
-                    println!("set input region: {inr:?}");
                     if let Some(surf) = window.surface() {
                         surf.set_input_region(&Region::create_rectangle(&inr));
                     }
