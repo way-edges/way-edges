@@ -69,6 +69,31 @@
       }
     },
 
+    "widgets": {
+      "$id": "#AllWidgets",
+      "description": "All widgets in the config file",
+      "oneOf": [
+        {
+          "$ref": "#BtnWidget"
+        },
+        {
+          "$ref": "#SpeakerWidget"
+        },
+        {
+          "$ref": "#MicrophoneWidget"
+        },
+        {
+          "$ref": "#SlideWidget"
+        },
+        {
+          "$ref": "#BacklightWidget"
+        },
+        {
+          "$ref": "#Box"
+        }
+      ]
+    },
+
     "BtnWidget": {
       "$id": "#BtnWidget",
       "description": "Button widget specific properties",
@@ -246,6 +271,77 @@
           }
         }
       ]
+    },
+
+    "BoxOutlookWindow": {
+      "$id": "#BoxOutlookWindow",
+      "description": "Box Outlook `Window`",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "window"
+        },
+        "margins": {
+          "type": "array",
+          "description": "left, top, right, bottom",
+          "prefixItems": [
+            { "type": "number" },
+            { "type": "number" },
+            { "type": "number" },
+            { "type": "number" }
+          ]
+        },
+        "color": {
+          "$ref": "#UtilColor"
+        },
+        "border_radius": {
+          "type": "number",
+          "minimum": 1
+        },
+        "border_width": {
+          "type": "number",
+          "minimum": 1
+        }
+      }
+    },
+    "Box": {
+      "$id": "#Box",
+      "description": "Box widgets with grid layout, only support limited widgets",
+      "properties": {
+        "widgets": {
+          "type": "array",
+          "items": {
+            "properties": {
+              "index": {
+                "type": "array",
+                "description": "index of the widget's position in the grid",
+                "prefixItems": [{ "type": "number" }, { "type": "number" }]
+              },
+              "widget": {
+                "description": "widget type, only Ring supported for now",
+                "$ref": "#AllWidgets"
+              }
+            }
+          }
+        },
+        "gap": {
+          "description": "gap between each widget",
+          "type": "number",
+          "minimum": 0
+        },
+        "frame_rate": {
+          "$ref": "#UtilCommon/properties/frame_rate"
+        },
+        "extra_trigger_size": {
+          "$ref": "#UtilCommon/properties/extra_trigger_size"
+        },
+        "transition_duration": {
+          "$ref": "#UtilCommon/properties/transition_duration"
+        },
+        "outloook": {
+          "oneOf": [{ "$ref": "#BoxOutlookWindow" }]
+        }
+      }
     }
   }
 }

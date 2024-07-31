@@ -16,9 +16,9 @@ pub struct OutlookWindowConfig {
     pub margins: Option<[f64; 4]>,
     #[serde(default = "dt_color")]
     #[serde(deserialize_with = "common::color_translate")]
-    pub border_color: RGBA,
+    pub color: RGBA,
     #[serde(default = "dt_radius")]
-    pub radius: f64,
+    pub border_radius: f64,
     #[serde(default = "dt_border_width")]
     pub border_width: f64,
 }

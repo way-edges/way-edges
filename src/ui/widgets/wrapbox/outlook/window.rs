@@ -37,8 +37,8 @@ pub struct BoxOutlookWindow {
 impl BoxOutlookWindow {
     pub fn redraw(&mut self, content_size: (f64, f64)) {
         let margins = self.config.margins;
-        let border_color = self.config.border_color;
-        let radius = self.config.radius;
+        let color = self.config.color;
+        let border_radius = self.config.border_radius;
         let border_width = self.config.border_width;
 
         let ([content_box_size, size, startoff_point], margins) =
@@ -47,7 +47,7 @@ impl BoxOutlookWindow {
             let mut shade = RGBA::BLACK;
             shade.set_alpha(0.2);
             let one = shade;
-            let two = border_color;
+            let two = color;
             let a = 1. - (1. - one.alpha()) * (1. - two.alpha());
             let r = (one.red() * one.alpha() + two.red() * two.alpha() * (1. - one.alpha())) / a;
             let g =
@@ -60,11 +60,11 @@ impl BoxOutlookWindow {
             move |s: (i32, i32)| ImageSurface::create(Format::ARgb32, s.0, s.1).unwrap();
 
         let (border_path, border) = {
-            let path = draw_rect_path(radius, size, [false, true, true, false]).unwrap();
+            let path = draw_rect_path(border_radius, size, [false, true, true, false]).unwrap();
             let map_size = (size.0.ceil() as i32, size.1.ceil() as i32);
             let surf = new_surface(map_size);
             let ctx = cairo::Context::new(&surf).unwrap();
-            ctx.set_source_color(&border_color);
+            ctx.set_source_color(&color);
             ctx.append_path(&path);
             ctx.fill().unwrap();
             (path, surf)
@@ -75,7 +75,8 @@ impl BoxOutlookWindow {
                 content_box_size.0.ceil() as i32,
                 content_box_size.1.ceil() as i32,
             );
-            let path = draw_rect_path(radius, content_box_size, [true, true, true, true]).unwrap();
+            let path =
+                draw_rect_path(border_radius, content_box_size, [true, true, true, true]).unwrap();
             let bg_surf = {
                 let surf = new_surface(map_size);
                 let ctx = cairo::Context::new(&surf).unwrap();

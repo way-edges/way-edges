@@ -4,20 +4,8 @@
     "numOrPercentage": {
       "$ref": "https://raw.githubusercontent.com/ogios/way-edges/master/config/defs.schema.json#UtilNumOrPercentage"
     },
-    "BtnWidget": {
-      "$ref": "https://raw.githubusercontent.com/ogios/way-edges/master/config/defs.schema.json#BtnWidget"
-    },
-    "SlideWidget": {
-      "$ref": "https://raw.githubusercontent.com/ogios/way-edges/master/config/defs.schema.json#SlideWidget"
-    },
-    "SpeakerWidget": {
-      "$ref": "https://raw.githubusercontent.com/ogios/way-edges/master/config/defs.schema.json#Speaker"
-    },
-    "MicrophoneWidget": {
-      "$ref": "https://raw.githubusercontent.com/ogios/way-edges/master/config/defs.schema.json#Microphone"
-    },
-    "BacklightWidget": {
-      "$ref": "https://raw.githubusercontent.com/ogios/way-edges/master/config/defs.schema.json#Backlight"
+    "AllWidgets": {
+      "$ref": "https://raw.githubusercontent.com/ogios/way-edges/master/config/defs.schema.json#AllWidgets"
     }
   },
   "title": "way-edges config",
@@ -88,23 +76,7 @@
                 },
                 "widget": {
                   "description": "Select one widget type",
-                  "oneOf": [
-                    {
-                      "$ref": "#/definitions/BtnWidget"
-                    },
-                    {
-                      "$ref": "#/definitions/SpeakerWidget"
-                    },
-                    {
-                      "$ref": "#/definitions/MicrophoneWidget"
-                    },
-                    {
-                      "$ref": "#/definitions/SlideWidget"
-                    },
-                    {
-                      "$ref": "#/definitions/BacklightWidget"
-                    }
-                  ]
+                  "$ref": "#/definitions/AllWidgets"
                 }
               }
             }
