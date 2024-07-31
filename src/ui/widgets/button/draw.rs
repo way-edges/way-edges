@@ -29,8 +29,9 @@ pub fn setup_draw(
     let darea = DrawingArea::new();
     let size = btn_cfg.get_size()?;
     let edge = cfg.edge;
-    let extra_trigger_size = btn_cfg.extra_trigger_size.get_num_into()?;
-    let map_size = ((size.0 + extra_trigger_size) as i32, size.1 as i32);
+    // let extra_trigger_size = btn_cfg.extra_trigger_size.get_num_into()?;
+    // let map_size = ((size.0 + extra_trigger_size) as i32, size.1 as i32);
+    let map_size = (size.0 as i32, size.1 as i32);
     match edge {
         Edge::Left | Edge::Right => {
             darea.set_width_request(map_size.0);

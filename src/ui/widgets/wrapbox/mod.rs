@@ -127,7 +127,7 @@ pub fn init_widget(
                 | (Edge::Right, Edge::Top)
                 | (Edge::Right, Edge::Bottom)
                 | (Edge::Top, Edge::Right)
-                | (Edge::Bottom, Edge::Right) => darea.width() - wh.0,
+                | (Edge::Bottom, Edge::Right) => ((wh.0 as f64) * (1. - ts_y)) as i32,
                 (Edge::Top, Edge::Top)
                 | (Edge::Top, Edge::Bottom)
                 | (Edge::Bottom, Edge::Top)
@@ -212,7 +212,6 @@ pub fn init_widget(
 
                     let mut inr = match_rect(&darea, wh, y);
                     input_region.set(inr);
-                    println!("set input region: {inr:?}");
 
                     // NOTE: INR ISSURE WITH LEFT AND RIGHT
                     match edge {
@@ -223,9 +222,17 @@ pub fn init_widget(
                             inr.set_y(inr.y() - extra_trigger_size as i32);
                             inr.set_height(inr.height() + extra_trigger_size as i32);
                         }
+                        Edge::Left => {
+                            inr.set_width(inr.width() + extra_trigger_size as i32);
+                        }
+                        Edge::Right => {
+                            inr.set_x(inr.x() - extra_trigger_size as i32);
+                            inr.set_width(inr.width() + extra_trigger_size as i32);
+                        }
                         _ => {}
                     }
 
+                    println!("set input region: {inr:?}");
                     if let Some(surf) = window.surface() {
                         surf.set_input_region(&Region::create_rectangle(&inr));
                     }

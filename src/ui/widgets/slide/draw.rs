@@ -46,7 +46,8 @@ pub fn setup_draw(
     let edge = cfg.edge;
     let direction = slide_cfg.progress_direction;
     let extra_trigger_size = slide_cfg.extra_trigger_size.get_num()?;
-    let f_map_size = (size.0 + extra_trigger_size, size.1);
+    // let f_map_size = (size.0 + extra_trigger_size, size.1);
+    let f_map_size = (size.0, size.1);
     let map_size = (f_map_size.0 as i32, f_map_size.1 as i32);
     match edge {
         Edge::Left | Edge::Right => {

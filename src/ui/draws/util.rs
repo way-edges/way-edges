@@ -38,11 +38,13 @@ pub fn draw_motion(
     range: (f64, f64),
     extra_trigger_size: f64,
 ) {
-    let offset: f64 = match edge {
-        Edge::Right | Edge::Bottom => extra_trigger_size,
-        _ => 0.,
-    };
-    ctx.translate(-range.1 + visible_y - offset, 0.);
+    // let offset: f64 = match edge {
+    //     Edge::Right | Edge::Bottom => extra_trigger_size,
+    //     _ => 0.,
+    // };
+    // println!("offset: {}", offset);
+    // ctx.translate(-range.1 + visible_y - offset, 0.);
+    ctx.translate(-range.1 + visible_y, 0.);
 }
 
 pub fn ensure_frame_manager(frame_manager: &mut FrameManager, y: f64) {
