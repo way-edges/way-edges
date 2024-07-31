@@ -24,9 +24,6 @@ pub fn draw_rect_path(radius: f64, size: (f64, f64), corners: [bool; 4]) -> Resu
             .unwrap();
     let ctx = cairo::Context::new(&surf).unwrap();
 
-    // calculate
-    let acute_angel = 90.;
-
     // draw
     {
         // top left corner
