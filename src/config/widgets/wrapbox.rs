@@ -48,7 +48,7 @@ pub struct BoxedWidgetConfig {
 
 #[derive(Deserialize, Debug)]
 pub struct BoxSelf {
-    #[serde(default)]
+    #[serde(default = "dt_gap")]
     pub gap: f64,
     #[serde(default = "common::dt_extra_trigger_size")]
     pub extra_trigger_size: NumOrRelative,
@@ -56,6 +56,10 @@ pub struct BoxSelf {
     pub transition_duration: u64,
     #[serde(default = "common::dt_frame_rate")]
     pub frame_rate: u32,
+}
+
+fn dt_gap() -> f64 {
+    10.
 }
 
 #[derive(Debug)]
