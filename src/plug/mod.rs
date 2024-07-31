@@ -1,5 +1,6 @@
 pub mod backlight;
 pub mod pulseaudio;
+pub mod system;
 
 pub mod common {
     use std::{process::Command, thread};
