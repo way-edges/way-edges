@@ -15,11 +15,7 @@ https://github.com/ogios/way-edges/assets/96933655/98219132-b37e-4d8d-9b4a-01c64
 - [x] margin
 - [x] watch file & hot reload
 - [x] modulize mouse event
-- [-] relative height
-  - ~~check if on_size_change signal works~~ no need.
-  - get available working area(~~how?~~ each compositor specific)
-  - ~~every draw process should be initialized within draw func, record and compare height in each draw call. (lots of code rewrite)~~ no need.
-- [-] wayland compositor specific relative height as features(including exclusive zone calculation)
+- [-] relative height(wayland compositor specific relative height as features(including exclusive zone calculation))
 - [ ] ease-in & ease-out button motion curve
 - [ ] widgets
   - [x] Button
@@ -27,11 +23,12 @@ https://github.com/ogios/way-edges/assets/96933655/98219132-b37e-4d8d-9b4a-01c64
   - [x] PulseAudio(Speaker, Microphone)
     - [x] allow specify device(only default for now)
   - [x] Brightness
-  - [-] Ring progress(for cpu/ram... status)
+  - [x] Ring progress(for cpu/ram... status)
   - [x] Box
-  - [ ] Hyprland Workspaces
   - [ ] Time
   - [ ] Tray
+  - [ ] Hyprland Workspaces
+- [ ] CLI
 - [ ] ?multiple click & long press & release event(Buttom widget)
 - [ ] ?hover event(only bind with transition, not necessary - for now)
 - [ ] ?button click effects optimization(gradience)
