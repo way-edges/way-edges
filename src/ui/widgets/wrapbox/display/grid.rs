@@ -4,9 +4,12 @@ use std::{
     rc::Rc,
 };
 
-use crate::ui::{
-    draws::{mouse_state::MouseEvent, util::Z},
-    widgets::wrapbox::MousePosition,
+use crate::{
+    config::widgets::wrapbox::Align,
+    ui::{
+        draws::{mouse_state::MouseEvent, util::Z},
+        widgets::wrapbox::MousePosition,
+    },
 };
 use gtk::gdk::cairo::{self, Format, ImageSurface};
 
@@ -37,13 +40,15 @@ pub struct GridBox {
     pub ws: GridMap,
     pub row_col_num: (usize, usize),
     pub gap: f64,
+    pub align: Align,
 }
 impl GridBox {
-    pub fn new(gap: f64) -> Self {
+    pub fn new(gap: f64, align: Align) -> Self {
         Self {
             ws: vec![],
             row_col_num: (0, 0),
             gap,
+            align,
         }
     }
 
@@ -189,10 +194,14 @@ impl GridBox {
                 // let pos = (position_x, position_y);
                 let mut w = w.borrow_mut();
                 let content_size = w.get_size();
-                let pos = (
-                    position_x + (size.0 - content_size.0) / 2.,
-                    position_y + (size.1 - content_size.1) / 2.,
-                );
+
+                // TEST:
+                let pos_x = match self.align {
+                    Align::Left => position_x,
+                    Align::Center => position_x + (size.0 - content_size.0) / 2.,
+                    Align::Right => position_x + (size.0 - content_size.0),
+                };
+                let pos = (pos_x, position_y + (size.1 - content_size.1) / 2.);
                 let content = w.content();
 
                 {

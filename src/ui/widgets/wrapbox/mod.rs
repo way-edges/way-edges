@@ -1,12 +1,10 @@
 use std::cell::Cell;
-use std::str::FromStr;
 use std::time::Duration;
 use std::{cell::RefCell, rc::Rc};
 
 use async_channel::{Receiver, Sender};
 use cairo::{ImageSurface, RectangleInt, Region};
 use display::grid::{BoxedWidgetRc, GridBox, GridItemSizeMapRc};
-use gtk::gdk::RGBA;
 use gtk::glib;
 use gtk::prelude::NativeExt;
 use gtk::prelude::{DrawingAreaExtManual, GtkWindowExt, SurfaceExt, WidgetExt};
@@ -72,7 +70,7 @@ pub fn init_widget(
     let darea = DrawingArea::new();
 
     let (mut ol, expose, mut disp, update_signal_receiver) = {
-        let mut disp = display::grid::GridBox::new(box_conf.box_conf.gap);
+        let mut disp = display::grid::GridBox::new(box_conf.box_conf.gap, box_conf.box_conf.align);
         let (expose, update_signal_receiver) = BoxExpose::new();
         init_boxed_widgets(&mut disp, expose.clone(), box_conf.widgets);
         let ol = match box_conf.outlook {
@@ -213,7 +211,6 @@ pub fn init_widget(
                     let mut inr = match_rect(&darea, wh, y);
                     input_region.set(inr);
 
-                    // NOTE: INR ISSURE WITH LEFT AND RIGHT
                     match edge {
                         Edge::Top => {
                             inr.set_height(inr.height() + extra_trigger_size as i32);
@@ -245,43 +242,39 @@ pub fn init_widget(
         (outlook_rc, buf, filtered_grid_item_map, input_region)
     };
 
-    darea.set_draw_func(glib::clone!(
-        #[weak]
-        window,
-        move |darea, ctx, _, _| {
-            if let Some(buf) = buf.take() {
-                let size = (buf.content.width() as f64, buf.content.height() as f64);
-                let range = (0., size.0);
-                let visible_y = transition_state::calculate_transition(buf.y, range);
-                draw_rotation(ctx, edge, size);
-                match edge {
-                    Edge::Top => match position {
-                        Edge::Right => {
-                            ctx.translate(0., -(darea.width() as f64 - size.1));
-                        }
-                        Edge::Top | Edge::Bottom => {
-                            ctx.translate(0., -(darea.width() as f64 - size.1) / 2.);
-                        }
-                        _ => {}
-                    },
-                    Edge::Bottom => match position {
-                        Edge::Right => {
-                            ctx.translate(0., darea.width() as f64 - size.1);
-                        }
-                        Edge::Top | Edge::Bottom => {
-                            ctx.translate(0., (darea.width() as f64 - size.1) / 2.);
-                        }
-                        _ => {}
-                    },
+    darea.set_draw_func(move |darea, ctx, _, _| {
+        if let Some(buf) = buf.take() {
+            let size = (buf.content.width() as f64, buf.content.height() as f64);
+            let range = (0., size.0);
+            let visible_y = transition_state::calculate_transition(buf.y, range);
+            draw_rotation(ctx, edge, size);
+            match edge {
+                Edge::Top => match position {
+                    Edge::Right => {
+                        ctx.translate(0., -(darea.width() as f64 - size.1));
+                    }
+                    Edge::Top | Edge::Bottom => {
+                        ctx.translate(0., -(darea.width() as f64 - size.1) / 2.);
+                    }
                     _ => {}
-                };
-                draw_motion(ctx, visible_y, edge, range, extra_trigger_size);
+                },
+                Edge::Bottom => match position {
+                    Edge::Right => {
+                        ctx.translate(0., darea.width() as f64 - size.1);
+                    }
+                    Edge::Top | Edge::Bottom => {
+                        ctx.translate(0., (darea.width() as f64 - size.1) / 2.);
+                    }
+                    _ => {}
+                },
+                _ => {}
+            };
+            draw_motion(ctx, visible_y, edge, range, extra_trigger_size);
 
-                ctx.set_source_surface(&buf.content, Z, Z).unwrap();
-                ctx.paint().unwrap()
-            }
+            ctx.set_source_surface(&buf.content, Z, Z).unwrap();
+            ctx.paint().unwrap()
         }
-    ));
+    });
 
     event_handle(
         &darea,

@@ -46,10 +46,20 @@ pub struct BoxedWidgetConfig {
     pub widget: Widget,
 }
 
+#[derive(Deserialize, Debug, Default, Clone, Copy)]
+pub enum Align {
+    #[default]
+    Left,
+    Center,
+    Right,
+}
+
 #[derive(Deserialize, Debug)]
 pub struct BoxSelf {
     #[serde(default = "dt_gap")]
     pub gap: f64,
+    #[serde(default)]
+    pub align: Align,
     #[serde(default = "common::dt_extra_trigger_size")]
     pub extra_trigger_size: NumOrRelative,
     #[serde(default = "common::dt_transition_duration")]
