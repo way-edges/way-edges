@@ -34,9 +34,7 @@ https://github.com/user-attachments/assets/37d267cb-1cb4-44b4-81a8-8ac02bb741cb
   - [ ] Tray
   - [ ] Hyprland Workspaces
 - [ ] CLI
-- [ ] ?multiple click & long press & release event(Buttom widget)
-- [ ] ?hover event(only bind with transition, not necessary - for now)
-- [ ] ?button click effects optimization(gradience)
+- [ ] ?multiple click & long press & release event(Button widget)
 - [ ] ~~?buttom size calculation, arrangement and overlap(should this be considered?)~~
 
 ## Configuration
