@@ -4,18 +4,23 @@ mod pre_draw;
 
 use crate::activate::get_monior_size;
 use crate::config::{widgets::button::BtnConfig, Config, NumOrRelative};
+use crate::ui::{WidgetExpose, WidgetExposePtr};
 use gtk::ApplicationWindow;
 use gtk4_layer_shell::Edge;
 
 use super::common;
 
+struct ButtonWidgetExpose;
+impl WidgetExpose for ButtonWidgetExpose {}
+
 pub fn init_widget(
     window: &ApplicationWindow,
     config: Config,
     mut btn_config: BtnConfig,
-) -> Result<gtk::DrawingArea, String> {
+) -> Result<WidgetExposePtr, String> {
     calculate_rel(&config, &mut btn_config)?;
-    draw::setup_draw(window, config, btn_config)
+    draw::setup_draw(window, config, btn_config)?;
+    Ok(Box::new(ButtonWidgetExpose))
 }
 
 fn calculate_rel(config: &Config, btn_config: &mut BtnConfig) -> Result<(), String> {

@@ -32,6 +32,8 @@ pub struct RawConfig {
     #[serde(default)]
     pub margin: RawMargins,
 
+    #[serde(default)]
+    pub name: String,
     pub widget: Value,
 }
 fn dt_edge() -> String {

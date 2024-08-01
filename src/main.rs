@@ -9,7 +9,6 @@ use std::time::Duration;
 use std::{process, thread};
 
 use activate::WindowDestroyer;
-use activate::WindowInitializer;
 use async_channel::Receiver;
 use file_watch::*;
 use gio::glib::idle_add_local_once;
@@ -18,6 +17,10 @@ use gtk::glib;
 use gtk::Application;
 use log::debug;
 use notify_rust::Notification;
+
+const TEMP_DIR: &str = "/tmp/way-edges";
+const LOCK_FILE: &str = "way-edges.lock";
+const SOCK_FILE: &str = "way-edges.sock";
 
 fn init_app(app: &Application, reload_signal_receiver: &Receiver<i32>) {
     let args = args::get_args();

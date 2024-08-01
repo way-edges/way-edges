@@ -1,17 +1,24 @@
 use crate::config::{self, Config};
 
+use gio::glib::WeakRef;
 use gtk::{
-    gdk::Monitor, prelude::*, Application, CssProvider, STYLE_PROVIDER_PRIORITY_APPLICATION,
+    gdk::Monitor, prelude::*, Application, ApplicationWindow, CssProvider,
+    STYLE_PROVIDER_PRIORITY_APPLICATION,
 };
 use gtk4_layer_shell::LayerShell;
 
 use super::widgets;
 
+pub struct WidgetCtx {
+    pub window: WeakRef<ApplicationWindow>,
+    pub widget_expose: WidgetExposePtr,
+}
+
 pub fn new_window(
     app: &Application,
     mut config: Config,
     monitor: &Monitor,
-) -> Result<gtk::ApplicationWindow, String> {
+) -> Result<WidgetCtx, String> {
     let window = gtk::ApplicationWindow::new(app);
 
     // init layer
@@ -39,31 +46,29 @@ pub fn new_window(
         );
     });
 
-    // TEST:
-    // widgets::wrapbox::init_widget(&window);
-    // return Ok(window);
-
     // margin
     std::mem::take(&mut config.margins)
         .into_iter()
         .try_for_each(|(e, m)| -> Result<(), String> {
             window.set_margin(e, m.get_num_into()? as i32);
             Ok(())
-        })
-        .and_then(|_| match config.widget.take().ok_or("Widget is None")? {
-            config::Widget::Btn(c) => widgets::button::init_widget(&window, config, *c).map(|_| ()),
-            config::Widget::Slider(c) => {
-                widgets::slide::init_widget(&window, config, *c).map(|_| ())
-            }
-            config::Widget::PulseAudio(c) => {
-                widgets::pulseaudio::init_widget(&window, config, *c).map(|_| ())
-            }
-            config::Widget::Backlight(c) => {
-                widgets::backlight::init_widget(&window, config, *c).map(|_| ())
-            }
-            config::Widget::WrapBox(c) => widgets::wrapbox::init_widget(&window, config, *c),
-            _ => unreachable!(),
         })?;
+    let widget = match config.widget.take().ok_or("Widget is None")? {
+        config::Widget::Btn(c) => widgets::button::init_widget(&window, config, *c),
+        config::Widget::Slider(c) => widgets::slide::init_widget(&window, config, *c),
+        config::Widget::PulseAudio(c) => widgets::pulseaudio::init_widget(&window, config, *c),
+        config::Widget::Backlight(c) => widgets::backlight::init_widget(&window, config, *c),
+        config::Widget::WrapBox(c) => widgets::wrapbox::init_widget(&window, config, *c),
+        _ => return Err("Unsupported window widget".to_string()),
+    }?;
 
-    Ok(window)
+    Ok(WidgetCtx {
+        window: window.downgrade(),
+        widget_expose: widget,
+    })
+}
+
+pub type WidgetExposePtr = Box<dyn WidgetExpose>;
+pub trait WidgetExpose {
+    fn toggle_pin(&self) {}
 }

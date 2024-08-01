@@ -165,6 +165,7 @@ pub struct Config {
     pub monitor: MonitorSpecifier,
     pub margins: Vec<(Edge, NumOrRelative)>,
 
+    pub name: String,
     pub widget: Option<Widget>,
 }
 

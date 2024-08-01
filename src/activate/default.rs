@@ -1,17 +1,14 @@
-#![cfg(not(feature = "hyprland"))]
+// #![cfg(not(feature = "hyprland"))]
 
-use super::{calculate_config_relative, create_widgets, find_monitor, take_monitor, WidgetItem};
-use crate::config::GroupConfig;
-use gtk::{
-    prelude::{GtkWindowExt, MonitorExt},
-    ApplicationWindow,
+use super::{
+    calculate_config_relative, create_widgets, find_monitor, take_monitor, WidgetItem, WidgetMap,
 };
+use crate::config::GroupConfig;
+use gtk::prelude::{GtkWindowExt, MonitorExt};
 
-#[derive(Clone)]
-// pub struct Default(Rc<Cell<Vec<ApplicationWindow>>>);
-pub struct Default(Vec<ApplicationWindow>);
-impl super::WindowInitializer for Default {
-    fn init_window(app: &gtk::Application, cfgs: GroupConfig) -> Result<Self, String> {
+pub struct Default(WidgetMap);
+impl Default {
+    pub fn init_window(app: &gtk::Application, cfgs: GroupConfig) -> Result<Self, String> {
         let res = take_monitor().and_then(|monitors| {
             let btis: Vec<WidgetItem> = cfgs
                 .into_iter()
@@ -33,6 +30,10 @@ impl super::WindowInitializer for Default {
 }
 impl super::WindowDestroyer for Default {
     fn close_window(self) {
-        self.0.into_iter().for_each(|w| w.close());
+        self.0.into_iter().for_each(|(_, v)| {
+            if let Some(w) = v.window.upgrade() {
+                w.close()
+            }
+        });
     }
 }

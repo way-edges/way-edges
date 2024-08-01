@@ -17,9 +17,11 @@ use crate::config::Config;
 use crate::ui::draws::frame_manager::FrameManager;
 use crate::ui::draws::mouse_state::{
     new_mouse_event_func, new_mouse_state, new_translate_mouse_state, MouseEvent,
+    TranslateStateExpose, TranslateStateRc,
 };
 use crate::ui::draws::transition_state::{self, TransitionState, TransitionStateRc};
 use crate::ui::draws::util::{draw_motion, draw_rotation, ensure_frame_manager, new_surface, Z};
+use crate::ui::WidgetExposePtr;
 
 use super::ring::init_ring;
 
@@ -62,7 +64,7 @@ pub fn init_widget(
     window: &gtk::ApplicationWindow,
     conf: Config,
     box_conf: BoxConfig,
-) -> Result<(), String> {
+) -> Result<WidgetExposePtr, String> {
     let edge = conf.edge;
     let position = conf.position.unwrap();
     let extra_trigger_size = box_conf.box_conf.extra_trigger_size.get_num_into().unwrap();
@@ -276,7 +278,7 @@ pub fn init_widget(
         }
     });
 
-    event_handle(
+    let tls = event_handle(
         &darea,
         expose.clone(),
         filtered_grid_item_map,
@@ -292,7 +294,7 @@ pub fn init_widget(
         expose.borrow().update_signal.close();
     });
     window.set_child(Some(&darea));
-    Ok(())
+    Ok(Box::new(TranslateStateExpose::new(Rc::downgrade(&tls))))
 }
 
 fn event_handle(
@@ -302,7 +304,7 @@ fn event_handle(
     outlook_rc: BoxOutlookWindowRc,
     ts: TransitionStateRc,
     input_region: Rc<Cell<RectangleInt>>,
-) {
+) -> TranslateStateRc {
     let ms = new_mouse_state(darea);
     let mut last_widget: Option<BoxedWidgetRc> = None;
     let cb = {
@@ -342,8 +344,9 @@ fn event_handle(
             };
         })
     };
-    let cb = new_translate_mouse_state(ts, ms.clone(), Some(cb), false);
+    let (cb, tls) = new_translate_mouse_state(ts, ms.clone(), Some(cb), false);
     ms.borrow_mut().set_event_cb(cb);
+    tls
 }
 
 fn init_boxed_widgets(bx: &mut GridBox, expose: BoxExposeRc, ws: Vec<BoxedWidgetConfig>) {

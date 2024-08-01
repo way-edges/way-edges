@@ -13,7 +13,10 @@ use crate::{
     plug::pulseaudio::{
         register_callback, set_mute, set_vol, unregister_callback, OptionalSinkOrSource,
     },
-    ui::draws::transition_state::TransitionState,
+    ui::{
+        draws::{mouse_state::TranslateStateExpose, transition_state::TransitionState},
+        WidgetExposePtr,
+    },
 };
 use gtk::{gdk::RGBA, prelude::WidgetExt, ApplicationWindow};
 
@@ -23,7 +26,7 @@ pub fn init_widget(
     window: &ApplicationWindow,
     config: Config,
     mut pa_conf: PAConfig,
-) -> Result<(), String> {
+) -> Result<WidgetExposePtr, String> {
     let (debug_name, sos) = match pa_conf.is_sink {
         true => (
             NAME_SINK,
@@ -77,6 +80,7 @@ pub fn init_widget(
             },
         )?
     };
+    let pa_expose = TranslateStateExpose::new(exposed.tls.clone());
     let cb_key = register_callback(
         Box::new(move |vinfo| {
             if let Some(p) = exposed.progress.upgrade() {
@@ -91,10 +95,6 @@ pub fn init_widget(
                 exposed.darea.upgrade().unwrap().queue_draw();
             }
         }),
-        // Some(glib::clone!(#[strong] window , move |s| {
-        //     log::error!("Received error from pulseaudio, closing window: {s}");
-        //     window.close();
-        // })),
         sos,
     )?;
     log::debug!("registered pa callback for {debug_name}: {cb_key}");
@@ -103,7 +103,7 @@ pub fn init_widget(
         log::debug!("unregister pa callback for {debug_name}: {cb_key}");
         unregister_callback(cb_key);
     });
-    Ok(())
+    Ok(Box::new(pa_expose))
 }
 
 fn color_transition(start_color: RGBA, stop_color: RGBA, v: f32) -> RGBA {

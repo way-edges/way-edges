@@ -4,6 +4,7 @@ use super::conf::*;
 use super::raw::*;
 use super::widgets;
 
+use gio::glib::uuid_string_random;
 use gtk4_layer_shell::{Edge, Layer};
 use serde_jsonrc::Value;
 
@@ -76,6 +77,13 @@ pub fn raw_2_conf(raw: RawGroup) -> Result<GroupConfig, String> {
                 }
                 m
             };
+            let name = {
+                if raw.name.is_empty() {
+                    uuid_string_random().to_string()
+                } else {
+                    raw.name
+                }
+            };
             let widget = parse_widget(raw.widget)?;
 
             Ok(Config {
@@ -84,6 +92,7 @@ pub fn raw_2_conf(raw: RawGroup) -> Result<GroupConfig, String> {
                 layer,
                 monitor,
                 margins,
+                name,
                 widget: Some(widget),
             })
         })
