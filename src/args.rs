@@ -1,6 +1,6 @@
 use std::sync::OnceLock;
 
-use clap::Parser;
+use clap::{Parser, Subcommand};
 
 /// shit
 #[derive(Debug, Parser)]
@@ -14,6 +14,14 @@ pub struct Cli {
     /// whether enable mouse click output
     #[arg(short = 'd', long)]
     pub mouse_debug: bool,
+
+    #[command(subcommand)]
+    pub command: Command,
+}
+#[derive(Subcommand, Debug, PartialEq, Clone)]
+pub enum Command {
+    #[command(name = "daemon", alias = "d")]
+    Daemon,
 }
 
 static ARGS: OnceLock<Cli> = OnceLock::new();

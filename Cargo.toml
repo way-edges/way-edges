@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+notify = { version = "6.1.1", default-features = false }
 gtk4-layer-shell = "0.4"
 gtk = { package = "gtk4", version = "0.9", features = ["v4_12", "v4_14"] }
 gio = "0.20"
@@ -22,7 +23,6 @@ log = "0.4.22"
 env_logger = "0.11.3"
 notify-rust = "4.11.0"
 scopeguard = "1.2.0"
-notify = "6.1.1"
 async-channel = "2.3.1"
 notify-debouncer-mini = "0.4.1"
 cairo-rs = { version = "0.20", features = ["freetype", "freetype-rs", "png"] }

@@ -18,13 +18,80 @@ use gtk::Application;
 use log::debug;
 use notify_rust::Notification;
 
-fn main() {
-    // env_logger::builder().format_suffix("\n\n").init();
-    env_logger::init();
-    // for cmd line help msg.
-    // or else it will show help from `gtk` other than `clap`
-    args::get_args();
+fn init_app(app: &Application, reload_signal_receiver: &Receiver<i32>) {
+    let args = args::get_args();
+    debug!("Parsed Args: {:?}", args);
+    let cfgs = match config::take_config() {
+        Ok(v) => v,
+        Err(e) => {
+            notify_send(
+                "Way-edges config",
+                &format!("Failed to load config: {e}"),
+                true,
+            );
+            app.quit();
+            return;
+        }
+    };
+    // let cfgs = config::match_group_config(group_map, &args.group);
+    debug!("Parsed Config: {cfgs:?}");
+    if let Err(e) = activate::init_monitor() {
+        notify_send(
+            "Way-edges monitor",
+            &format!("Failed to init monitor: {e}"),
+            true,
+        );
+        app.quit();
+        return;
+    };
+    let res = {
+        #[cfg(feature = "hyprland")]
+        {
+            use activate::hyprland::Hyprland;
+            Hyprland::init_window(app, cfgs)
+        }
+        #[cfg(not(feature = "hyprland"))]
+        {
+            use activate::default::Default;
+            Default::init_window(app, cfgs)
+        }
+    };
+    let window_destroyer = match res {
+        Ok(v) => v,
+        Err(e) => {
+            log::error!("{e}");
+            crate::notify_send("Way-edges app error", &e, true);
+            app.quit();
+            return;
+        }
+    };
 
+    glib::spawn_future_local(glib::clone!(
+        #[weak_allow_none]
+        app,
+        #[strong(rename_to = r)]
+        reload_signal_receiver,
+        async move {
+            if let Ok(s) = r.recv().await {
+                debug!("receive reload signal: {s}");
+                log::info!("Received reload signal, quiting..");
+                if let Some(app) = app {
+                    window_destroyer.close_window();
+                    idle_add_local_once(glib::clone!(
+                        #[weak]
+                        app,
+                        move || {
+                            debug!("Quit app");
+                            app.quit();
+                        }
+                    ));
+                }
+            }
+        }
+    ));
+}
+
+fn daemon() {
     // set renderer explicitly to cairo instead of ngl
     std::env::set_var("GSK_RENDERER", "cairo");
 
@@ -114,78 +181,19 @@ fn main() {
     }
 }
 
-fn init_app(app: &Application, reload_signal_receiver: &Receiver<i32>) {
-    let args = args::get_args();
-    debug!("Parsed Args: {:?}", args);
-    let cfgs = match config::take_config() {
-        Ok(v) => v,
-        Err(e) => {
-            notify_send(
-                "Way-edges config",
-                &format!("Failed to load config: {e}"),
-                true,
-            );
-            app.quit();
-            return;
-        }
-    };
-    // let cfgs = config::match_group_config(group_map, &args.group);
-    debug!("Parsed Config: {cfgs:?}");
-    if let Err(e) = activate::init_monitor() {
-        notify_send(
-            "Way-edges monitor",
-            &format!("Failed to init monitor: {e}"),
-            true,
-        );
-        app.quit();
-        return;
-    };
-    let res = {
-        #[cfg(feature = "hyprland")]
-        {
-            use activate::hyprland::Hyprland;
-            Hyprland::init_window(app, cfgs)
-        }
-        #[cfg(not(feature = "hyprland"))]
-        {
-            use activate::default::Default;
-            Default::init_window(app, cfgs)
-        }
-    };
-    let window_destroyer = match res {
-        Ok(v) => v,
-        Err(e) => {
-            log::error!("{e}");
-            crate::notify_send("Way-edges app error", &e, true);
-            app.quit();
-            return;
-        }
-    };
+fn main() {
+    env_logger::init();
 
-    glib::spawn_future_local(glib::clone!(
-        #[weak_allow_none]
-        app,
-        #[strong(rename_to = r)]
-        reload_signal_receiver,
-        async move {
-            if let Ok(s) = r.recv().await {
-                debug!("receive reload signal: {s}");
-                log::info!("Received reload signal, quiting..");
-                if let Some(app) = app {
-                    window_destroyer.close_window();
-                    idle_add_local_once(glib::clone!(
-                        #[weak]
-                        app,
-                        move || {
-                            debug!("Quit app");
-                            app.quit();
-                        }
-                    ));
-                }
-            }
+    // for cmd line help msg.
+    // or else it will show help from `gtk` other than `clap`
+    let cmd = args::get_args();
+    match cmd.command {
+        args::Command::Daemon => {
+            daemon();
         }
-    ));
+    }
 }
+
 pub fn notify_send(summary: &str, body: &str, is_critical: bool) {
     let mut n = Notification::new();
     n.summary(summary);
