@@ -5,6 +5,7 @@ mod file_watch;
 mod plug;
 mod ui;
 
+use std::time::Duration;
 use std::{process, thread};
 
 use activate::WindowDestroyer;
@@ -91,7 +92,7 @@ fn init_app(app: &Application, reload_signal_receiver: &Receiver<i32>) {
     ));
 }
 
-fn daemon() {
+async fn daemon() {
     // set renderer explicitly to cairo instead of ngl
     std::env::set_var("GSK_RENDERER", "cairo");
 
@@ -100,88 +101,110 @@ fn daemon() {
     let (reload_signal_sender, reload_signal_receiver) = async_channel::bounded::<i32>(1);
     let (continue_sender, continue_receiver) = async_channel::bounded(1);
 
-    thread::spawn(move || loop {
-        debug!("wait for config file change");
-        if let Err(e) = file_change_signal_receiver.recv_blocking() {
-            let msg = format!("File change signal Error: {e}");
-            log::error!("{msg}");
-            notify_send("Way-edges file change signal", &msg, true);
-            process::exit(1);
-        } else {
-            debug!("Receive file change signal");
-            if let Err(e) = reload_signal_sender.try_send(0) {
-                log::error!("Reload signal send Error: {e}");
-            };
-            debug!("send continue signal");
-            if let Err(e) = continue_sender.send_blocking(()) {
-                let msg = format!("Reload conitnue siganl Error: {e}");
+    tokio::spawn(async move {
+        loop {
+            debug!("wait for config file change");
+            if let Err(e) = file_change_signal_receiver.recv_blocking() {
+                let msg = format!("File change signal Error: {e}");
                 log::error!("{msg}");
-                notify_send("Way-edges reload conitnue signal", &msg, true);
+                notify_send("Way-edges file change signal", &msg, true);
                 process::exit(1);
-            };
+            } else {
+                debug!("Receive file change signal");
+                if let Err(e) = reload_signal_sender.try_send(0) {
+                    log::error!("Reload signal send Error: {e}");
+                };
+                debug!("send continue signal");
+                if let Err(e) = continue_sender.send_blocking(()) {
+                    let msg = format!("Reload conitnue siganl Error: {e}");
+                    log::error!("{msg}");
+                    notify_send("Way-edges reload conitnue signal", &msg, true);
+                    process::exit(1);
+                };
+            }
         }
     });
 
-    #[allow(clippy::never_loop)]
-    loop {
-        stop_watch_file();
-        let res = config::init_config();
-        start_watch_file();
+    // this is where glib mainloop will be
+    let glib_mainloop = thread::spawn(move || {
+        loop {
+            stop_watch_file();
+            let res = config::init_config();
+            start_watch_file();
 
-        if let Err(e) = res {
-            log::error!("{e}");
-            notify_send("Way-edges init config", &e, true);
-        } else {
-            // that flag is for command line arguments
-            let application =
+            if let Err(e) = res {
+                log::error!("{e}");
+                notify_send("Way-edges init config", &e, true);
+            } else {
+                // that flag is for command line arguments
+                let application =
             // gtk::Application::new(Some("com.ogios.way-edges"), ApplicationFlags::HANDLES_OPEN);
             gtk::Application::new(None::<String>, ApplicationFlags::HANDLES_OPEN);
 
-            // when args passed, `open` will be signaled instead of `activate`
-            application.connect_open(glib::clone!(
-                #[strong(rename_to = r)]
-                reload_signal_receiver,
-                move |app, _, _| {
-                    debug!("connect open");
-                    init_app(app, &r);
-                }
-            ));
-            application.connect_activate(glib::clone!(
-                #[strong(rename_to = r)]
-                reload_signal_receiver,
-                move |app| {
-                    debug!("connect activate");
-                    init_app(app, &r);
-                }
-            ));
-            if application.run_with_args::<String>(&[]).value() == 1 {
+                // when args passed, `open` will be signaled instead of `activate`
+                application.connect_open(glib::clone!(
+                    #[strong(rename_to = r)]
+                    reload_signal_receiver,
+                    move |app, _, _| {
+                        debug!("connect open");
+                        init_app(app, &r);
+                    }
+                ));
+                application.connect_activate(glib::clone!(
+                    #[strong(rename_to = r)]
+                    reload_signal_receiver,
+                    move |app| {
+                        debug!("connect activate");
+                        init_app(app, &r);
+                    }
+                ));
+                if application.run_with_args::<String>(&[]).value() == 1 {
+                    notify_send(
+                        "Way-edges",
+                        "Application exit unexpectedly, it's likely a gtk4 issue",
+                        true,
+                    );
+                    break;
+                };
+            }
+
+            debug!("WAIT FOR CONITNUE...");
+            if continue_receiver.recv_blocking().is_err() {
                 notify_send(
-                    "Way-edges",
-                    "Application exit unexpectedly, it's likely a gtk4 issue",
+                    "Way-edges reload conitnue signal",
+                    "Channel exit unexpectedly",
                     true,
                 );
                 break;
-            };
-        }
+            }
+            log::debug!("Reload!!!");
+            notify_send("Way-edges", "App Reload", false);
 
-        debug!("WAIT FOR CONITNUE...");
-        if continue_receiver.recv_blocking().is_err() {
-            notify_send(
-                "Way-edges reload conitnue signal",
-                "Channel exit unexpectedly",
-                true,
-            );
-            break;
+            // clear reload channel
+            reload_signal_receiver.try_recv().ok();
         }
-        log::debug!("Reload!!!");
-        notify_send("Way-edges", "App Reload", false);
+    });
 
-        // clear reload channel
-        reload_signal_receiver.try_recv().ok();
+    thread::spawn(move || {
+        match glib_mainloop.join() {
+            Ok(_) => {}
+            Err(e) => {
+                let msg = format!("Glib mainloop Exit with error: {e:?}");
+                notify_send("Way-edges", msg.as_str(), true);
+                log::error!("{msg}");
+            }
+        }
+        process::exit(0);
+    });
+
+    // UnixListener later
+    loop {
+        tokio::time::sleep(Duration::from_secs(1)).await
     }
 }
 
-fn main() {
+#[tokio::main(flavor = "current_thread")]
+async fn main() {
     env_logger::init();
 
     // for cmd line help msg.
@@ -189,7 +212,7 @@ fn main() {
     let cmd = args::get_args();
     match cmd.command {
         args::Command::Daemon => {
-            daemon();
+            daemon().await;
         }
     }
 }
