@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use crate::{
     config::{widgets::slide::update_task_interval, Widget},
-    plug::system::init_mem_info,
+    plug::system::{init_mem_info, init_system_info, register_disk_partition},
 };
 
 use super::{
@@ -22,7 +22,7 @@ pub enum RingPreset {
     Swap,
     Cpu,
     Battery,
-    Disk,
+    Disk(String),
     Custom(RingCustom),
 }
 
@@ -109,6 +109,25 @@ pub fn visit_config(d: Value) -> Result<Widget, String> {
             "swap" => {
                 init_mem_info();
                 RingPreset::Swap
+            }
+            "cpu" => {
+                init_system_info();
+                RingPreset::Cpu
+            }
+            "battery" => {
+                init_system_info();
+                RingPreset::Battery
+            }
+            "disk" => {
+                let partition = preset
+                    .get("partition")
+                    .unwrap_or(&Value::String("/".to_string()))
+                    .as_str()
+                    .ok_or("partition must be string")?
+                    .to_string();
+                init_system_info();
+                register_disk_partition(partition.clone());
+                RingPreset::Disk(partition)
             }
             "custom" => {
                 RingPreset::Custom(super::common::from_value::<RingCustom>(preset.clone())?)

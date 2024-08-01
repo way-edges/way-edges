@@ -10,7 +10,9 @@ use gtk::{gdk::RGBA, prelude::GdkCairoContextExt};
 use interval_task::runner::{ExternalRunnerExt, Runner, Task};
 
 use crate::config::widgets::ring::RingConfig;
-use crate::plug::system::{get_ram_info, get_swap_info};
+use crate::plug::system::{
+    get_battery_info, get_cpu_info, get_disk_info, get_ram_info, get_swap_info,
+};
 use crate::ui::draws::frame_manager::FrameManager;
 use crate::ui::draws::mouse_state::MouseEvent;
 use crate::ui::draws::transition_state::{self, TransitionState, TransitionStateRc};
@@ -20,7 +22,8 @@ use crate::ui::draws::{shape::draw_fan, util::Z};
 use super::wrapbox::display::grid::DisplayWidget;
 use super::wrapbox::BoxExposeRc;
 
-fn draw_text(size: (i32, i32), pl: &Layout, color: &RGBA) -> ImageSurface {
+fn draw_text(pl: &Layout, color: &RGBA) -> ImageSurface {
+    let size = pl.pixel_size();
     let surf = new_surface(size);
     let ctx = cairo::Context::new(&surf).unwrap();
     ctx.set_antialias(cairo::Antialias::None);
@@ -33,9 +36,9 @@ fn from_kb(total: u64, avaibale: u64) -> (f64, f64, &'static str) {
     let mut c = 0;
     let mut total = total as f64;
     let mut avaibale = avaibale as f64;
-    while total > 1024. && c < 3 {
-        total /= 1024.;
-        avaibale /= 1024.;
+    while total > 1000. && c < 3 {
+        total /= 1000.;
+        avaibale /= 1000.;
         c += 1;
     }
     let surfix = match c {
@@ -61,8 +64,7 @@ impl RamTextRender {
             )
             .as_str(),
         );
-        let size = pl.pixel_size();
-        draw_text(size, pl, color)
+        draw_text(pl, color)
     }
 }
 impl TextRender for RamTextRender {
@@ -78,6 +80,48 @@ impl TextRender for SwapTextRender {
     }
 }
 
+struct CpuTextRender;
+impl TextRender for CpuTextRender {
+    fn draw_text(&self, _: f64, pl: &Layout, color: &RGBA) -> Option<ImageSurface> {
+        get_cpu_info().map(|(progress, temp)| {
+            let t = format!(" {:.2}% {temp:.2}°C", progress * 100.);
+            pl.set_text(t.as_str());
+            draw_text(pl, color)
+        })
+    }
+}
+
+struct BatteryTextRender;
+impl TextRender for BatteryTextRender {
+    fn draw_text(&self, _: f64, pl: &Layout, color: &RGBA) -> Option<ImageSurface> {
+        get_battery_info().map(|progress| {
+            let t = format!(" {:.2}%", progress * 100.);
+            pl.set_text(t.as_str());
+            draw_text(pl, color)
+        })
+    }
+}
+
+struct DiskTextRender(String);
+impl TextRender for DiskTextRender {
+    fn draw_text(&self, _: f64, pl: &Layout, color: &RGBA) -> Option<ImageSurface> {
+        get_disk_info(&self.0).map(|(ava, total)| {
+            let (total, avaibale, surfix) = from_kb(total, ava);
+            pl.set_text(
+                format!(
+                    " [Partition: {}] {:.2}{surfix} / {:.2}{surfix} [{:.2}%]",
+                    self.0,
+                    avaibale,
+                    total,
+                    avaibale / total * 100.
+                )
+                .as_str(),
+            );
+            draw_text(pl, color)
+        })
+    }
+}
+
 struct CustomTextRender {
     template: String,
 }
@@ -89,8 +133,7 @@ impl TextRender for CustomTextRender {
             format!("{:.0}%", progress * 100.).as_str(),
         );
         pl.set_text(t.as_str());
-        let size = pl.pixel_size();
-        Some(draw_text(size, pl, color))
+        Some(draw_text(pl, color))
     }
 }
 
@@ -138,9 +181,11 @@ impl Ring {
                     None
                 }
             }
-            crate::config::widgets::ring::RingPreset::Cpu => todo!(),
-            crate::config::widgets::ring::RingPreset::Battery => todo!(),
-            crate::config::widgets::ring::RingPreset::Disk => todo!(),
+            crate::config::widgets::ring::RingPreset::Cpu => Some(Box::new(CpuTextRender)),
+            crate::config::widgets::ring::RingPreset::Battery => Some(Box::new(BatteryTextRender)),
+            crate::config::widgets::ring::RingPreset::Disk(p) => {
+                Some(Box::new(DiskTextRender(p.clone())))
+            }
         };
         let font_family = config.common.font_family.clone();
         let progress = 0.;
@@ -339,6 +384,26 @@ impl RingCtx {
                         }
                     }),
                 ),
+                crate::config::widgets::ring::RingPreset::Cpu => (
+                    1000,
+                    Box::new(|| {
+                        if let Some((progress, _)) = get_cpu_info() {
+                            Ok(progress)
+                        } else {
+                            Ok(0.)
+                        }
+                    }),
+                ),
+                crate::config::widgets::ring::RingPreset::Battery => (
+                    1000,
+                    Box::new(|| {
+                        if let Some(progress) = get_battery_info() {
+                            Ok(progress)
+                        } else {
+                            Ok(0.)
+                        }
+                    }),
+                ),
                 crate::config::widgets::ring::RingPreset::Custom(f) => {
                     if let Some((ms, f)) = f.update_with_interval_ms.take() {
                         (ms, f)
@@ -346,9 +411,19 @@ impl RingCtx {
                         (999999, Box::new(|| Ok(0.)))
                     }
                 }
-                crate::config::widgets::ring::RingPreset::Cpu => todo!(),
-                crate::config::widgets::ring::RingPreset::Battery => todo!(),
-                crate::config::widgets::ring::RingPreset::Disk => todo!(),
+                crate::config::widgets::ring::RingPreset::Disk(s) => {
+                    let s = s.clone();
+                    (
+                        1000,
+                        Box::new(move || {
+                            if let Some((ava, total)) = get_disk_info(s.as_str()) {
+                                Ok(ava as f64 / total as f64)
+                            } else {
+                                Ok(0.)
+                            }
+                        }),
+                    )
+                }
             };
         let inner = Rc::new(RefCell::new(Ring::new(&config)));
         let text_ts = TransitionState::new(Duration::from_millis(config.common.text_transition_ms));

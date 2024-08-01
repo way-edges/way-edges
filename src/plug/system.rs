@@ -1,5 +1,6 @@
 use std::{
     cell::RefCell,
+    collections::HashMap,
     fs::File,
     io::Read,
     rc::Rc,
@@ -7,7 +8,8 @@ use std::{
     sync::atomic::{AtomicBool, AtomicPtr},
 };
 
-use get_sys_info::Platform;
+use get_sys_info::{CPULoad, DelayedMeasurement, Filesystem, Platform};
+use gio::glib::translate::Ptr;
 
 const MEMORY_FILE: &str = "/proc/meminfo";
 fn with_mem_info<T>(f: impl FnOnce(String) -> T) -> T {
@@ -151,46 +153,106 @@ pub fn init_mem_info() {
 }
 
 pub type CpuInfo = (f64, f64);
-static CPU_INFO: AtomicPtr<CpuInfo> = AtomicPtr::new(std::ptr::null_mut());
-fn update_cpu_info(info: CpuInfo) {
-    CPU_INFO.store(
-        std::ptr::addr_of!(info) as *mut _,
-        std::sync::atomic::Ordering::Release,
-    );
+struct SysInfo {
+    cpu_info: Option<CpuInfo>,
+    battery_info: Option<f64>,
+    disk_map: HashMap<String, (u64, u64)>,
 }
-pub fn get_system() -> Option<CpuInfo> {
-    unsafe {
-        CPU_INFO
-            .load(std::sync::atomic::Ordering::Acquire)
-            .as_ref()
-            .cloned()
+
+static SYS_INFO: AtomicPtr<SysInfo> = AtomicPtr::new(std::ptr::null_mut());
+fn init_system() {
+    if unsafe { SYS_INFO.as_ptr().as_ref().unwrap().is_null() } {
+        SYS_INFO.store(
+            Box::into_raw(Box::new(SysInfo {
+                cpu_info: None,
+                battery_info: None,
+                disk_map: HashMap::new(),
+            })) as *mut _,
+            std::sync::atomic::Ordering::Release,
+        );
     }
 }
-
-static CPU_INITED: AtomicBool = AtomicBool::new(false);
-pub fn init_system() {
-    if !CPU_INITED.load(std::sync::atomic::Ordering::Acquire) {
+fn get_sys_info() -> Option<&'static mut SysInfo> {
+    unsafe { SYS_INFO.load(std::sync::atomic::Ordering::Acquire).as_mut() }
+}
+fn update_cpu_info(info: CpuInfo) {
+    if let Some(s) = get_sys_info() {
+        s.cpu_info = Some(info);
+    }
+}
+pub fn get_cpu_info() -> Option<CpuInfo> {
+    unsafe {
+        SYS_INFO
+            .load(std::sync::atomic::Ordering::Acquire)
+            .as_ref()
+            .map(|s| s.cpu_info)?
+    }
+}
+fn update_battery_info(info: f64) {
+    if let Some(s) = get_sys_info() {
+        s.battery_info = Some(info);
+    }
+}
+pub fn get_battery_info() -> Option<f64> {
+    unsafe {
+        SYS_INFO
+            .load(std::sync::atomic::Ordering::Acquire)
+            .as_ref()
+            .map(|s| s.battery_info)?
+    }
+}
+fn update_disk_info(mut f: impl FnMut(&str) -> (u64, u64)) {
+    if let Some(s) = get_sys_info() {
+        s.disk_map.iter_mut().for_each(|(k, v)| *v = f(k.as_str()));
+    }
+}
+fn filesys_2_percent(f: Filesystem) -> (u64, u64) {
+    let a = f.avail.0 / 1000;
+    let t = f.total.0 / 1000;
+    (t - a, t)
+}
+pub fn register_disk_partition(s: String) {
+    if let Some(info) = get_sys_info() {
         let sys = get_sys_info::System::new();
-        let holder = Rc::new(RefCell::new(sys.cpu_load_aggregate().unwrap()));
-        gtk::glib::timeout_add_seconds_local(1, move || {
-            let re = holder.borrow_mut();
-            let a = re.done().unwrap();
-            println!("{a:#?}");
+        if let Ok(f) = sys.mount_at(s.as_str()) {
+            info.disk_map.insert(s, filesys_2_percent(f));
+        }
+    };
+}
+pub fn get_disk_info(s: &str) -> Option<(u64, u64)> {
+    get_sys_info().map(|sys| sys.disk_map.get(s).cloned())?
+}
 
-            // update_cpu_info();
-            *holder.borrow_mut() = sys.cpu_load_aggregate().unwrap();
+use get_sys_info::platform::linux::PlatformImpl;
+fn cpu_info(sys: &PlatformImpl, holder: &Rc<RefCell<DelayedMeasurement<CPULoad>>>) {
+    let mut re = holder.borrow_mut();
+    let cpu_load = re.done().unwrap();
+    let temp = sys.cpu_temp().unwrap_or_default();
+    update_cpu_info(((1. - cpu_load.idle).into(), temp.into()));
+    *re = sys.cpu_load_aggregate().unwrap();
+}
+fn battery_info(sys: &PlatformImpl) {
+    if let Ok(r) = sys.battery_life() {
+        update_battery_info(r.remaining_capacity.into());
+    }
+}
+fn disk_info(sys: &PlatformImpl) {
+    update_disk_info(|s| sys.mount_at(s).map(filesys_2_percent).unwrap());
+}
+
+static SYSTEM_INITED: AtomicBool = AtomicBool::new(false);
+pub fn init_system_info() {
+    if !SYSTEM_INITED.load(std::sync::atomic::Ordering::Acquire) {
+        init_system();
+        let sys = get_sys_info::System::new();
+        let progress_holder = Rc::new(RefCell::new(sys.cpu_load_aggregate().unwrap()));
+        battery_info(&sys);
+        disk_info(&sys);
+        gtk::glib::timeout_add_seconds_local(1, move || {
+            cpu_info(&sys, &progress_holder);
+            battery_info(&sys);
+            disk_info(&sys);
             gio::glib::ControlFlow::Continue
         });
     }
-}
-
-pub fn get_cpu_usage() {
-    let s = File::open("/proc/stat")
-        .and_then(|mut f| {
-            let mut s = String::new();
-            f.read_to_string(&mut s)?;
-            Ok(s)
-        })
-        .unwrap();
-    let cpu = s.lines().find(|line| line.starts_with("cpu ")).unwrap();
 }
