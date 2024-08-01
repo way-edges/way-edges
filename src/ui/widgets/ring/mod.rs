@@ -50,11 +50,29 @@ fn from_kb(total: u64, avaibale: u64) -> (f64, f64, &'static str) {
     };
     (total, avaibale, surfix)
 }
+fn from_kib(total: u64, avaibale: u64) -> (f64, f64, &'static str) {
+    let mut c = 0;
+    let mut total = total as f64;
+    let mut avaibale = avaibale as f64;
+    while total > 1024. && c < 3 {
+        total /= 1024.;
+        avaibale /= 1024.;
+        c += 1;
+    }
+    let surfix = match c {
+        0 => "KiB",
+        1 => "MiB",
+        2 => "GiB",
+        3 => "TiB",
+        _ => unreachable!(),
+    };
+    (total, avaibale, surfix)
+}
 
 struct RamTextRender;
 impl RamTextRender {
     fn core(&self, p: (u64, u64), pl: &Layout, color: &RGBA) -> ImageSurface {
-        let (total, avaibale, surfix) = from_kb(p.1, p.0);
+        let (total, avaibale, surfix) = from_kib(p.1, p.0);
         pl.set_text(
             format!(
                 " {:.2}{surfix} / {:.2}{surfix} [{:.2}%]",
