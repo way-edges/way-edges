@@ -1,6 +1,7 @@
 use crate::{
     config::{widgets::backlight::BLConfig, Config},
     plug::backlight::{register_callback, set_backlight, unregister_callback},
+    ui::WidgetExposePtr,
 };
 use gtk::{
     glib,
@@ -14,7 +15,7 @@ pub fn init_widget(
     window: &ApplicationWindow,
     config: Config,
     mut bl_conf: BLConfig,
-) -> Result<(), String> {
+) -> Result<WidgetExposePtr, String> {
     let exposed = {
         // do not let itself queue_draw, but pulseaudio callback
         let (s, r) = async_channel::bounded(1);
@@ -30,7 +31,8 @@ pub fn init_widget(
             }
         )));
 
-        let exposed = slide::init_widget(window, config, bl_conf.slide)?;
+        let add = slide::SlideAdditionalConfig::default(bl_conf.slide.fg_color);
+        let exposed = slide::init_widget_as_plug(window, config, bl_conf.slide, add)?;
         glib::spawn_future_local(glib::clone!(
             #[weak]
             window,
@@ -42,6 +44,7 @@ pub fn init_widget(
         ));
         exposed
     };
+    let widget_expose = exposed.create_widget_expose();
     let cb_key = register_callback(
         move |pro| {
             if let Some(p) = exposed.progress.upgrade() {
@@ -66,5 +69,5 @@ pub fn init_widget(
         log::debug!("unregister pa callback for brightness: {cb_key}");
         unregister_callback(cb_key);
     });
-    Ok(())
+    Ok(Box::new(widget_expose))
 }

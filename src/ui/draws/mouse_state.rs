@@ -6,11 +6,14 @@ use gtk::{
 };
 use std::{
     cell::{Cell, RefCell},
-    rc::Rc,
+    ops::Not,
+    rc::{Rc, Weak},
     time::Duration,
 };
 
-use super::transition_state::{TransitionDirection, TransitionStateRc};
+use crate::ui::WidgetExpose;
+
+use super::transition_state::{TransitionDirection, TransitionState, TransitionStateRc};
 
 #[derive(Debug, Clone)]
 pub enum MouseEvent {
@@ -166,34 +169,37 @@ pub fn new_translate_mouse_state(
     ms: MouseStateRc,
     mut additional_cbs: Option<MouseEventFunc>,
     hidden_only: bool,
-) -> MouseEventFunc {
+) -> (MouseEventFunc, TranslateStateRc) {
     let tls = Rc::new(RefCell::new(TranslateState::new()));
-    new_mouse_event_func(glib::clone!(
-        #[strong(rename_to=tls)]
-        tls,
-        #[strong(rename_to=ts)]
-        ts,
-        #[weak(rename_to=ms)]
-        ms,
-        move |e| {
-            match e {
-                MouseEvent::Enter(_) | MouseEvent::Leave => {
-                    let tls = if hidden_only { None } else { Some(&tls) };
-                    ensure_transition_direction(&ts, &ms, tls);
-                }
-                MouseEvent::Release(_, k) => {
-                    if !hidden_only && k == BUTTON_MIDDLE {
-                        tls.borrow_mut().toggle_pin();
+    (
+        new_mouse_event_func(glib::clone!(
+            #[strong(rename_to=tls)]
+            tls,
+            #[strong(rename_to=ts)]
+            ts,
+            #[weak(rename_to=ms)]
+            ms,
+            move |e| {
+                match e {
+                    MouseEvent::Enter(_) | MouseEvent::Leave => {
+                        let tls = if hidden_only { None } else { Some(&tls) };
+                        ensure_transition_direction(&ts, &ms, tls);
                     }
-                    ensure_transition_direction(&ts, &ms, Some(&tls));
+                    MouseEvent::Release(_, k) => {
+                        if !hidden_only && k == BUTTON_MIDDLE {
+                            tls.borrow_mut().toggle_pin();
+                        }
+                        ensure_transition_direction(&ts, &ms, Some(&tls));
+                    }
+                    _ => {}
+                };
+                if let Some(f) = additional_cbs.as_mut() {
+                    f(e)
                 }
-                _ => {}
-            };
-            if let Some(f) = additional_cbs.as_mut() {
-                f(e)
             }
-        }
-    ))
+        )),
+        tls,
+    )
 }
 
 pub type TranslateStateRc = Rc<RefCell<TranslateState>>;
@@ -252,6 +258,46 @@ impl TranslateState {
     pub fn invalidate_pop(&mut self) {
         if let Some(before) = self.pop_state.take() {
             before.set(false);
+        }
+    }
+}
+
+// NOTE: THIS ONE IS ONLY FOR TRANSLATE_STATE
+pub struct TranslateStateExpose {
+    pub tls: Weak<RefCell<TranslateState>>,
+    pub ts: Weak<RefCell<TransitionState>>,
+    pub draw: Box<dyn FnMut()>,
+}
+impl TranslateStateExpose {
+    pub fn new(
+        tls: Weak<RefCell<TranslateState>>,
+        ts: Weak<RefCell<TransitionState>>,
+        f: impl FnMut() + 'static,
+    ) -> Self {
+        Self {
+            tls,
+            ts,
+            draw: Box::new(f),
+        }
+    }
+}
+impl WidgetExpose for TranslateStateExpose {
+    fn toggle_pin(&mut self) {
+        if let Some(tls) = self.tls.upgrade() {
+            if let Some(ts) = self.ts.upgrade() {
+                let mut ts = ts.borrow_mut();
+                let direction = ts.direction;
+                ts.set_direction_self(direction.not());
+                match direction {
+                    TransitionDirection::Forward => {
+                        tls.borrow_mut().unpin();
+                    }
+                    TransitionDirection::Backward => {
+                        tls.borrow_mut().pin();
+                    }
+                }
+                (self.draw)()
+            }
         }
     }
 }

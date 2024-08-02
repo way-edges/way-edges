@@ -12,7 +12,7 @@ use interval_task::runner::ExternalRunnerExt;
 use crate::config::widgets::slide::{Direction, SlideConfig, Task};
 use crate::config::Config;
 use crate::ui::draws::mouse_state::{
-    new_mouse_event_func, new_mouse_state, new_translate_mouse_state, MouseEvent,
+    new_mouse_event_func, new_mouse_state, new_translate_mouse_state, MouseEvent, TranslateStateRc,
 };
 use crate::ui::draws::transition_state::TransitionStateRc;
 use crate::ui::draws::util::Z;
@@ -76,7 +76,7 @@ pub(super) fn setup_event(
     ts: TransitionStateRc,
     cfg: &Config,
     slide_cfg: &mut SlideConfig,
-) -> Rc<Cell<f64>> {
+) -> (Rc<Cell<f64>>, TranslateStateRc) {
     let xory = cfg.edge.into();
     let direction = slide_cfg.progress_direction;
     let max = slide_cfg.get_size().unwrap().1;
@@ -140,7 +140,7 @@ pub(super) fn setup_event(
         }
     ));
 
-    let cb = new_translate_mouse_state(ts, ms.clone(), Some(cb), false);
+    let (cb, tls) = new_translate_mouse_state(ts, ms.clone(), Some(cb), false);
     ms.borrow_mut().set_event_cb(cb);
 
     let progress = progress_state.borrow().current.clone();
@@ -153,7 +153,7 @@ pub(super) fn setup_event(
         runner.set_task(Box::new(move || {
             match f() {
                 Ok(p) => {
-                    s.send_blocking(p);
+                    s.send_blocking(p).unwrap();
                 }
                 Err(e) => {
                     log::error!("Fail to get progress: {e}")
@@ -179,10 +179,10 @@ pub(super) fn setup_event(
             let runner = Rc::new(Cell::new(Some(runner)));
             darea.connect_destroy(move |_| {
                 if let Some(runner) = runner.take() {
-                    runner.close();
+                    runner.close().unwrap();
                 }
             });
         };
     };
-    progress
+    (progress, tls)
 }

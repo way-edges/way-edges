@@ -3,23 +3,39 @@ mod event;
 mod pre_draw;
 
 use std::{
-    cell::Cell,
+    cell::{Cell, RefCell},
     rc::{Rc, Weak},
 };
 
 use crate::{
     activate::get_monior_size,
     config::{widgets::slide::SlideConfig, Config},
-    ui::draws::transition_state::TransitionStateRc,
+    ui::{
+        draws::{
+            mouse_state::{TranslateState, TranslateStateExpose},
+            transition_state::{TransitionState, TransitionStateRc},
+        },
+        WidgetExposePtr,
+    },
 };
 use gio::glib::WeakRef;
-use gtk::{gdk::RGBA, ApplicationWindow};
+use gtk::{gdk::RGBA, prelude::WidgetExt, ApplicationWindow};
 
 use super::common;
 
 pub struct SlideExpose {
     pub darea: WeakRef<gtk::DrawingArea>,
     pub progress: Weak<Cell<f64>>,
+    pub tls: Weak<RefCell<TranslateState>>,
+    pub ts: Weak<RefCell<TransitionState>>,
+}
+impl SlideExpose {
+    pub fn create_widget_expose(&self) -> TranslateStateExpose {
+        let darea = self.darea.clone();
+        TranslateStateExpose::new(self.tls.clone(), self.ts.clone(), move || {
+            darea.upgrade().map(|d| d.queue_draw());
+        })
+    }
 }
 
 // this is actually for pulseaudio specific, idk how do design this
@@ -28,18 +44,28 @@ pub struct SlideAdditionalConfig {
     pub additional_transitions: Vec<TransitionStateRc>,
     pub on_draw: Option<Box<dyn FnMut()>>,
 }
+impl SlideAdditionalConfig {
+    pub fn default(fg_color: RGBA) -> Self {
+        Self {
+            fg_color: Rc::new(Cell::new(fg_color)),
+            additional_transitions: vec![],
+            on_draw: None,
+        }
+    }
+}
 
 pub fn init_widget(
     window: &ApplicationWindow,
     config: Config,
     slide_cfg: SlideConfig,
-) -> Result<SlideExpose, String> {
+) -> Result<WidgetExposePtr, String> {
     let add = SlideAdditionalConfig {
         fg_color: Rc::new(Cell::new(slide_cfg.fg_color)),
         additional_transitions: vec![],
         on_draw: None,
     };
-    init_widget_as_plug(window, config, slide_cfg, add)
+    let expose = init_widget_as_plug(window, config, slide_cfg, add)?;
+    Ok(Box::new(expose.create_widget_expose()))
 }
 
 pub fn init_widget_as_plug(

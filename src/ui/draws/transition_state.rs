@@ -1,5 +1,6 @@
 use std::{
     cell::RefCell,
+    ops::Not,
     rc::Rc,
     time::{Duration, Instant},
 };
@@ -16,6 +17,16 @@ pub type TransitionStateRc = Rc<RefCell<TransitionState>>;
 pub enum TransitionDirection {
     Forward,
     Backward,
+}
+impl Not for TransitionDirection {
+    type Output = TransitionDirection;
+
+    fn not(self) -> Self::Output {
+        match self {
+            TransitionDirection::Forward => Self::Backward,
+            TransitionDirection::Backward => Self::Forward,
+        }
+    }
 }
 impl From<bool> for TransitionDirection {
     fn from(x: bool) -> Self {

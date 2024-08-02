@@ -1,11 +1,14 @@
 pub mod default;
+
+#[cfg(feature = "hyprland")]
 pub mod hyprland;
 
-use crate::config::{Config, GroupConfig};
-use crate::ui;
+use std::collections::HashMap;
+
+use crate::config::Config;
+use crate::ui::{self, WidgetCtx};
 use gtk::gdk::Monitor;
 use gtk::prelude::GtkWindowExt;
-use gtk::{Application, ApplicationWindow};
 use gtk4_layer_shell::{Edge, LayerShell};
 
 fn notify_app_error(err_des: &str) {
@@ -37,11 +40,9 @@ fn calculate_config_relative(cfg: &mut Config, max_size_raw: (i32, i32)) -> Resu
     Ok(())
 }
 
-pub trait WindowInitializer: Clone {
-    fn init_window(app: &Application, cfgs: GroupConfig) -> Result<Self, String>;
-}
-pub trait WindowDestroyer {
-    fn close_window(self);
+pub trait GroupCtx {
+    fn close(&mut self);
+    fn widget_map(&mut self) -> &mut WidgetMap;
 }
 
 struct WidgetItem {
@@ -49,20 +50,26 @@ struct WidgetItem {
     monitor: Monitor,
 }
 
+pub type WidgetMap = HashMap<String, WidgetCtx>;
+
 fn create_widgets(
     app: &gtk::Application,
     widget_items: Vec<WidgetItem>,
-) -> Result<Vec<ApplicationWindow>, String> {
+) -> Result<WidgetMap, String> {
     let a = widget_items
         .into_iter()
         .map(|w| {
             log::debug!("Final Config: {:?}", w.cfg);
-            let window = ui::new_window(app, w.cfg, &w.monitor)?;
-            window.set_namespace("way-edges-widget");
-            Ok(window)
+            let key = w.cfg.name.clone();
+            let widget_ctx = ui::new_window(app, w.cfg, &w.monitor)?;
+            {
+                let win = widget_ctx.window.upgrade().unwrap();
+                win.set_namespace("way-edges-widget");
+                win.present();
+            }
+            Ok((key, widget_ctx))
         })
-        .collect::<Result<Vec<ApplicationWindow>, String>>()?;
-    a.iter().for_each(|f| f.present());
+        .collect::<Result<WidgetMap, String>>()?;
     Ok(a)
 }
 
@@ -126,9 +133,9 @@ mod globals {
     pub fn get_monitors() -> Result<&'static Vec<Monitor>, String> {
         unsafe { MONITORS.as_ref().ok_or("MONITORS is NONE".to_string()) }
     }
-    pub fn take_monitor() -> Result<Vec<Monitor>, String> {
-        unsafe { MONITORS.take().ok_or("MONITORS is NONE".to_string()) }
-    }
+    // pub fn take_monitor() -> Result<Vec<Monitor>, String> {
+    //     unsafe { MONITORS.take().ok_or("MONITORS is NONE".to_string()) }
+    // }
 
     pub type MonitorNameIndexMap = HashMap<String, usize>;
     pub static mut MONITOR_NAME_INDEX_MAP: Option<MonitorNameIndexMap> = None;

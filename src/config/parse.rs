@@ -4,16 +4,17 @@ use super::conf::*;
 use super::raw::*;
 use super::widgets;
 
+use gio::glib::uuid_string_random;
 use gtk4_layer_shell::{Edge, Layer};
 use serde_jsonrc::Value;
 
-pub fn parse_config(data: &str, group_name: &Option<String>) -> Result<GroupConfig, String> {
+pub fn parse_config(data: &str, group_name: Option<&str>) -> Result<GroupConfig, String> {
     let mut res: RawTemp =
         serde_jsonrc::from_str(data).map_err(|e| format!("JSON parse error: {e}"))?;
     let group = if let Some(s) = group_name {
         res.groups
             .into_iter()
-            .find(|g| &g.name == s)
+            .find(|g| g.name == s)
             .ok_or_else(|| format!("group {s} not found"))?
     } else {
         res.groups.remove(0)
@@ -76,6 +77,13 @@ pub fn raw_2_conf(raw: RawGroup) -> Result<GroupConfig, String> {
                 }
                 m
             };
+            let name = {
+                if raw.name.is_empty() {
+                    uuid_string_random().to_string()
+                } else {
+                    raw.name
+                }
+            };
             let widget = parse_widget(raw.widget)?;
 
             Ok(Config {
@@ -84,6 +92,7 @@ pub fn raw_2_conf(raw: RawGroup) -> Result<GroupConfig, String> {
                 layer,
                 monitor,
                 margins,
+                name,
                 widget: Some(widget),
             })
         })

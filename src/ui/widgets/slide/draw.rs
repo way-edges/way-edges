@@ -1,6 +1,5 @@
 use std::cell::Cell;
 use std::cell::RefCell;
-use std::fs::File;
 use std::rc::Rc;
 use std::time::Duration;
 
@@ -65,7 +64,7 @@ pub fn setup_draw(
     let ts = Rc::new(RefCell::new(TransitionState::new(Duration::from_millis(
         slide_cfg.transition_duration,
     ))));
-    let progress = event::setup_event(&darea, ts.clone(), &cfg, &mut slide_cfg);
+    let (progress, tls) = event::setup_event(&darea, ts.clone(), &cfg, &mut slide_cfg);
 
     let predraw = super::pre_draw::draw(
         size,
@@ -102,6 +101,8 @@ pub fn setup_draw(
         window,
         #[strong]
         progress,
+        #[strong]
+        ts,
         move |_, context, _, _| {
             if let Some(f) = additional.on_draw.as_mut() {
                 f()
@@ -137,6 +138,8 @@ pub fn setup_draw(
     Ok(SlideExpose {
         darea: Downgrade::downgrade(&darea),
         progress: progress.downgrade(),
+        tls: tls.downgrade(),
+        ts: ts.downgrade(),
     })
 }
 
