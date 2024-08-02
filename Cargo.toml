@@ -2,6 +2,7 @@
 name = "way-edges"
 version = "0.1.0"
 edition = "2021"
+description = "Hidden widget on screen edges"
 
 [dependencies]
 notify = { version = "6.1.1", default-features = false }
