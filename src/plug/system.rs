@@ -59,18 +59,18 @@ pub fn get_swap_info() -> Option<SwapInfo> {
 static MEM_INITED: AtomicBool = AtomicBool::new(false);
 
 fn ram_info(lines: &mut Lines) -> RamInfo {
-    let mut ava = None;
+    let mut free = None;
     let mut total = None;
     for ele in lines {
         if ele.starts_with("MemAvailable:") {
-            ava = Some(ele)
+            free = Some(ele)
         } else if ele.starts_with("MemTotal:") {
             total = Some(ele)
         }
     }
-    if let Some(ava) = ava {
+    if let Some(free) = free {
         if let Some(total) = total {
-            let ava = ava
+            let free = free
                 .split_whitespace()
                 .nth(1)
                 .unwrap()
@@ -83,7 +83,7 @@ fn ram_info(lines: &mut Lines) -> RamInfo {
                 .parse::<u64>()
                 .unwrap();
 
-            (ava, total)
+            (total - free, total)
         } else {
             panic!("MemTotal not found");
         }
