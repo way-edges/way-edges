@@ -1,9 +1,4 @@
-
-
 https://github.com/user-attachments/assets/37d267cb-1cb4-44b4-81a8-8ac02bb741cb
-
-
-
 
 ## TODO
 
@@ -45,14 +40,25 @@ Place `config.jsonc` under `~/.config/way-edges/`
 
 ## Arguments
 
-```rust
-Usage: gtk4-test [OPTIONS] [GROUP]
+1. Run daemon first(`way-edges daemon`).
+2. Add group of widgets given group name specified in your configuration file(`way-edges add <group_name>`).
+3. Some command require widget_name specified in order to operate.
 
-Arguments:
-  [GROUP]  which grouop to activate
+```rust
+Hidden widget on the screen edges
+
+Usage: way-edges [OPTIONS] <COMMAND>
+
+Commands:
+  daemon     run daemon. There can only be one daemon at a time
+  add        add group of widgets to applicatoin given group name
+  rm         remove group of widgets to applicatoin given group name
+  togglepin  toggle pin of a widget under certain group. format: <group_name>:<widget_name>
+  quit       close daemon
+  help       Print this message or the help of the given subcommand(s)
 
 Options:
-  -d, --mouse-debug  whether enable mouse click output
+  -d, --mouse-debug  whether enable mouse click output, shoule be used width daemon command
   -h, --help         Print help
   -V, --version      Print version
 ```

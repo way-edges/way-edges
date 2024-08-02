@@ -1169,38 +1169,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "gtk4-test"
-version = "0.1.0"
-dependencies = [
- "async-channel",
- "blight",
- "cairo-rs",
- "clap",
- "educe",
- "env_logger",
- "get_sys_info",
- "gio",
- "gtk4",
- "gtk4-layer-shell",
- "hyprland",
- "interval-task",
- "libpulse-binding",
- "log",
- "notify",
- "notify-debouncer-mini",
- "notify-rust",
- "pangocairo",
- "regex",
- "scopeguard",
- "serde",
- "serde_jsonrc",
- "tokio",
- "way-edges-derive",
- "xdg",
- "zbus",
-]
-
-[[package]]
 name = "hashbrown"
 version = "0.14.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2411,6 +2379,38 @@ name = "wasm-bindgen-shared"
 version = "0.2.92"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "af190c94f2773fdb3729c55b007a722abb5384da03bc0986df4c289bf5567e96"
+
+[[package]]
+name = "way-edges"
+version = "0.1.0"
+dependencies = [
+ "async-channel",
+ "blight",
+ "cairo-rs",
+ "clap",
+ "educe",
+ "env_logger",
+ "get_sys_info",
+ "gio",
+ "gtk4",
+ "gtk4-layer-shell",
+ "hyprland",
+ "interval-task",
+ "libpulse-binding",
+ "log",
+ "notify",
+ "notify-debouncer-mini",
+ "notify-rust",
+ "pangocairo",
+ "regex",
+ "scopeguard",
+ "serde",
+ "serde_jsonrc",
+ "tokio",
+ "way-edges-derive",
+ "xdg",
+ "zbus",
+]
 
 [[package]]
 name = "way-edges-derive"

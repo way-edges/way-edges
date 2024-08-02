@@ -6,7 +6,7 @@ use clap::{Parser, Subcommand};
 #[derive(Debug, Parser)]
 #[command(name = "way-edges")]
 #[command(version = "pre")]
-#[command(about = "Hidden buttons on the edges", long_about = None)]
+#[command(about = "Hidden widget on the screen edges", long_about = None)]
 pub struct Cli {
     /// whether enable mouse click output, shoule be used width daemon command.
     #[arg(short = 'd', long)]
@@ -17,18 +17,18 @@ pub struct Cli {
 }
 #[derive(Subcommand, Debug, PartialEq, Clone)]
 pub enum Command {
-    /// run daemon. There can only be one daemon
+    /// run daemon. There can only be one daemon at a time.
     #[command(name = "daemon", alias = "d")]
     Daemon,
 
-    /// add widget to applicatoin given group name
+    /// add group of widgets in applicatoin given group name
     #[command(name = "add", alias = "a")]
     Add {
         /// group name
         name: String,
     },
 
-    /// remove widget to applicatoin given group name
+    /// remove group of widgets in applicatoin given group name
     #[command(name = "rm", alias = "r")]
     Remove {
         /// group name
