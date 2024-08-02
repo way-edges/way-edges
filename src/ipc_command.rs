@@ -36,7 +36,9 @@ pub async fn send_command(cmd: &Command) -> Result<(), Box<dyn std::error::Error
         Command::Exit => {
             format!(r#"{{"command": "{IPC_COMMAND_QUIT}"}}"#)
         }
-        Command::TogglePin { name } => {
+        Command::TogglePin {
+            group_and_widget_name: name,
+        } => {
             let (group_name, widget_name) = name
                 .split_once(':')
                 .ok_or("widget must be specified with: `group_name:widget_name`")?;

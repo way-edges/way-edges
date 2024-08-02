@@ -8,10 +8,7 @@ use clap::{Parser, Subcommand};
 #[command(version = "pre")]
 #[command(about = "Hidden buttons on the edges", long_about = None)]
 pub struct Cli {
-    /// which grouop to activate
-    pub group: Option<String>,
-
-    /// whether enable mouse click output
+    /// whether enable mouse click output, shoule be used width daemon command.
     #[arg(short = 'd', long)]
     pub mouse_debug: bool,
 
@@ -20,18 +17,33 @@ pub struct Cli {
 }
 #[derive(Subcommand, Debug, PartialEq, Clone)]
 pub enum Command {
+    /// run daemon. There can only be one daemon
     #[command(name = "daemon", alias = "d")]
     Daemon,
 
+    /// add widget to applicatoin given group name
     #[command(name = "add", alias = "a")]
-    Add { name: String },
+    Add {
+        /// group name
+        name: String,
+    },
 
+    /// remove widget to applicatoin given group name
     #[command(name = "rm", alias = "r")]
-    Remove { name: String },
+    Remove {
+        /// group name
+        name: String,
+    },
 
+    /// toggle pin of a widget under certain group.
+    /// format: <group_name>:<widget_name>
     #[command(name = "togglepin")]
-    TogglePin { name: String },
+    TogglePin {
+        /// format: <group_name>:<widget_name>
+        group_and_widget_name: String,
+    },
 
+    /// close daemon
     #[command(name = "quit", alias = "q")]
     Exit,
 }
