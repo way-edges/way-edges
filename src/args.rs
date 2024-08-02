@@ -22,6 +22,15 @@ pub struct Cli {
 pub enum Command {
     #[command(name = "daemon", alias = "d")]
     Daemon,
+
+    #[command(name = "add", alias = "a")]
+    Add { name: String },
+
+    #[command(name = "rm", alias = "r")]
+    Remove { name: String },
+
+    #[command(name = "quit", alias = "q")]
+    Exit,
 }
 
 static ARGS: OnceLock<Cli> = OnceLock::new();

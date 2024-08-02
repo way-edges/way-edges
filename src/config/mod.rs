@@ -12,23 +12,6 @@ use std::{
     sync::OnceLock,
 };
 
-pub static mut GLOBAL_CONFIG: Option<Box<GroupConfig>> = None;
-
-pub fn init_config() -> Result<(), String> {
-    unsafe {
-        GLOBAL_CONFIG = Some(Box::new(get_config(&crate::args::get_args().group)?));
-        Ok(())
-    }
-}
-
-pub fn take_config() -> Result<GroupConfig, String> {
-    let config = unsafe { GLOBAL_CONFIG.take().ok_or("no config found".to_string()) };
-    match config {
-        Ok(v) => Ok(*v),
-        Err(e) => Err(e),
-    }
-}
-
 static CONFIG_PATH: OnceLock<PathBuf> = OnceLock::new();
 pub fn get_config_path() -> &'static Path {
     let pb = CONFIG_PATH.get_or_init(|| {
@@ -65,7 +48,7 @@ fn get_config_file() -> Result<String, String> {
     Ok(s)
 }
 
-pub fn get_config(group_name: &Option<String>) -> Result<GroupConfig, String> {
+pub fn get_config(group_name: Option<&str>) -> Result<GroupConfig, String> {
     let s = get_config_file()?;
     parse::parse_config(&s, group_name)
 }

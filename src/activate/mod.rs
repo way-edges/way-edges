@@ -5,11 +5,10 @@ pub mod hyprland;
 
 use std::collections::HashMap;
 
-use crate::config::{Config, GroupConfig};
+use crate::config::Config;
 use crate::ui::{self, WidgetCtx};
 use gtk::gdk::Monitor;
 use gtk::prelude::GtkWindowExt;
-use gtk::Application;
 use gtk4_layer_shell::{Edge, LayerShell};
 
 fn notify_app_error(err_des: &str) {
@@ -41,8 +40,9 @@ fn calculate_config_relative(cfg: &mut Config, max_size_raw: (i32, i32)) -> Resu
     Ok(())
 }
 
-pub trait WindowDestroyer {
-    fn close_window(self);
+pub trait GroupCtx {
+    fn close(&mut self);
+    fn widget_map(&mut self) -> &mut WidgetMap;
 }
 
 struct WidgetItem {
@@ -133,9 +133,9 @@ mod globals {
     pub fn get_monitors() -> Result<&'static Vec<Monitor>, String> {
         unsafe { MONITORS.as_ref().ok_or("MONITORS is NONE".to_string()) }
     }
-    pub fn take_monitor() -> Result<Vec<Monitor>, String> {
-        unsafe { MONITORS.take().ok_or("MONITORS is NONE".to_string()) }
-    }
+    // pub fn take_monitor() -> Result<Vec<Monitor>, String> {
+    //     unsafe { MONITORS.take().ok_or("MONITORS is NONE".to_string()) }
+    // }
 
     pub type MonitorNameIndexMap = HashMap<String, usize>;
     pub static mut MONITOR_NAME_INDEX_MAP: Option<MonitorNameIndexMap> = None;

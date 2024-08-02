@@ -31,7 +31,7 @@ blight = "0.7"
 zbus = "4.4"
 pangocairo = "0.20"
 get_sys_info = "0.1"
-tokio = { version = "1.39", features = ["net", "macros", "rt", "time"] }
+tokio = { version = "1.39", features = ["net", "macros", "rt", "time", "sync"] }
 
 [dependencies.way-edges-derive]
 path = "way-edges-derive"
