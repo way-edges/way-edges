@@ -1,7 +1,7 @@
 use crate::{
     config::{widgets::backlight::BLConfig, Config},
     plug::backlight::{register_callback, set_backlight, unregister_callback},
-    ui::{draws::mouse_state::TranslateStateExpose, WidgetExposePtr},
+    ui::WidgetExposePtr,
 };
 use gtk::{
     glib,
@@ -44,7 +44,7 @@ pub fn init_widget(
         ));
         exposed
     };
-    let bl_expose = TranslateStateExpose::new(exposed.tls.clone());
+    let widget_expose = exposed.create_widget_expose();
     let cb_key = register_callback(
         move |pro| {
             if let Some(p) = exposed.progress.upgrade() {
@@ -69,5 +69,5 @@ pub fn init_widget(
         log::debug!("unregister pa callback for brightness: {cb_key}");
         unregister_callback(cb_key);
     });
-    Ok(Box::new(bl_expose))
+    Ok(Box::new(widget_expose))
 }

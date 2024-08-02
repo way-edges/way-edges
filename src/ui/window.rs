@@ -70,5 +70,5 @@ pub fn new_window(
 
 pub type WidgetExposePtr = Box<dyn WidgetExpose>;
 pub trait WidgetExpose {
-    fn toggle_pin(&self) {}
+    fn toggle_pin(&mut self) {}
 }

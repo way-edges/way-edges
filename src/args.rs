@@ -29,6 +29,9 @@ pub enum Command {
     #[command(name = "rm", alias = "r")]
     Remove { name: String },
 
+    #[command(name = "togglepin")]
+    TogglePin { name: String },
+
     #[command(name = "quit", alias = "q")]
     Exit,
 }

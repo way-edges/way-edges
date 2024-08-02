@@ -5,6 +5,7 @@ use std::{cell::RefCell, rc::Rc};
 use async_channel::{Receiver, Sender};
 use cairo::{ImageSurface, RectangleInt, Region};
 use display::grid::{BoxedWidgetRc, GridBox, GridItemSizeMapRc};
+use gio::glib::clone::Downgrade;
 use gtk::glib;
 use gtk::prelude::NativeExt;
 use gtk::prelude::{DrawingAreaExtManual, GtkWindowExt, SurfaceExt, WidgetExt};
@@ -283,8 +284,13 @@ pub fn init_widget(
         expose.clone(),
         filtered_grid_item_map,
         outlook_rc,
-        box_motion_transition,
+        box_motion_transition.clone(),
         input_region,
+    );
+    let tls_expose = TranslateStateExpose::new(
+        Rc::downgrade(&tls),
+        box_motion_transition.downgrade(),
+        expose.borrow().update_func(),
     );
     darea.connect_destroy(move |_| {
         log::debug!("DrawingArea destroyed");
@@ -294,7 +300,7 @@ pub fn init_widget(
         expose.borrow().update_signal.close();
     });
     window.set_child(Some(&darea));
-    Ok(Box::new(TranslateStateExpose::new(Rc::downgrade(&tls))))
+    Ok(Box::new(tls_expose))
 }
 
 fn event_handle(

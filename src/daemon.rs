@@ -12,19 +12,25 @@ use tokio::net::UnixStream;
 use crate::{
     activate::{self, GroupCtx},
     args, config, init_file_monitor,
-    ipc_command::{CommandBody, IPCCommand, IPC_COMMAND_ADD, IPC_COMMAND_QUIT, IPC_COMMAND_REMOVE},
+    ipc_command::{
+        CommandBody, IPCCommand, IPC_COMMAND_ADD, IPC_COMMAND_QUIT, IPC_COMMAND_REMOVE,
+        IPC_COMMAND_TOGGLE_PIN,
+    },
     notify_send, start_watch_file, stop_watch_file,
 };
 
-pub const TEMP_DIR: &str = "/tmp/way-edges";
-pub const LOCK_FILE: &str = "way-edges.lock";
+// pub const TEMP_DIR: &str = "/tmp/way-edges";
+// pub const LOCK_FILE: &str = "way-edges.lock";
 pub const SOCK_FILE: &str = "/tmp/way-edges/way-edges.sock";
 
 // fn init_app(app: &Application, reload_signal_receiver: &Receiver<i32>) {
 fn init_group(app: &Application, name: &str) -> Result<Box<dyn GroupCtx>, String> {
     let args = args::get_args();
     debug!("Parsed Args: {:?}", args);
-    let res = config::get_config(Some(name)).and_then(|vc| {
+    stop_watch_file();
+    let conf = config::get_config(Some(name));
+    start_watch_file();
+    let res = conf.and_then(|vc| {
         debug!("Parsed Config: {vc:?}");
         {
             #[cfg(feature = "hyprland")]
@@ -78,11 +84,13 @@ impl GroupMapCtx {
         }
     }
     fn add_group(&mut self, name: &str) {
-        if let Some(app) = &self.app {
-            let s = init_group(&app.upgrade().unwrap(), name).ok();
-            self.map.insert(name.to_string(), s);
-        } else {
-            self.map.insert(name.to_string(), None);
+        if !self.map.contains_key(name) {
+            if let Some(app) = &self.app {
+                let s = init_group(&app.upgrade().unwrap(), name).ok();
+                self.map.insert(name.to_string(), s);
+            } else {
+                self.map.insert(name.to_string(), None);
+            }
         }
     }
     fn rm_group(&mut self, name: &str) {
@@ -109,6 +117,13 @@ impl GroupMapCtx {
             }
         });
         drop(self.hold.take());
+    }
+    fn toggle_pin(&mut self, gn: &str, wn: &str) {
+        if let Some(Some(v)) = self.map.get_mut(gn) {
+            if let Some(v) = v.widget_map().get_mut(wn) {
+                v.widget_expose.toggle_pin()
+            }
+        }
     }
 }
 
@@ -159,11 +174,9 @@ pub async fn daemon() {
             group_ctx,
             async move {
                 while (file_change_signal_receiver.recv().await).is_ok() {
-                    stop_watch_file();
                     group_ctx.borrow_mut().reload();
                     log::debug!("Reload!!!");
                     notify_send("Way-edges", "App Reload", false);
-                    start_watch_file();
                 }
                 log::error!("File Watcher exit");
                 notify_send("Way-edges file watcher", "watcher exited", true);
@@ -171,6 +184,7 @@ pub async fn daemon() {
         ));
         glib::spawn_future_local(async move {
             while let Ok(command) = ipc_command_receiver.recv().await {
+                log::debug!("recv ipc command: {command:?}");
                 match command {
                     IPCCommand::AddGroup(s) => {
                         group_ctx.borrow_mut().add_group(&s);
@@ -183,6 +197,7 @@ pub async fn daemon() {
                         group_ctx.borrow_mut().dispose();
                         ipc_command_receiver.close();
                     }
+                    IPCCommand::TogglePin(gn, wn) => group_ctx.borrow_mut().toggle_pin(&gn, &wn),
                 }
             }
         });
@@ -255,6 +270,10 @@ fn deal_stream(stream: UnixStream, sender: async_channel::Sender<IPCCommand>) {
             IPC_COMMAND_REMOVE => {
                 IPCCommand::RemoveGroup(command_body.args.first().ok_or("No group name")?.clone())
             }
+            IPC_COMMAND_TOGGLE_PIN => IPCCommand::TogglePin(
+                command_body.args.first().ok_or("No group name")?.clone(),
+                command_body.args.get(1).ok_or("No widget name")?.clone(),
+            ),
             IPC_COMMAND_QUIT => IPCCommand::Exit,
             _ => return Err("unknown command".to_string()),
         };

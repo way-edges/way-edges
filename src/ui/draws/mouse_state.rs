@@ -6,13 +6,14 @@ use gtk::{
 };
 use std::{
     cell::{Cell, RefCell},
+    ops::Not,
     rc::{Rc, Weak},
     time::Duration,
 };
 
 use crate::ui::WidgetExpose;
 
-use super::transition_state::{TransitionDirection, TransitionStateRc};
+use super::transition_state::{TransitionDirection, TransitionState, TransitionStateRc};
 
 #[derive(Debug, Clone)]
 pub enum MouseEvent {
@@ -264,16 +265,39 @@ impl TranslateState {
 // NOTE: THIS ONE IS ONLY FOR TRANSLATE_STATE
 pub struct TranslateStateExpose {
     pub tls: Weak<RefCell<TranslateState>>,
+    pub ts: Weak<RefCell<TransitionState>>,
+    pub draw: Box<dyn FnMut()>,
 }
 impl TranslateStateExpose {
-    pub fn new(tls: Weak<RefCell<TranslateState>>) -> Self {
-        Self { tls }
+    pub fn new(
+        tls: Weak<RefCell<TranslateState>>,
+        ts: Weak<RefCell<TransitionState>>,
+        f: impl FnMut() + 'static,
+    ) -> Self {
+        Self {
+            tls,
+            ts,
+            draw: Box::new(f),
+        }
     }
 }
 impl WidgetExpose for TranslateStateExpose {
-    fn toggle_pin(&self) {
+    fn toggle_pin(&mut self) {
         if let Some(tls) = self.tls.upgrade() {
-            tls.borrow_mut().toggle_pin();
+            if let Some(ts) = self.ts.upgrade() {
+                let mut ts = ts.borrow_mut();
+                let direction = ts.direction;
+                ts.set_direction_self(direction.not());
+                match direction {
+                    TransitionDirection::Forward => {
+                        tls.borrow_mut().unpin();
+                    }
+                    TransitionDirection::Backward => {
+                        tls.borrow_mut().pin();
+                    }
+                }
+                (self.draw)()
+            }
         }
     }
 }

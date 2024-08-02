@@ -101,6 +101,8 @@ pub fn setup_draw(
         window,
         #[strong]
         progress,
+        #[strong]
+        ts,
         move |_, context, _, _| {
             if let Some(f) = additional.on_draw.as_mut() {
                 f()
@@ -137,6 +139,7 @@ pub fn setup_draw(
         darea: Downgrade::downgrade(&darea),
         progress: progress.downgrade(),
         tls: tls.downgrade(),
+        ts: ts.downgrade(),
     })
 }
 

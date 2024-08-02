@@ -11,12 +11,15 @@ use crate::{
     activate::get_monior_size,
     config::{widgets::slide::SlideConfig, Config},
     ui::{
-        draws::{mouse_state::TranslateState, transition_state::TransitionStateRc},
-        WidgetExpose, WidgetExposePtr,
+        draws::{
+            mouse_state::{TranslateState, TranslateStateExpose},
+            transition_state::{TransitionState, TransitionStateRc},
+        },
+        WidgetExposePtr,
     },
 };
 use gio::glib::WeakRef;
-use gtk::{gdk::RGBA, ApplicationWindow};
+use gtk::{gdk::RGBA, prelude::WidgetExt, ApplicationWindow};
 
 use super::common;
 
@@ -24,12 +27,14 @@ pub struct SlideExpose {
     pub darea: WeakRef<gtk::DrawingArea>,
     pub progress: Weak<Cell<f64>>,
     pub tls: Weak<RefCell<TranslateState>>,
+    pub ts: Weak<RefCell<TransitionState>>,
 }
-impl WidgetExpose for SlideExpose {
-    fn toggle_pin(&self) {
-        if let Some(tls) = self.tls.upgrade() {
-            tls.borrow_mut().toggle_pin();
-        }
+impl SlideExpose {
+    pub fn create_widget_expose(&self) -> TranslateStateExpose {
+        let darea = self.darea.clone();
+        TranslateStateExpose::new(self.tls.clone(), self.ts.clone(), move || {
+            darea.upgrade().map(|d| d.queue_draw());
+        })
     }
 }
 
@@ -60,7 +65,7 @@ pub fn init_widget(
         on_draw: None,
     };
     let expose = init_widget_as_plug(window, config, slide_cfg, add)?;
-    Ok(Box::new(expose))
+    Ok(Box::new(expose.create_widget_expose()))
 }
 
 pub fn init_widget_as_plug(

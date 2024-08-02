@@ -15,12 +15,14 @@ pub struct CommandBody {
 pub enum IPCCommand {
     AddGroup(String),
     RemoveGroup(String),
+    TogglePin(String, String),
     Exit,
 }
 
 pub const IPC_COMMAND_ADD: &str = "add";
 pub const IPC_COMMAND_REMOVE: &str = "rm";
 pub const IPC_COMMAND_QUIT: &str = "q";
+pub const IPC_COMMAND_TOGGLE_PIN: &str = "togglepin";
 
 pub async fn send_command(cmd: &Command) -> Result<(), Box<dyn std::error::Error>> {
     let data = match cmd {
@@ -33,6 +35,14 @@ pub async fn send_command(cmd: &Command) -> Result<(), Box<dyn std::error::Error
         }
         Command::Exit => {
             format!(r#"{{"command": "{IPC_COMMAND_QUIT}"}}"#)
+        }
+        Command::TogglePin { name } => {
+            let (group_name, widget_name) = name
+                .split_once(':')
+                .ok_or("widget must be specified with: `group_name:widget_name`")?;
+            format!(
+                r#"{{"command": "{IPC_COMMAND_TOGGLE_PIN}", "args": ["{group_name}", "{widget_name}"]}}"#
+            )
         }
     };
 
