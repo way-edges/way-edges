@@ -1,8 +1,3 @@
-# This is an example PKGBUILD file. Use this as a start to creating your own,
-# and remove these comments. For more information, see 'man PKGBUILD'.
-# NOTE: Please fill out the license field for your package! If it is unknown,
-# then please put 'unknown'.
-
 # Maintainer: OGIOS <ogios@foxmail.com>
 _pkgname=way-edges
 pkgname=way-edges-git
@@ -15,8 +10,13 @@ license=('MIT')
 depends=('gtk4' 'gtk4-layer-shell' 'cairo' 'pango')
 makedepends=(cargo git)
 provides=(way-edges)
-source=("$_pkgname::git+$url")
-sha256sums=('SKIP')
+options=(!debug)
+# source=("$_pkgname::git+$url")
+# sha256sums=('SKIP')
+
+prepare() {
+  git clone "$url.git" "$_pkgname" --depth=1
+}
 
 pkgver() {
   cd "$_pkgname"
