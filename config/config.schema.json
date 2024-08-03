@@ -28,6 +28,10 @@
             "items": {
               "type": "object",
               "properties": {
+                "name": {
+                  "description": "Name of the widget, can be empty",
+                  "type": "string"
+                },
                 "edge": {
                   "type": "string",
                   "description": "edge of the screen: top/bottom/left/right.\nDefault `left`",

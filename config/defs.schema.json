@@ -342,6 +342,117 @@
           "oneOf": [{ "$ref": "#BoxOutlookWindow" }]
         }
       }
+    },
+    "Ring": {
+      "$id": "#Ring",
+      "properties": {
+        "radius": {
+          "description": "radius of the ring",
+          "type": "number",
+          "default": 13
+        },
+        "ring_width": {
+          "description": "ring width, should be less than radius",
+          "type": "number",
+          "default": 5
+        },
+        "bg_color": {
+          "description": "progress uncovered area color",
+          "$ref": "#UtilColor",
+          "default": "#9F9F9F"
+        },
+        "fg_color": {
+          "description": "progress area color",
+          "$ref": "#UtilColor",
+          "default": "#F1FA8C"
+        },
+        "frame_rate": {
+          "$ref": "#UtilCommon/properties/frame_rate"
+        },
+        "transition_duration": {
+          "$ref": "#UtilCommon/properties/transition_duration"
+        },
+        "prefix": {
+          "description": "Text on the left side of the ring, default empty",
+          "type": "string"
+        },
+        "font-family": {
+          "description": "Font family of all text within ring widget, use default by not include this key",
+          "type": "string"
+        },
+        "preset": {
+          "description": "preset update function of the ring",
+          "oneOf": [
+            {
+              "type": "string",
+              "enum": ["ram", "swap", "cpu", "battery", "disk"]
+            },
+            {
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "const": "ram"
+                }
+              }
+            },
+            {
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "const": "swap"
+                }
+              }
+            },
+            {
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "const": "cpu"
+                }
+              }
+            },
+            {
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "const": "disk"
+                },
+                "partition": {
+                  "description": "disk partition to monitor, default `/`",
+                  "type": "string",
+                  "default": "/"
+                }
+              }
+            },
+            {
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "const": "battery"
+                }
+              }
+            },
+            {
+              "properties": {
+                "type": { "type": "string", "const": "custom" },
+                "update_with_interval_ms": {
+                  "description": "update progress with command given milliseconds, Please be noted that the return value of the command must be between 0 and 1.\nExample: [1000, \"echo 0.2333\"]",
+                  "type": "array",
+                  "prefixItems": [
+                    { "type": "integer", "minimum": 1 },
+                    { "type": "string" }
+                  ]
+                },
+                "template": {
+                  "description": "hidden text, replace '{progress}' with the progress from 0-1",
+                  "type": "string",
+                  "default": "{progress}%"
+                }
+              }
+            }
+          ]
+        }
+      }
     }
   }
 }
