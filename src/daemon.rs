@@ -25,8 +25,6 @@ pub const SOCK_FILE: &str = "/tmp/way-edges/way-edges.sock";
 
 // fn init_app(app: &Application, reload_signal_receiver: &Receiver<i32>) {
 fn init_group(app: &Application, name: &str) -> Result<Box<dyn GroupCtx>, String> {
-    let args = args::get_args();
-    debug!("Parsed Args: {:?}", args);
     stop_watch_file();
     let conf = config::get_config(Some(name));
     start_watch_file();
@@ -116,6 +114,11 @@ impl GroupMapCtx {
                 v.close()
             }
         });
+        if let Some(app) = &self.app {
+            if let Some(app) = app.upgrade() {
+                app.quit()
+            }
+        }
         drop(self.hold.take());
     }
     fn toggle_pin(&mut self, gn: &str, wn: &str) {

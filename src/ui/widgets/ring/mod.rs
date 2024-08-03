@@ -20,7 +20,7 @@ use crate::ui::draws::util::new_surface;
 use crate::ui::draws::{shape::draw_fan, util::Z};
 
 use super::wrapbox::display::grid::DisplayWidget;
-use super::wrapbox::BoxExposeRc;
+use super::wrapbox::expose::BoxExposeRc;
 
 fn draw_text(pl: &Layout, color: &RGBA) -> ImageSurface {
     let size = pl.pixel_size();

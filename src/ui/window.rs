@@ -9,9 +9,28 @@ use gtk4_layer_shell::LayerShell;
 
 use super::widgets;
 
+pub type WidgetExposePtr = Box<dyn WidgetExpose>;
+pub trait WidgetExpose {
+    fn close(&mut self) {}
+    fn toggle_pin(&mut self) {}
+}
+
 pub struct WidgetCtx {
     pub window: WeakRef<ApplicationWindow>,
     pub widget_expose: WidgetExposePtr,
+}
+impl WidgetCtx {
+    pub fn close(&mut self) {
+        if let Some(w) = self.window.upgrade() {
+            w.close()
+        }
+        self.widget_expose.close()
+    }
+}
+impl Drop for WidgetCtx {
+    fn drop(&mut self) {
+        self.close()
+    }
 }
 
 pub fn new_window(
@@ -62,13 +81,12 @@ pub fn new_window(
         _ => return Err("Unsupported window widget".to_string()),
     }?;
 
+    window.connect_destroy(|_| {
+        log::info!("destroy window");
+    });
+
     Ok(WidgetCtx {
         window: window.downgrade(),
         widget_expose: widget,
     })
-}
-
-pub type WidgetExposePtr = Box<dyn WidgetExpose>;
-pub trait WidgetExpose {
-    fn toggle_pin(&mut self) {}
 }

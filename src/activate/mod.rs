@@ -59,7 +59,6 @@ fn create_widgets(
     let a = widget_items
         .into_iter()
         .map(|w| {
-            log::debug!("Final Config: {:?}", w.cfg);
             let key = w.cfg.name.clone();
             let widget_ctx = ui::new_window(app, w.cfg, &w.monitor)?;
             {

@@ -5,6 +5,7 @@ use std::{cell::RefCell, rc::Rc};
 use async_channel::{Receiver, Sender};
 use cairo::{ImageSurface, RectangleInt, Region};
 use display::grid::{BoxedWidgetRc, GridBox, GridItemSizeMapRc};
+use expose::{BoxExpose, BoxExposeRc, BoxWidgetExpose};
 use gio::glib::clone::Downgrade;
 use gtk::glib;
 use gtk::prelude::NativeExt;
@@ -27,34 +28,10 @@ use crate::ui::WidgetExposePtr;
 use super::ring::init_ring;
 
 pub mod display;
+pub mod expose;
 pub mod outlook;
 
-pub type UpdateSignal = ();
 pub type MousePosition = (f64, f64);
-pub type BoxExposeRc = Rc<RefCell<BoxExpose>>;
-
-pub struct BoxExpose {
-    pub update_signal: Sender<UpdateSignal>,
-}
-
-impl BoxExpose {
-    fn new() -> (BoxExposeRc, Receiver<UpdateSignal>) {
-        let (update_signal_sender, update_signal_receiver) = async_channel::bounded(1);
-        let se = Rc::new(RefCell::new(BoxExpose {
-            update_signal: update_signal_sender,
-        }));
-        (se, update_signal_receiver)
-    }
-    pub fn update_func(&self) -> impl Fn() + Clone {
-        let s = self.update_signal.downgrade();
-        move || {
-            if let Some(s) = s.upgrade() {
-                // ignored result
-                s.force_send(()).ok();
-            }
-        }
-    }
-}
 
 struct BoxBuffer {
     content: ImageSurface,
@@ -71,6 +48,7 @@ pub fn init_widget(
     let extra_trigger_size = box_conf.box_conf.extra_trigger_size.get_num_into().unwrap();
 
     let darea = DrawingArea::new();
+    window.set_child(Some(&darea));
 
     let (mut ol, expose, mut disp, update_signal_receiver) = {
         let mut disp = display::grid::GridBox::new(box_conf.box_conf.gap, box_conf.box_conf.align);
@@ -292,15 +270,7 @@ pub fn init_widget(
         box_motion_transition.downgrade(),
         expose.borrow().update_func(),
     );
-    darea.connect_destroy(move |_| {
-        log::debug!("DrawingArea destroyed");
-    });
-    window.connect_destroy(move |_| {
-        log::debug!("destroy window");
-        expose.borrow().update_signal.close();
-    });
-    window.set_child(Some(&darea));
-    Ok(Box::new(tls_expose))
+    Ok(Box::new(BoxWidgetExpose::new(tls_expose, expose)))
 }
 
 fn event_handle(

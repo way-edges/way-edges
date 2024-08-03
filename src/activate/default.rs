@@ -4,7 +4,7 @@ use super::{
     calculate_config_relative, create_widgets, find_monitor, get_monitors, WidgetItem, WidgetMap,
 };
 use crate::config::GroupConfig;
-use gtk::prelude::{GtkWindowExt, MonitorExt};
+use gtk::prelude::MonitorExt;
 
 pub struct Default(WidgetMap);
 impl Default {
@@ -28,14 +28,15 @@ impl Default {
         })
     }
 }
+impl Drop for Default {
+    fn drop(&mut self) {
+        self.0.iter_mut().for_each(|(_, v)| v.close())
+    }
+}
 
 impl super::GroupCtx for Default {
     fn close(&mut self) {
-        self.0.iter().for_each(|(_, v)| {
-            if let Some(w) = v.window.upgrade() {
-                w.close()
-            }
-        });
+        self.0.iter_mut().for_each(|(_, v)| v.close());
     }
 
     fn widget_map(&mut self) -> &mut WidgetMap {
