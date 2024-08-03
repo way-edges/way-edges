@@ -15,12 +15,19 @@ options=(!debug)
 # sha256sums=('SKIP')
 
 prepare() {
-  git clone "$url.git" "$_pkgname" --depth=1
+  if [ -d "$_pkgname" ]; then
+    cd "$_pkgname"
+    git fetch origin
+    git reset --hard origin/master
+  else
+    git clone "$url.git" "$_pkgname" --depth=1
+  fi
 }
 
 pkgver() {
   cd "$_pkgname"
-  printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
+  # printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
+  printf "%s" "$(git rev-parse --short HEAD)"
 }
 
 build() {
