@@ -16,6 +16,7 @@ https://github.com/user-attachments/assets/37d267cb-1cb4-44b4-81a8-8ac02bb741cb
 - [x] watch file & hot reload
 - [x] modulize mouse event
 - [-] relative height(wayland compositor specific relative height as features(including exclusive zone calculation))
+- [x] CLI
 - [ ] ease-in & ease-out button motion curve
 - [ ] widgets
   - [x] Button
@@ -28,7 +29,6 @@ https://github.com/user-attachments/assets/37d267cb-1cb4-44b4-81a8-8ac02bb741cb
   - [ ] Time
   - [ ] Tray
   - [ ] Hyprland Workspaces
-- [ ] CLI
 - [ ] ?multiple click & long press & release event(Button widget)
 - [ ] ~~?buttom size calculation, arrangement and overlap(should this be considered?)~~
 
