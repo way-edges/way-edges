@@ -33,6 +33,7 @@ zbus = "4.4"
 pangocairo = "0.20"
 get_sys_info = "0.1"
 tokio = { version = "1.39", features = ["net", "macros", "rt", "time", "sync"] }
+tokio-timerfd = "0.2.0"
 
 [dependencies.way-edges-derive]
 path = "way-edges-derive"

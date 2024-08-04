@@ -2168,6 +2168,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ef927ca75afb808a4d64dd374f00a2adf8d0fcff8e7b184af886c3c87ec4a3f3"
 
 [[package]]
+name = "timerfd"
+version = "1.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "84e482e368cf7efa2c8b570f476e5b9fd9fd5e9b9219fc567832b05f13511091"
+dependencies = [
+ "rustix",
+]
+
+[[package]]
 name = "tokio"
 version = "1.39.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2191,6 +2200,19 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.72",
+]
+
+[[package]]
+name = "tokio-timerfd"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "87eecdae9a9b793843b1df7a64bc136f203443c1ca9889b3c4a39590afa51094"
+dependencies = [
+ "futures-core",
+ "libc",
+ "slab",
+ "timerfd",
+ "tokio",
 ]
 
 [[package]]
@@ -2407,6 +2429,7 @@ dependencies = [
  "serde",
  "serde_jsonrc",
  "tokio",
+ "tokio-timerfd",
  "way-edges-derive",
  "xdg",
  "zbus",
