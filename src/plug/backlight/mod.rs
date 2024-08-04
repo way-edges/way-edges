@@ -12,15 +12,14 @@ use std::{
 
 use blight::Device;
 use dbus::set_brightness;
+use watch::WatchCtx;
 
 pub type PaCallback = dyn FnMut(f64);
-pub type PaErrCallback = dyn FnMut(String);
 
 struct BackLight {
     count: i32,
-    cbs: HashMap<i32, (String, Rc<RefCell<PaCallback>>)>,
+    cbs: HashMap<i32, (String, WatchCtx, Rc<RefCell<PaCallback>>)>,
     device_map: HashMap<String, (Device, HashMap<i32, ()>)>,
-    on_error_cbs: Vec<Box<PaErrCallback>>,
 
     v: HashMap<String, f64>,
 }
@@ -31,7 +30,6 @@ impl BackLight {
             count: 0,
             cbs: HashMap::new(),
             device_map: HashMap::new(),
-            on_error_cbs: vec![],
             v: HashMap::new(),
         }
     }
@@ -40,7 +38,7 @@ impl BackLight {
         if let Some((d, v)) = self.device_map.get_mut(device) {
             d.reload();
             v.keys().for_each(|i| {
-                if let Some((_, f)) = self.cbs.get(i) {
+                if let Some((_, _, f)) = self.cbs.get(i) {
                     f.borrow_mut()(d.current_percent());
                 }
             });
@@ -49,15 +47,15 @@ impl BackLight {
     fn add_cb(
         &mut self,
         cb: Box<PaCallback>,
-        error_cb: Option<impl FnMut(String) + 'static>,
         device: Device,
+        ctx: WatchCtx,
     ) -> Result<i32, String> {
         let cb = Rc::new(RefCell::new(cb));
         let key = self.count;
-        log::debug!("add sink cb");
+        log::debug!("add backlight cb");
 
         let name = device.name().to_string();
-        self.cbs.insert(key, (name.clone(), cb.clone()));
+        self.cbs.insert(key, (name.clone(), ctx, cb.clone()));
         if let Some((_, v)) = self.device_map.get_mut(&name) {
             v.insert(key, ());
         } else {
@@ -68,26 +66,16 @@ impl BackLight {
         }
 
         cb.borrow_mut()(*self.v.get(&name).unwrap());
-        if let Some(error_cb) = error_cb {
-            self.on_error_cbs.push(Box::new(error_cb));
-        };
         self.count += 1;
         Ok(key)
     }
     fn remove_cb(&mut self, key: i32) {
-        if let Some((d, _)) = self.cbs.remove(&key) {
+        if let Some((d, _, _)) = self.cbs.remove(&key) {
             if let Some((_, h)) = self.device_map.get_mut(&d) {
                 h.remove(&key);
-                // if h.is_empty() {
-                //     self.device_map.remove(&d);
-                // };
             };
         }
     }
-    // fn error(self, e: String) {
-    //     log::error!("Pulseaudio error(quit mainloop because of this): {e}");
-    //     self.on_error_cbs.into_iter().for_each(|mut f| f(e.clone()));
-    // }
     fn update_v(&mut self, device_name: String, v: f64) {
         self.v.insert(device_name, v);
     }
@@ -111,32 +99,15 @@ static BL_CTX: AtomicPtr<BackLight> = AtomicPtr::new(std::ptr::null_mut());
 unsafe fn get_ctx() -> *mut BackLight {
     BL_CTX.load(Ordering::Acquire)
 }
-fn init_pa() {
+fn init_bl() {
     IS_BL_INITED.store(true, Ordering::Release);
     BL_CTX.store(Box::into_raw(Box::new(BackLight::new())), Ordering::Release);
 }
-// fn on_pa_error(e: String) {
-//     unsafe {
-//         let pa_ptr = BL_CTX.swap(std::ptr::null_mut(), Ordering::Release);
-//         if pa_ptr.is_null() {
-//             return;
-//         }
-//         let a = pa_ptr.read();
-//         a.error(e);
-//     }
-// }
-fn is_pa_inited() -> bool {
+fn is_bl_inited() -> bool {
     IS_BL_INITED.load(Ordering::Acquire)
 }
-fn is_pa_empty() -> bool {
-    BL_CTX.load(Ordering::Acquire).is_null()
-}
-fn add_cb(
-    cb: Box<PaCallback>,
-    error_cb: Option<impl FnMut(String) + 'static>,
-    device: Device,
-) -> Result<i32, String> {
-    unsafe { get_ctx().as_mut().unwrap().add_cb(cb, error_cb, device) }
+fn add_cb(cb: Box<PaCallback>, device: Device, ctx: WatchCtx) -> Result<i32, String> {
+    unsafe { get_ctx().as_mut().unwrap().add_cb(cb, device, ctx) }
 }
 fn rm_cb(key: i32) {
     unsafe {
@@ -147,16 +118,11 @@ fn call_cb(name: &str) {
     unsafe { get_ctx().as_mut().unwrap().call(name) }
 }
 
-pub fn try_init_backlight(device: Device) -> Result<(), String> {
-    if !is_pa_inited() {
-        init_pa();
-    } else if is_pa_empty() {
-        return Err(
-            "pulseaudio mainloops seems inited before closed due to some error".to_string(),
-        );
+pub fn try_init_backlight(device: Device) -> Result<WatchCtx, String> {
+    if !is_bl_inited() {
+        init_bl();
     }
-    init_watcher(device)?;
-    Ok(())
+    init_watcher(device)
 }
 
 fn update_backlight(device: &Device) {
@@ -176,12 +142,13 @@ pub fn set_backlight(device_name: Option<String>, v: f64) -> Result<(), String> 
     Ok(())
 }
 
-fn init_watcher(device: Device) -> Result<(), String> {
+fn init_watcher(device: Device) -> Result<WatchCtx, String> {
     let path_buf = device.device_path();
     let ctx = watch::watch(&path_buf)?;
     update_backlight(&device);
+    let recv = ctx.r.clone();
     thread::spawn(move || loop {
-        let res = ctx.r.recv_blocking();
+        let res = recv.recv_blocking();
         match res {
             Ok(s) => match s {
                 Ok(_) => update_backlight(&device),
@@ -195,7 +162,7 @@ fn init_watcher(device: Device) -> Result<(), String> {
             }
         }
     });
-    Ok(())
+    Ok(ctx)
 }
 
 fn match_device(device_name: Option<String>) -> Result<Device, String> {
@@ -208,18 +175,17 @@ fn match_device(device_name: Option<String>) -> Result<Device, String> {
 
 pub fn register_callback(
     cb: impl FnMut(f64) + 'static,
-    error_cb: Option<impl FnMut(String) + 'static>,
     device_name: Option<String>,
 ) -> Result<i32, String> {
     let device = match_device(device_name)?;
 
-    try_init_backlight(device.clone())?;
+    let ctx = try_init_backlight(device.clone())?;
 
-    add_cb(Box::new(cb), error_cb, device)
+    add_cb(Box::new(cb), device, ctx)
 }
 
 pub fn unregister_callback(key: i32) {
-    if !is_pa_empty() {
+    if is_bl_inited() {
         rm_cb(key);
     }
 }

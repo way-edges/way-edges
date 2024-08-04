@@ -33,7 +33,9 @@ impl SlideExpose {
     pub fn create_widget_expose(&self) -> TranslateStateExpose {
         let darea = self.darea.clone();
         TranslateStateExpose::new(self.tls.clone(), self.ts.clone(), move || {
-            darea.upgrade().map(|d| d.queue_draw());
+            if let Some(d) = darea.upgrade() {
+                d.queue_draw()
+            }
         })
     }
 }

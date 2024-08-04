@@ -85,6 +85,7 @@ impl Drop for WatchCtx {
 }
 
 pub fn watch(p: &Path) -> Result<WatchCtx, String> {
+    log::info!("backlight watching path {:?}", p);
     let (w, h) = get_watcher()?;
     w.watch(p, notify::RecursiveMode::NonRecursive)
         .map_err(|e| format!("Failed to watch path {p:?}: {e}"))?;
@@ -94,6 +95,7 @@ pub fn watch(p: &Path) -> Result<WatchCtx, String> {
 }
 
 pub fn unwatch(p: &Path) -> Result<(), String> {
+    log::info!("backlight unwatching path {:?}", p);
     let (w, h) = get_watcher()?;
     w.unwatch(p)
         .map_err(|e| format!("Failed to unwatch path {p:?}: {e}"))?;
