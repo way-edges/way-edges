@@ -462,7 +462,6 @@ pub fn init_mainloop() -> Result<async_channel::Receiver<Signal>, String> {
                 }
             };
             // first
-            // let data_res = Rc::new(Cell::new(None::<Result<(), &str>>));
             let data_res = Rc::new(RefCell::new(Ok((false, false))));
             let data_res_clone = data_res.clone();
             with_context(|ctx| {

@@ -11,7 +11,7 @@ use tokio::net::UnixStream;
 
 use crate::{
     activate::{self, GroupCtx},
-    args, config, init_file_monitor,
+    config, init_file_monitor,
     ipc_command::{
         CommandBody, IPCCommand, IPC_COMMAND_ADD, IPC_COMMAND_QUIT, IPC_COMMAND_REMOVE,
         IPC_COMMAND_TOGGLE_PIN,

@@ -28,7 +28,6 @@ struct PA {
     source_cbs: HashMap<i32, (String, Rc<RefCell<PaCallback>>)>,
 
     device_map: HashMap<SinkOrSource, HashMap<i32, ()>>,
-    // on_error_cbs: Vec<Box<PaErrCallback>>,
 }
 
 impl PA {
@@ -38,7 +37,6 @@ impl PA {
             sink_cbs: HashMap::new(),
             source_cbs: HashMap::new(),
             device_map: HashMap::new(),
-            // on_error_cbs: vec![],
         }
     }
     fn call(&mut self, sink_or_source: SinkOrSource) {
@@ -67,12 +65,7 @@ impl PA {
             };
         }
     }
-    fn add_cb(
-        &mut self,
-        cb: Box<PaCallback>,
-        // error_cb: Option<impl FnMut(String) + 'static>,
-        sink_or_source: SinkOrSource,
-    ) -> i32 {
+    fn add_cb(&mut self, cb: Box<PaCallback>, sink_or_source: SinkOrSource) -> i32 {
         let cb = Rc::new(RefCell::new(cb));
         let key = self.count;
         self.device_map
@@ -95,23 +88,13 @@ impl PA {
                 self.source_cbs.insert(key, (s, cb.clone()));
             }
         };
-        // if let Some(error_cb) = error_cb {
-        //     self.on_error_cbs.push(Box::new(error_cb));
-        // };
         self.count += 1;
         key
     }
-    // fn add_error_cb(error_cb: impl FnMut(String) + 'static) {
-    //     self.on_error_cbs.push(Box::new(error_cb));
-    // }
     fn remove_cb(&mut self, key: i32) {
         self.sink_cbs.remove_entry(&key);
         self.source_cbs.remove_entry(&key);
     }
-    // fn error(self, e: String) {
-    //     log::error!("Pulseaudio error(quit mainloop because of this): {e}");
-    //     self.on_error_cbs.into_iter().for_each(|mut f| f(e.clone()));
-    // }
 }
 
 static IS_PA_INITIALIZED: AtomicBool = AtomicBool::new(false);
@@ -120,16 +103,6 @@ fn init_pa() {
     IS_PA_INITIALIZED.store(true, Ordering::Release);
     GLOBAL_PA.store(Box::into_raw(Box::new(PA::new())), Ordering::Release);
 }
-// fn on_pa_error(e: String) {
-//     unsafe {
-//         let pa_ptr = PA_CONTEXT.swap(std::ptr::null_mut(), Ordering::Release);
-//         if pa_ptr.is_null() {
-//             return;
-//         }
-//         let a = pa_ptr.read();
-//         a.error(e);
-//     }
-// }
 fn is_pa_inited() -> bool {
     IS_PA_INITIALIZED.load(Ordering::Acquire)
 }
@@ -145,17 +118,12 @@ fn call_pa(sink_or_source: SinkOrSource) {
             .call(sink_or_source);
     }
 }
-fn add_cb(
-    cb: Box<PaCallback>,
-    // error_cb: Option<impl FnMut(String) + 'static>,
-    sink_or_source: SinkOrSource,
-) -> i32 {
+fn add_cb(cb: Box<PaCallback>, sink_or_source: SinkOrSource) -> i32 {
     unsafe {
         GLOBAL_PA
             .load(Ordering::Acquire)
             .as_mut()
             .unwrap()
-            // .add_cb(cb, error_cb, sink_or_source)
             .add_cb(cb, sink_or_source)
     }
 }
@@ -171,6 +139,7 @@ fn rm_cb(key: i32) {
 
 pub fn try_init_pulseaudio() -> Result<(), String> {
     if !is_pa_inited() {
+        log::info!("start init pulseaudio related stuff");
         let sr = pa::init_mainloop()?;
         init_pa();
         init_painfo_changer();
@@ -222,14 +191,8 @@ impl OptionalSinkOrSource {
     }
 }
 
-pub fn register_callback(
-    cb: Box<PaCallback>,
-    sos: OptionalSinkOrSource, // cb: impl FnMut(VInfo, InterestMaskSet) + 'static,
-                               // error_cb: Option<impl FnMut(String) + 'static>,
-                               // sink_or_source: InterestMaskSet,
-) -> Result<i32, String> {
+pub fn register_callback(cb: Box<PaCallback>, sos: OptionalSinkOrSource) -> Result<i32, String> {
     try_init_pulseaudio()?;
-    // Ok(add_cb(Box::new(cb), error_cb, sink_or_source))
     let sos = match sos.0.as_ref() {
         OptionalSinkOrSourceDevice::Sink(s) => {
             let s = match s {
@@ -247,8 +210,6 @@ pub fn register_callback(
         }
     };
     let ind = match &sos {
-        // SinkOrSource::Sink(s) => (true, match_name_index_sink(s)?),
-        // SinkOrSource::Source(s) => (false, match_name_index_source(s)?),
         SinkOrSource::Sink(s) => SinkOrSourceIndex::Sink(match_name_index_sink(s)?),
         SinkOrSource::Source(s) => SinkOrSourceIndex::Source(match_name_index_source(s)?),
     };
