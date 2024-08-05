@@ -2,7 +2,6 @@ use std::cell::Cell;
 use std::time::Duration;
 use std::{cell::RefCell, rc::Rc};
 
-use async_channel::{Receiver, Sender};
 use cairo::{ImageSurface, RectangleInt, Region};
 use display::grid::{BoxedWidgetRc, GridBox, GridItemSizeMapRc};
 use expose::{BoxExpose, BoxExposeRc, BoxWidgetExpose};
@@ -328,8 +327,12 @@ fn event_handle(
 fn init_boxed_widgets(bx: &mut GridBox, expose: BoxExposeRc, ws: Vec<BoxedWidgetConfig>) {
     ws.into_iter().for_each(|w| match w.widget {
         crate::config::Widget::Ring(r) => {
-            let ring = Rc::new(RefCell::new(init_ring(&expose, *r)));
-            bx.add(ring, (w.index[0], w.index[1]));
+            if let Ok(ring) = init_ring(&expose, *r) {
+                let ring = Rc::new(RefCell::new(ring));
+                bx.add(ring, (w.index[0], w.index[1]));
+            } else {
+                log::error!("Fail to create ring widget")
+            }
         }
         _ => unreachable!(),
     });

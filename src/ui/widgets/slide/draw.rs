@@ -64,7 +64,7 @@ pub fn setup_draw(
     let ts = Rc::new(RefCell::new(TransitionState::new(Duration::from_millis(
         slide_cfg.transition_duration,
     ))));
-    let (progress, tls) = event::setup_event(&darea, ts.clone(), &cfg, &mut slide_cfg);
+    let (progress, tls) = event::setup_event(window, &darea, ts.clone(), &cfg, &mut slide_cfg);
 
     let predraw = super::pre_draw::draw(
         size,
@@ -134,6 +134,11 @@ pub fn setup_draw(
             }
         }
     ));
+
+    darea.connect_destroy(|_| {
+        log::debug!("slide drawing area destroyed");
+    });
+
     window.set_child(Some(&darea));
     Ok(SlideExpose {
         darea: Downgrade::downgrade(&darea),

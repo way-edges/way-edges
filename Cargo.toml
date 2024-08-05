@@ -9,7 +9,7 @@ notify = { version = "6.1.1", default-features = false }
 gtk4-layer-shell = "0.4"
 gtk = { package = "gtk4", version = "0.9", features = ["v4_12", "v4_14"] }
 gio = "0.20"
-interval-task = "0.2.0"
+interval-task = "0.3"
 serde_jsonrc = "0.1"
 serde = { version = "1.0", features = ["derive"] }
 xdg = "2.5"
@@ -33,6 +33,7 @@ zbus = "4.4"
 pangocairo = "0.20"
 get_sys_info = "0.1"
 tokio = { version = "1.39", features = ["net", "macros", "rt", "time", "sync"] }
+tokio-timerfd = "0.2.0"
 
 [dependencies.way-edges-derive]
 path = "way-edges-derive"

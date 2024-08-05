@@ -23,7 +23,7 @@ fn with_mem_info<T>(f: impl FnOnce(String) -> T) -> T {
     f(s)
 }
 
-pub type RamInfo = (u64, u64);
+pub type RamInfo = [u64; 2];
 pub static RAM_INFO: AtomicPtr<RamInfo> = AtomicPtr::new(std::ptr::null_mut());
 fn update_ram_info(info: RamInfo) {
     RAM_INFO.store(
@@ -34,7 +34,7 @@ fn update_ram_info(info: RamInfo) {
 pub fn get_ram_info() -> Option<RamInfo> {
     unsafe {
         RAM_INFO
-            .load(std::sync::atomic::Ordering::Acquire)
+            .load(std::sync::atomic::Ordering::SeqCst)
             .as_ref()
             .cloned()
     }
@@ -83,7 +83,7 @@ fn ram_info(lines: &mut Lines) -> RamInfo {
                 .parse::<u64>()
                 .unwrap();
 
-            (total - free, total)
+            [total - free, total]
         } else {
             panic!("MemTotal not found");
         }
@@ -123,7 +123,7 @@ fn swap_info(lines: &mut Lines) -> SwapInfo {
                 .parse::<u64>()
                 .unwrap();
 
-            ((total - free), total)
+            [(total - free), total]
         } else {
             panic!("SwapTotal not found");
         }

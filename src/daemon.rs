@@ -1,4 +1,11 @@
-use std::{cell::RefCell, collections::HashMap, io, path::Path, rc::Rc, thread};
+use std::{
+    cell::{Cell, RefCell},
+    collections::HashMap,
+    io,
+    path::Path,
+    rc::Rc,
+    thread,
+};
 
 use gio::{
     glib::{self, clone::Downgrade, WeakRef},
@@ -11,7 +18,7 @@ use tokio::net::UnixStream;
 
 use crate::{
     activate::{self, GroupCtx},
-    args, config, init_file_monitor,
+    config, init_file_monitor,
     ipc_command::{
         CommandBody, IPCCommand, IPC_COMMAND_ADD, IPC_COMMAND_QUIT, IPC_COMMAND_REMOVE,
         IPC_COMMAND_TOGGLE_PIN,
@@ -139,23 +146,45 @@ fn new_app() -> (GroupMapCtxRc, Application) {
 
     let group_map = Rc::new(RefCell::new(GroupMapCtx::new()));
 
+    let is_already_active = Rc::new(Cell::new(false));
+
     // when args passed, `open` will be signaled instead of `activate`
     app.connect_open(glib::clone!(
         #[weak]
         group_map,
+        #[strong]
+        is_already_active,
         move |app, _, _| {
-            debug!("connect open");
-            on_active(app);
-            group_map.borrow_mut().inited(app);
+            if is_already_active.get() {
+                notify_send(
+                    "Way-edges",
+                    "A way-edges daemon already running, something trys to run one more",
+                    true,
+                );
+            } else {
+                is_already_active.set(true);
+                debug!("connect open");
+                on_active(app);
+                group_map.borrow_mut().inited(app);
+            }
         }
     ));
     app.connect_activate(glib::clone!(
         #[weak]
         group_map,
         move |app| {
-            debug!("connect activate");
-            on_active(app);
-            group_map.borrow_mut().inited(app);
+            if is_already_active.get() {
+                notify_send(
+                    "Way-edges",
+                    "A way-edges daemon already running, something trys to run one more",
+                    true,
+                );
+            } else {
+                is_already_active.set(true);
+                debug!("connect activate");
+                on_active(app);
+                group_map.borrow_mut().inited(app);
+            }
         }
     ));
     (group_map, app)

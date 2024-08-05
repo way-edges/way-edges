@@ -3,11 +3,10 @@ use std::time::Duration;
 use std::{cell::RefCell, rc::Rc};
 
 use gtk::gdk::BUTTON_PRIMARY;
-use gtk::glib;
 use gtk::prelude::WidgetExt;
 use gtk::DrawingArea;
+use gtk::{glib, ApplicationWindow};
 use gtk4_layer_shell::Edge;
-use interval_task::runner::ExternalRunnerExt;
 
 use crate::config::widgets::slide::{Direction, SlideConfig, Task};
 use crate::config::Config;
@@ -72,6 +71,7 @@ impl From<Edge> for XorY {
 }
 
 pub(super) fn setup_event(
+    window: &ApplicationWindow,
     darea: &DrawingArea,
     ts: TransitionStateRc,
     cfg: &Config,
@@ -147,23 +147,28 @@ pub(super) fn setup_event(
 
     // update progress interval
     if let Some((ms, mut f)) = update_with_interval_ms {
-        let mut runner =
-            interval_task::runner::new_external_close_runner(Duration::from_millis(ms));
         let (s, r) = async_channel::bounded::<f64>(1);
-        runner.set_task(Box::new(move || {
-            match f() {
-                Ok(p) => {
-                    s.send_blocking(p).unwrap();
-                }
-                Err(e) => {
-                    log::error!("Fail to get progress: {e}")
-                }
-            };
-        }));
+        let mut runner = interval_task::runner::new_runner(
+            Duration::from_millis(ms),
+            || (),
+            move |_| {
+                match f() {
+                    Ok(p) => {
+                        s.send_blocking(p).unwrap();
+                    }
+                    Err(e) => {
+                        log::error!("Fail to get progress: {e}")
+                    }
+                };
+                false
+            },
+        );
         if let Err(e) = runner.start() {
             log::error!("Failt to start runner for update interval: {e}");
         } else {
             glib::spawn_future_local(glib::clone!(
+                #[strong]
+                r,
                 #[strong]
                 progress,
                 #[strong]
@@ -177,7 +182,9 @@ pub(super) fn setup_event(
                 }
             ));
             let runner = Rc::new(Cell::new(Some(runner)));
-            darea.connect_destroy(move |_| {
+            window.connect_destroy(move |_| {
+                log::debug!("closing slide progress update task");
+                r.close();
                 if let Some(runner) = runner.take() {
                     runner.close().unwrap();
                 }

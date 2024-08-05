@@ -110,21 +110,17 @@ pub fn send_painfo_change_signal(msg: PaInfoSignal) {
                 .load(Ordering::Acquire)
                 .as_ref()
                 .unwrap()
-                // .send_blocking(msg)
                 .send(msg)
                 .await
                 .ok()
         };
         log::debug!("send signal done");
     });
-    // get_debouncer().run(move || {
-    // });
 }
 
 pub fn init_painfo_changer() {
     let (s, r) = async_channel::bounded::<PaInfoSignal>(1);
     glib::spawn_future_local(async move {
-        // thread::spawn(move || {
         let pat = Rc::new(
             PulseAudioThing::new().expect("Fail to init pulseaudio mainloop for modification"),
         );
@@ -135,7 +131,6 @@ pub fn init_painfo_changer() {
             log::debug!("process painfo signal");
             match res {
                 Ok((sink_or_source, info)) => {
-                    // pamixer_cmd(sink_or_source, info);
                     match sink_or_source.0.as_ref() {
                         OptionalSinkOrSourceDevice::Sink(os) => {
                             let name = os.as_ref().or(get_default_sink());
@@ -167,7 +162,6 @@ pub fn init_painfo_changer() {
             }
         }
     });
-    // thread::spawn(move || loop {});
 
     PA_INFO_SENDER.store(Box::into_raw(Box::new(s)), Ordering::Release);
 }

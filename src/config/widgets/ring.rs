@@ -1,17 +1,17 @@
 use std::str::FromStr;
 
 use crate::{
-    config::{widgets::slide::update_task_interval, Widget},
-    plug::system::{init_mem_info, init_system_info, register_disk_partition},
+    config::Widget,
+    plug::{
+        common::shell_cmd,
+        system::{init_mem_info, init_system_info, register_disk_partition},
+    },
 };
 
-use super::{
-    common::{color_translate, dt_frame_rate},
-    slide::UpdateTask,
-};
+use super::common::{color_translate, dt_frame_rate};
 use educe::Educe;
 use gtk::gdk::RGBA;
-use serde::Deserialize;
+use serde::{Deserialize, Deserializer};
 use serde_jsonrc::Value;
 
 pub const NAME: &str = "ring";
@@ -25,6 +25,8 @@ pub enum RingPreset {
     Disk(String),
     Custom(RingCustom),
 }
+
+pub type UpdateTask = Box<dyn Send + FnMut() -> Result<(f64, Option<String>), String>>;
 
 #[derive(Deserialize, Educe)]
 #[educe(Debug)]
@@ -84,6 +86,13 @@ pub struct RingConfig {
     pub common: RingCommon,
     pub preset: RingPreset,
 }
+unsafe impl Send for RingConfig {}
+unsafe impl Sync for RingConfig {}
+impl Drop for RingConfig {
+    fn drop(&mut self) {
+        log::info!("Dropping RingConfig");
+    }
+}
 
 pub fn visit_config(d: Value) -> Result<Widget, String> {
     let preset = {
@@ -139,4 +148,47 @@ pub fn visit_config(d: Value) -> Result<Widget, String> {
     };
     let common = super::common::from_value::<RingCommon>(d)?;
     Ok(Widget::Ring(Box::new(RingConfig { common, preset })))
+}
+
+pub fn update_task_interval<'de, D>(d: D) -> Result<Option<(u64, UpdateTask)>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    struct EventMapVisitor;
+    impl<'de> serde::de::Visitor<'de> for EventMapVisitor {
+        type Value = Option<(u64, UpdateTask)>;
+
+        fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+        where
+            A: serde::de::SeqAccess<'de>,
+        {
+            let ms = seq.next_element()?.unwrap();
+            let ut = seq.next_element()?.unwrap();
+            Ok(Some((ms, create_update_task(ut))))
+        }
+
+        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            formatter.write_str("vec of tuples: (key: number, command: string)")
+        }
+    }
+    d.deserialize_any(EventMapVisitor)
+}
+pub fn create_update_task(value: String) -> UpdateTask {
+    Box::new(move || {
+        let value = value.clone();
+        let a = shell_cmd(value)?;
+        Ok(if let Some((p, text)) = a.split_once('\n') {
+            (
+                f64::from_str(&p)
+                    .map_err(|e| format!("Fail to convert result({a}) to f64: {e}"))?,
+                Some(text.to_string()),
+            )
+        } else {
+            (
+                f64::from_str(&a)
+                    .map_err(|e| format!("Fail to convert result({a}) to f64: {e}"))?,
+                None,
+            )
+        })
+    })
 }
