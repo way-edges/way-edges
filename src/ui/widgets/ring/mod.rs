@@ -17,22 +17,11 @@ use crate::plug::system::{
 use crate::ui::draws::frame_manager::FrameManager;
 use crate::ui::draws::mouse_state::MouseEvent;
 use crate::ui::draws::transition_state::{self, TransitionState, TransitionStateRc};
-use crate::ui::draws::util::new_surface;
+use crate::ui::draws::util::{draw_text, new_surface, ImageData};
 use crate::ui::draws::{shape::draw_fan, util::Z};
 
 use super::wrapbox::display::grid::DisplayWidget;
 use super::wrapbox::expose::BoxExposeRc;
-
-fn draw_text(pl: &Layout, color: &RGBA, text: &str) -> ImageSurface {
-    pl.set_text(text);
-    let size = pl.pixel_size();
-    let surf = new_surface(size);
-    let ctx = cairo::Context::new(&surf).unwrap();
-    ctx.set_antialias(cairo::Antialias::None);
-    ctx.set_source_color(color);
-    pangocairo::functions::show_layout(&ctx, pl);
-    surf
-}
 
 fn from_kb(total: u64, avaibale: u64) -> (f64, f64, &'static str) {
     let mut c = 0;
@@ -211,53 +200,6 @@ impl Drop for Ring {
 
 struct RingEvents {
     queue_draw: Box<dyn FnMut() + 'static>,
-}
-
-#[derive(Educe, Clone)]
-#[educe(Debug)]
-struct ImageData {
-    width: i32,
-    height: i32,
-    stride: i32,
-    format: Format,
-    #[educe(Debug(ignore))]
-    data: Vec<u8>,
-}
-unsafe impl Send for ImageData {}
-impl ImageData {
-    unsafe fn temp_surface(&mut self) -> ImageSurface {
-        ImageSurface::create_for_data_unsafe(
-            self.data.as_ptr() as *mut _,
-            self.format,
-            self.width,
-            self.height,
-            self.stride,
-        )
-        .unwrap()
-    }
-}
-impl From<ImageSurface> for ImageData {
-    fn from(value: ImageSurface) -> Self {
-        Self {
-            width: value.width(),
-            height: value.height(),
-            stride: value.stride(),
-            format: value.format(),
-            data: value.take_data().unwrap().to_vec(),
-        }
-    }
-}
-impl From<ImageData> for ImageSurface {
-    fn from(value: ImageData) -> Self {
-        ImageSurface::create_for_data(
-            value.data,
-            value.format,
-            value.width,
-            value.height,
-            value.stride,
-        )
-        .unwrap()
-    }
 }
 
 struct ProgressCache {
