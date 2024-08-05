@@ -172,6 +172,7 @@ struct PulseAudioThing {
 }
 impl PulseAudioThing {
     fn new() -> Result<Self, String> {
+        // NOTE: this `threaded` mainloop takes another one thread
         let mainloop = Rc::new(RefCell::new(
             Mainloop::new().ok_or("pulseaudio: failed to create main loop")?,
         ));

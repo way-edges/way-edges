@@ -11,6 +11,8 @@ use file_watch::*;
 use ipc_command::send_command;
 use notify_rust::Notification;
 
+// NOTE: thread 0
+
 #[tokio::main(flavor = "current_thread")]
 async fn main() {
     env_logger::init();

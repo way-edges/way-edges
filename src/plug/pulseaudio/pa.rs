@@ -352,6 +352,7 @@ pub fn init_mainloop() -> Result<async_channel::Receiver<Signal>, String> {
     {
         // init
         let (ps, pr) = async_channel::bounded::<Result<(), String>>(1);
+        // NOTE: 1 thread for monitor pulseaudio
         thread::spawn(move || {
             let ss_clone = ss.clone();
             // let res = move || -> Result<(Rc<RefCell<Mainloop>>, Rc<RefCell<Context>>), String> {

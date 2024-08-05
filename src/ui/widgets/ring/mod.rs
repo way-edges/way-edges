@@ -419,6 +419,7 @@ impl RingCtx {
         let (runner, cache_content, progress_cache) = {
             let (s, r) = async_channel::bounded(1);
             let mut uf = update_ctx.1;
+            // NOTE: one thread each ring widget
             let mut runner = interval_task::runner::new_runner(
                 Duration::from_millis(update_ctx.0),
                 move || Ring::new(&config),

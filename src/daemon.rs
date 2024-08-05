@@ -194,11 +194,15 @@ pub async fn daemon() {
     // set renderer explicitly to cairo instead of ngl
     std::env::set_var("GSK_RENDERER", "cairo");
 
+    // NOTE: `notify` takes 2 thread, may be i can make it to main tokio thread?
+    // idk how to do it.
     let file_change_signal_receiver = init_file_monitor();
 
     let (ipc_command_sender, ipc_command_receiver) = async_channel::unbounded::<IPCCommand>();
 
     // this is where glib mainloop will be
+    // NOTE: glib here 2 threads, also glib it self needs lots of other thread
+    // normally till here it will be 10-12 threads already (1 + 2 + 2 + <glib/gio additional threads>)
     let glib_mainloop = thread::spawn(move || {
         let (group_ctx, app) = new_app();
         glib::spawn_future_local(glib::clone!(

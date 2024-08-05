@@ -18,6 +18,8 @@ fn get_future_sender() -> &'static FutureSender {
     FUTURE_SENDER.get_or_init(|| {
         let (started_signal_sender, started_signal_receiver) = tokio::sync::oneshot::channel();
         let (future_sender, future_receiver) = async_channel::bounded::<BoxFuture>(1);
+
+        // NOTE: one async thread created just for sending signals
         thread::spawn(move || {
             let rt = tokio::runtime::Builder::new_current_thread()
                 .enable_all()

@@ -10,7 +10,7 @@ use notify::{INotifyWatcher, Watcher};
 type WatcherCtx = (INotifyWatcher, HashMap<String, Sender<Signal>>);
 pub type Signal = Result<(), String>;
 
-// static WATCHER: OnceLock<INotifyWatcher> = OnceLock::new();
+// NOTE: Another notify-rs monitor backlight file, cost 2 threads
 static WATCHER: AtomicPtr<WatcherCtx> = AtomicPtr::new(std::ptr::null_mut());
 
 fn get_watcher_ptr() -> *mut WatcherCtx {
