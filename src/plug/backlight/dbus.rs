@@ -1,39 +1,21 @@
-use std::sync::atomic::{AtomicPtr, Ordering};
-
 use zbus::Connection;
 use zbus::{proxy, Result};
 
-// struct BackLight;
-
+// NOTE: this dbus proxy takes 2 threads
+// it'll create 1 thread which always on after first connection
 #[proxy(interface = "org.freedesktop.login1.Session")]
 trait BackLight {
     fn SetBrightness(&self, subsystem: &str, name: &str, brightness: u32) -> Result<()>;
 }
 
-static PROXY: AtomicPtr<BackLightProxy> = AtomicPtr::new(std::ptr::null_mut());
-
-fn get_proxy_pointer() -> *mut BackLightProxy<'static> {
-    PROXY.load(std::sync::atomic::Ordering::Acquire)
-}
-
-async fn get_proxy() -> Result<&'static mut BackLightProxy<'static>> {
-    let p = get_proxy_pointer();
-    if p.is_null() {
-        let connection = Connection::system().await?;
-
-        PROXY.store(
-            Box::into_raw(Box::new(
-                BackLightProxy::new(
-                    &connection,
-                    "org.freedesktop.login1",
-                    "/org/freedesktop/login1/session/auto",
-                )
-                .await?,
-            )),
-            Ordering::Release,
-        );
-    };
-    unsafe { Ok(get_proxy_pointer().as_mut().unwrap()) }
+async fn get_proxy() -> Result<BackLightProxy<'static>> {
+    let connection = Connection::system().await?;
+    BackLightProxy::new(
+        &connection,
+        "org.freedesktop.login1",
+        "/org/freedesktop/login1/session/auto",
+    )
+    .await
 }
 
 pub async fn set_brightness(device_name: &str, p: u32) -> Result<()> {

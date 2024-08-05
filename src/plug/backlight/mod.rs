@@ -7,7 +7,6 @@ use std::{
     collections::HashMap,
     rc::Rc,
     sync::atomic::{AtomicBool, AtomicPtr, Ordering},
-    thread::{self},
 };
 
 use blight::Device;
@@ -147,18 +146,21 @@ fn init_watcher(device: Device) -> Result<WatchCtx, String> {
     let ctx = watch::watch(&path_buf)?;
     update_backlight(&device);
     let recv = ctx.r.clone();
-    thread::spawn(move || loop {
-        let res = recv.recv_blocking();
-        match res {
-            Ok(s) => match s {
-                Ok(_) => update_backlight(&device),
+    use gtk::glib;
+    glib::spawn_future_local(async move {
+        loop {
+            let res = recv.recv().await;
+            match res {
+                Ok(s) => match s {
+                    Ok(_) => update_backlight(&device),
+                    Err(e) => {
+                        log::error!("Watch error on device({}): {e}", device.name());
+                    }
+                },
                 Err(e) => {
-                    log::error!("Watch error on device({}): {e}", device.name());
+                    log::warn!("watcher for device({}) is closed: {e}", device.name());
+                    break;
                 }
-            },
-            Err(e) => {
-                log::warn!("watcher for device({}) is closed: {e}", device.name());
-                break;
             }
         }
     });
