@@ -86,6 +86,13 @@ pub struct RingConfig {
     pub common: RingCommon,
     pub preset: RingPreset,
 }
+unsafe impl Send for RingConfig {}
+unsafe impl Sync for RingConfig {}
+impl Drop for RingConfig {
+    fn drop(&mut self) {
+        log::info!("Dropping RingConfig");
+    }
+}
 
 pub fn visit_config(d: Value) -> Result<Widget, String> {
     let preset = {
