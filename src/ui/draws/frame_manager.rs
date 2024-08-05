@@ -7,7 +7,6 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use gtk::glib;
-// use interval_task::runner::{ExternalRunnerExt, Runner, Task};
 use tokio::sync::oneshot::error::TryRecvError;
 
 type BoxFuture = Pin<Box<dyn Future<Output = ()> + Send>>;
@@ -72,49 +71,45 @@ pub type FrameManagerCb = Box<dyn FnMut() + 'static>;
 pub type FrameManagerCbRc = Rc<RefCell<FrameManagerCb>>;
 
 pub struct FrameManager {
-    runner: Rc<Cell<Option<tokio::sync::oneshot::Sender<()>>>>,
+    stop_sender: Rc<Cell<Option<tokio::sync::oneshot::Sender<()>>>>,
     frame_gap: Duration,
     cb: FrameManagerCbRc,
 }
 impl FrameManager {
     pub fn new(frame_rate: u32, cb: impl FnMut() + 'static) -> Self {
-        let runner = Rc::new(Cell::new(None));
         Self {
-            runner,
+            stop_sender: Rc::new(Cell::new(None)),
             frame_gap: Duration::from_micros(1_000_000 / frame_rate as u64),
             cb: Rc::new(RefCell::new(Box::new(cb))),
         }
     }
     pub fn start(&mut self) -> Result<(), String> {
-        let is_no_runner = unsafe {
-            let ptr = self.runner.as_ptr();
-            let runner = ptr.as_ref().unwrap();
-            runner.is_none()
+        let no_fm = unsafe {
+            let ptr = self.stop_sender.as_ptr();
+            ptr.as_ref().unwrap().is_none()
         };
-        if is_no_runner {
+        if no_fm {
             log::debug!("start frame manager");
             let (stop_sender, signal_receiver) = add_frame_manage_future(self.frame_gap);
-            self.runner.set(Some(stop_sender));
+            self.stop_sender.set(Some(stop_sender));
             glib::spawn_future_local(glib::clone!(
                 #[weak(rename_to=cb)]
                 self.cb,
                 async move {
-                    log::debug!("start wait runner signal");
+                    log::debug!("start wait frame_manage signal");
                     while signal_receiver.recv().await.is_ok() {
                         cb.borrow_mut()();
                     }
-                    log::debug!("stop wait runner signal");
+                    log::debug!("stop wait frame_manage signal");
                 }
             ));
         }
         Ok(())
     }
     pub fn stop(&mut self) -> Result<(), String> {
-        if let Some(runner) = self.runner.take() {
-            // runner.send(()).unwrap();
-            let _ = runner.send(());
-            // runner.close().unwrap();
-            log::debug!("runner closed");
+        if let Some(stop_sender) = self.stop_sender.take() {
+            let _ = stop_sender.send(());
+            log::debug!("frame manage closed");
         }
         Ok(())
     }
