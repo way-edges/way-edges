@@ -90,6 +90,9 @@
         },
         {
           "$ref": "#Box"
+        },
+        {
+          "$ref": "#Text"
         }
       ]
     },
@@ -249,7 +252,7 @@
       ]
     },
     "Backlight": {
-      "$id": "#Microphone",
+      "$id": "#Backlight",
       "description": "Monitor Brightness widget specific properties",
       "allOf": [
         { "$ref": "#BaseSlideWidget" },
@@ -436,17 +439,74 @@
               "properties": {
                 "type": { "type": "string", "const": "custom" },
                 "update_with_interval_ms": {
-                  "description": "update progress with command given milliseconds, Please be noted that the return value of the command must be between 0 and 1.\nExample: [1000, \"echo 0.2333\"]",
+                  "description": "update progress with command given milliseconds\nProgress must be between 0 and 1.\n You can disable template by not providing text after\"\\n\"\nExample: [1000, \"printf \"0.2333\\n23.33%\"]",
                   "type": "array",
+                  "default": [
+                    1000,
+                    "a=0.233 && printf \"$a\\n%.2f%%\" $(bc <<< \"scale=2; $a*100\")"
+                  ],
                   "prefixItems": [
                     { "type": "integer", "minimum": 1 },
                     { "type": "string" }
                   ]
-                },
-                "template": {
-                  "description": "hidden text, replace '{progress}' with the progress from 0-1",
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "Text": {
+      "$id": "#Text",
+      "properties": {
+        "fg_color": {
+          "description": "progress area color",
+          "$ref": "#UtilColor",
+          "default": "#000000"
+        },
+        "font-family": {
+          "description": "Font family of all text within ring widget, use default by not include this key",
+          "type": "string"
+        },
+        "font-size": {
+          "description": "Font size, default 12",
+          "type": "integer",
+          "default": 12
+        },
+        "preset": {
+          "description": "text preset, avaibable: `time`, `custom`",
+          "oneOf": [
+            {
+              "properties": {
+                "type": {
                   "type": "string",
-                  "default": "{progress}%"
+                  "const": "time"
+                },
+                "format": {
+                  "description": "time format, optional, please refer to [https://docs.rs/chrono/latest/chrono/naive/struct.NaiveDateTime.html#method.format]",
+                  "type": "string",
+                  "default": "%Y-%m-%d %H:%M:%S"
+                },
+                "time_zone": {
+                  "type": "string",
+                  "description": "time zone, optional, please refer to [https://docs.rs/chrono-tz/0.9.0/chrono_tz/enum.Tz.html]\ndefault local"
+                }
+              }
+            },
+            {
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "const": "custom"
+                },
+                "update_with_interval_ms": {
+                  "description": "update text with command given milliseconds",
+                  "type": "array",
+                  "default": [1000, "echo -n example_text"],
+                  "prefixItems": [
+                    { "type": "integer", "minimum": 1 },
+                    { "type": "string" }
+                  ]
                 }
               }
             }

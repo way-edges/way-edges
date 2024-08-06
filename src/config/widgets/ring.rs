@@ -35,9 +35,6 @@ pub struct RingCustom {
     #[serde(default)]
     #[serde(deserialize_with = "update_task_interval")]
     pub update_with_interval_ms: Option<(u64, UpdateTask)>,
-
-    #[serde(default)]
-    pub template: Option<String>,
 }
 
 #[derive(Deserialize, Educe)]
@@ -179,8 +176,7 @@ fn create_update_task(value: String) -> UpdateTask {
         let a = shell_cmd(value)?;
         Ok(if let Some((p, text)) = a.split_once('\n') {
             (
-                f64::from_str(&p)
-                    .map_err(|e| format!("Fail to convert result({a}) to f64: {e}"))?,
+                f64::from_str(p).map_err(|e| format!("Fail to convert result({a}) to f64: {e}"))?,
                 Some(text.to_string()),
             )
         } else {
