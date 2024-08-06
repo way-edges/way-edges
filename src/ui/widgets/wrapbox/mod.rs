@@ -25,6 +25,7 @@ use crate::ui::draws::util::{draw_motion, draw_rotation, ensure_frame_manager, n
 use crate::ui::WidgetExposePtr;
 
 use super::ring::init_ring;
+use super::text::init_text;
 
 pub mod display;
 pub mod expose;
@@ -324,20 +325,6 @@ fn event_handle(
     tls
 }
 
-fn init_boxed_widgets(bx: &mut GridBox, expose: BoxExposeRc, ws: Vec<BoxedWidgetConfig>) {
-    ws.into_iter().for_each(|w| match w.widget {
-        crate::config::Widget::Ring(r) => {
-            if let Ok(ring) = init_ring(&expose, *r) {
-                let ring = Rc::new(RefCell::new(ring));
-                bx.add(ring, (w.index[0], w.index[1]));
-            } else {
-                log::error!("Fail to create ring widget")
-            }
-        }
-        _ => unreachable!(),
-    });
-}
-
 fn rotate_content(edge: Edge, content: ImageSurface) -> ImageSurface {
     match edge {
         Edge::Left => content,
@@ -373,4 +360,30 @@ fn rotate_content(edge: Edge, content: ImageSurface) -> ImageSurface {
         }
         _ => unreachable!(),
     }
+}
+
+fn init_boxed_widgets(bx: &mut GridBox, expose: BoxExposeRc, ws: Vec<BoxedWidgetConfig>) {
+    ws.into_iter().for_each(|w| {
+        let _ = match w.widget {
+            crate::config::Widget::Ring(r) => match init_ring(&expose, *r) {
+                Ok(ring) => {
+                    bx.add(Rc::new(RefCell::new(ring)), (w.index[0], w.index[1]));
+                    Ok(())
+                }
+                Err(e) => Err(format!("Fail to create ring widget: {e}")),
+            },
+            crate::config::Widget::Text(t) => match init_text(&expose, *t) {
+                Ok(text) => {
+                    bx.add(Rc::new(RefCell::new(text)), (w.index[0], w.index[1]));
+                    Ok(())
+                }
+                Err(e) => Err(format!("Fail to create text widget: {e}")),
+            },
+            _ => unreachable!(),
+        }
+        .inspect_err(|e| {
+            crate::notify_send("Way-edges boxed widgets", e.as_str(), true);
+            log::error!("{e}");
+        });
+    });
 }

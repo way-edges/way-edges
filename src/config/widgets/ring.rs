@@ -150,7 +150,7 @@ pub fn visit_config(d: Value) -> Result<Widget, String> {
     Ok(Widget::Ring(Box::new(RingConfig { common, preset })))
 }
 
-pub fn update_task_interval<'de, D>(d: D) -> Result<Option<(u64, UpdateTask)>, D::Error>
+fn update_task_interval<'de, D>(d: D) -> Result<Option<(u64, UpdateTask)>, D::Error>
 where
     D: Deserializer<'de>,
 {
@@ -173,7 +173,7 @@ where
     }
     d.deserialize_any(EventMapVisitor)
 }
-pub fn create_update_task(value: String) -> UpdateTask {
+fn create_update_task(value: String) -> UpdateTask {
     Box::new(move || {
         let value = value.clone();
         let a = shell_cmd(value)?;

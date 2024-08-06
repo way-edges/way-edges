@@ -105,6 +105,7 @@ pub fn visit_config(d: Value) -> Result<Widget, String> {
                     let widget = parse_widget(wv)?;
                     match &widget {
                         Widget::Ring(_) => Ok(widget),
+                        Widget::Text(_) => Ok(widget),
                         _ => Err("Unsupported boxed widget"),
                     }?
                 };

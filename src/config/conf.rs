@@ -11,6 +11,7 @@ use super::widgets::{
     pulseaudio::PAConfig,
     ring::RingConfig,
     slide::SlideConfig,
+    text::TextConfig,
     wrapbox::BoxConfig,
 };
 
@@ -154,6 +155,7 @@ pub enum Widget {
     Backlight(Box<BLConfig>),
     WrapBox(Box<BoxConfig>),
     Ring(Box<RingConfig>),
+    Text(Box<TextConfig>),
 }
 
 #[derive(Educe)]
