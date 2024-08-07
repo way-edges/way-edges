@@ -28,17 +28,18 @@ impl TextDrawer {
 
         let layout = {
             let font_family = config.font_family.clone();
-            let font_size = config.font_size;
+            let font_size = config.font_size << 10;
 
             let pc = pangocairo::pango::Context::new();
             let fm = pangocairo::FontMap::default();
             pc.set_font_map(Some(&fm));
             let mut desc = pc.font_description().unwrap();
+
             desc.set_size(font_size);
             if let Some(font_family) = font_family {
                 desc.set_family(font_family.as_str());
-                pc.set_font_description(Some(&desc));
             }
+            pc.set_font_description(Some(&desc));
             pangocairo::pango::Layout::new(&pc)
         };
 
