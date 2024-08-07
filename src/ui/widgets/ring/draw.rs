@@ -4,7 +4,7 @@ use gtk::pango::Layout;
 use gtk::{gdk::RGBA, prelude::GdkCairoContextExt};
 
 use crate::config::widgets::ring::RingConfig;
-use crate::ui::draws::util::{draw_text, ImageData};
+use crate::ui::draws::util::{draw_text, horizon_center_combine, new_surface, ImageData};
 use crate::ui::draws::{shape::draw_fan, util::Z};
 
 pub struct ProgressCache {
@@ -34,6 +34,7 @@ impl Ring {
         let fg_color = config.common.fg_color;
         let prefix = config.common.prefix.clone();
         let font_family = config.common.font_family.clone();
+        let font_size = config.common.font_size;
         let (layout, prefix_text, bg_arc, inner_radius) = Self::draw_base(
             radius,
             ring_width,
@@ -41,6 +42,7 @@ impl Ring {
             &fg_color,
             prefix,
             font_family,
+            font_size,
         );
 
         Self {
@@ -56,19 +58,8 @@ impl Ring {
     pub fn draw_progress(&self, progress: f64, text: Option<String>) -> ProgressCache {
         let ring_surf = {
             let radius = self.radius;
-            let mut size = (self.bg_arc.width(), self.bg_arc.height());
-            if let Some(img) = &self.prefix_text {
-                size.0 += img.width()
-            }
-            let surf = ImageSurface::create(Format::ARgb32, size.0, size.1).unwrap();
+            let surf = new_surface((self.bg_arc.width(), self.bg_arc.height()));
             let ctx = cairo::Context::new(&surf).unwrap();
-
-            if let Some(img) = &self.prefix_text {
-                let tranaslate_x = img.width();
-                ctx.set_source_surface(img, Z, Z).unwrap();
-                ctx.paint().unwrap();
-                ctx.translate(tranaslate_x as f64, Z);
-            }
 
             ctx.set_source_surface(&self.bg_arc, Z, Z).unwrap();
             ctx.paint().unwrap();
@@ -80,7 +71,13 @@ impl Ring {
             ctx.set_operator(cairo::Operator::Clear);
             draw_fan(&ctx, (radius, radius), self.inner_radius, 0., 2.);
             ctx.fill().unwrap();
-            surf
+
+            // combine
+            if let Some(pre_text) = self.prefix_text.as_ref() {
+                horizon_center_combine(pre_text, &surf)
+            } else {
+                surf
+            }
         };
 
         let text_surf =
@@ -98,6 +95,7 @@ impl Ring {
         fg_color: &RGBA,
         prefix: Option<String>,
         font_family: Option<String>,
+        font_size: Option<f64>,
     ) -> (Layout, Option<ImageSurface>, ImageSurface, f64) {
         let big_radius = radius;
         let small_radius = big_radius - ring_width;
@@ -118,12 +116,11 @@ impl Ring {
             let fm = pangocairo::FontMap::default();
             pc.set_font_map(Some(&fm));
             let mut desc = pc.font_description().unwrap();
-            desc.set_absolute_size(radius * 1.5 * 1024.);
+            desc.set_absolute_size(font_size.unwrap() * 1024.);
             if let Some(font_family) = font_family {
                 desc.set_family(font_family.as_str());
-                pc.set_font_description(Some(&desc));
             }
-            // desc.set_family("JetBrainsMono Nerd Font Mono");
+            pc.set_font_description(Some(&desc));
             let pl = pangocairo::pango::Layout::new(&pc);
 
             if let Some(prefix) = prefix {

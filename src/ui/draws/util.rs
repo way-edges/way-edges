@@ -164,3 +164,27 @@ pub fn draw_text(pl: &Layout, color: &RGBA, text: &str) -> ImageSurface {
     pangocairo::functions::show_layout(&ctx, pl);
     surf
 }
+
+pub fn horizon_center_combine(surf1: &ImageSurface, surf2: &ImageSurface) -> ImageSurface {
+    let s1_height = surf1.height();
+    let s2_height = surf2.height();
+    let mut surf = new_surface((surf1.width() + surf2.width(), s1_height.max(s2_height)));
+    let ctx = cairo::Context::new(&mut surf).unwrap();
+
+    let positions = {
+        match s1_height.cmp(&s2_height) {
+            std::cmp::Ordering::Less => [(s2_height as f64 - s1_height as f64) / 2., Z],
+            std::cmp::Ordering::Equal => [Z, Z],
+            std::cmp::Ordering::Greater => [Z, (s1_height as f64 - s2_height as f64) / 2.],
+        }
+    };
+
+    ctx.set_source_surface(surf1, Z, positions[0]).unwrap();
+    ctx.paint().unwrap();
+
+    ctx.translate(surf1.width() as f64, Z);
+
+    ctx.set_source_surface(surf2, Z, positions[1]).unwrap();
+    ctx.paint().unwrap();
+    surf
+}

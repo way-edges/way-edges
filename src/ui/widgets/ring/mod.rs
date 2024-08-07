@@ -17,7 +17,7 @@ use crate::plug::system::{
 use crate::ui::draws::frame_manager::FrameManager;
 use crate::ui::draws::mouse_state::MouseEvent;
 use crate::ui::draws::transition_state::{self, TransitionState, TransitionStateRc};
-use crate::ui::draws::util::Z;
+use crate::ui::draws::util::{horizon_center_combine, new_surface, Z};
 
 use super::wrapbox::display::grid::DisplayWidget;
 use super::wrapbox::expose::BoxExposeRc;
@@ -297,46 +297,18 @@ impl RingCtx {
     }
 
     fn _combine(r: &ImageSurface, t: Option<&ImageSurface>, y: f64) -> ImageSurface {
-        let ring_size = (r.width(), r.height());
-        let (text_size, visible_text_width, size) = {
-            if let Some(t) = t {
-                let text_size = (t.width(), t.height());
-                let visible_text_width =
-                    transition_state::calculate_transition(y, (0., text_size.0 as f64));
-                let size = (
-                    ring_size.0 + visible_text_width.ceil() as i32,
-                    ring_size.1.max(text_size.1),
-                );
-                (text_size, visible_text_width, size)
-            } else {
-                let size = (ring_size.0, ring_size.1);
-                ((0, 0), Z, size)
-            }
-        };
-
-        let surf = ImageSurface::create(Format::ARgb32, size.0, size.1).unwrap();
-        let ctx = cairo::Context::new(&surf).unwrap();
-        ctx.set_antialias(cairo::Antialias::None);
-        ctx.set_source_surface(r, Z, Z).unwrap();
-        ctx.paint().unwrap();
-
-        if let Some(t) = t {
-            ctx.set_source_surface(
-                t,
-                -text_size.0 as f64 + ring_size.0 as f64 + visible_text_width,
-                Z,
-            )
-            .unwrap();
-            ctx.rectangle(
-                ring_size.0 as f64,
-                Z,
-                text_size.0 as f64,
-                text_size.1 as f64,
-            );
-            ctx.fill().unwrap();
+        if let Some(text) = t {
+            let visible_text_width =
+                transition_state::calculate_transition(y, (0., text.width() as f64));
+            let text_visible_surf = new_surface((visible_text_width.ceil() as i32, text.height()));
+            let ctx = cairo::Context::new(&text_visible_surf).unwrap();
+            ctx.translate(-(text.width() - visible_text_width.ceil() as i32) as f64, Z);
+            ctx.set_source_surface(text, Z, Z).unwrap();
+            ctx.paint().unwrap();
+            horizon_center_combine(r, &text_visible_surf)
+        } else {
+            r.clone()
         }
-
-        surf
     }
 }
 

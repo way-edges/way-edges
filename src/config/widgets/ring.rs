@@ -60,6 +60,8 @@ pub struct RingCommon {
     pub prefix: Option<String>,
     #[serde(default)]
     pub font_family: Option<String>,
+    #[serde(default)]
+    pub font_size: Option<f64>,
 }
 
 fn dt_r() -> f64 {
@@ -143,7 +145,11 @@ pub fn visit_config(d: Value) -> Result<Widget, String> {
             }
         }
     };
-    let common = super::common::from_value::<RingCommon>(d)?;
+    let mut common = super::common::from_value::<RingCommon>(d)?;
+
+    if common.font_size.is_none() {
+        common.font_size = Some(common.radius * 1.5);
+    }
     Ok(Widget::Ring(Box::new(RingConfig { common, preset })))
 }
 
