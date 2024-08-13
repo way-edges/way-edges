@@ -1309,9 +1309,9 @@ dependencies = [
 
 [[package]]
 name = "interval-task"
-version = "0.3.1"
+version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c8a7b58847424381dc5d3931d8efc4084bd886539f76497e7c705101044c44ff"
+checksum = "6dfdc11ba8b91a436b6684219add95c919df09e50589c5a41b65370159ffcc59"
 dependencies = [
  "async-channel",
  "spin_sleep",
