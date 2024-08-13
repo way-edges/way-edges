@@ -34,19 +34,7 @@ pub fn new_surface(size: (i32, i32)) -> ImageSurface {
     ImageSurface::create(Format::ARgb32, size.0, size.1).unwrap()
 }
 
-pub fn draw_motion(
-    ctx: &Context,
-    visible_y: f64,
-    edge: Edge,
-    range: (f64, f64),
-    extra_trigger_size: f64,
-) {
-    // let offset: f64 = match edge {
-    //     Edge::Right | Edge::Bottom => extra_trigger_size,
-    //     _ => 0.,
-    // };
-    // println!("offset: {}", offset);
-    // ctx.translate(-range.1 + visible_y - offset, 0.);
+pub fn draw_motion(ctx: &Context, visible_y: f64, range: (f64, f64)) {
     ctx.translate(-range.1 + visible_y, 0.);
 }
 

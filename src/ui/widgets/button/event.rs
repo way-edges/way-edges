@@ -22,14 +22,11 @@ pub(super) fn setup_event(
         #[weak]
         darea,
         move |e| {
-            match e {
-                MouseEvent::Release(_, k) => {
-                    if let Some(cb) = event_map.get_mut(&k) {
-                        cb();
-                    };
-                }
-                _ => {}
-            };
+            if let MouseEvent::Release(_, k) = e {
+                if let Some(cb) = event_map.get_mut(&k) {
+                    cb();
+                };
+            }
             darea.queue_draw();
         }
     ));

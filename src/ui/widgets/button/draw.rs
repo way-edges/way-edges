@@ -119,13 +119,7 @@ impl DrawCore {
     fn draw(&mut self, context: &Context, y: f64, window: &gtk::ApplicationWindow) {
         let visible_y = transition_state::calculate_transition(y, self.transition_range);
         draw_rotation(context, self.edge, self.size);
-        draw_motion(
-            context,
-            visible_y,
-            self.edge,
-            self.transition_range,
-            self.extra_trigger_size,
-        );
+        draw_motion(context, visible_y, self.transition_range);
         let is_pressing = self.ms.borrow().pressing.is_some();
         (self.core)(context, is_pressing, self.f_map_size);
         ensure_input_region(

@@ -250,7 +250,7 @@ pub fn init_widget(
                 },
                 _ => {}
             };
-            draw_motion(ctx, visible_y, edge, range, extra_trigger_size);
+            draw_motion(ctx, visible_y, range);
 
             ctx.set_source_surface(&buf.content, Z, Z).unwrap();
             ctx.paint().unwrap()

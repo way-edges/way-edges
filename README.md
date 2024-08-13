@@ -1,36 +1,8 @@
 https://github.com/user-attachments/assets/37d267cb-1cb4-44b4-81a8-8ac02bb741cb
 
-## TODO
+## Doc
 
-- [x] Cairo paint buttons & shadow
-- [x] GTK4 DrawArea & pre-draw surface cache
-- [x] click event
-- [x] button movement: motion curve(linear for now: y=x)
-- [x] Frame rate management, only renders when visible.(to save resources)
-- [x] `wl_surface` input region dynamically changes with button movement
-- [x] pre-draw surface transformation(to fit other edges)
-- [x] widget grouping
-- [x] configuration file
-- [x] cmdline args
-- [x] margin
-- [x] watch file & hot reload
-- [x] modulize mouse event
-- [-] relative height(wayland compositor specific relative height as features(including exclusive zone calculation))
-- [x] CLI
-- [ ] ease-in & ease-out button motion curve
-- [ ] widgets
-  - [x] Button
-  - [x] Slider(for volume, brightness, etc.)
-  - [x] PulseAudio(Speaker, Microphone)
-    - [x] allow specify device(only default for now)
-  - [x] Brightness
-  - [x] Ring progress(for cpu/ram... status)
-  - [x] Box
-  - [ ] Time
-  - [ ] Tray
-  - [ ] Hyprland Workspaces
-- [ ] ?multiple click & long press & release event(Button widget)
-- [ ] ~~?buttom size calculation, arrangement and overlap(should this be considered?)~~
+Please refer to [https://way-edges.github.io/description]
 
 ## Configuration
 
@@ -62,3 +34,35 @@ Options:
   -h, --help         Print help
   -V, --version      Print version
 ```
+
+## TODO
+
+- [x] Cairo paint buttons & shadow
+- [x] GTK4 DrawArea & pre-draw surface cache
+- [x] click event
+- [x] button movement: motion curve(linear for now: y=x)
+- [x] Frame rate management, only renders when visible.(to save resources)
+- [x] `wl_surface` input region dynamically changes with button movement
+- [x] pre-draw surface transformation(to fit other edges)
+- [x] widget grouping
+- [x] configuration file
+- [x] cmdline args
+- [x] margin
+- [x] watch file & hot reload
+- [x] modulize mouse event
+- [-] relative height(wayland compositor specific relative height as features(including exclusive zone calculation))
+- [x] CLI
+- [ ] ease-in & ease-out button motion curve
+- [ ] widgets
+  - [x] Button
+  - [x] Slider(for volume, brightness, etc.)
+  - [x] PulseAudio(Speaker, Microphone)
+    - [x] allow specify device(only default for now)
+  - [x] Brightness
+  - [x] Ring progress(for cpu/ram... status)
+  - [x] Box
+  - [x] Text
+  - [ ] Tray
+  - [ ] Hyprland Workspaces
+- [ ] ?multiple click & long press & release event(Button widget)
+- [ ] ~~?buttom size calculation, arrangement and overlap(should this be considered?)~~

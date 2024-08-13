@@ -5,7 +5,7 @@ use std::cell::Cell;
 use std::{cell::RefCell, rc::Rc, time::Duration};
 
 use async_channel::Sender;
-use cairo::{Format, ImageSurface};
+use cairo::ImageSurface;
 use draw::{ProgressCache, Ring};
 use gtk::glib;
 use interval_task::runner::Runner;

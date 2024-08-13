@@ -110,13 +110,7 @@ pub fn setup_draw(
             draw_rotation(context, dc.edge, dc.size);
             let y = ts.borrow().get_y();
             let visible_y = transition_state::calculate_transition(y, transition_range);
-            draw_motion(
-                context,
-                visible_y,
-                dc.edge,
-                transition_range,
-                dc.extra_trigger_size,
-            );
+            draw_motion(context, visible_y, transition_range);
 
             let res = dc.draw(context, progress.get()).and_then(|_| {
                 ensure_input_region(&window, visible_y, dc.size, dc.edge, dc.extra_trigger_size);

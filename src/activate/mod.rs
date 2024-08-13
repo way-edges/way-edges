@@ -166,7 +166,6 @@ mod globals {
     pub fn set_working_area_size_map(index: usize, v: Rectangle) -> Result<(), String> {
         let map = get_working_area_size_map()?;
         map.insert(index, v);
-        drop(map);
         Ok(())
     }
     pub fn set_working_area_size_map_multiple(v: Vec<(usize, Rectangle)>) -> Result<(), String> {
@@ -175,7 +174,6 @@ mod globals {
             map.insert(i, r);
         }
         log::debug!("Calculated layer map sizes: {map:?}");
-        drop(map);
         Ok(())
     }
     pub fn get_working_area_size(index: usize) -> Result<Option<Size>, String> {
@@ -184,7 +182,6 @@ mod globals {
                 .as_ref()
                 .ok_or("WORKING_AREA_SIZE_MAP has not been initialized")?;
             if let Some(geom) = map.get(&index) {
-                drop(map);
                 Ok(Some((geom.width(), geom.height())))
             } else {
                 Ok(None)
@@ -205,7 +202,6 @@ mod globals {
                 .as_ref()
                 .ok_or("MONITOR_SIZE_MAP has not been initialized")?;
             if let Some(geom) = map.get(&index) {
-                drop(map);
                 Ok(Some((geom.width(), geom.height())))
             } else {
                 Ok(None)
