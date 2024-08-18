@@ -91,7 +91,6 @@ impl BoxCtx {
             y,
             self.extra_trigger_size,
         );
-        println!("rec_int: {:?}", rec_int);
 
         let buffer = {
             ensure_frame_manager(&mut self.box_frame_manager, y);
@@ -231,11 +230,8 @@ fn draw_first_frame(
         Z,
         extra_trigger_size,
     );
-    println!("rec_int: {:?}", rec_int);
 
     let buf = BoxBuffer { content, y: Z };
-
-    println!("frame_rate: {:?}", box_conf.box_conf.frame_rate);
 
     let box_frame_manager = {
         let up = expose.borrow().update_func();
