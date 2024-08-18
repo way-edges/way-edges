@@ -13,17 +13,17 @@ pub const NAME: &str = "box";
 #[derive(Debug, Deserialize)]
 pub struct OutlookWindowConfig {
     #[serde(default = "dt_margins")]
-    pub margins: Option<[f64; 4]>,
+    pub margins: Option<[i32; 4]>,
     #[serde(default = "dt_color")]
     #[serde(deserialize_with = "common::color_translate")]
     pub color: RGBA,
     #[serde(default = "dt_radius")]
     pub border_radius: f64,
     #[serde(default = "dt_border_width")]
-    pub border_width: f64,
+    pub border_width: i32,
 }
-fn dt_margins() -> Option<[f64; 4]> {
-    Some([5., 5., 5., 5.])
+fn dt_margins() -> Option<[i32; 4]> {
+    Some([5, 5, 5, 5])
 }
 fn dt_color() -> RGBA {
     RGBA::from_str("#4d8080").unwrap()
@@ -31,8 +31,8 @@ fn dt_color() -> RGBA {
 fn dt_radius() -> f64 {
     5.
 }
-fn dt_border_width() -> f64 {
-    15.
+fn dt_border_width() -> i32 {
+    15
 }
 
 #[derive(Debug, Deserialize)]
@@ -76,7 +76,7 @@ fn dt_gap() -> f64 {
 pub struct BoxConfig {
     pub widgets: Vec<BoxedWidgetConfig>,
     pub box_conf: BoxSelf,
-    pub outlook: Outlook,
+    pub outlook: Option<Outlook>,
 }
 
 pub fn visit_config(d: Value) -> Result<Widget, String> {
@@ -143,6 +143,6 @@ pub fn visit_config(d: Value) -> Result<Widget, String> {
     Ok(Widget::WrapBox(Box::new(BoxConfig {
         widgets,
         box_conf,
-        outlook,
+        outlook: Some(outlook),
     })))
 }

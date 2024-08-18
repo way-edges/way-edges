@@ -71,7 +71,7 @@ pub fn ensure_input_region(
     size: (f64, f64),
     edge: Edge,
     extra_trigger_size: f64,
-) {
+) -> Region {
     let region = {
         let (x, y, w, h) = match edge {
             Edge::Left => (0, 0, (visible_y + extra_trigger_size) as i32, size.1 as i32),
@@ -84,7 +84,7 @@ pub fn ensure_input_region(
             Edge::Top => (0, 0, size.1 as i32, (visible_y + extra_trigger_size) as i32),
             Edge::Bottom => (
                 0,
-                (size.0 - visible_y) as i32,
+                (size.0 - visible_y - extra_trigger_size) as i32,
                 size.1 as i32,
                 (visible_y + extra_trigger_size).ceil() as i32,
             ),
@@ -93,6 +93,7 @@ pub fn ensure_input_region(
         Region::create_rectangle(&RectangleInt::new(x, y, w, h))
     };
     window.surface().unwrap().set_input_region(&region);
+    region
 }
 
 #[derive(Educe, Clone)]

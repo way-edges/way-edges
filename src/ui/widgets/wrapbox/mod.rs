@@ -1,17 +1,17 @@
-use std::cell::Cell;
 use std::time::Duration;
 use std::{cell::RefCell, rc::Rc};
 
+use async_channel::Receiver;
 use cairo::{ImageSurface, RectangleInt, Region};
-use display::grid::{BoxedWidgetRc, GridBox, GridItemSizeMapRc};
+use display::grid::{BoxedWidgetRc, GridBox, GridItemSizeMap};
 use expose::{BoxExpose, BoxExposeRc, BoxWidgetExpose};
 use gio::glib::clone::Downgrade;
-use gtk::glib;
+use gio::glib::WeakRef;
 use gtk::prelude::NativeExt;
 use gtk::prelude::{DrawingAreaExtManual, GtkWindowExt, SurfaceExt, WidgetExt};
 use gtk::DrawingArea;
+use gtk::{glib, ApplicationWindow};
 use gtk4_layer_shell::Edge;
-use outlook::window::BoxOutlookWindowRc;
 
 use crate::config::widgets::wrapbox::{BoxConfig, BoxedWidgetConfig};
 use crate::config::Config;
@@ -38,10 +38,245 @@ struct BoxBuffer {
     y: f64,
 }
 
+struct BoxCtx {
+    buf: BoxBuffer,
+    item_map: GridItemSizeMap,
+    rec_int: RectangleInt,
+    outlook: outlook::window::BoxOutlookWindow,
+    grid_box: GridBox,
+
+    edge: Edge,
+    position: Edge,
+    extra_trigger_size: f64,
+
+    darea: WeakRef<DrawingArea>,
+    window: WeakRef<ApplicationWindow>,
+
+    box_frame_manager: FrameManager,
+    box_motion_transition: TransitionStateRc,
+}
+
+impl BoxCtx {
+    fn refresh(&mut self) {
+        let darea = if let Some(darea) = self.darea.upgrade() {
+            darea
+        } else {
+            return;
+        };
+
+        let window = if let Some(window) = self.window.upgrade() {
+            window
+        } else {
+            return;
+        };
+
+        let (content, filtered_map) = self.grid_box.draw_content();
+        let content = rotate_content(self.edge, content);
+        let content = {
+            let content_size = (content.width(), content.height());
+            self.outlook.redraw_if_size_change(content_size);
+            self.outlook.with_box(content)
+        };
+
+        let wh = set_window_max_size(&darea, (content.width(), content.height()), self.edge);
+
+        let y = self.box_motion_transition.borrow().get_y();
+
+        let rec_int = set_window_input_size(
+            &window,
+            &darea,
+            self.edge,
+            self.position,
+            wh,
+            y,
+            self.extra_trigger_size,
+        );
+        println!("rec_int: {:?}", rec_int);
+
+        let buffer = {
+            ensure_frame_manager(&mut self.box_frame_manager, y);
+            BoxBuffer { content, y }
+        };
+
+        self.buf = buffer;
+        self.item_map = filtered_map;
+        self.rec_int = rec_int;
+    }
+}
+
+fn set_window_max_size(darea: &DrawingArea, size: (i32, i32), edge: Edge) -> (i32, i32) {
+    let size = match edge {
+        Edge::Left | Edge::Right => size,
+        Edge::Top | Edge::Bottom => (size.1, size.0),
+        _ => unreachable!(),
+    };
+    darea.set_size_request(size.0, size.1);
+    size
+}
+
+fn set_window_input_size(
+    window: &gtk::ApplicationWindow,
+    darea: &DrawingArea,
+    edge: Edge,
+    position: Edge,
+    size: (i32, i32),
+    ts_y: f64,
+    extra_trigger_size: f64,
+) -> RectangleInt {
+    let x = match (edge, position) {
+        (Edge::Left, Edge::Left)
+        | (Edge::Left, Edge::Right)
+        | (Edge::Left, Edge::Top)
+        | (Edge::Left, Edge::Bottom)
+        | (Edge::Top, Edge::Left)
+        | (Edge::Bottom, Edge::Left) => Z as i32,
+        (Edge::Right, Edge::Left)
+        | (Edge::Right, Edge::Right)
+        | (Edge::Right, Edge::Top)
+        | (Edge::Right, Edge::Bottom)
+        | (Edge::Top, Edge::Right)
+        | (Edge::Bottom, Edge::Right) => ((size.0 as f64) * (1. - ts_y)) as i32,
+        (Edge::Top, Edge::Top)
+        | (Edge::Top, Edge::Bottom)
+        | (Edge::Bottom, Edge::Top)
+        | (Edge::Bottom, Edge::Bottom) => (darea.width().max(size.0) - size.0) / 2,
+        _ => unreachable!(),
+    };
+    let (y, h) = match edge {
+        Edge::Top => (Z as i32, (size.1 as f64 * ts_y) as i32),
+        Edge::Bottom => (
+            (size.1 as f64 * (1. - ts_y)) as i32,
+            (size.1 as f64 * ts_y).ceil() as i32,
+        ),
+        _ => (Z as i32, size.1),
+    };
+    let w = match edge {
+        Edge::Left | Edge::Right => (size.0 as f64 * ts_y).ceil() as i32,
+        Edge::Top | Edge::Bottom => size.0,
+        _ => unreachable!(),
+    };
+
+    // box normal input region
+    let rec_int = RectangleInt::new(x, y, w, h);
+
+    // box input region add extra_trigger
+    let mut inr = rec_int;
+    match edge {
+        Edge::Top => {
+            inr.set_height(inr.height() + extra_trigger_size as i32);
+        }
+        Edge::Bottom => {
+            inr.set_y(inr.y() - extra_trigger_size as i32);
+            inr.set_height(inr.height() + extra_trigger_size as i32);
+        }
+        Edge::Left => {
+            inr.set_width(inr.width() + extra_trigger_size as i32);
+        }
+        Edge::Right => {
+            inr.set_x(inr.x() - extra_trigger_size as i32);
+            inr.set_width(inr.width() + extra_trigger_size as i32);
+        }
+        _ => {}
+    }
+
+    if let Some(surf) = window.surface() {
+        surf.set_input_region(&Region::create_rectangle(&inr));
+    }
+
+    rec_int
+}
+
+fn draw_first_frame(
+    window: &gtk::ApplicationWindow,
+    darea: &DrawingArea,
+    box_conf: &mut BoxConfig,
+    edge: Edge,
+    position: Edge,
+    extra_trigger_size: f64,
+) -> (BoxCtx, Receiver<()>, BoxExposeRc, TransitionStateRc) {
+    // init grid layout
+    let mut grid_box = display::grid::GridBox::new(box_conf.box_conf.gap, box_conf.box_conf.align);
+
+    // define box expose and create boxed widgets
+    let (expose, update_signal_receiver) = BoxExpose::new();
+    init_boxed_widgets(
+        &mut grid_box,
+        expose.clone(),
+        std::mem::take(&mut box_conf.widgets),
+    );
+
+    // draw first frame
+    // first draw
+    let (content, item_map) = grid_box.draw_content();
+    let content = rotate_content(edge, content);
+
+    // create outlook
+    let ol = match box_conf.outlook.take().unwrap() {
+        crate::config::widgets::wrapbox::Outlook::Window(c) => {
+            outlook::window::BoxOutlookWindow::new(c, (content.width(), content.height()))
+        }
+    };
+
+    // add box outlook
+    let content = ol.with_box(content);
+    let content_size = set_window_max_size(darea, (content.width(), content.height()), edge);
+
+    // input region
+    let rec_int = set_window_input_size(
+        window,
+        darea,
+        edge,
+        position,
+        content_size,
+        Z,
+        extra_trigger_size,
+    );
+    println!("rec_int: {:?}", rec_int);
+
+    let buf = BoxBuffer { content, y: Z };
+
+    println!("frame_rate: {:?}", box_conf.box_conf.frame_rate);
+
+    let box_frame_manager = {
+        let up = expose.borrow().update_func();
+        FrameManager::new(
+            box_conf.box_conf.frame_rate,
+            glib::clone!(move || {
+                up();
+            }),
+        )
+    };
+
+    let box_motion_transition = Rc::new(RefCell::new(TransitionState::new(Duration::from_millis(
+        box_conf.box_conf.transition_duration,
+    ))));
+
+    (
+        BoxCtx {
+            buf,
+            item_map,
+            rec_int,
+
+            outlook: ol,
+            grid_box,
+            edge,
+            position,
+            extra_trigger_size,
+            darea: darea.downgrade(),
+            window: window.downgrade(),
+            box_frame_manager,
+            box_motion_transition: box_motion_transition.clone(),
+        },
+        update_signal_receiver,
+        expose,
+        box_motion_transition,
+    )
+}
+
 pub fn init_widget(
     window: &gtk::ApplicationWindow,
     conf: Config,
-    box_conf: BoxConfig,
+    mut box_conf: BoxConfig,
 ) -> Result<WidgetExposePtr, String> {
     let edge = conf.edge;
     let position = conf.position.unwrap();
@@ -50,181 +285,38 @@ pub fn init_widget(
     let darea = DrawingArea::new();
     window.set_child(Some(&darea));
 
-    let (mut ol, expose, mut disp, update_signal_receiver) = {
-        let mut disp = display::grid::GridBox::new(box_conf.box_conf.gap, box_conf.box_conf.align);
-        let (expose, update_signal_receiver) = BoxExpose::new();
-        init_boxed_widgets(&mut disp, expose.clone(), box_conf.widgets);
-        let ol = match box_conf.outlook {
-            crate::config::widgets::wrapbox::Outlook::Window(c) => {
-                outlook::window::BoxOutlookWindow::new(c)
+    let (box_ctx, update_signal_receiver, expose, box_motion_transition) = draw_first_frame(
+        window,
+        &darea,
+        &mut box_conf,
+        edge,
+        position,
+        extra_trigger_size,
+    );
+    let box_ctx = Rc::new(RefCell::new(box_ctx));
+
+    // it's a async block once, doesn't matter strong or weak
+    glib::spawn_future_local(glib::clone!(
+        #[weak]
+        darea,
+        #[strong]
+        box_ctx,
+        async move {
+            log::debug!("box draw signal receive loop start");
+            while (update_signal_receiver.recv().await).is_ok() {
+                box_ctx.borrow_mut().refresh();
+                darea.queue_draw();
             }
-        };
-        (ol, expose, disp, update_signal_receiver)
-    };
+            log::debug!("box draw signal receive loop exit");
+        }
+    ));
 
-    let (box_motion_transition, mut box_frame_manager) = {
-        let ts = Rc::new(RefCell::new(TransitionState::new(Duration::from_millis(
-            box_conf.box_conf.transition_duration,
-        ))));
-        let fm = {
-            let up = expose.borrow().update_func();
-            FrameManager::new(
-                box_conf.box_conf.frame_rate,
-                glib::clone!(move || {
-                    up();
-                }),
-            )
-        };
-        (ts, fm)
-    };
+    darea.set_draw_func(glib::clone!(
+        #[weak]
+        box_ctx,
+        move |darea, ctx, _, _| {
+            let buf = &box_ctx.borrow().buf;
 
-    let (outlook_rc, buf, filtered_grid_item_map, input_region) = {
-        let set_size = glib::clone!(
-            #[weak]
-            darea,
-            move |size: (i32, i32)| {
-                darea.set_size_request(size.0, size.1);
-            }
-        );
-        let match_size = move |wh: (i32, i32)| -> (i32, i32) {
-            match edge {
-                Edge::Left | Edge::Right => wh,
-                Edge::Top | Edge::Bottom => (wh.1, wh.0),
-                _ => unreachable!(),
-            }
-        };
-        let match_rect = move |darea: &DrawingArea, wh: (i32, i32), ts_y: f64| -> RectangleInt {
-            let x = match (edge, position) {
-                (Edge::Left, Edge::Left)
-                | (Edge::Left, Edge::Right)
-                | (Edge::Left, Edge::Top)
-                | (Edge::Left, Edge::Bottom)
-                | (Edge::Top, Edge::Left)
-                | (Edge::Bottom, Edge::Left) => Z as i32,
-                (Edge::Right, Edge::Left)
-                | (Edge::Right, Edge::Right)
-                | (Edge::Right, Edge::Top)
-                | (Edge::Right, Edge::Bottom)
-                | (Edge::Top, Edge::Right)
-                | (Edge::Bottom, Edge::Right) => ((wh.0 as f64) * (1. - ts_y)) as i32,
-                (Edge::Top, Edge::Top)
-                | (Edge::Top, Edge::Bottom)
-                | (Edge::Bottom, Edge::Top)
-                | (Edge::Bottom, Edge::Bottom) => (darea.width() - wh.0) / 2,
-                _ => unreachable!(),
-            };
-            let (y, h) = match edge {
-                Edge::Top => (Z as i32, (wh.1 as f64 * ts_y) as i32),
-                Edge::Bottom => (
-                    (wh.1 as f64 * (1. - ts_y)) as i32,
-                    (wh.1 as f64 * ts_y) as i32,
-                ),
-                _ => (Z as i32, wh.1),
-            };
-            let w = match edge {
-                Edge::Left | Edge::Right => (wh.0 as f64 * ts_y).ceil() as i32,
-                Edge::Top | Edge::Bottom => wh.0,
-                _ => unreachable!(),
-            };
-            RectangleInt::new(x, y, w, h)
-        };
-        let (outlook_rc, buf, filtered_grid_item_map, input_region) = {
-            let (content, filtered_grid_item_map, rectint) = {
-                let (content, filtered_grid_item_map) = disp.draw_content();
-                ol.redraw((content.width() as f64, content.height() as f64));
-                let content = ol.with_box(content);
-                let wh = match_size((content.width(), content.height()));
-                set_size(wh);
-                let rectint = match_rect(&darea, wh, box_motion_transition.borrow().get_y());
-                (content, filtered_grid_item_map, rectint)
-            };
-            let buffer = BoxBuffer {
-                content,
-                y: box_motion_transition.borrow().get_y(),
-            };
-            (
-                Rc::new(RefCell::new(ol)),
-                Rc::new(Cell::new(Some(buffer))),
-                Rc::new(Cell::new(filtered_grid_item_map)),
-                Rc::new(Cell::new(rectint)),
-            )
-        };
-        // it's a async block once, doesn't matter strong or weak
-        glib::spawn_future_local(glib::clone!(
-            #[weak]
-            darea,
-            #[weak]
-            window,
-            #[strong]
-            buf,
-            #[strong]
-            filtered_grid_item_map,
-            #[strong]
-            outlook_rc,
-            #[strong]
-            box_motion_transition,
-            #[strong]
-            input_region,
-            async move {
-                log::debug!("box draw signal receive loop start");
-                while (update_signal_receiver.recv().await).is_ok() {
-                    let (content, filtered_map) = disp.draw_content();
-                    let content = rotate_content(edge, content);
-                    let content = {
-                        let content_size = (content.width(), content.height());
-                        let mut ol = outlook_rc.borrow_mut();
-                        let size = ol.cache.as_ref().unwrap().content_size;
-                        let size = (size.0 as i32, size.1 as i32);
-                        if size != content_size {
-                            ol.redraw((content_size.0 as f64, content_size.1 as f64));
-                        }
-                        ol.with_box(content)
-                    };
-                    let wh = match_size((content.width(), content.height()));
-                    set_size(wh);
-                    let y = box_motion_transition.borrow().get_y();
-                    let buffer = {
-                        ensure_frame_manager(&mut box_frame_manager, y);
-                        BoxBuffer { content, y }
-                    };
-                    buf.set(Some(buffer));
-
-                    let mut inr = match_rect(&darea, wh, y);
-                    input_region.set(inr);
-
-                    match edge {
-                        Edge::Top => {
-                            inr.set_height(inr.height() + extra_trigger_size as i32);
-                        }
-                        Edge::Bottom => {
-                            inr.set_y(inr.y() - extra_trigger_size as i32);
-                            inr.set_height(inr.height() + extra_trigger_size as i32);
-                        }
-                        Edge::Left => {
-                            inr.set_width(inr.width() + extra_trigger_size as i32);
-                        }
-                        Edge::Right => {
-                            inr.set_x(inr.x() - extra_trigger_size as i32);
-                            inr.set_width(inr.width() + extra_trigger_size as i32);
-                        }
-                        _ => {}
-                    }
-
-                    if let Some(surf) = window.surface() {
-                        surf.set_input_region(&Region::create_rectangle(&inr));
-                    }
-
-                    filtered_grid_item_map.set(filtered_map);
-                    darea.queue_draw();
-                }
-                log::debug!("box draw signal receive loop exit");
-            }
-        ));
-        (outlook_rc, buf, filtered_grid_item_map, input_region)
-    };
-
-    darea.set_draw_func(move |darea, ctx, _, _| {
-        if let Some(buf) = buf.take() {
             let size = (buf.content.width() as f64, buf.content.height() as f64);
             let range = (0., size.0);
             let visible_y = transition_state::calculate_transition(buf.y, range);
@@ -255,15 +347,13 @@ pub fn init_widget(
             ctx.set_source_surface(&buf.content, Z, Z).unwrap();
             ctx.paint().unwrap()
         }
-    });
+    ));
 
     let tls = event_handle(
         &darea,
         expose.clone(),
-        filtered_grid_item_map,
-        outlook_rc,
         box_motion_transition.clone(),
-        input_region,
+        box_ctx.clone(),
     );
     let tls_expose = TranslateStateExpose::new(
         Rc::downgrade(&tls),
@@ -273,13 +363,13 @@ pub fn init_widget(
     Ok(Box::new(BoxWidgetExpose::new(tls_expose, expose)))
 }
 
+type BoxCtxRc = Rc<RefCell<BoxCtx>>;
+
 fn event_handle(
     darea: &DrawingArea,
     expose: BoxExposeRc,
-    filtered_grid_item_map: GridItemSizeMapRc,
-    outlook_rc: BoxOutlookWindowRc,
     ts: TransitionStateRc,
-    input_region: Rc<Cell<RectangleInt>>,
+    box_ctx: BoxCtxRc,
 ) -> TranslateStateRc {
     let ms = new_mouse_state(darea);
     let mut last_widget: Option<BoxedWidgetRc> = None;
@@ -288,11 +378,16 @@ fn event_handle(
         new_mouse_event_func(move |e| {
             match e {
                 MouseEvent::Enter(pos) | MouseEvent::Motion(pos) => {
-                    let rectint = input_region.as_ref().clone().into_inner();
-                    let pos = (pos.0 - rectint.x() as f64, pos.1 - rectint.y() as f64);
-                    let pos = outlook_rc.borrow().transform_mouse_pos(pos);
-                    let matched = unsafe { filtered_grid_item_map.as_ptr().as_ref().unwrap() }
-                        .match_item(pos);
+                    let box_ctx = box_ctx.borrow();
+
+                    let pos = {
+                        let rectint = box_ctx.rec_int; //input_region.as_ref().clone().into_inner();
+                        let pos = (pos.0 - rectint.x() as f64, pos.1 - rectint.y() as f64);
+                        box_ctx.outlook.transform_mouse_pos(pos)
+                    };
+
+                    let matched = box_ctx.item_map.match_item(pos);
+                    // unsafe { filtered_grid_item_map.as_ptr().as_ref().unwrap() }.match_item(pos);
                     if let Some((widget, pos)) = matched {
                         if let Some(last) = last_widget.take() {
                             if Rc::ptr_eq(&last, &widget) {

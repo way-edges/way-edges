@@ -95,9 +95,6 @@ impl GridBox {
         pos
     }
 
-    /// 0 -> each row max height
-    /// 1 -> each col max width
-    /// return: row_col_max_map, total_size
     pub fn draw_content(&mut self) -> (ImageSurface, GridItemSizeMap) {
         let mut map = [
             Vec::with_capacity(self.row_col_num.0),
@@ -195,7 +192,6 @@ impl GridBox {
                 let mut w = w.borrow_mut();
                 let content_size = w.get_size();
 
-                // TEST:
                 let pos_x = match self.align {
                     Align::Left => position_x,
                     Align::Center => position_x + (size.0 - content_size.0) / 2.,
