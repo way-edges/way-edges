@@ -401,7 +401,9 @@ fn event_handle(
                             last.borrow_mut().on_mouse_event(MouseEvent::Leave);
                         }
                     }
-                    f();
+                    if let MouseEvent::Enter(_) = e {
+                        f();
+                    }
                 }
                 MouseEvent::Leave => {
                     last_widget = None;
