@@ -169,17 +169,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "async-net"
-version = "2.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b948000fad4873c1c9339d60f2623323a0cfd3816e5181033c6a5cb68b2accf7"
-dependencies = [
- "async-io",
- "blocking",
- "futures-lite",
-]
-
-[[package]]
 name = "async-process"
 version = "2.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -333,6 +322,12 @@ name = "byteorder"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1fd0f2584146f6f2ef48085050886acf353beff7305ebd1ae69500e27c67f64b"
+
+[[package]]
+name = "bytes"
+version = "1.7.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8318a53db07bb3f8dca91a600466bdb3f2eaadeedfdbcf02e1accbad9271ba50"
 
 [[package]]
 name = "cairo-rs"
@@ -1234,9 +1229,7 @@ version = "0.4.0-alpha.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d627cd06fb3389f2554b7a4bb21db8c0bfca8863e6e653702cc4c6dbf20d8276"
 dependencies = [
- "async-net",
  "derive_more",
- "futures-lite",
  "hyprland-macros",
  "num-traits",
  "once_cell",
@@ -1245,6 +1238,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_repr",
+ "tokio",
 ]
 
 [[package]]
@@ -2268,6 +2262,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9babc99b9923bfa4804bd74722ff02c0381021eafa4db9949217e3be8e84fff5"
 dependencies = [
  "backtrace",
+ "bytes",
  "libc",
  "mio 1.0.2",
  "pin-project-lite",

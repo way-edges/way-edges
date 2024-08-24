@@ -1,4 +1,5 @@
 pub mod backlight;
+pub mod hypr_workspace;
 pub mod pulseaudio;
 pub mod system;
 
