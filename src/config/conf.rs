@@ -8,6 +8,7 @@ use super::widgets::{
     // button::BtnConfig, pulseaudio::PAConfig, slide::SlideConfig, speaker::SpeakerConfig,
     backlight::BLConfig,
     button::BtnConfig,
+    hypr_workspace::HyprWorkspaceConfig,
     pulseaudio::PAConfig,
     ring::RingConfig,
     slide::SlideConfig,
@@ -156,6 +157,7 @@ pub enum Widget {
     WrapBox(Box<BoxConfig>),
     Ring(Box<RingConfig>),
     Text(Box<TextConfig>),
+    HyprWorkspace(Box<HyprWorkspaceConfig>),
 }
 
 #[derive(Educe)]

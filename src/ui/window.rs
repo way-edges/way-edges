@@ -72,12 +72,17 @@ pub fn new_window(
             window.set_margin(e, m.get_num_into()? as i32);
             Ok(())
         })?;
+
+    // widget
     let widget = match config.widget.take().ok_or("Widget is None")? {
         config::Widget::Btn(c) => widgets::button::init_widget(&window, config, *c),
         config::Widget::Slider(c) => widgets::slide::init_widget(&window, config, *c),
         config::Widget::PulseAudio(c) => widgets::pulseaudio::init_widget(&window, config, *c),
         config::Widget::Backlight(c) => widgets::backlight::init_widget(&window, config, *c),
         config::Widget::WrapBox(c) => widgets::wrapbox::init_widget(&window, config, *c),
+        config::Widget::HyprWorkspace(c) => {
+            widgets::hypr_workspace::init_widget(&window, config, *c)
+        }
         _ => return Err("Unsupported window widget".to_string()),
     }?;
 

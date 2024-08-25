@@ -118,6 +118,7 @@ pub fn parse_widget(raw: Value) -> Result<Widget, String> {
         widgets::wrapbox::NAME => widgets::wrapbox::visit_config(raw)?,
         widgets::ring::NAME => widgets::ring::visit_config(raw)?,
         widgets::text::NAME => widgets::text::visit_config(raw)?,
+        widgets::hypr_workspace::NAME => widgets::hypr_workspace::visit_config(raw)?,
         _ => return Err(format!("unknown widget type: {t}")),
     };
     Ok(w)

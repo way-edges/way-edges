@@ -1,5 +1,6 @@
 pub mod backlight;
 pub mod button;
+pub mod hypr_workspace;
 pub mod pulseaudio;
 pub mod ring;
 pub mod slide;

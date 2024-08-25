@@ -19,6 +19,7 @@ hyprland = { version = "0.4.0-alpha.2", default-features = false, features = [
   "tokio",
   "listener",
   "unsafe-impl",
+  "async-lite",
 ] }
 educe = { version = "0.6.0", default-features = false, features = ["Debug"] }
 regex = "1.10"

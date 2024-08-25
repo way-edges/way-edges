@@ -13,9 +13,12 @@ use crate::{
     plug::pulseaudio::{
         register_callback, set_mute, set_vol, unregister_callback, OptionalSinkOrSource,
     },
-    ui::{draws::transition_state::TransitionState, WidgetExposePtr},
+    ui::{
+        draws::{transition_state::TransitionState, util::color_transition},
+        WidgetExposePtr,
+    },
 };
-use gtk::{gdk::RGBA, prelude::WidgetExt, ApplicationWindow};
+use gtk::{prelude::WidgetExt, ApplicationWindow};
 
 use super::slide;
 
@@ -101,12 +104,4 @@ pub fn init_widget(
         unregister_callback(cb_key);
     });
     Ok(Box::new(widget_expose))
-}
-
-fn color_transition(start_color: RGBA, stop_color: RGBA, v: f32) -> RGBA {
-    let r = start_color.red() + (stop_color.red() - start_color.red()) * v;
-    let g = start_color.green() + (stop_color.green() - start_color.green()) * v;
-    let b = start_color.blue() + (stop_color.blue() - start_color.blue()) * v;
-    let a = start_color.alpha() + (stop_color.alpha() - start_color.alpha()) * v;
-    RGBA::new(r, g, b, a)
 }

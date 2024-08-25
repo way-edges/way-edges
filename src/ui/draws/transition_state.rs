@@ -117,6 +117,13 @@ impl TransitionState {
         };
         *direction_state = to_direction;
     }
+
+    pub fn get_abs(&self, y: f64) -> f64 {
+        match self.direction {
+            TransitionDirection::Forward => y,
+            TransitionDirection::Backward => 1. - y,
+        }
+    }
 }
 
 pub fn calculate_transition(y: f64, range: (f64, f64)) -> f64 {

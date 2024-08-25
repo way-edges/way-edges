@@ -177,3 +177,11 @@ pub fn horizon_center_combine(surf1: &ImageSurface, surf2: &ImageSurface) -> Ima
     ctx.paint().unwrap();
     surf
 }
+
+pub fn color_transition(start_color: RGBA, stop_color: RGBA, v: f32) -> RGBA {
+    let r = start_color.red() + (stop_color.red() - start_color.red()) * v;
+    let g = start_color.green() + (stop_color.green() - start_color.green()) * v;
+    let b = start_color.blue() + (stop_color.blue() - start_color.blue()) * v;
+    let a = start_color.alpha() + (stop_color.alpha() - start_color.alpha()) * v;
+    RGBA::new(r, g, b, a)
+}
