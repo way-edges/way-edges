@@ -27,12 +27,11 @@ pub struct SlideExpose {
     pub darea: WeakRef<gtk::DrawingArea>,
     pub progress: Weak<Cell<f64>>,
     pub tls: Weak<RefCell<TranslateState>>,
-    pub ts: Weak<RefCell<TransitionState>>,
 }
 impl SlideExpose {
     pub fn create_widget_expose(&self) -> TranslateStateExpose {
         let darea = self.darea.clone();
-        TranslateStateExpose::new(self.tls.clone(), self.ts.clone(), move || {
+        TranslateStateExpose::new(self.tls.clone(), move || {
             if let Some(d) = darea.upgrade() {
                 d.queue_draw()
             }

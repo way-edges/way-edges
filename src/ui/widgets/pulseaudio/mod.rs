@@ -100,7 +100,6 @@ pub fn init_widget(
     log::debug!("registered pa callback for {debug_name}: {cb_key}");
 
     window.connect_destroy(move |_| {
-        log::debug!("unregister pa callback for {debug_name}: {cb_key}");
         unregister_callback(cb_key);
     });
     Ok(Box::new(widget_expose))

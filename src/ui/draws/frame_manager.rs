@@ -9,6 +9,8 @@ use std::time::{Duration, Instant};
 use gtk::glib;
 use tokio::sync::oneshot::error::TryRecvError;
 
+use super::transition_state::TransitionStateList;
+
 type BoxFuture = Pin<Box<dyn Future<Output = ()> + Send>>;
 type FutureSender = async_channel::Sender<BoxFuture>;
 
@@ -119,5 +121,19 @@ impl FrameManager {
 impl Drop for FrameManager {
     fn drop(&mut self) {
         self.stop().unwrap();
+    }
+}
+
+pub trait FrameManagerBindTransition {
+    fn ensure_frame_run(&mut self, ts_list: &TransitionStateList);
+}
+impl FrameManagerBindTransition for FrameManager {
+    fn ensure_frame_run(&mut self, ts_list: &TransitionStateList) {
+        let is_in_transition = ts_list.iter().any(|f| f.borrow().is_in_transition());
+        if is_in_transition {
+            self.start().unwrap();
+        } else {
+            self.stop().unwrap();
+        }
     }
 }

@@ -1,12 +1,16 @@
 use std::{
-    cell::Cell,
+    cell::{Cell, RefCell},
     rc::Rc,
-    sync::{atomic::AtomicPtr, Arc},
+    time::Duration,
 };
 
 use cairo::{Context, Format, ImageSurface, LinearGradient};
-use gtk::{gdk::RGBA, ApplicationWindow};
-use gtk4_layer_shell::Edge;
+use gtk::{
+    gdk::RGBA,
+    glib,
+    prelude::{DrawingAreaExtManual, GdkCairoContextExt},
+    ApplicationWindow, DrawingArea,
+};
 
 use crate::{
     config::widgets::hypr_workspace::HyprWorkspaceConfig,
@@ -16,6 +20,7 @@ use crate::{
     },
     ui::{
         draws::{
+            mouse_state::{new_mouse_state, new_translate_mouse_state},
             transition_state::{TransitionState, TransitionStateRc},
             util::{color_transition, Z},
         },
@@ -37,11 +42,30 @@ pub fn init_widget(
 ) -> Result<WidgetExposePtr, String> {
     init_hyprland_listener();
 
+    let darea = DrawingArea::new();
+
+    let mouse_state = new_mouse_state(&darea);
+    let pop_transition_state = Rc::new(RefCell::new(TransitionState::new(Duration::from_millis(
+        wp_conf.transition_duration,
+    ))));
+    let (cb, translate_state) = new_translate_mouse_state(
+        pop_transition_state.clone(),
+        mouse_state.clone(),
+        None,
+        false,
+    );
+    mouse_state.borrow_mut().set_event_cb(cb);
+
+    let workspace_transition = Rc::new(RefCell::new(TransitionState::new(Duration::from_millis(
+        wp_conf.workspace_transition_duration,
+    ))));
+    let transition_list = [pop_transition_state, workspace_transition.clone()];
+
+    let core = DrawCore::new(&wp_conf, workspace_transition);
+    darea.set_draw_func(|_, ctx, _, _| {});
+
     Ok(Box::new(HyprWorkspaceExpose))
 }
-
-type MaxWorkspace = i32;
-type WorkspaceID = i32;
 
 struct DrawCore {
     data: Rc<Cell<HyprGlobalData>>,
@@ -70,12 +94,11 @@ impl Drop for DrawCore {
 impl DrawCore {
     fn new(wp_conf: &HyprWorkspaceConfig, workspace_transition: TransitionStateRc) -> Self {
         let data = Rc::new(Cell::new(HyprGlobalData::default()));
-        use gtk::glib;
         let (id, init_data) = register_hypr_event_callback(glib::clone!(
             #[weak]
             data,
             move |f| {
-                data.set(f.clone());
+                data.set(*f);
             }
         ));
         data.set(init_data);
@@ -98,17 +121,17 @@ impl DrawCore {
     }
 
     fn draw(&self) -> ImageSurface {
-        let data = self.data.as_ref().as_ptr();
+        let data = self.data.get();
         let item_base_length = {
-            let up = (self.length - self.gap * (self.max_workspace - 1)) as f64;
-            up / self.max_workspace as f64
+            let up = (self.length - self.gap * (data.max_workspace - 1)) as f64;
+            up / data.max_workspace as f64
         };
         let item_changable_length = item_base_length * self.active_increase;
         println!("{item_base_length}, {item_changable_length}");
 
         let item_max_length = item_base_length + item_changable_length;
         let item_min_length =
-            item_base_length - item_changable_length / (self.max_workspace - 1) as f64;
+            item_base_length - item_changable_length / (data.max_workspace - 1) as f64;
         println!("{item_max_length}, {item_min_length}");
 
         let surf = ImageSurface::create(Format::ARgb32, self.thickness, self.length).unwrap();
@@ -139,23 +162,24 @@ impl DrawCore {
             ctx.paint().unwrap();
         }
 
-        let y = self
-            .workspace_transition
-            .get_abs(self.workspace_transition.y);
+        let y = {
+            let a = self.workspace_transition.borrow();
+            a.get_abs_y()
+        };
 
         println!("{y}");
 
-        let a: Vec<(f64, RGBA)> = (1..=self.max_workspace)
+        let a: Vec<(f64, RGBA)> = (1..=data.max_workspace)
             .map(|w| {
-                if w == self.current_workspace {
+                if w == data.current_workspace {
                     (
                         item_min_length + (item_max_length - item_min_length) * y,
-                        color_transition(self.deactive_color, self.active_color, y),
+                        color_transition(self.deactive_color, self.active_color, y as f32),
                     )
-                } else if w == self.last_workspace {
+                } else if w == data.last_workspace {
                     (
                         item_min_length + (item_max_length - item_min_length) * (1. - y),
-                        color_transition(self.active_color, self.deactive_color, y),
+                        color_transition(self.active_color, self.deactive_color, y as f32),
                     )
                 } else {
                     (item_min_length, self.deactive_color)

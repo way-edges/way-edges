@@ -9,7 +9,7 @@ use gtk::pango::Layout;
 use gtk::prelude::*;
 use gtk4_layer_shell::Edge;
 
-use super::transition_state::{self};
+use super::transition_state::{self, TransitionStateList};
 
 pub const Z: f64 = 0.;
 
@@ -36,14 +36,6 @@ pub fn new_surface(size: (i32, i32)) -> ImageSurface {
 
 pub fn draw_motion(ctx: &Context, visible_y: f64, range: (f64, f64)) {
     ctx.translate(-range.1 + visible_y, 0.);
-}
-
-pub fn ensure_frame_manager(frame_manager: &mut FrameManager, y: f64) {
-    if transition_state::is_in_transition(y) {
-        frame_manager.start().unwrap();
-    } else {
-        frame_manager.stop().unwrap();
-    }
 }
 
 pub fn draw_rotation(ctx: &Context, edge: Edge, size: (f64, f64)) {

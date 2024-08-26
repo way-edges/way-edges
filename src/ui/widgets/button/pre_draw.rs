@@ -15,12 +15,17 @@ fn draw_2(context: &Context, radius: f64, h: f64) {
     context.rel_line_to(0., -lg_height);
 }
 
+pub struct PreDrawCache {
+    pub base_surf: ImageSurface,
+    pub press_state_shadow: [ImageSurface; 2],
+}
+
 pub fn draw_to_surface(
     map_size: (i32, i32),
     item_size: (f64, f64),
     main_color: RGBA,
     extra_trigger_size: f64,
-) -> (ImageSurface, ImageSurface, ImageSurface) {
+) -> PreDrawCache {
     // size and position
     let f_map_size = (map_size.0 as f64, map_size.1 as f64);
 
@@ -118,5 +123,8 @@ pub fn draw_to_surface(
         (normal_surf, pressing_surf)
     };
 
-    (base_surf, normal_surf, pressing_surf)
+    PreDrawCache {
+        base_surf,
+        press_state_shadow: [normal_surf, pressing_surf],
+    }
 }

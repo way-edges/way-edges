@@ -213,12 +213,13 @@ pub fn register_callback(cb: Box<PaCallback>, sos: OptionalSinkOrSource) -> Resu
         SinkOrSource::Sink(s) => SinkOrSourceIndex::Sink(match_name_index_sink(s)?),
         SinkOrSource::Source(s) => SinkOrSourceIndex::Source(match_name_index_source(s)?),
     };
-    log::debug!("device index: {ind:?}");
+    log::info!("register pulseaudio callback for device index: {ind:?}");
     reload_device_vinfo_blocking(ind, None);
     Ok(add_cb(cb, sos))
 }
 
 pub fn unregister_callback(key: i32) {
+    log::info!("unregister pulseaudio callback for key: {key:?}");
     if !is_pa_empty() {
         rm_cb(key);
     }

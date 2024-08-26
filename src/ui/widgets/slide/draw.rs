@@ -1,5 +1,4 @@
 use std::cell::Cell;
-use std::cell::RefCell;
 use std::rc::Rc;
 use std::time::Duration;
 
@@ -8,9 +7,9 @@ use crate::config::Config;
 use crate::ui::draws::blur::blur_image_surface;
 use crate::ui::draws::font::get_font_face;
 use crate::ui::draws::frame_manager::FrameManager;
+use crate::ui::draws::frame_manager::FrameManagerBindTransition;
 use crate::ui::draws::transition_state;
-use crate::ui::draws::transition_state::is_in_transition;
-use crate::ui::draws::transition_state::TransitionState;
+use crate::ui::draws::transition_state::TransitionStateList;
 use crate::ui::draws::transition_state::TransitionStateRc;
 use crate::ui::draws::util::draw_motion;
 use crate::ui::draws::util::draw_rotation;
@@ -61,10 +60,12 @@ pub fn setup_draw(
     };
 
     let transition_range = (slide_cfg.preview_size, size.0);
-    let ts = Rc::new(RefCell::new(TransitionState::new(Duration::from_millis(
-        slide_cfg.transition_duration,
-    ))));
-    let (progress, tls) = event::setup_event(window, &darea, ts.clone(), &cfg, &mut slide_cfg);
+
+    let mut ts_list = TransitionStateList::new();
+    ts_list.extend_from_slice(&std::mem::take(&mut additional.additional_transitions));
+    let pop_ts = ts_list.new_transition(Duration::from_millis(slide_cfg.transition_duration));
+
+    let (progress, tls) = event::setup_event(window, &darea, pop_ts.clone(), &cfg, &mut slide_cfg);
 
     let predraw = super::pre_draw::draw(
         size,
@@ -74,19 +75,8 @@ pub fn setup_draw(
         slide_cfg.obtuse_angle,
         slide_cfg.radius,
     )?;
-    let dc = DrawCore {
-        predraw,
-        edge,
-        direction,
-        size,
-        f_map_size,
-        map_size,
-        extra_trigger_size,
-        is_start: slide_cfg.is_text_position_start,
-        text_color: slide_cfg.text_color,
-        fg_color: additional.fg_color,
-    };
-    let mut frame_manager = FrameManager::new(
+
+    let frame_manager = FrameManager::new(
         slide_cfg.frame_rate,
         glib::clone!(
             #[weak]
@@ -96,36 +86,34 @@ pub fn setup_draw(
             }
         ),
     );
+
+    let mut dc = DrawCore {
+        predraw,
+        frame_manager,
+        ts_list,
+        pop_ts,
+
+        progress: progress.clone(),
+
+        edge,
+        direction,
+        size,
+        f_map_size,
+        map_size,
+        extra_trigger_size,
+        is_start: slide_cfg.is_text_position_start,
+        text_color: slide_cfg.text_color,
+
+        transition_range,
+
+        fg_color: additional.fg_color,
+        additional_callback: additional.on_draw.take(),
+    };
     darea.set_draw_func(glib::clone!(
         #[weak]
         window,
-        #[strong]
-        progress,
-        #[strong]
-        ts,
         move |_, context, _, _| {
-            if let Some(f) = additional.on_draw.as_mut() {
-                f()
-            }
-            draw_rotation(context, dc.edge, dc.size);
-            let y = ts.borrow().get_y();
-            let visible_y = transition_state::calculate_transition(y, transition_range);
-            draw_motion(context, visible_y, transition_range);
-
-            let res = dc.draw(context, progress.get()).and_then(|_| {
-                ensure_input_region(&window, visible_y, dc.size, dc.edge, dc.extra_trigger_size);
-                draw_frame_manager_multiple_transition(
-                    &mut frame_manager,
-                    &additional.additional_transitions,
-                    y,
-                )
-            });
-
-            if let Err(e) = res {
-                window.close();
-                log::error!("{e}");
-                crate::notify_send("Way-edges widget draw error", &e, true);
-            }
+            dc.draw_core(context, &window);
         }
     ));
 
@@ -138,25 +126,18 @@ pub fn setup_draw(
         darea: Downgrade::downgrade(&darea),
         progress: progress.downgrade(),
         tls: tls.downgrade(),
-        ts: ts.downgrade(),
     })
-}
-
-pub fn draw_frame_manager_multiple_transition(
-    frame_manager: &mut FrameManager,
-    tss: &[TransitionStateRc],
-    visible_y: f64,
-) -> Result<(), String> {
-    if is_in_transition(visible_y) || tss.iter().any(|f| f.borrow().is_in_transition()) {
-        frame_manager.start()?;
-    } else {
-        frame_manager.stop()?;
-    }
-    Ok(())
 }
 
 struct DrawCore {
     predraw: SlidePredraw,
+    frame_manager: FrameManager,
+    ts_list: TransitionStateList,
+    pop_ts: TransitionStateRc,
+
+    progress: Rc<Cell<f64>>,
+
+    // normal config
     edge: Edge,
     direction: Direction,
     size: (f64, f64),
@@ -165,9 +146,43 @@ struct DrawCore {
     extra_trigger_size: f64,
     is_start: bool,
     text_color: RGBA,
+
+    transition_range: (f64, f64),
+
+    // additional
     fg_color: Rc<Cell<RGBA>>,
+    additional_callback: Option<Box<dyn FnMut()>>,
 }
 impl DrawCore {
+    fn draw_core(&mut self, ctx: &Context, window: &gtk::ApplicationWindow) {
+        self.ts_list.refresh();
+
+        if let Some(f) = self.additional_callback.as_mut() {
+            f()
+        }
+
+        draw_rotation(ctx, self.edge, self.size);
+        let y = self.pop_ts.borrow().get_y();
+        let visible_y = transition_state::calculate_transition(y, self.transition_range);
+        draw_motion(ctx, visible_y, self.transition_range);
+
+        let res = self.draw(ctx, self.progress.get()).map(|_| {
+            ensure_input_region(
+                &window,
+                visible_y,
+                self.size,
+                self.edge,
+                self.extra_trigger_size,
+            );
+            self.frame_manager.ensure_frame_run(&self.ts_list);
+        });
+
+        if let Err(e) = res {
+            window.close();
+            log::error!("{e}");
+            crate::notify_send("Way-edges widget draw error", &e, true);
+        }
+    }
     fn draw(&self, ctx: &Context, progress: f64) -> Result<(), String> {
         fn error_handle(e: cairo::Error) -> String {
             format!("Draw core error: {:?}", e)
@@ -309,5 +324,10 @@ impl DrawCore {
     }
     fn new_surface(&self) -> ImageSurface {
         new_surface(self.map_size)
+    }
+}
+impl Drop for DrawCore {
+    fn drop(&mut self) {
+        log::info!("slide draw core dropped");
     }
 }

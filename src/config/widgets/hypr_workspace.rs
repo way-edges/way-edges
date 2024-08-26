@@ -20,6 +20,9 @@ pub struct HyprWorkspaceConfig {
     #[serde(default = "dt_active_increase")]
     pub active_increase: f64,
 
+    #[serde(default = "common::dt_transition_duration")]
+    pub workspace_transition_duration: u64,
+
     #[serde(default)]
     #[serde(deserialize_with = "common::option_color_translate")]
     pub backlight: Option<RGBA>,

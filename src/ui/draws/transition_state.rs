@@ -1,16 +1,10 @@
 use std::{
     cell::RefCell,
-    ops::Not,
+    ops::{Deref, DerefMut, Not},
     rc::Rc,
     time::{Duration, Instant},
 };
 
-// const DIRECTION_FORWARD: i8 = 0;
-// const DIRECTION_BACKWARD: i8 = 1;
-// enum Direction {
-//     Forward,
-//     Backward,
-// }
 pub type TransitionStateRc = Rc<RefCell<TransitionState>>;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -45,6 +39,8 @@ pub struct TransitionState {
     pub direction: TransitionDirection,
     // const + Copy
     pub duration: Duration,
+
+    cache_y: f64,
 }
 impl TransitionState {
     pub fn new(time_cost: Duration) -> TransitionState {
@@ -52,6 +48,8 @@ impl TransitionState {
             t: Instant::now().checked_sub(time_cost).unwrap(),
             duration: time_cost,
             direction: TransitionDirection::Backward,
+
+            cache_y: 0.,
         }
     }
     fn calculation(&self, x: f64) -> f64 {
@@ -75,25 +73,53 @@ impl TransitionState {
             y
         }
     }
-    pub fn get_y(&self) -> f64 {
+
+    pub fn refresh(&mut self) {
         let passed_duration = self.t.elapsed();
-        match self.direction {
+        let y = match self.direction {
             TransitionDirection::Forward => self.calculation(passed_duration.as_secs_f64()),
             TransitionDirection::Backward => {
                 self.calculation(self.duration.as_secs_f64() - passed_duration.as_secs_f64())
             }
+        };
+        self.cache_y = y
+    }
+    pub fn get_y(&self) -> f64 {
+        self.cache_y
+    }
+    pub fn get_abs_y(&self) -> f64 {
+        match self.direction {
+            TransitionDirection::Forward => self.cache_y,
+            TransitionDirection::Backward => 1. - self.cache_y,
         }
     }
+
     pub fn is_in_transition(&self) -> bool {
         is_in_transition(self.get_y())
     }
     pub fn set_direction_self(&mut self, to_direction: TransitionDirection) {
-        Self::set_direction(
-            &mut self.t,
-            self.duration,
-            &mut self.direction,
-            to_direction,
-        )
+        if self.direction == to_direction {
+            return;
+        }
+        // let max_time = self.duration;
+        let passed_duration = self.t.elapsed();
+
+        // NOTE: assume that `passed_duration` will not be 0.
+        self.t = if passed_duration < self.duration {
+            Instant::now()
+                .checked_sub(self.duration - passed_duration)
+                .unwrap()
+        } else {
+            Instant::now()
+        };
+        self.direction = to_direction;
+
+        // Self::set_direction(
+        //     &mut self.t,
+        //     self.duration,
+        //     &mut self.direction,
+        //     to_direction,
+        // )
     }
     pub fn set_direction(
         t: &mut Instant,
@@ -117,13 +143,6 @@ impl TransitionState {
         };
         *direction_state = to_direction;
     }
-
-    pub fn get_abs(&self, y: f64) -> f64 {
-        match self.direction {
-            TransitionDirection::Forward => y,
-            TransitionDirection::Backward => 1. - y,
-        }
-    }
 }
 
 pub fn calculate_transition(y: f64, range: (f64, f64)) -> f64 {
@@ -132,4 +151,35 @@ pub fn calculate_transition(y: f64, range: (f64, f64)) -> f64 {
 
 pub fn is_in_transition(y: f64) -> bool {
     y > 0. && y < 1.
+}
+
+pub struct TransitionStateList(Vec<TransitionStateRc>);
+impl TransitionStateList {
+    pub fn new() -> Self {
+        Self(vec![])
+    }
+
+    pub fn new_transition(&mut self, duration: Duration) -> TransitionStateRc {
+        let ts = TransitionState::new(duration);
+        let item = Rc::new(RefCell::new(ts));
+        self.0.push(item.clone());
+        item
+    }
+
+    pub fn refresh(&mut self) {
+        self.0.iter_mut().for_each(|f| {
+            f.borrow_mut().refresh();
+        });
+    }
+}
+impl Deref for TransitionStateList {
+    type Target = Vec<TransitionStateRc>;
+    fn deref(&self) -> &Self::Target {
+        self.0.as_ref()
+    }
+}
+impl DerefMut for TransitionStateList {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.0.as_mut()
+    }
 }

@@ -32,9 +32,9 @@ pub type HyprCallback = Box<dyn 'static + FnMut(&HyprGlobalData)>;
 
 #[derive(Debug, Clone, Copy)]
 pub struct HyprGlobalData {
-    max_workspace: i32,
-    current_workspace: i32,
-    last_workspace: i32,
+    pub max_workspace: i32,
+    pub current_workspace: i32,
+    pub last_workspace: i32,
 }
 impl Default for HyprGlobalData {
     fn default() -> Self {

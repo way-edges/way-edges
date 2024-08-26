@@ -183,10 +183,12 @@ pub fn register_callback(
 
     let ctx = try_init_backlight(device.clone())?;
 
+    log::info!("register backlight callback for device({})", device.name());
     add_cb(Box::new(cb), device, ctx)
 }
 
 pub fn unregister_callback(key: i32) {
+    log::info!("unregister backlight callback for key({key})");
     if is_bl_inited() {
         rm_cb(key);
     }

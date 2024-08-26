@@ -1,3 +1,4 @@
+use gio::glib::clone::Downgrade;
 use gtk::{
     gdk::BUTTON_MIDDLE,
     glib,
@@ -170,26 +171,24 @@ pub fn new_translate_mouse_state(
     mut additional_cbs: Option<MouseEventFunc>,
     hidden_only: bool,
 ) -> (MouseEventFunc, TranslateStateRc) {
-    let tls = Rc::new(RefCell::new(TranslateState::new()));
+    let tls = Rc::new(RefCell::new(TranslateState::new(
+        ts.downgrade(),
+        ms.downgrade(),
+    )));
     (
         new_mouse_event_func(glib::clone!(
             #[strong(rename_to=tls)]
             tls,
-            #[strong(rename_to=ts)]
-            ts,
-            #[weak(rename_to=ms)]
-            ms,
             move |e| {
                 match e {
                     MouseEvent::Enter(_) | MouseEvent::Leave => {
-                        let tls = if hidden_only { None } else { Some(&tls) };
-                        ensure_transition_direction(&ts, &ms, tls);
+                        tls.borrow().ensure_direction();
                     }
                     MouseEvent::Release(_, k) => {
                         if !hidden_only && k == BUTTON_MIDDLE {
                             tls.borrow_mut().toggle_pin();
                         }
-                        ensure_transition_direction(&ts, &ms, Some(&tls));
+                        tls.borrow().ensure_direction();
                     }
                     _ => {}
                 };
@@ -208,14 +207,19 @@ pub struct TranslateState {
     is_pinned: bool,
     pop_state: Option<Rc<Cell<bool>>>,
     timeout: Duration,
+
+    ts: Weak<RefCell<TransitionState>>,
+    ms: Weak<RefCell<MouseState>>,
 }
 
 impl TranslateState {
-    pub fn new() -> Self {
+    pub fn new(ts: Weak<RefCell<TransitionState>>, ms: Weak<RefCell<MouseState>>) -> Self {
         Self {
             pop_state: None,
             timeout: Duration::from_secs(2),
             is_pinned: false,
+            ts,
+            ms,
         }
     }
 
@@ -227,14 +231,29 @@ impl TranslateState {
     pub fn unpin(&mut self) {
         self.is_pinned = false;
     }
-    /// return the pin state
-    pub fn toggle_pin(&mut self) -> bool {
+
+    pub fn toggle_pin(&mut self) {
         if self.is_pinned {
             self.unpin();
-            false
         } else {
             self.pin();
-            true
+        }
+
+        if let Some(ts) = self.ts.upgrade() {
+            ts.borrow_mut().set_direction_self(self.is_pinned.into());
+        }
+    }
+
+    pub fn ensure_direction(&self) {
+        if let (Some(ts), Some(ms)) = (self.ts.upgrade(), self.ms.upgrade()) {
+            // if not pin
+            if !self.is_pinned {
+                let direction = {
+                    let ms_ref = unsafe { ms.as_ptr().as_ref().unwrap() };
+                    check_translate_direction(&ms_ref.hovering, &ms_ref.pressing)
+                };
+                ts.borrow_mut().set_direction_self(direction);
+            }
         }
     }
 
@@ -265,18 +284,12 @@ impl TranslateState {
 // NOTE: THIS ONE IS ONLY FOR TRANSLATE_STATE
 pub struct TranslateStateExpose {
     pub tls: Weak<RefCell<TranslateState>>,
-    pub ts: Weak<RefCell<TransitionState>>,
     pub draw: Box<dyn FnMut()>,
 }
 impl TranslateStateExpose {
-    pub fn new(
-        tls: Weak<RefCell<TranslateState>>,
-        ts: Weak<RefCell<TransitionState>>,
-        f: impl FnMut() + 'static,
-    ) -> Self {
+    pub fn new(tls: Weak<RefCell<TranslateState>>, f: impl FnMut() + 'static) -> Self {
         Self {
             tls,
-            ts,
             draw: Box::new(f),
         }
     }
@@ -284,38 +297,23 @@ impl TranslateStateExpose {
 impl WidgetExpose for TranslateStateExpose {
     fn toggle_pin(&mut self) {
         if let Some(tls) = self.tls.upgrade() {
-            if let Some(ts) = self.ts.upgrade() {
-                let mut ts = ts.borrow_mut();
-                let direction = ts.direction;
-                ts.set_direction_self(direction.not());
-                match direction {
-                    TransitionDirection::Forward => {
-                        tls.borrow_mut().unpin();
-                    }
-                    TransitionDirection::Backward => {
-                        tls.borrow_mut().pin();
-                    }
-                }
-                (self.draw)()
-            }
+            tls.borrow_mut().toggle_pin();
+            (self.draw)()
         }
     }
 }
 
 /// return is transition change
-pub fn ensure_transition_direction(
-    ts: &TransitionStateRc,
-    ms: &MouseStateRc,
-    tls: Option<&TranslateStateRc>,
-) {
-    if tls.is_none() || !tls.unwrap().borrow().is_pinned {
-        let direction = {
-            let ms_ref = unsafe { ms.as_ptr().as_ref().unwrap() };
-            check_translate_direction(&ms_ref.hovering, &ms_ref.pressing)
-        };
-        ts.borrow_mut().set_direction_self(direction);
-    }
-}
+// pub fn ensure_transition_direction(ms: &MouseStateRc, tls: &TranslateStateRc) {
+//     // if not pin
+//     if !tls.borrow().is_pinned {
+//         let direction = {
+//             let ms_ref = unsafe { ms.as_ptr().as_ref().unwrap() };
+//             check_translate_direction(&ms_ref.hovering, &ms_ref.pressing)
+//         };
+//         ts.borrow_mut().set_direction_self(direction);
+//     }
+// }
 
 pub fn check_translate_direction(hovering: &bool, pressing: &Option<u32>) -> TransitionDirection {
     // not hovering and no pressing

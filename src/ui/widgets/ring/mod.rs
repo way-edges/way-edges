@@ -253,7 +253,7 @@ impl RingCtx {
                         progress_cache.set(res.unwrap());
                         redraw();
                     }
-                    log::warn!("ring progress runner closed");
+                    log::debug!("ring progress runner closed");
                 }
             ));
             (Some(runner), cache_content, progress_cache)
@@ -284,7 +284,7 @@ impl RingCtx {
                     ensure_fm(y);
                     queue_draw()
                 }
-                log::warn!("ring update runner closed");
+                log::debug!("ring update runner closed");
             }
         ));
 
@@ -343,7 +343,7 @@ impl DisplayWidget for RingCtx {
 }
 impl Drop for RingCtx {
     fn drop(&mut self) {
-        log::debug!("drop ring ctx");
+        log::info!("drop ring ctx");
         self.ring_update_signal_sender.close();
         if let Some(r) = self.runner.take() {
             r.close().unwrap();

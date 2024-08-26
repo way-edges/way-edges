@@ -1,24 +1,22 @@
 use crate::config::Config;
 use crate::ui::draws::frame_manager::FrameManager;
+use crate::ui::draws::frame_manager::FrameManagerBindTransition;
 use crate::ui::draws::mouse_state::MouseStateRc;
 use crate::ui::draws::transition_state;
-use crate::ui::draws::transition_state::TransitionState;
+use crate::ui::draws::transition_state::TransitionStateList;
 use crate::ui::draws::util::draw_motion;
 use crate::ui::draws::util::draw_rotation;
-use crate::ui::draws::util::ensure_frame_manager;
 use crate::ui::draws::util::ensure_input_region;
 
 use super::event::*;
+use super::pre_draw::PreDrawCache;
 use super::BtnConfig;
 use clap::error::Result;
 use gtk::cairo::Context;
-use gtk::gdk::RGBA;
 use gtk::glib;
 use gtk::prelude::*;
 use gtk::DrawingArea;
 use gtk4_layer_shell::Edge;
-use std::cell::RefCell;
-use std::rc::Rc;
 use std::time::Duration;
 
 pub fn setup_draw(
@@ -45,21 +43,19 @@ pub fn setup_draw(
     };
 
     // visible range is 0 -> width
-    let ts = Rc::new(RefCell::new(TransitionState::new(Duration::from_millis(
-        btn_cfg.transition_duration,
-    ))));
+    let mut ts_list = TransitionStateList::new();
+    let pop_ts = ts_list.new_transition(Duration::from_millis(btn_cfg.transition_duration));
     let ms = setup_event(
         &darea,
         btn_cfg.event_map.take().ok_or("EventMap is None")?,
-        ts.clone(),
+        pop_ts.clone(),
     );
-    let mut dc = DrawCore::new(&darea, &cfg, &btn_cfg, ms);
+    let mut dc = DrawCore::new(&darea, &cfg, &btn_cfg, ms, ts_list);
     darea.set_draw_func(glib::clone!(
         #[weak]
         window,
         move |_, context, _, _| {
-            let visible_y = ts.borrow().get_y();
-            dc.draw(context, visible_y, &window);
+            dc.draw(context, &window);
         }
     ));
     window.set_child(Some(&darea));
@@ -67,8 +63,9 @@ pub fn setup_draw(
 }
 
 struct DrawCore {
-    core: DrawCoreFunc,
+    predraw_cache: PreDrawCache,
     frame_manager: FrameManager,
+    ts_list: TransitionStateList,
 
     ms: MouseStateRc,
     transition_range: (f64, f64),
@@ -81,10 +78,10 @@ struct DrawCore {
 impl DrawCore {
     fn new(
         darea: &DrawingArea,
-        // window: &gtk::ApplicationWindow,
         cfg: &Config,
         btn_cfg: &BtnConfig,
         ms: MouseStateRc,
+        ts_list: TransitionStateList,
     ) -> Self {
         let size = btn_cfg.get_size().unwrap();
         let edge = cfg.edge;
@@ -93,7 +90,9 @@ impl DrawCore {
         let map_size = (f_map_size.0.ceil() as i32, f_map_size.1.ceil() as i32);
         let transition_range = (0., size.0);
 
-        let core = draw_core(map_size, size, btn_cfg.color, extra_trigger_size);
+        let predraw_cache =
+            super::pre_draw::draw_to_surface(map_size, size, btn_cfg.color, extra_trigger_size);
+
         let frame_manager = FrameManager::new(
             btn_cfg.frame_rate,
             glib::clone!(
@@ -104,9 +103,12 @@ impl DrawCore {
                 }
             ),
         );
+
         Self {
-            core,
+            predraw_cache,
             frame_manager,
+            ts_list,
+
             ms,
 
             transition_range,
@@ -116,12 +118,20 @@ impl DrawCore {
             edge,
         }
     }
-    fn draw(&mut self, context: &Context, y: f64, window: &gtk::ApplicationWindow) {
+
+    fn draw(&mut self, context: &Context, window: &gtk::ApplicationWindow) {
+        let y = {
+            self.ts_list.refresh();
+            self.ts_list.get(0).unwrap().borrow_mut().get_y()
+        };
+
         let visible_y = transition_state::calculate_transition(y, self.transition_range);
         draw_rotation(context, self.edge, self.size);
         draw_motion(context, visible_y, self.transition_range);
         let is_pressing = self.ms.borrow().pressing.is_some();
-        (self.core)(context, is_pressing, self.f_map_size);
+
+        self.draw_core(context, is_pressing, self.f_map_size);
+
         ensure_input_region(
             window,
             visible_y,
@@ -129,35 +139,24 @@ impl DrawCore {
             self.edge,
             self.extra_trigger_size,
         );
-        ensure_frame_manager(&mut self.frame_manager, y);
+        self.frame_manager.ensure_frame_run(&self.ts_list);
     }
-}
 
-type DrawCoreFunc = Box<dyn Fn(&Context, bool, (f64, f64))>;
-fn draw_core(
-    map_size: (i32, i32),
-    size: (f64, f64),
-    color: RGBA,
-    extra_trigger_size: f64,
-) -> DrawCoreFunc {
-    let (b, n, p) = super::pre_draw::draw_to_surface(map_size, size, color, extra_trigger_size);
-
-    Box::new(
-        move |ctx: &Context, pressing: bool, f_map_size: (f64, f64)| {
-            // base_surface
-            ctx.set_source_surface(&b, 0., 0.).unwrap();
-            ctx.rectangle(0., 0., f_map_size.0, f_map_size.1);
-            ctx.fill().unwrap();
-
-            // mask
-            if pressing {
-                ctx.set_source_surface(&p, 0., 0.)
-            } else {
-                ctx.set_source_surface(&n, 0., 0.)
-            }
+    fn draw_core(&self, ctx: &Context, pressing: bool, f_map_size: (f64, f64)) {
+        // base_surface
+        ctx.set_source_surface(&self.predraw_cache.base_surf, 0., 0.)
             .unwrap();
-            ctx.rectangle(0., 0., f_map_size.0, f_map_size.1);
-            ctx.fill().unwrap();
-        },
-    )
+        ctx.rectangle(0., 0., f_map_size.0, f_map_size.1);
+        ctx.fill().unwrap();
+
+        // mask
+        if pressing {
+            ctx.set_source_surface(&self.predraw_cache.press_state_shadow[1], 0., 0.)
+        } else {
+            ctx.set_source_surface(&self.predraw_cache.press_state_shadow[0], 0., 0.)
+        }
+        .unwrap();
+        ctx.rectangle(0., 0., f_map_size.0, f_map_size.1);
+        ctx.fill().unwrap();
+    }
 }
