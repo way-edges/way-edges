@@ -172,35 +172,36 @@ fn parse_preset(preset: &mut RingPreset) -> (u64, RunnerTask) {
     }
 }
 
+type RingUpdateSignal = Option<ProgressCache>;
+
 pub struct RingCtx {
     cache_content: Rc<Cell<ImageSurface>>,
-    runner: Option<Runner<Ring>>,
-    text_ts: TransitionStateRc,
-    ring_update_signal_sender: Sender<()>,
+    runner: Runner<Ring>,
+
+    pop_ts: TransitionStateRc,
+
+    ring_update_signal_sender: Sender<RingUpdateSignal>,
 }
 impl RingCtx {
     fn new(events: RingEvents, mut config: RingConfig) -> Result<Self, String> {
-        let update_ctx = { parse_preset(&mut config.preset) };
+        // preset: `update interval duration` & `update function`
+        let update_ctx = parse_preset(&mut config.preset);
 
-        let text_ts = Rc::new(RefCell::new(TransitionState::new(Duration::from_millis(
+        // for text pop transition
+        let pop_ts = Rc::new(RefCell::new(TransitionState::new(Duration::from_millis(
             config.common.text_transition_ms,
         ))));
 
-        let (ring_update_signal_sender, ring_update_signal_receiver) = async_channel::bounded(1);
+        // ring content cache redraw signal
+        let (ring_update_signal_sender, ring_update_signal_receiver) =
+            async_channel::bounded::<RingUpdateSignal>(1);
 
-        // ring cache redraw signal
-        let make_redraw_send_func = || {
-            let s = ring_update_signal_sender.clone();
-            move || {
-                // ignored result
-                let _ = s.force_send(());
-            }
-        };
-
+        // frame manager
         let mut ensure_fm = {
-            let update_func = make_redraw_send_func();
+            let update_signal = ring_update_signal_sender.clone();
             let mut fm = FrameManager::new(config.common.frame_rate, move || {
-                update_func();
+                // ignore result
+                let _ = update_signal.try_send(None);
             });
             move |y| {
                 if transition_state::is_in_transition(y) {
@@ -212,9 +213,9 @@ impl RingCtx {
         };
 
         // just use separate threads to run rather than one async thread.
-        // incase some task takes too many time.
-        let (runner, cache_content, progress_cache) = {
-            let (s, r) = async_channel::bounded(1);
+        // incase some task takes too much of cpu time.
+        let (runner, cache_content, mut progress_cache_img) = {
+            let update_signal = ring_update_signal_sender.clone();
             let mut uf = update_ctx.1;
             // NOTE: one thread each ring widget
             let mut runner = interval_task::runner::new_runner(
@@ -222,59 +223,50 @@ impl RingCtx {
                 move || Ring::new(&config),
                 move |ring| {
                     let res = uf(ring);
-                    s.force_send(res).ok();
+                    if let Ok(res) = res {
+                        let _ = update_signal.force_send(Some(res));
+                    }
                     false
                 },
             );
+            // start progress update interval thread
             runner.start().unwrap();
 
-            let (cache_content, progress_cache) = if let Ok(res) = r.recv_blocking() {
-                let mut cache = res?;
-                let prefix = unsafe { cache.prefix_ring.temp_surface() };
-                let text = cache.text.as_mut().map(|d| unsafe { d.temp_surface() });
-                (
-                    Rc::new(Cell::new(Self::_combine(
-                        &prefix,
-                        text.as_ref(),
-                        text_ts.borrow().get_y(),
-                    ))),
-                    Rc::new(Cell::new(cache)),
-                )
-            } else {
-                return Err("first frame fail to create".to_string());
-            };
+            // wait for first progress
+            let (cache_content, progress_cache_img) =
+                if let Ok(Some(mut cache)) = ring_update_signal_receiver.recv_blocking() {
+                    let prefix = unsafe { cache.prefix_ring.temp_surface() };
+                    let text = cache.text.as_mut().map(|d| unsafe { d.temp_surface() });
+                    let content = Self::_combine(&prefix, text.as_ref(), 0.);
 
-            let redraw = make_redraw_send_func();
-            glib::spawn_future_local(glib::clone!(
-                #[strong]
-                progress_cache,
-                async move {
-                    while let Ok(res) = r.recv().await {
-                        progress_cache.set(res.unwrap());
-                        redraw();
-                    }
-                    log::debug!("ring progress runner closed");
-                }
-            ));
-            (Some(runner), cache_content, progress_cache)
+                    (Rc::new(Cell::new(content)), cache)
+                } else {
+                    return Err("first frame fail to create".to_string());
+                };
+
+            (runner, cache_content, progress_cache_img)
         };
 
         let mut queue_draw = events.queue_draw;
         // it's a while loop inside async block, so no matter weak or strong
         glib::spawn_future_local(glib::clone!(
             #[strong]
-            text_ts,
+            pop_ts,
             #[strong]
             cache_content,
-            #[strong]
-            progress_cache,
             async move {
-                while ring_update_signal_receiver.recv().await.is_ok() {
-                    let y = text_ts.borrow().get_y();
+                while let Ok(res) = ring_update_signal_receiver.recv().await {
+                    // refresh transition
+                    pop_ts.borrow_mut().refresh();
+
+                    // if new progress cache drawed, replace
+                    if let Some(cache) = res {
+                        progress_cache_img = cache;
+                    }
+                    let y = pop_ts.borrow().get_y();
                     let (prefix, text) = {
-                        let progress_cache = unsafe { progress_cache.as_ptr().as_mut().unwrap() };
-                        let prefix = unsafe { progress_cache.prefix_ring.temp_surface() };
-                        let text = progress_cache
+                        let prefix = unsafe { progress_cache_img.prefix_ring.temp_surface() };
+                        let text = progress_cache_img
                             .text
                             .as_mut()
                             .map(|d| unsafe { d.temp_surface() });
@@ -291,7 +283,9 @@ impl RingCtx {
         Ok(Self {
             runner,
             cache_content,
-            text_ts,
+
+            pop_ts,
+
             ring_update_signal_sender,
         })
     }
@@ -324,18 +318,20 @@ impl DisplayWidget for RingCtx {
     fn on_mouse_event(&mut self, event: MouseEvent) {
         match event {
             MouseEvent::Enter(_) => {
-                self.text_ts
+                self.pop_ts
                     .borrow_mut()
                     .set_direction_self(transition_state::TransitionDirection::Forward);
                 // ignore
-                let _ = self.ring_update_signal_sender.force_send(());
+                let _ = self.ring_update_signal_sender.try_send(None);
+                // let _ = self.ring_update_signal_sender.force_send(());
             }
             MouseEvent::Leave => {
-                self.text_ts
+                self.pop_ts
                     .borrow_mut()
                     .set_direction_self(transition_state::TransitionDirection::Backward);
                 // ignore
-                let _ = self.ring_update_signal_sender.force_send(());
+                let _ = self.ring_update_signal_sender.try_send(None);
+                // let _ = self.ring_update_signal_sender.force_send(());
             }
             _ => {}
         }
@@ -345,9 +341,7 @@ impl Drop for RingCtx {
     fn drop(&mut self) {
         log::info!("drop ring ctx");
         self.ring_update_signal_sender.close();
-        if let Some(r) = self.runner.take() {
-            r.close().unwrap();
-        }
+        std::mem::take(&mut self.runner).close().unwrap();
     }
 }
 

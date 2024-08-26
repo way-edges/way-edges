@@ -51,7 +51,7 @@ impl TextDrawer {
 }
 impl Drop for TextDrawer {
     fn drop(&mut self) {
-        log::debug!("drop text drawer");
+        log::info!("drop text drawer");
     }
 }
 
@@ -129,7 +129,7 @@ impl TextCtx {
                         cache_content.set(text_img_data.into());
                         queue_draw()
                     }
-                    log::warn!("text update runner closed");
+                    log::debug!("text update runner closed");
                 }
             ));
 
@@ -154,7 +154,7 @@ impl DisplayWidget for TextCtx {
 }
 impl Drop for TextCtx {
     fn drop(&mut self) {
-        log::debug!("drop text ctx");
+        log::info!("drop text ctx");
         if let Some(r) = self.runner.take() {
             r.close().unwrap();
         }
