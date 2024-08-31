@@ -264,15 +264,14 @@ impl TranslateState {
         let state = Rc::new(Cell::new(true));
         let state_clone = state.clone();
         self.pop_state = Some(state);
-        {
-            glib::timeout_add_local_once(self.timeout, move || {
-                if state_clone.get() {
-                    if let Some(f) = on_end_cb {
-                        f()
-                    }
+
+        glib::timeout_add_local_once(self.timeout, move || {
+            if state_clone.get() {
+                if let Some(f) = on_end_cb {
+                    f()
                 }
-            });
-        };
+            }
+        });
     }
     pub fn invalidate_pop(&mut self) {
         if let Some(before) = self.pop_state.take() {
