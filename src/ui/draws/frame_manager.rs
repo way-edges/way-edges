@@ -129,7 +129,13 @@ pub trait FrameManagerBindTransition {
 }
 impl FrameManagerBindTransition for FrameManager {
     fn ensure_frame_run(&mut self, ts_list: &TransitionStateList) {
-        let is_in_transition = ts_list.iter().any(|f| f.borrow().is_in_transition());
+        let is_in_transition = ts_list.iter().any(|f| {
+            if let Some(f) = f {
+                f.borrow().is_in_transition()
+            } else {
+                false
+            }
+        });
         if is_in_transition {
             self.start().unwrap();
         } else {

@@ -42,7 +42,7 @@ pub struct HyprWorkspaceConfig {
 }
 
 fn dt_thickness() -> NumOrRelative {
-    NumOrRelative::Num(5.0)
+    NumOrRelative::Num(10.0)
 }
 fn dt_length() -> NumOrRelative {
     NumOrRelative::Num(200.0)

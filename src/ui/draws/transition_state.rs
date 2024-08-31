@@ -1,6 +1,6 @@
 use std::{
     cell::RefCell,
-    ops::{Deref, DerefMut, Not},
+    ops::{Deref, Not},
     rc::Rc,
     time::{Duration, Instant},
 };
@@ -153,33 +153,106 @@ pub fn is_in_transition(y: f64) -> bool {
     y > 0. && y < 1.
 }
 
-pub struct TransitionStateList(Vec<TransitionStateRc>);
+// pub struct TransitionStateList(Vec<TransitionStateRc>);
+// impl TransitionStateList {
+//     pub fn new() -> Self {
+//         Self(vec![])
+//     }
+//
+//     pub fn new_transition(&mut self, duration: Duration) -> TransitionStateRc {
+//         let ts = TransitionState::new(duration);
+//         let item = Rc::new(RefCell::new(ts));
+//         self.0.push(item.clone());
+//         item
+//     }
+//
+//     pub fn refresh(&mut self) {
+//         self.0.iter_mut().for_each(|f| {
+//             f.borrow_mut().refresh();
+//         });
+//     }
+//
+//     pub fn extend_list(&mut self, l: &[TransitionStateRc]) {
+//         self.0.extend_from_slice(l);
+//     }
+//
+//     pub fn remove_item(&mut self, id: usize) {
+//         self.0.remove()
+//     }
+// }
+// impl Deref for TransitionStateList {
+//     type Target = Vec<TransitionStateRc>;
+//     fn deref(&self) -> &Self::Target {
+//         self.0.as_ref()
+//     }
+// }
+// impl DerefMut for TransitionStateList {
+//     fn deref_mut(&mut self) -> &mut Self::Target {
+//         self.0.as_mut()
+//     }
+// }
+//
+
+pub struct TransitionStateItem {
+    pub index: usize,
+    pub item: TransitionStateRc,
+}
+
+pub struct TransitionStateList {
+    inner: Vec<Option<TransitionStateRc>>,
+    empties: Vec<usize>,
+}
 impl TransitionStateList {
     pub fn new() -> Self {
-        Self(vec![])
+        Self {
+            inner: Vec::new(),
+            empties: Vec::new(),
+        }
     }
 
-    pub fn new_transition(&mut self, duration: Duration) -> TransitionStateRc {
+    pub fn new_transition(&mut self, duration: Duration) -> TransitionStateItem {
         let ts = TransitionState::new(duration);
         let item = Rc::new(RefCell::new(ts));
-        self.0.push(item.clone());
-        item
+
+        let index = if !self.empties.is_empty() {
+            let index = self.empties.pop().unwrap();
+            self.inner[index] = Some(item.clone());
+            index
+        } else {
+            self.inner.push(Some(item.clone()));
+            self.inner.len() - 1
+        };
+
+        TransitionStateItem { index, item }
     }
 
     pub fn refresh(&mut self) {
-        self.0.iter_mut().for_each(|f| {
-            f.borrow_mut().refresh();
+        self.inner.iter_mut().for_each(|f| {
+            if let Some(f) = f.as_ref() {
+                f.borrow_mut().refresh();
+            }
         });
     }
-}
-impl Deref for TransitionStateList {
-    type Target = Vec<TransitionStateRc>;
-    fn deref(&self) -> &Self::Target {
-        self.0.as_ref()
+
+    pub fn extend_list(&mut self, l: &[TransitionStateRc]) {
+        let a = l
+            .iter()
+            .map(|i| Some(i.clone()))
+            .collect::<Vec<Option<TransitionStateRc>>>();
+        self.inner.extend_from_slice(&a);
+    }
+
+    pub fn remove_item(&mut self, id: usize) {
+        if let Some(item) = self.inner.get_mut(id) {
+            *item = None
+        }
+        self.empties.push(id)
     }
 }
-impl DerefMut for TransitionStateList {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        self.0.as_mut()
+
+impl Deref for TransitionStateList {
+    type Target = Vec<Option<TransitionStateRc>>;
+    fn deref(&self) -> &Self::Target {
+        self.inner.as_ref()
     }
 }

@@ -1,24 +1,37 @@
 mod draw;
+mod event;
 
-use std::time::Duration;
+use std::{cell::Cell, rc::Rc, time::Duration};
 
 use draw::DrawCore;
-use gtk::{prelude::DrawingAreaExtManual, prelude::GtkWindowExt, ApplicationWindow, DrawingArea};
+use gio::glib::{clone::Downgrade, WeakRef};
+use gtk::{
+    glib,
+    prelude::{DrawingAreaExtManual, GtkWindowExt, WidgetExt},
+    ApplicationWindow, DrawingArea,
+};
 
 use crate::{
     config::widgets::hypr_workspace::HyprWorkspaceConfig,
     plug::hypr_workspace::init_hyprland_listener,
     ui::{
-        draws::{
-            mouse_state::{new_mouse_state, new_translate_mouse_state},
-            transition_state::TransitionStateList,
-        },
+        draws::{mouse_state::TranslateStateRc, transition_state::TransitionStateList},
         WidgetExpose, WidgetExposePtr,
     },
 };
 
-struct HyprWorkspaceExpose;
-impl WidgetExpose for HyprWorkspaceExpose {}
+struct HyprWorkspaceExpose {
+    tls: TranslateStateRc,
+    darea: WeakRef<DrawingArea>,
+}
+impl WidgetExpose for HyprWorkspaceExpose {
+    fn toggle_pin(&mut self) {
+        self.tls.borrow_mut().toggle_pin();
+        if let Some(darea) = self.darea.upgrade() {
+            darea.queue_draw();
+        }
+    }
+}
 
 pub fn init_widget(
     window: &ApplicationWindow,
@@ -30,18 +43,33 @@ pub fn init_widget(
 
     let darea = DrawingArea::new();
     window.set_child(Some(&darea));
-
-    let mouse_state = new_mouse_state(&darea);
+    match config.edge {
+        gtk4_layer_shell::Edge::Left | gtk4_layer_shell::Edge::Right => {
+            darea.set_size_request(
+                wp_conf.thickness.get_num().unwrap().ceil() as i32,
+                wp_conf.length.get_num().unwrap().ceil() as i32,
+            );
+        }
+        gtk4_layer_shell::Edge::Top | gtk4_layer_shell::Edge::Bottom => {
+            darea.set_size_request(
+                wp_conf.length.get_num().unwrap().ceil() as i32,
+                wp_conf.thickness.get_num().unwrap().ceil() as i32,
+            );
+        }
+        _ => todo!(),
+    };
 
     let mut ts_list = TransitionStateList::new();
-    let pop_ts = ts_list.new_transition(Duration::from_millis(wp_conf.transition_duration));
+    let pop_ts = ts_list
+        .new_transition(Duration::from_millis(wp_conf.transition_duration))
+        .item;
 
-    let workspace_ts =
-        ts_list.new_transition(Duration::from_millis(wp_conf.workspace_transition_duration));
+    let workspace_ts = ts_list
+        .new_transition(Duration::from_millis(wp_conf.workspace_transition_duration))
+        .item;
 
-    let (cb, translate_state) =
-        new_translate_mouse_state(pop_ts.clone(), mouse_state.clone(), None, false);
-    mouse_state.borrow_mut().set_event_cb(cb);
+    let workspace_draw_data = Rc::new(Cell::new(draw::DrawData::new(config.edge)));
+    let (ms, translate_state) = event::setup_event(&pop_ts, &darea, &workspace_draw_data);
 
     let mut core = DrawCore::new(
         &darea,
@@ -50,8 +78,9 @@ pub fn init_widget(
         workspace_ts,
         pop_ts.clone(),
         ts_list,
+        workspace_draw_data,
     );
-    use gtk::glib;
+
     darea.set_draw_func(glib::clone!(
         #[weak]
         window,
@@ -61,5 +90,13 @@ pub fn init_widget(
         }
     ));
 
-    Ok(Box::new(HyprWorkspaceExpose))
+    darea.connect_destroy(move |_| {
+        // move lifetime inside destroy
+        let _ = &ms;
+    });
+
+    Ok(Box::new(HyprWorkspaceExpose {
+        tls: translate_state,
+        darea: darea.downgrade(),
+    }))
 }

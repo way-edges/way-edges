@@ -252,3 +252,14 @@ pub fn register_hypr_event_callback(
 pub fn unregister_hypr_event_callback(id: HyprCallbackId) {
     get_hypr_listener().remove_cb(id)
 }
+
+pub fn change_to_workspace(id: i32) {
+    use hyprland::dispatch::*;
+
+    log::debug!("change to workspace: {id}");
+
+    // ignore
+    let _ = Dispatch::call(DispatchType::Workspace(WorkspaceIdentifierWithSpecial::Id(
+        id,
+    )));
+}

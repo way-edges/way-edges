@@ -1,12 +1,8 @@
 use crate::config::Config;
-use crate::ui::draws::frame_manager::FrameManager;
-use crate::ui::draws::frame_manager::FrameManagerBindTransition;
+use crate::ui::draws::frame_manager::{FrameManager, FrameManagerBindTransition};
 use crate::ui::draws::mouse_state::MouseStateRc;
-use crate::ui::draws::transition_state;
-use crate::ui::draws::transition_state::TransitionStateList;
-use crate::ui::draws::util::draw_motion;
-use crate::ui::draws::util::draw_rotation;
-use crate::ui::draws::util::ensure_input_region;
+use crate::ui::draws::transition_state::{self, TransitionStateList, TransitionStateRc};
+use crate::ui::draws::util::{draw_motion, draw_rotation, ensure_input_region};
 
 use super::event::*;
 use super::pre_draw::PreDrawCache;
@@ -44,13 +40,15 @@ pub fn setup_draw(
 
     // visible range is 0 -> width
     let mut ts_list = TransitionStateList::new();
-    let pop_ts = ts_list.new_transition(Duration::from_millis(btn_cfg.transition_duration));
+    let pop_ts = ts_list
+        .new_transition(Duration::from_millis(btn_cfg.transition_duration))
+        .item;
     let ms = setup_event(
         &darea,
         btn_cfg.event_map.take().ok_or("EventMap is None")?,
         pop_ts.clone(),
     );
-    let mut dc = DrawCore::new(&darea, &cfg, &btn_cfg, ms, ts_list);
+    let mut dc = DrawCore::new(&darea, &cfg, &btn_cfg, ms, ts_list, pop_ts);
     darea.set_draw_func(glib::clone!(
         #[weak]
         window,
@@ -66,6 +64,7 @@ struct DrawCore {
     predraw_cache: PreDrawCache,
     frame_manager: FrameManager,
     ts_list: TransitionStateList,
+    pop_ts: TransitionStateRc,
 
     ms: MouseStateRc,
     transition_range: (f64, f64),
@@ -82,6 +81,7 @@ impl DrawCore {
         btn_cfg: &BtnConfig,
         ms: MouseStateRc,
         ts_list: TransitionStateList,
+        pop_ts: TransitionStateRc,
     ) -> Self {
         let size = btn_cfg.get_size().unwrap();
         let edge = cfg.edge;
@@ -108,6 +108,7 @@ impl DrawCore {
             predraw_cache,
             frame_manager,
             ts_list,
+            pop_ts,
 
             ms,
 
@@ -122,7 +123,7 @@ impl DrawCore {
     fn draw(&mut self, context: &Context, window: &gtk::ApplicationWindow) {
         let y = {
             self.ts_list.refresh();
-            self.ts_list.get(0).unwrap().borrow_mut().get_y()
+            self.pop_ts.borrow().get_y()
         };
 
         let visible_y = transition_state::calculate_transition(y, self.transition_range);

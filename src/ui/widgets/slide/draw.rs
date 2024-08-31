@@ -62,8 +62,10 @@ pub fn setup_draw(
     let transition_range = (slide_cfg.preview_size, size.0);
 
     let mut ts_list = TransitionStateList::new();
-    ts_list.extend_from_slice(&std::mem::take(&mut additional.additional_transitions));
-    let pop_ts = ts_list.new_transition(Duration::from_millis(slide_cfg.transition_duration));
+    ts_list.extend_list(&std::mem::take(&mut additional.additional_transitions));
+    let pop_ts = ts_list
+        .new_transition(Duration::from_millis(slide_cfg.transition_duration))
+        .item;
 
     let (progress, tls) = event::setup_event(window, &darea, pop_ts.clone(), &cfg, &mut slide_cfg);
 

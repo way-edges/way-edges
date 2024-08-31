@@ -115,8 +115,9 @@ impl BoxCtx {
         };
 
         let mut ts_list = TransitionStateList::new();
-        let pop_ts =
-            ts_list.new_transition(Duration::from_millis(box_conf.box_conf.transition_duration));
+        let pop_ts = ts_list
+            .new_transition(Duration::from_millis(box_conf.box_conf.transition_duration))
+            .item;
         (
             Self {
                 buf,
