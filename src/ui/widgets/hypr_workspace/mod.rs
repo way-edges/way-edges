@@ -12,6 +12,7 @@ use gtk::{
 };
 
 use crate::{
+    activate::get_monior_size,
     config::widgets::hypr_workspace::HyprWorkspaceConfig,
     plug::hypr_workspace::init_hyprland_listener,
     ui::{
@@ -33,13 +34,40 @@ impl WidgetExpose for HyprWorkspaceExpose {
     }
 }
 
+fn calculate_raletive(
+    config: &crate::config::Config,
+    wp_conf: &mut HyprWorkspaceConfig,
+) -> Result<(), String> {
+    let monitor = config.monitor.to_index()?;
+
+    let size = get_monior_size(monitor)?.ok_or(format!("Failed to get monitor size: {monitor}"))?;
+
+    match config.edge {
+        gtk4_layer_shell::Edge::Left | gtk4_layer_shell::Edge::Right => {
+            wp_conf.thickness.calculate_relative(size.0 as f64);
+            wp_conf.length.calculate_relative(size.1 as f64);
+            wp_conf.extra_trigger_size.calculate_relative(size.0 as f64);
+        }
+        gtk4_layer_shell::Edge::Top | gtk4_layer_shell::Edge::Bottom => {
+            wp_conf.thickness.calculate_relative(size.1 as f64);
+            wp_conf.length.calculate_relative(size.0 as f64);
+            wp_conf.extra_trigger_size.calculate_relative(size.1 as f64);
+        }
+        _ => unreachable!(),
+    }
+
+    Ok(())
+}
+
 pub fn init_widget(
     window: &ApplicationWindow,
     config: crate::config::Config,
-    wp_conf: HyprWorkspaceConfig,
+    mut wp_conf: HyprWorkspaceConfig,
 ) -> Result<WidgetExposePtr, String> {
     println!("Initializing Hyprland Workspace");
     init_hyprland_listener();
+
+    calculate_raletive(&config, &mut wp_conf)?;
 
     let darea = DrawingArea::new();
     window.set_child(Some(&darea));
