@@ -18,6 +18,7 @@ pub fn setup_event(
     pop_ts: &TransitionStateRc,
     darea: &DrawingArea,
     workspace_draw_data: &Rc<Cell<DrawData>>,
+    hover_id: &Rc<Cell<isize>>,
 ) -> (MouseStateRc, TranslateStateRc) {
     let mouse_state = new_mouse_state(darea);
 
@@ -26,20 +27,24 @@ pub fn setup_event(
         darea,
         #[weak]
         workspace_draw_data,
+        #[weak]
+        hover_id,
         move |e| {
+            fn get_pos(workspace_draw_data: &Rc<Cell<DrawData>>, pos: (f64, f64)) -> isize {
+                unsafe {
+                    workspace_draw_data
+                        .as_ptr()
+                        .as_ref()
+                        .unwrap()
+                        .match_workspace(pos)
+                        + 1
+                }
+            }
             match e {
                 MouseEvent::Press(_, _) => return,
                 MouseEvent::Release(pos, key) => {
                     if key == BUTTON_PRIMARY {
-                        let pos = unsafe {
-                            workspace_draw_data
-                                .as_ptr()
-                                .as_ref()
-                                .unwrap()
-                                .match_workspace(pos)
-                                + 1
-                        };
-                        println!("{pos}");
+                        let pos = get_pos(&workspace_draw_data, pos);
                         // set workspace
                         if pos > 0 {
                             change_to_workspace(pos as i32);
@@ -47,10 +52,18 @@ pub fn setup_event(
                     };
                 }
                 MouseEvent::Enter(pos) => {
+                    hover_id.set(get_pos(&workspace_draw_data, pos));
                     darea.queue_draw();
                 }
-                MouseEvent::Motion(pos) => {}
+                MouseEvent::Motion(pos) => {
+                    let pos = get_pos(&workspace_draw_data, pos);
+                    if hover_id.get() != pos {
+                        hover_id.set(pos);
+                        darea.queue_draw();
+                    };
+                }
                 MouseEvent::Leave => {
+                    hover_id.set(-1);
                     darea.queue_draw();
                 }
             };

@@ -32,6 +32,9 @@ pub struct HyprWorkspaceConfig {
     #[serde(default = "dt_active_color")]
     #[serde(deserialize_with = "common::color_translate")]
     pub active_color: RGBA,
+    #[serde(default)]
+    #[serde(deserialize_with = "common::option_color_translate")]
+    pub hover_color: Option<RGBA>,
 
     #[serde(default = "common::dt_transition_duration")]
     pub transition_duration: u64,

@@ -16,8 +16,8 @@ use crate::{
     },
     ui::draws::{
         frame_manager::{FrameManager, FrameManagerBindTransition},
-        transition_state::{self, TransitionStateList, TransitionStateRc},
-        util::{color_transition, new_surface, Z},
+        transition_state::{TransitionStateList, TransitionStateRc},
+        util::{color_mix, color_transition, new_surface, Z},
     },
 };
 
@@ -77,6 +77,7 @@ pub struct DrawCore {
     data: Rc<Cell<HyprGlobalData>>,
 
     workspace_draw_data: Rc<Cell<DrawData>>,
+    hover_id: Rc<Cell<isize>>,
 
     edge: Edge,
     thickness: i32,
@@ -88,6 +89,7 @@ pub struct DrawCore {
     backlight: Option<RGBA>,
     deactive_color: RGBA,
     active_color: RGBA,
+    hover_color: Option<RGBA>,
 
     workspace_transition: TransitionStateRc,
     ts_list: TransitionStateList,
@@ -106,14 +108,17 @@ impl Drop for DrawCore {
 }
 
 impl DrawCore {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         darea: &DrawingArea,
         conf: &Config,
         wp_conf: &HyprWorkspaceConfig,
+
         workspace_transition: TransitionStateRc,
         pop_ts: TransitionStateRc,
         ts_list: TransitionStateList,
         workspace_draw_data: Rc<Cell<DrawData>>,
+        hover_id: Rc<Cell<isize>>,
     ) -> Self {
         // data related
         let data = Rc::new(Cell::new(HyprGlobalData::default()));
@@ -153,6 +158,7 @@ impl DrawCore {
             data,
 
             workspace_draw_data,
+            hover_id,
 
             edge: conf.edge,
             thickness: wp_conf.thickness.get_num_into().unwrap() as i32,
@@ -164,6 +170,7 @@ impl DrawCore {
             backlight: wp_conf.backlight,
             deactive_color: wp_conf.deactive_color,
             active_color: wp_conf.active_color,
+            hover_color: wp_conf.hover_color,
 
             ts_list,
             workspace_transition,
@@ -286,14 +293,16 @@ impl DrawCore {
         let mut draw_data = DrawData::new(self.edge);
         let mut draw_start_pos = 0.;
 
+        let hover_id = self.hover_id.get();
+
         let a: Vec<(f64, RGBA)> = (1..=data.max_workspace)
-            .map(|w| {
-                let (size, color) = if w == data.current_workspace {
+            .map(|id| {
+                let (size, mut color) = if id == data.current_workspace {
                     (
                         item_min_length + (item_max_length - item_min_length) * y,
                         color_transition(self.deactive_color, self.active_color, y as f32),
                     )
-                } else if w == data.last_workspace {
+                } else if id == data.last_workspace {
                     (
                         item_min_length + (item_max_length - item_min_length) * (1. - y),
                         color_transition(self.active_color, self.deactive_color, y as f32),
@@ -301,6 +310,14 @@ impl DrawCore {
                 } else {
                     (item_min_length, self.deactive_color)
                 };
+
+                if let Some(hover_color) = self.hover_color {
+                    if id as isize == hover_id {
+                        println!("mix color: {hover_color:?}");
+                        // color = color_mix(color, hover_color);
+                        color = color_mix(hover_color, color);
+                    }
+                }
 
                 {
                     let end = draw_start_pos + size;

@@ -6,7 +6,7 @@ use crate::{
     ui::{
         draws::{
             shape::draw_rect_path,
-            util::{new_surface, Z},
+            util::{color_mix, new_surface, Z},
         },
         widgets::wrapbox::MousePosition,
     },
@@ -52,12 +52,7 @@ impl BoxOutlookWindow {
             shade.set_alpha(0.2);
             let one = shade;
             let two = color;
-            let a = 1. - (1. - one.alpha()) * (1. - two.alpha());
-            let r = (one.red() * one.alpha() + two.red() * two.alpha() * (1. - one.alpha())) / a;
-            let g =
-                (one.green() * one.alpha() + two.green() * two.alpha() * (1. - one.alpha())) / a;
-            let b = (one.blue() * one.alpha() + two.blue() * two.alpha() * (1. - one.alpha())) / a;
-            RGBA::new(r, g, b, a)
+            color_mix(one, two)
         };
 
         let new_surface =

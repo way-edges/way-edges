@@ -69,7 +69,9 @@ pub fn init_widget(
         .item;
 
     let workspace_draw_data = Rc::new(Cell::new(draw::DrawData::new(config.edge)));
-    let (ms, translate_state) = event::setup_event(&pop_ts, &darea, &workspace_draw_data);
+    let hover_id = Rc::new(Cell::new(-1));
+    let (ms, translate_state) =
+        event::setup_event(&pop_ts, &darea, &workspace_draw_data, &hover_id);
 
     let mut core = DrawCore::new(
         &darea,
@@ -79,6 +81,7 @@ pub fn init_widget(
         pop_ts.clone(),
         ts_list,
         workspace_draw_data,
+        hover_id,
     );
 
     darea.set_draw_func(glib::clone!(

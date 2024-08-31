@@ -177,3 +177,11 @@ pub fn color_transition(start_color: RGBA, stop_color: RGBA, v: f32) -> RGBA {
     let a = start_color.alpha() + (stop_color.alpha() - start_color.alpha()) * v;
     RGBA::new(r, g, b, a)
 }
+
+pub fn color_mix(one: RGBA, two: RGBA) -> RGBA {
+    let a = 1. - (1. - one.alpha()) * (1. - two.alpha());
+    let r = (one.red() * one.alpha() + two.red() * two.alpha() * (1. - one.alpha())) / a;
+    let g = (one.green() * one.alpha() + two.green() * two.alpha() * (1. - one.alpha())) / a;
+    let b = (one.blue() * one.alpha() + two.blue() * two.alpha() * (1. - one.alpha())) / a;
+    RGBA::new(r, g, b, a)
+}
