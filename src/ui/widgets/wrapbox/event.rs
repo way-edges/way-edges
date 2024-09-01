@@ -6,7 +6,7 @@ use super::BoxCtxRc;
 use gtk::DrawingArea;
 
 use crate::ui::draws::mouse_state::{
-    new_mouse_event_func, new_mouse_state, new_translate_mouse_state, MouseEvent, TranslateStateRc,
+    new_mouse_event_func, new_mouse_state, MouseEvent, MouseState, MouseStateRc,
 };
 use crate::ui::draws::transition_state::TransitionStateRc;
 
@@ -15,8 +15,8 @@ pub fn event_handle(
     expose: BoxExposeRc,
     ts: TransitionStateRc,
     box_ctx: BoxCtxRc,
-) -> TranslateStateRc {
-    let ms = new_mouse_state(darea);
+) -> MouseStateRc {
+    let ms = new_mouse_state(darea, MouseState::new(true, false, true, ts.clone()));
     let mut last_widget: Option<BoxedWidgetRc> = None;
     let cb = {
         let f = expose.borrow().update_func();
@@ -62,7 +62,6 @@ pub fn event_handle(
             };
         })
     };
-    let (cb, tls) = new_translate_mouse_state(ts, ms.clone(), Some(cb), false);
     ms.borrow_mut().set_event_cb(cb);
-    tls
+    ms
 }

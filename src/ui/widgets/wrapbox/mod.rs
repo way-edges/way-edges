@@ -6,6 +6,7 @@ use cairo::{ImageSurface, RectangleInt, Region};
 use display::grid::{GridBox, GridItemSizeMap};
 use event::event_handle;
 use expose::{BoxExpose, BoxExposeRc, BoxWidgetExpose};
+use gio::glib::clone::Downgrade;
 use gtk::glib;
 use gtk::prelude::NativeExt;
 use gtk::prelude::{DrawingAreaExtManual, GtkWindowExt, SurfaceExt, WidgetExt};
@@ -15,7 +16,6 @@ use gtk4_layer_shell::Edge;
 use crate::config::widgets::wrapbox::{BoxConfig, BoxedWidgetConfig};
 use crate::config::Config;
 use crate::ui::draws::frame_manager::{FrameManager, FrameManagerBindTransition};
-use crate::ui::draws::mouse_state::TranslateStateExpose;
 use crate::ui::draws::transition_state::{self, TransitionStateList, TransitionStateRc};
 use crate::ui::draws::util::{draw_motion, draw_rotation, new_surface, Z};
 use crate::ui::WidgetExposePtr;
@@ -344,14 +344,13 @@ pub fn init_widget(
         }
     ));
 
-    let tls = event_handle(
+    let ms = event_handle(
         &darea,
         expose.clone(),
         box_motion_transition.clone(),
         box_ctx.clone(),
     );
-    let tls_expose = TranslateStateExpose::new(Rc::downgrade(&tls), expose.borrow().update_func());
-    Ok(Box::new(BoxWidgetExpose::new(tls_expose, expose)))
+    Ok(Box::new(BoxWidgetExpose::new(ms.downgrade(), expose)))
 }
 
 fn rotate_content(edge: Edge, content: ImageSurface) -> ImageSurface {

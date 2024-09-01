@@ -1,7 +1,6 @@
 use crate::config::widgets::common::EventMap;
 use crate::ui::draws::mouse_state::new_mouse_event_func;
 use crate::ui::draws::mouse_state::new_mouse_state;
-use crate::ui::draws::mouse_state::new_translate_mouse_state;
 use crate::ui::draws::mouse_state::MouseEvent;
 use crate::ui::draws::mouse_state::MouseState;
 use crate::ui::draws::transition_state::TransitionStateRc;
@@ -17,7 +16,7 @@ pub(super) fn setup_event(
     mut event_map: EventMap,
     ts: TransitionStateRc,
 ) -> Rc<RefCell<MouseState>> {
-    let ms = new_mouse_state(darea);
+    let ms = new_mouse_state(darea, MouseState::new(false, false, true, ts));
     let cb = new_mouse_event_func(glib::clone!(
         #[weak]
         darea,
@@ -30,7 +29,7 @@ pub(super) fn setup_event(
             darea.queue_draw();
         }
     ));
-    let (cb, _) = new_translate_mouse_state(ts, ms.clone(), Some(cb), true);
+    // let (cb, _) = new_translate_mouse_state(ts, ms.clone(), Some(cb), true);
     ms.borrow_mut().set_event_cb(cb);
     ms
 }

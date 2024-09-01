@@ -80,7 +80,7 @@ pub fn init_widget(
             },
         )?
     };
-    let widget_expose = exposed.create_widget_expose();
+    let widget_expose = exposed.clone();
     let cb_key = register_callback(
         Box::new(move |vinfo| {
             if let Some(p) = exposed.progress.upgrade() {
@@ -92,7 +92,9 @@ pub fn init_widget(
                         .borrow_mut()
                         .set_direction_self(vinfo.is_muted.into());
                 }
-                exposed.darea.upgrade().unwrap().queue_draw();
+                if let Some(darea) = exposed.darea.upgrade() {
+                    darea.queue_draw();
+                }
             }
         }),
         sos,

@@ -6,9 +6,9 @@ use gtk::DrawingArea;
 use gtk::{gdk::BUTTON_PRIMARY, glib};
 
 use crate::plug::hypr_workspace::change_to_workspace;
-use crate::ui::draws::mouse_state::{MouseStateRc, TranslateStateRc};
+use crate::ui::draws::mouse_state::{MouseState, MouseStateRc};
 use crate::ui::draws::{
-    mouse_state::{new_mouse_event_func, new_mouse_state, new_translate_mouse_state, MouseEvent},
+    mouse_state::{new_mouse_event_func, new_mouse_state, MouseEvent},
     transition_state::TransitionStateRc,
 };
 
@@ -19,10 +19,10 @@ pub fn setup_event(
     darea: &DrawingArea,
     workspace_draw_data: &Rc<Cell<DrawData>>,
     hover_id: &Rc<Cell<isize>>,
-) -> (MouseStateRc, TranslateStateRc) {
-    let mouse_state = new_mouse_state(darea);
+) -> MouseStateRc {
+    let mouse_state = new_mouse_state(darea, MouseState::new(true, true, true, pop_ts.clone()));
 
-    let a = new_mouse_event_func(glib::clone!(
+    let cb = new_mouse_event_func(glib::clone!(
         #[weak]
         darea,
         #[weak]
@@ -66,12 +66,14 @@ pub fn setup_event(
                     hover_id.set(-1);
                     darea.queue_draw();
                 }
+                _ => {
+                    // pin || unpin || pop || unpop
+                    darea.queue_draw();
+                }
             };
         }
     ));
-    let (cb, translate_state) =
-        new_translate_mouse_state(pop_ts.clone(), mouse_state.clone(), Some(a), false);
     mouse_state.borrow_mut().set_event_cb(cb);
 
-    (mouse_state, translate_state)
+    mouse_state
 }

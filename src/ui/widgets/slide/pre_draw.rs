@@ -1,7 +1,7 @@
 use std::f64::consts::PI;
 
 use gtk::{
-    cairo::{self, ImageSurface, LinearGradient, Path},
+    cairo::{self, ImageSurface, Path},
     gdk::RGBA,
     prelude::GdkCairoContextExt,
 };
@@ -12,14 +12,14 @@ pub struct SlidePredraw {
     pub bg: ImageSurface,
     // pub fg: ImageSurface,
     pub path: Path,
-    pub shade: ImageSurface,
+    // pub shade: ImageSurface,
     pub stroke: ImageSurface,
     pub slope_position: f64,
 }
 
-fn predraw_err_handle(e: cairo::Error) -> String {
-    format!("Slide Predraw error: {e}")
-}
+// fn predraw_err_handle(e: cairo::Error) -> String {
+//     format!("Slide Predraw error: {e}")
+// }
 fn draw_slide_path(
     obtuse_angle: f64,
     radius: f64,
@@ -110,21 +110,21 @@ pub fn draw(
     //     surf
     // };
 
-    let mask = {
-        let start_point = (0., size.1 / 2.);
-        let end_point = (size.0, size.1 / 2.);
-
-        let surf = new_surface();
-        let ctx = cairo::Context::new(&surf).unwrap();
-        let lg = LinearGradient::new(start_point.0, start_point.1, end_point.0, end_point.1);
-        lg.add_color_stop_rgba(0., Z, Z, Z, 0.);
-        lg.add_color_stop_rgba(0.4, Z, Z, Z, 0.);
-        lg.add_color_stop_rgba(1., Z, Z, Z, 0.7);
-        ctx.set_source(&lg).unwrap();
-        ctx.append_path(&path);
-        ctx.fill().unwrap();
-        surf
-    };
+    // let mask = {
+    //     let start_point = (0., size.1 / 2.);
+    //     let end_point = (size.0, size.1 / 2.);
+    //
+    //     let surf = new_surface();
+    //     let ctx = cairo::Context::new(&surf).unwrap();
+    //     let lg = LinearGradient::new(start_point.0, start_point.1, end_point.0, end_point.1);
+    //     lg.add_color_stop_rgba(0., Z, Z, Z, 0.);
+    //     lg.add_color_stop_rgba(0.4, Z, Z, Z, 0.);
+    //     lg.add_color_stop_rgba(1., Z, Z, Z, 0.7);
+    //     ctx.set_source(&lg).unwrap();
+    //     ctx.append_path(&path);
+    //     ctx.fill().unwrap();
+    //     surf
+    // };
 
     let stroke = {
         let surf = new_surface();
@@ -140,7 +140,7 @@ pub fn draw(
         bg: bg_surf,
         // fg: fg_surf,
         path,
-        shade: mask,
+        // shade: mask,
         stroke,
         slope_position,
     })

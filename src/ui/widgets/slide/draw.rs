@@ -67,7 +67,7 @@ pub fn setup_draw(
         .new_transition(Duration::from_millis(slide_cfg.transition_duration))
         .item;
 
-    let (progress, tls) = event::setup_event(window, &darea, pop_ts.clone(), &cfg, &mut slide_cfg);
+    let (progress, ms) = event::setup_event(window, &darea, pop_ts.clone(), &cfg, &mut slide_cfg);
 
     let predraw = super::pre_draw::draw(
         size,
@@ -127,7 +127,7 @@ pub fn setup_draw(
     Ok(SlideExpose {
         darea: Downgrade::downgrade(&darea),
         progress: progress.downgrade(),
-        tls: tls.downgrade(),
+        ms: ms.downgrade(),
     })
 }
 
@@ -170,7 +170,7 @@ impl DrawCore {
 
         let res = self.draw(ctx, self.progress.get()).map(|_| {
             ensure_input_region(
-                &window,
+                window,
                 visible_y,
                 self.size,
                 self.edge,

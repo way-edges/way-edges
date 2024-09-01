@@ -1,8 +1,11 @@
-use std::{cell::RefCell, rc::Rc};
+use std::{
+    cell::RefCell,
+    rc::{Rc, Weak},
+};
 
 use async_channel::{Receiver, Sender};
 
-use crate::ui::{draws::mouse_state::TranslateStateExpose, WidgetExpose};
+use crate::ui::{draws::mouse_state::MouseState, WidgetExpose};
 
 pub type UpdateSignal = ();
 pub type BoxExposeRc = Rc<RefCell<BoxExpose>>;
@@ -31,20 +34,19 @@ impl BoxExpose {
 }
 
 pub struct BoxWidgetExpose {
-    tls_expose: TranslateStateExpose,
+    ms: Weak<RefCell<MouseState>>,
     box_expose: BoxExposeRc,
 }
 impl BoxWidgetExpose {
-    pub fn new(tls_expose: TranslateStateExpose, box_expose: BoxExposeRc) -> Self {
-        Self {
-            tls_expose,
-            box_expose,
-        }
+    pub fn new(ms: Weak<RefCell<MouseState>>, box_expose: BoxExposeRc) -> Self {
+        Self { box_expose, ms }
     }
 }
 impl WidgetExpose for BoxWidgetExpose {
     fn toggle_pin(&mut self) {
-        self.tls_expose.toggle_pin()
+        if let Some(ms) = self.ms.upgrade() {
+            ms.borrow_mut().toggle_pin();
+        }
     }
     fn close(&mut self) {
         self.box_expose.borrow_mut().update_signal.close();

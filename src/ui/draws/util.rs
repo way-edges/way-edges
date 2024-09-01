@@ -1,7 +1,5 @@
 use std::f64::consts::PI;
 
-use crate::ui::draws::frame_manager::FrameManager;
-
 use educe::Educe;
 use gtk::cairo::{self, Context, Format, ImageSurface, RectangleInt, Region};
 use gtk::gdk::RGBA;
@@ -9,26 +7,24 @@ use gtk::pango::Layout;
 use gtk::prelude::*;
 use gtk4_layer_shell::Edge;
 
-use super::transition_state::{self, TransitionStateList};
-
 pub const Z: f64 = 0.;
 
 pub fn from_angel(a: f64) -> f64 {
     a / 180. * PI
 }
 
-pub fn copy_surface(src: &ImageSurface) -> ImageSurface {
-    let dst = ImageSurface::create(Format::ARgb32, src.width(), src.height()).unwrap();
-    let ctx = cairo::Context::new(&dst).unwrap();
-    copy_surface_to_context(&ctx, src);
-    dst
-}
-
-pub fn copy_surface_to_context(dst: &Context, src: &ImageSurface) {
-    dst.set_source_surface(src, Z, Z).unwrap();
-    dst.rectangle(Z, Z, src.width().into(), src.height().into());
-    dst.fill().unwrap();
-}
+// pub fn copy_surface(src: &ImageSurface) -> ImageSurface {
+//     let dst = ImageSurface::create(Format::ARgb32, src.width(), src.height()).unwrap();
+//     let ctx = cairo::Context::new(&dst).unwrap();
+//     copy_surface_to_context(&ctx, src);
+//     dst
+// }
+//
+// pub fn copy_surface_to_context(dst: &Context, src: &ImageSurface) {
+//     dst.set_source_surface(src, Z, Z).unwrap();
+//     dst.rectangle(Z, Z, src.width().into(), src.height().into());
+//     dst.fill().unwrap();
+// }
 
 pub fn new_surface(size: (i32, i32)) -> ImageSurface {
     ImageSurface::create(Format::ARgb32, size.0, size.1).unwrap()

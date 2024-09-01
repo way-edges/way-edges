@@ -1,10 +1,14 @@
 mod draw;
 mod event;
 
-use std::{cell::Cell, rc::Rc, time::Duration};
+use std::{
+    cell::{Cell, RefCell},
+    rc::{Rc, Weak},
+    time::Duration,
+};
 
 use draw::DrawCore;
-use gio::glib::{clone::Downgrade, WeakRef};
+use gio::glib::clone::Downgrade;
 use gtk::{
     glib,
     prelude::{DrawingAreaExtManual, GtkWindowExt, WidgetExt},
@@ -16,20 +20,19 @@ use crate::{
     config::widgets::hypr_workspace::HyprWorkspaceConfig,
     plug::hypr_workspace::init_hyprland_listener,
     ui::{
-        draws::{mouse_state::TranslateStateRc, transition_state::TransitionStateList},
+        draws::{mouse_state::MouseState, transition_state::TransitionStateList},
         WidgetExpose, WidgetExposePtr,
     },
 };
 
 struct HyprWorkspaceExpose {
-    tls: TranslateStateRc,
-    darea: WeakRef<DrawingArea>,
+    ms: Weak<RefCell<MouseState>>,
+    // darea: WeakRef<DrawingArea>,
 }
 impl WidgetExpose for HyprWorkspaceExpose {
     fn toggle_pin(&mut self) {
-        self.tls.borrow_mut().toggle_pin();
-        if let Some(darea) = self.darea.upgrade() {
-            darea.queue_draw();
+        if let Some(ms) = self.ms.upgrade() {
+            ms.borrow_mut().toggle_pin();
         }
     }
 }
@@ -64,7 +67,6 @@ pub fn init_widget(
     config: crate::config::Config,
     mut wp_conf: HyprWorkspaceConfig,
 ) -> Result<WidgetExposePtr, String> {
-    println!("Initializing Hyprland Workspace");
     init_hyprland_listener();
 
     calculate_raletive(&config, &mut wp_conf)?;
@@ -98,8 +100,7 @@ pub fn init_widget(
 
     let workspace_draw_data = Rc::new(Cell::new(draw::DrawData::new(config.edge)));
     let hover_id = Rc::new(Cell::new(-1));
-    let (ms, translate_state) =
-        event::setup_event(&pop_ts, &darea, &workspace_draw_data, &hover_id);
+    let ms = event::setup_event(&pop_ts, &darea, &workspace_draw_data, &hover_id);
 
     let mut core = DrawCore::new(
         &darea,
@@ -110,24 +111,19 @@ pub fn init_widget(
         ts_list,
         workspace_draw_data,
         hover_id,
+        &ms,
     );
 
     darea.set_draw_func(glib::clone!(
         #[weak]
         window,
         move |_, ctx, _, _| {
-            println!("draw");
             core.draw_core(ctx, &window);
         }
     ));
 
-    darea.connect_destroy(move |_| {
-        // move lifetime inside destroy
-        let _ = &ms;
-    });
-
     Ok(Box::new(HyprWorkspaceExpose {
-        tls: translate_state,
-        darea: darea.downgrade(),
+        ms: ms.downgrade(),
+        // darea: darea.downgrade(),
     }))
 }

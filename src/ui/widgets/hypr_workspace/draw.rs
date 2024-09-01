@@ -16,6 +16,7 @@ use crate::{
     },
     ui::draws::{
         frame_manager::{FrameManager, FrameManagerBindTransition},
+        mouse_state::MouseStateRc,
         transition_state::{TransitionStateList, TransitionStateRc},
         util::{color_mix, color_transition, new_surface, Z},
     },
@@ -119,6 +120,8 @@ impl DrawCore {
         ts_list: TransitionStateList,
         workspace_draw_data: Rc<Cell<DrawData>>,
         hover_id: Rc<Cell<isize>>,
+
+        ms: &MouseStateRc,
     ) -> Self {
         // data related
         let data = Rc::new(Cell::new(HyprGlobalData::default()));
@@ -129,6 +132,8 @@ impl DrawCore {
             darea,
             #[weak]
             workspace_transition,
+            #[weak]
+            ms,
             move |f| {
                 log::debug!("received hyprland worksapce change event: {f:?}");
                 data.set(*f);
@@ -137,6 +142,7 @@ impl DrawCore {
                     let direction = wp_ts.direction;
                     wp_ts.set_direction_self(direction.not());
                 }
+                ms.borrow_mut().pop();
                 darea.queue_draw();
             }
         ));
@@ -313,8 +319,6 @@ impl DrawCore {
 
                 if let Some(hover_color) = self.hover_color {
                     if id as isize == hover_id {
-                        println!("mix color: {hover_color:?}");
-                        // color = color_mix(color, hover_color);
                         color = color_mix(hover_color, color);
                     }
                 }

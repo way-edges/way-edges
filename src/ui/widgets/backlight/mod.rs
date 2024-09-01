@@ -24,13 +24,15 @@ pub fn init_widget(
         let add = slide::SlideAdditionalConfig::default(bl_conf.slide.fg_color);
         slide::init_widget_as_plug(window, config, bl_conf.slide, add)?
     };
-    let widget_expose = exposed.create_widget_expose();
+    let widget_expose = exposed.clone();
     let cb_key = register_callback(
         move |pro| {
             if let Some(p) = exposed.progress.upgrade() {
                 log::debug!("update brightness progress: {pro}");
                 p.set(pro / 100.);
-                exposed.darea.upgrade().unwrap().queue_draw();
+                if let Some(darea) = exposed.darea.upgrade() {
+                    darea.queue_draw();
+                }
             }
         },
         bl_conf.bl_conf.device_name,

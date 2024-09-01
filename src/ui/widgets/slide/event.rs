@@ -11,7 +11,7 @@ use gtk4_layer_shell::Edge;
 use crate::config::widgets::slide::{Direction, SlideConfig, Task};
 use crate::config::Config;
 use crate::ui::draws::mouse_state::{
-    new_mouse_event_func, new_mouse_state, new_translate_mouse_state, MouseEvent, TranslateStateRc,
+    new_mouse_event_func, new_mouse_state, MouseEvent, MouseState, MouseStateRc,
 };
 use crate::ui::draws::transition_state::TransitionStateRc;
 use crate::ui::draws::util::Z;
@@ -76,7 +76,7 @@ pub(super) fn setup_event(
     ts: TransitionStateRc,
     cfg: &Config,
     slide_cfg: &mut SlideConfig,
-) -> (Rc<Cell<f64>>, TranslateStateRc) {
+) -> (Rc<Cell<f64>>, MouseStateRc) {
     let xory = cfg.edge.into();
     let direction = slide_cfg.progress_direction;
     let max = slide_cfg.get_size().unwrap().1;
@@ -85,7 +85,7 @@ pub(super) fn setup_event(
     let update_with_interval_ms = slide_cfg.update_with_interval_ms.take();
     let draggable = slide_cfg.draggable;
 
-    let ms = new_mouse_state(darea);
+    let ms = new_mouse_state(darea, MouseState::new(true, false, true, ts.clone()));
     let progress_state = Rc::new(RefCell::new(ProgressState::new(max, direction, on_change)));
 
     let cb = new_mouse_event_func(glib::clone!(
@@ -140,7 +140,6 @@ pub(super) fn setup_event(
         }
     ));
 
-    let (cb, tls) = new_translate_mouse_state(ts, ms.clone(), Some(cb), false);
     ms.borrow_mut().set_event_cb(cb);
 
     let progress = progress_state.borrow().current.clone();
@@ -191,5 +190,5 @@ pub(super) fn setup_event(
             });
         };
     };
-    (progress, tls)
+    (progress, ms)
 }
