@@ -240,7 +240,7 @@ impl DrawCore {
             }
             Edge::Bottom => {
                 let w = self.thickness as f64 * y + self.extra_trigger_size;
-                RectangleInt::new(self.thickness - w as i32, 0, self.length, w.ceil() as i32)
+                RectangleInt::new(0, self.thickness - w as i32, self.length, w.ceil() as i32)
             }
             _ => todo!(),
         };
