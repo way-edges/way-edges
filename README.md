@@ -40,6 +40,7 @@ Options:
 - [x] fixed FPS.
 - [x] widget grouping
 - [x] configuration file
+- [x] JSON schema for configuration file
 - [x] watch file & hot reload
 - [x] CLI
 - [x] monitor relative height
