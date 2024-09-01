@@ -29,7 +29,6 @@ pub(super) fn setup_event(
             darea.queue_draw();
         }
     ));
-    // let (cb, _) = new_translate_mouse_state(ts, ms.clone(), Some(cb), true);
     ms.borrow_mut().set_event_cb(cb);
     ms
 }
