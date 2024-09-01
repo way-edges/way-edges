@@ -20,16 +20,19 @@
           "$ref": "#UtilNumOrPercentage"
         },
         "transition_duration": {
+          "$id": "#UtilCommon/transition_duration",
           "description": "widget show/hide in `transition_duration` ms.\n Default 100ms",
           "type": "integer",
           "minimum": 0
         },
         "frame_rate": {
+          "$id": "#UtilCommon/frame_rate",
           "description": "widget frame rate.\nDefault 30",
           "type": "integer",
           "minimum": 1
         },
         "extra_trigger_size": {
+          "$id": "#UtilCommon/extra_trigger_size",
           "description": "transparent extra trigger area, must > 0 or else the widget will not be triggered.\nDefault 5",
           "$ref": "#UtilNumOrPercentage"
         }
@@ -74,19 +77,19 @@
       "description": "All widgets in the config file",
       "oneOf": [
         {
-          "$ref": "#BtnWidget"
+          "$ref": "#Btn"
         },
         {
-          "$ref": "#SpeakerWidget"
+          "$ref": "#Speaker"
         },
         {
-          "$ref": "#MicrophoneWidget"
+          "$ref": "#Microphone"
         },
         {
-          "$ref": "#SlideWidget"
+          "$ref": "#Slider"
         },
         {
-          "$ref": "#BacklightWidget"
+          "$ref": "#Backlight"
         },
         {
           "$ref": "#Box"
@@ -98,7 +101,7 @@
     },
 
     "BtnWidget": {
-      "$id": "#BtnWidget",
+      "$id": "#Btn",
       "description": "Button widget specific properties",
       "allOf": [
         {
@@ -196,7 +199,7 @@
       ]
     },
     "SlideWidget": {
-      "$id": "#SlideWidget",
+      "$id": "#Slider",
       "description": "Slide widget specific properties",
       "allOf": [
         {
@@ -333,13 +336,13 @@
           "minimum": 0
         },
         "frame_rate": {
-          "$ref": "#UtilCommon/properties/frame_rate"
+          "$ref": "#UtilCommon/frame_rate"
         },
         "extra_trigger_size": {
-          "$ref": "#UtilCommon/properties/extra_trigger_size"
+          "$ref": "#UtilCommon/extra_trigger_size"
         },
         "transition_duration": {
-          "$ref": "#UtilCommon/properties/transition_duration"
+          "$ref": "#UtilCommon/transition_duration"
         },
         "outloook": {
           "oneOf": [{ "$ref": "#BoxOutlookWindow" }]
@@ -369,11 +372,12 @@
           "$ref": "#UtilColor",
           "default": "#F1FA8C"
         },
+
         "frame_rate": {
-          "$ref": "#UtilCommon/properties/frame_rate"
+          "$ref": "#UtilCommon/frame_rate"
         },
         "transition_duration": {
-          "$ref": "#UtilCommon/properties/transition_duration"
+          "$ref": "#UtilCommon/transition_duration"
         },
         "prefix": {
           "description": "Text on the left side of the ring, default empty",
