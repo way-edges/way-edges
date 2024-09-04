@@ -47,15 +47,12 @@ impl HyprGlobalData {
     fn reload_max_worksapce(&mut self) {
         match hyprland::data::Workspaces::get() {
             Ok(ws) => {
-                let max_workspace =
-                    ws.into_iter()
-                        .rev()
-                        .find_map(|w| if w.id > 0 { Some(w.id) } else { None });
+                let max_workspace = ws.into_iter().max_by_key(|w| w.id);
 
                 log::debug!("reload hyprland max workspace: {max_workspace:?}");
 
-                if let Some(id) = max_workspace {
-                    self.max_workspace = id;
+                if let Some(w) = max_workspace {
+                    self.max_workspace = w.id;
                 } else {
                     notify_hyprland_log("Failed to find available workspace", true);
                 }
@@ -101,21 +98,39 @@ impl HyprListenerCtx {
     fn remove_cb(&mut self, id: HyprCallbackId) {
         self.cb.remove(&id);
     }
-    fn call_event(&mut self, e: HyprEvent) {
-        match e {
-            HyprEvent::Workspace(s) => self.data.move_current(s),
-            HyprEvent::ActiveWindow(_) => {}
-        };
-        self.call();
+    fn on_signal(&mut self, s: Signal) {
+        let mut call = false;
+        match s {
+            Signal::Add(id) => {
+                if self.data.max_workspace < id {
+                    self.data.reload_max_worksapce();
+                    call = true;
+                }
+            }
+            Signal::Event(e) => {
+                match e {
+                    HyprEvent::Workspace(s) => {
+                        self.data.move_current(s);
+                        call = true;
+                    }
+                    HyprEvent::ActiveWindow(_) => {}
+                };
+            }
+            Signal::Destroy(id) => {
+                if self.data.max_workspace == id {
+                    self.data.reload_max_worksapce();
+                    call = true;
+                }
+            }
+        }
+        if call {
+            self.call();
+        }
     }
     fn call(&mut self) {
         self.cb.values_mut().for_each(|f| {
             f(&self.data);
         })
-    }
-    fn reload(&mut self) {
-        self.data.reload_max_worksapce();
-        self.call();
     }
 }
 unsafe impl Send for HyprListenerCtx {}
@@ -145,14 +160,15 @@ impl WorkspaceIDToInt for WorkspaceType {
     }
 }
 
+enum Signal {
+    Add(i32),
+    Destroy(i32),
+    Event(HyprEvent),
+}
+
 pub fn init_hyprland_listener() {
     if unsafe { GLOBAL_HYPR_LISTENER_CTX.is_some() } {
         return;
-    }
-
-    enum Signal {
-        Reload,
-        Event(HyprEvent),
     }
 
     log::debug!("start init hyprland listener");
@@ -182,9 +198,11 @@ pub fn init_hyprland_listener() {
         let s = s.clone();
         listener.add_workspace_added_handler(move |id| {
             log::debug!("received workspace add: {id}");
-            if let WorkspaceType::Regular(_) = id {
-                // ignore result
-                let _ = s.send_blocking(Signal::Reload);
+            if let WorkspaceType::Regular(sid) = id {
+                if let Ok(id) = i32::from_str(&sid) {
+                    // ignore result
+                    let _ = s.send_blocking(Signal::Add(id));
+                }
             }
         });
     }
@@ -193,7 +211,7 @@ pub fn init_hyprland_listener() {
         listener.add_workspace_destroy_handler(move |e| {
             log::debug!("received workspace destroy: {e:?}");
             // ignore result
-            let _ = s.send_blocking(Signal::Reload);
+            let _ = s.send_blocking(Signal::Destroy(e.workspace_id));
         });
     }
     {
@@ -218,14 +236,7 @@ pub fn init_hyprland_listener() {
     gtk::glib::spawn_future_local(async move {
         log::info!("start hyprland workspace signal listener");
         while let Ok(s) = r.recv().await {
-            match s {
-                Signal::Reload => {
-                    get_hypr_listener().reload();
-                }
-                Signal::Event(e) => {
-                    get_hypr_listener().call_event(e);
-                }
-            }
+            get_hypr_listener().on_signal(s)
         }
         log::info!("stop hyprland workspace signal listener");
     });
