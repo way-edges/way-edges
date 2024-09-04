@@ -46,26 +46,35 @@ impl DrawData {
             return -1;
         }
 
-        let mut index = self.data.len() / 2;
+        let mut index = self.data.len() - 1;
+        let mut half = self.data.len();
+
+        fn half_index(index: &mut usize, half: &mut usize, is_left: bool) {
+            *half = (*half / 2).max(1);
+
+            if is_left {
+                *index -= *half
+            } else {
+                *index += *half
+            }
+        }
+
+        half_index(&mut index, &mut half, true);
 
         loop {
             let current = self.data[index];
 
             if pos < current[0] {
                 if index == 0 || self.data[index - 1][1] <= pos {
-                    // reach start || between [last-end, current-start]
                     return -1;
                 } else {
-                    // div 2
-                    index /= 2;
+                    half_index(&mut index, &mut half, true);
                 }
             } else if pos >= current[1] {
                 if index == self.data.len() - 1 || pos < self.data[index + 1][0] {
-                    // reach end || between [current-end, next-start]
                     return -1;
                 } else {
-                    // o + div(o+1) 2
-                    index = index + ((index + 1) / 2);
+                    half_index(&mut index, &mut half, false);
                 }
             } else {
                 return index as isize;
