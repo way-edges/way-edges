@@ -77,7 +77,11 @@ impl MouseState {
         if self.pin_state != pin {
             self.pin_state = pin;
 
-            self.set_ts_dir(pin.into());
+            if pin {
+                self.set_ts_dir(TransitionDirection::Forward);
+            } else if !self.hovering && self.pressing.is_none() && self.pop_state.is_none() {
+                self.set_ts_dir(TransitionDirection::Backward);
+            }
 
             self.call_event(match pin {
                 true => MouseEvent::Pin,
