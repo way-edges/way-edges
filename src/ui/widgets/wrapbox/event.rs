@@ -71,6 +71,11 @@ pub fn event_handle(
 
     // last hover widget, for trigger mouse leave option for that widget.
     let mut last_widget = LastWidget::new();
+
+    // because mouse leave event is before release,
+    // we need to check if unpress is right behind leave
+    let mut leave_box_state = false;
+
     let cb = {
         let f = expose.borrow().update_func();
         new_mouse_event_func(move |e| {
@@ -90,9 +95,13 @@ pub fn event_handle(
                         // show box
                         should_redraw = true;
                     }
+
+                    leave_box_state = false;
                 }
                 MouseEvent::Leave => {
                     last_widget.dispose_current();
+                    leave_box_state = true;
+
                     // hide box
                     should_redraw = true;
                 }
@@ -104,15 +113,30 @@ pub fn event_handle(
                             .borrow_mut()
                             .on_mouse_event(MouseEvent::Press(pos, k));
                     }
+
+                    // hide box
+                    should_redraw = true;
                 }
                 MouseEvent::Release(pos, k) => {
+                    last_widget.set_press_lock(false);
+
                     let matched = match_item(&box_ctx, pos);
                     if let Some((widget, pos)) = matched {
-                        last_widget.set_press_lock(false);
                         widget
                             .borrow_mut()
-                            .on_mouse_event(MouseEvent::Press(pos, k));
+                            .on_mouse_event(MouseEvent::Release(pos, k));
+                    } else if leave_box_state {
+                        leave_box_state = false;
+                        if let Some(last) = last_widget.current_widget.take() {
+                            let mut last = last.borrow_mut();
+                            last.on_mouse_event(MouseEvent::Leave);
+                            last.on_mouse_event(MouseEvent::Release(pos, k));
+                        }
+                        last_widget.dispose_current();
                     }
+
+                    // hide box
+                    should_redraw = true;
                 }
                 // pin/unpin pop/unpop
                 _ => {
