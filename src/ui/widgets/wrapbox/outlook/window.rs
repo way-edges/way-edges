@@ -212,7 +212,6 @@ impl BoxOutlookWindow {
             Edge::Bottom => (margins[3], margins[0]),
             _ => unreachable!(),
         };
-        println!("startoff_point: {:?}", border_startoff_point);
         (
             [content_box_size, size],
             [border_startoff_point, margin_startoff_point],

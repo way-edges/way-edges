@@ -210,13 +210,16 @@ fn set_window_input_size(
         | (Edge::Left, Edge::Top)
         | (Edge::Left, Edge::Bottom)
         | (Edge::Top, Edge::Left)
-        | (Edge::Bottom, Edge::Left) => Z as i32,
+        | (Edge::Bottom, Edge::Left) => 0,
         (Edge::Right, Edge::Left)
         | (Edge::Right, Edge::Right)
         | (Edge::Right, Edge::Top)
-        | (Edge::Right, Edge::Bottom)
-        | (Edge::Top, Edge::Right)
-        | (Edge::Bottom, Edge::Right) => ((size.0 as f64) * (1. - ts_y)) as i32,
+        | (Edge::Right, Edge::Bottom) => {
+            ((size.0 as f64) * (1. - ts_y)) as i32 + (darea.width().max(size.0) - size.0)
+        }
+        (Edge::Top, Edge::Right) | (Edge::Bottom, Edge::Right) => {
+            darea.width().max(size.0) - size.0
+        }
         (Edge::Top, Edge::Top)
         | (Edge::Top, Edge::Bottom)
         | (Edge::Bottom, Edge::Top)
@@ -340,6 +343,9 @@ pub fn init_widget(
                     }
                     _ => {}
                 },
+                Edge::Right => {
+                    ctx.translate(-(darea.width() as f64 - size.0), 0.);
+                }
                 _ => {}
             };
             draw_motion(ctx, visible_y, range);
