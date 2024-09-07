@@ -1,3 +1,6 @@
+// NOTE: this widget is a mess
+// we need better coding
+
 use std::time::Duration;
 use std::{cell::RefCell, rc::Rc};
 
@@ -83,7 +86,7 @@ impl BoxCtx {
         // create outlook
         let ol = match box_conf.outlook.take().unwrap() {
             crate::config::widgets::wrapbox::Outlook::Window(c) => {
-                outlook::window::BoxOutlookWindow::new(c, (content.width(), content.height()))
+                outlook::window::BoxOutlookWindow::new(c, (content.width(), content.height()), edge)
             }
         };
 
@@ -316,6 +319,8 @@ pub fn init_widget(
             let range = (0., size.0);
             let visible_y = transition_state::calculate_transition(buf.y, range);
             draw_rotation(ctx, edge, size);
+
+            // for top&bottom to be centered
             match edge {
                 Edge::Top => match position {
                     Edge::Right => {
