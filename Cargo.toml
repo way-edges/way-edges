@@ -39,7 +39,7 @@ get_sys_info = "0.1"
 tokio = { version = "1.39", features = ["net", "macros", "rt", "time", "sync"] }
 tokio-timerfd = "0.2.0"
 chrono = "0.4.38"
-chrono-tz = "0.9.0"
+chrono-tz = "0.10.0"
 
 [dependencies.way-edges-derive]
 path = "way-edges-derive"
@@ -52,6 +52,8 @@ hyprland = []
 normal = []
 
 [profile.release]
-opt-level = 3 # Optimize for size
+opt-level = 3
+lto = true
+codegen-units = 2
 # lto = "fat"
 strip = true # Strip symbols from binary*
