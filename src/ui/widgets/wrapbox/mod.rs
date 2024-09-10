@@ -1,27 +1,21 @@
 // NOTE: this widget is a mess
 // we need better coding
 
-use std::time::Duration;
 use std::{cell::RefCell, rc::Rc};
 
 use async_channel::Receiver;
-use cairo::{ImageSurface, RectangleInt, Region};
+use cairo::RectangleInt;
 use display::grid::{GridBox, GridItemSizeMap};
 use draw::DrawCore;
 use event::event_handle;
 use expose::{BoxExpose, BoxExposeRc, BoxWidgetExpose};
 use gio::glib::clone::Downgrade;
 use gtk::glib;
-use gtk::prelude::NativeExt;
-use gtk::prelude::{DrawingAreaExtManual, GtkWindowExt, SurfaceExt, WidgetExt};
+use gtk::prelude::{DrawingAreaExtManual, GtkWindowExt, WidgetExt};
 use gtk::DrawingArea;
-use gtk4_layer_shell::Edge;
 
 use crate::config::widgets::wrapbox::{BoxConfig, BoxedWidgetConfig};
 use crate::config::Config;
-use crate::ui::draws::frame_manager::{FrameManager, FrameManagerBindTransition};
-use crate::ui::draws::transition_state::{self, TransitionStateList, TransitionStateRc};
-use crate::ui::draws::util::{draw_motion, draw_rotation, new_surface, Z};
 use crate::ui::WidgetExposePtr;
 
 use super::ring::init_ring;
@@ -35,40 +29,18 @@ pub mod outlook;
 
 pub type MousePosition = (f64, f64);
 
-struct BoxBuffer {
-    content: ImageSurface,
-    y: f64,
-}
-
 type BoxCtxRc = Rc<RefCell<BoxCtx>>;
 
 struct BoxCtx {
     // use
-    // buf: BoxBuffer,
     item_map: GridItemSizeMap,
     rec_int: RectangleInt,
     outlook: outlook::window::BoxOutlookWindow,
     grid_box: GridBox,
-    // config
-    // edge: Edge,
-    // position: Edge,
-    // extra_trigger_size: f64,
-    // box_frame_manager: FrameManager,
-    // ts_list: TransitionStateList,
-    // box_motion_transition: TransitionStateRc,
 }
 
 impl BoxCtx {
-    fn new(
-        // window: &gtk::ApplicationWindow,
-        // darea: &DrawingArea,
-        config: &Config,
-        box_conf: &mut BoxConfig,
-        // edge: Edge,
-        // position: Edge,
-        // extra_trigger_size: f64,
-        // ) -> (Self, Receiver<()>, BoxExposeRc, TransitionStateRc) {
-    ) -> (Self, Receiver<()>, BoxExposeRc) {
+    fn new(config: &Config, box_conf: &mut BoxConfig) -> (Self, Receiver<()>, BoxExposeRc) {
         let mut grid_box =
             display::grid::GridBox::new(box_conf.box_conf.gap, box_conf.box_conf.align);
 
@@ -83,7 +55,6 @@ impl BoxCtx {
         // draw first frame
         // first draw
         let (content, item_map) = grid_box.draw_content();
-        // let content = rotate_content(edge, content);
 
         // create outlook
         let ol = match box_conf.outlook.take().unwrap() {
@@ -96,97 +67,22 @@ impl BoxCtx {
             }
         };
 
-        // // add box outlook
-        // let content = ol.with_box(content);
-        // let content_size = set_window_max_size(darea, (content.width(), content.height()), edge);
-        //
-        // // input region
-        // let rec_int = set_window_input_size(
-        //     window,
-        //     darea,
-        //     edge,
-        //     position,
-        //     content_size,
-        //     Z,
-        //     extra_trigger_size,
-        // );
-        //
-        // let buf = BoxBuffer { content, y: Z };
-        //
-        // let box_frame_manager = {
-        //     let up = expose.borrow().update_func();
-        //     FrameManager::new(
-        //         box_conf.box_conf.frame_rate,
-        //         glib::clone!(move || {
-        //             up();
-        //         }),
-        //     )
-        // };
-        //
-        // let mut ts_list = TransitionStateList::new();
-        // let pop_ts = ts_list
-        //     .new_transition(Duration::from_millis(box_conf.box_conf.transition_duration))
-        //     .item;
         (
             Self {
-                // buf,
                 item_map,
                 rec_int: RectangleInt::new(0, 0, 0, 0),
                 outlook: ol,
                 grid_box,
-                // edge,
-                // position,
-                // extra_trigger_size,
-
-                // box_frame_manager,
-                // ts_list,
-                // box_motion_transition: pop_ts.clone(),
             },
             update_signal_receiver,
             expose,
-            // pop_ts,
         )
     }
 
-    fn r(&mut self, item_size_map: GridItemSizeMap, rec_int: RectangleInt) {
+    fn update_box_ctx(&mut self, item_size_map: GridItemSizeMap, rec_int: RectangleInt) {
         self.item_map = item_size_map;
         self.rec_int = rec_int;
     }
-
-    // fn refresh(&mut self, darea: &DrawingArea, window: &gtk::ApplicationWindow) {
-    //     self.ts_list.refresh();
-    //
-    //     let (content, filtered_map) = self.grid_box.draw_content();
-    //     // let content = rotate_content(self.edge, content);
-    //     let content = {
-    //         let content_size = (content.width(), content.height());
-    //         self.outlook.redraw_if_size_change(content_size);
-    //         self.outlook.with_box(content)
-    //     };
-    //
-    //     let wh = set_window_max_size(darea, (content.width(), content.height()), self.edge);
-    //
-    //     let y = self.box_motion_transition.borrow().get_y();
-    //
-    //     let rec_int = set_window_input_size(
-    //         window,
-    //         darea,
-    //         self.edge,
-    //         self.position,
-    //         wh,
-    //         y,
-    //         self.extra_trigger_size,
-    //     );
-    //
-    //     let buffer = {
-    //         self.box_frame_manager.ensure_frame_run(&self.ts_list);
-    //         BoxBuffer { content, y }
-    //     };
-    //
-    //     self.buf = buffer;
-    //     self.item_map = filtered_map;
-    //     self.rec_int = rec_int;
-    // }
 }
 
 impl Drop for BoxCtx {
@@ -194,91 +90,6 @@ impl Drop for BoxCtx {
         log::info!("drop box ctx");
     }
 }
-
-// fn set_window_max_size(darea: &DrawingArea, size: (i32, i32), edge: Edge) -> (i32, i32) {
-//     let size = match edge {
-//         Edge::Left | Edge::Right => size,
-//         Edge::Top | Edge::Bottom => (size.1, size.0),
-//         _ => unreachable!(),
-//     };
-//     darea.set_size_request(size.0, size.1);
-//     size
-// }
-//
-// fn set_window_input_size(
-//     window: &gtk::ApplicationWindow,
-//     darea: &DrawingArea,
-//     edge: Edge,
-//     position: Edge,
-//     size: (i32, i32),
-//     ts_y: f64,
-//     extra_trigger_size: f64,
-// ) -> RectangleInt {
-//     let x = match (edge, position) {
-//         (Edge::Left, Edge::Left)
-//         | (Edge::Left, Edge::Right)
-//         | (Edge::Left, Edge::Top)
-//         | (Edge::Left, Edge::Bottom)
-//         | (Edge::Top, Edge::Left)
-//         | (Edge::Bottom, Edge::Left) => 0,
-//         (Edge::Right, Edge::Left)
-//         | (Edge::Right, Edge::Right)
-//         | (Edge::Right, Edge::Top)
-//         | (Edge::Right, Edge::Bottom) => {
-//             ((size.0 as f64) * (1. - ts_y)) as i32 + (darea.width().max(size.0) - size.0)
-//         }
-//         (Edge::Top, Edge::Right) | (Edge::Bottom, Edge::Right) => {
-//             darea.width().max(size.0) - size.0
-//         }
-//         (Edge::Top, Edge::Top)
-//         | (Edge::Top, Edge::Bottom)
-//         | (Edge::Bottom, Edge::Top)
-//         | (Edge::Bottom, Edge::Bottom) => (darea.width().max(size.0) - size.0) / 2,
-//         _ => unreachable!(),
-//     };
-//     let (y, h) = match edge {
-//         Edge::Top => (Z as i32, (size.1 as f64 * ts_y) as i32),
-//         Edge::Bottom => (
-//             (size.1 as f64 * (1. - ts_y)) as i32,
-//             (size.1 as f64 * ts_y).ceil() as i32,
-//         ),
-//         _ => (Z as i32, size.1),
-//     };
-//     let w = match edge {
-//         Edge::Left | Edge::Right => (size.0 as f64 * ts_y).ceil() as i32,
-//         Edge::Top | Edge::Bottom => size.0,
-//         _ => unreachable!(),
-//     };
-//
-//     // box normal input region
-//     let rec_int = RectangleInt::new(x, y, w, h);
-//
-//     // box input region add extra_trigger
-//     let mut inr = rec_int;
-//     match edge {
-//         Edge::Top => {
-//             inr.set_height(inr.height() + extra_trigger_size as i32);
-//         }
-//         Edge::Bottom => {
-//             inr.set_y(inr.y() - extra_trigger_size as i32);
-//             inr.set_height(inr.height() + extra_trigger_size as i32);
-//         }
-//         Edge::Left => {
-//             inr.set_width(inr.width() + extra_trigger_size as i32);
-//         }
-//         Edge::Right => {
-//             inr.set_x(inr.x() - extra_trigger_size as i32);
-//             inr.set_width(inr.width() + extra_trigger_size as i32);
-//         }
-//         _ => {}
-//     }
-//
-//     if let Some(surf) = window.surface() {
-//         surf.set_input_region(&Region::create_rectangle(&inr));
-//     }
-//
-//     rec_int
-// }
 
 pub fn init_widget(
     window: &gtk::ApplicationWindow,
@@ -296,16 +107,9 @@ pub fn init_widget(
     });
 
     // let (box_ctx, update_signal_receiver, expose, box_motion_transition) = BoxCtx::new(
-    let (box_ctx, update_signal_receiver, expose) = BoxCtx::new(
-        // window,
-        // &darea,
-        &conf,
-        &mut box_conf,
-        // edge,
-        // position,
-        // extra_trigger_size,
-    );
+    let (box_ctx, update_signal_receiver, expose) = BoxCtx::new(&conf, &mut box_conf);
     let box_ctx = Rc::new(RefCell::new(box_ctx));
+
     let mut box_draw_core = DrawCore::new(
         &mut box_conf,
         box_ctx.clone(),
@@ -340,43 +144,6 @@ pub fn init_widget(
     let ms = event_handle(&darea, expose.clone(), box_motion_transition, box_ctx);
     Ok(Box::new(BoxWidgetExpose::new(ms.downgrade(), expose)))
 }
-
-// fn rotate_content(edge: Edge, content: ImageSurface) -> ImageSurface {
-//     match edge {
-//         Edge::Left => content,
-//         Edge::Right => {
-//             let size = (content.width(), content.height());
-//             let surf = new_surface(size);
-//             let ctx = cairo::Context::new(&surf).unwrap();
-//             ctx.rotate(-180_f64.to_radians());
-//             ctx.translate(-size.0 as f64, -size.1 as f64);
-//             ctx.set_source_surface(content, Z, Z).unwrap();
-//             ctx.paint().unwrap();
-//             surf
-//         }
-//         Edge::Top => {
-//             let size = (content.height(), content.width());
-//             let surf = new_surface(size);
-//             let ctx = cairo::Context::new(&surf).unwrap();
-//             ctx.rotate(270.0_f64.to_radians());
-//             ctx.translate(-size.1 as f64, 0.);
-//             ctx.set_source_surface(content, Z, Z).unwrap();
-//             ctx.paint().unwrap();
-//             surf
-//         }
-//         Edge::Bottom => {
-//             let size = (content.height(), content.width());
-//             let surf = new_surface(size);
-//             let ctx = cairo::Context::new(&surf).unwrap();
-//             ctx.rotate(90.0_f64.to_radians());
-//             ctx.translate(0., -size.0 as f64);
-//             ctx.set_source_surface(content, Z, Z).unwrap();
-//             ctx.paint().unwrap();
-//             surf
-//         }
-//         _ => unreachable!(),
-//     }
-// }
 
 fn init_boxed_widgets(bx: &mut GridBox, expose: BoxExposeRc, ws: Vec<BoxedWidgetConfig>) {
     ws.into_iter().for_each(|w| {
