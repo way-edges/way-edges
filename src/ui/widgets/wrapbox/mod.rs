@@ -111,6 +111,7 @@ pub fn init_widget(
     let box_ctx = Rc::new(RefCell::new(box_ctx));
 
     let mut box_draw_core = DrawCore::new(
+        &darea,
         &mut box_conf,
         box_ctx.clone(),
         &expose,

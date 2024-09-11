@@ -30,6 +30,8 @@ pub struct DrawCore {
 }
 impl DrawCore {
     pub fn new(
+        darea: &DrawingArea,
+
         box_conf: &mut BoxConfig,
         box_ctx: BoxCtxRc,
         expose: &BoxExposeRc,
@@ -53,6 +55,19 @@ impl DrawCore {
 
         let motion_func = Self::make_motion_func(edge, position);
         let input_size_func = set_window_input_size_func(edge, position, extra_trigger_size);
+
+        {
+            let mut box_ctx = box_ctx.borrow_mut();
+            let (content, _) = box_ctx.grid_box.draw_content();
+            let content = {
+                let content_size = (content.width(), content.height());
+                box_ctx.outlook.redraw_if_size_change(content_size);
+                box_ctx.outlook.with_box(content)
+            };
+
+            let wh = (content.width(), content.height());
+            set_window_max_size(darea, wh);
+        }
 
         Self {
             box_ctx,
