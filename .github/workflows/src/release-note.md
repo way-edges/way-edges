@@ -1,3 +1,5 @@
 ## 💻 Way-Edges
 
-Refactor [Box](https://way-edges.github.io/widgets/box) widget for the coming `tray` widget.
+Quick fix to box widget:
+
+- fix: initial set size request for box
