@@ -1,0 +1,37 @@
+on:
+  push:
+    tags:
+      - "*"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: debian:sid
+    steps:
+      - name: Install deps
+        run: |
+          echo "deb http://ftp.us.debian.org/debian unstable main contrib non-free" >> /etc/apt/sources.list.d/unstable.list
+
+          apt-get -y update
+          apt-get -y install -t unstable libgtk-4-dev build-essential curl libgtk4-layer-shell-dev pipewire-pulse
+
+      - uses: moonrepo/setup-rust@v1
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build and compress
+        run: |
+          cargo build --release
+          chmod +x target/release/way-edges
+          tar zcf target/release/way-edges_linux-x86_64.tar.gz target/release/way-edges
+
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            target/release/way-edges_linux-x86_64.tar.gz
+          body_path: .github/workflows/src/release-note.md
+          make_latest: true
+          token: ${{ secrets.RELEASE }}
