@@ -4,13 +4,33 @@ https://github.com/user-attachments/assets/37d267cb-1cb4-44b4-81a8-8ac02bb741cb
 
 Please refer to [https://way-edges.github.io/description]
 
-## Configuration
+## Installation
 
-Please refer to [config.jsonc](./config/config.jsonc) and [schema](./config/config.schema.json)
+### Arch(aur)
+
+- [way-edges-bin](https://aur.archlinux.org/packages/way-edges-bin)
+- [way-edges-git](https://aur.archlinux.org/packages/way-edges-git)
+
+### Manual
+
+```shell
+git clone https://github.com/way-edges/way-edges.git
+cd way-edges && cargo build --release
+```
+
+## Configuration
 
 Place `config.jsonc` under `~/.config/way-edges/`
 
-## Arguments
+### Full doc
+
+Doc: https://way-edges.github.io/basic_config
+
+### Schema
+
+Please refer to [config.jsonc](./config/config.jsonc) and [schema](./config/config.schema.json)
+
+## Launch
 
 1. Run daemon first(`way-edges daemon`).
 2. Add group of widgets given group name specified in your configuration file(`way-edges add <group_name>`).
@@ -35,7 +55,13 @@ Options:
   -V, --version      Print version
 ```
 
+<details>
+
+  <summary>
+
 ## TODO
+
+  </summary>
 
 - [x] fixed FPS.
 - [x] widget grouping
@@ -58,3 +84,5 @@ Options:
   - [ ] Tray
 - [ ] ?multiple click & long press & release event(Button widget)
 - [ ] ~~?buttom size calculation, arrangement and overlap(should this be considered?)~~
+
+</details>
