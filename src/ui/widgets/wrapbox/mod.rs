@@ -3,7 +3,6 @@
 
 use std::{cell::RefCell, rc::Rc};
 
-use async_channel::Receiver;
 use cairo::RectangleInt;
 use display::grid::{GridBox, GridItemSizeMap};
 use draw::DrawCore;
@@ -40,12 +39,12 @@ struct BoxCtx {
 }
 
 impl BoxCtx {
-    fn new(config: &Config, box_conf: &mut BoxConfig) -> (Self, Receiver<()>, BoxExposeRc) {
+    fn new(config: &Config, box_conf: &mut BoxConfig, darea: &DrawingArea) -> (Self, BoxExposeRc) {
         let mut grid_box =
             display::grid::GridBox::new(box_conf.box_conf.gap, box_conf.box_conf.align);
 
         // define box expose and create boxed widgets
-        let (expose, update_signal_receiver) = BoxExpose::new();
+        let expose = BoxExpose::new(darea);
         init_boxed_widgets(
             &mut grid_box,
             expose.clone(),
@@ -74,7 +73,6 @@ impl BoxCtx {
                 outlook: ol,
                 grid_box,
             },
-            update_signal_receiver,
             expose,
         )
     }
@@ -100,14 +98,16 @@ pub fn init_widget(
     let position = conf.position.unwrap();
     let extra_trigger_size = box_conf.box_conf.extra_trigger_size.get_num_into().unwrap();
 
-    let darea = DrawingArea::new();
-    window.set_child(Some(&darea));
-    darea.connect_destroy(|_| {
-        log::info!("destroy `box` drawing area");
-    });
+    let darea = {
+        let darea = DrawingArea::new();
+        window.set_child(Some(&darea));
+        darea.connect_destroy(|_| {
+            log::info!("destroy `box` drawing area");
+        });
+        darea
+    };
 
-    // let (box_ctx, update_signal_receiver, expose, box_motion_transition) = BoxCtx::new(
-    let (box_ctx, update_signal_receiver, expose) = BoxCtx::new(&conf, &mut box_conf);
+    let (box_ctx, expose) = BoxCtx::new(&conf, &mut box_conf, &darea);
     let box_ctx = Rc::new(RefCell::new(box_ctx));
 
     let mut box_draw_core = DrawCore::new(
@@ -119,20 +119,12 @@ pub fn init_widget(
         position,
         extra_trigger_size,
     );
-    let box_motion_transition = box_draw_core.box_motion_transition.clone();
 
-    // it's a async block once, doesn't matter strong or weak
-    glib::spawn_future_local(glib::clone!(
-        #[weak]
-        darea,
-        async move {
-            log::debug!("box draw signal receive loop start");
-            while (update_signal_receiver.recv().await).is_ok() {
-                darea.queue_draw();
-            }
-            log::debug!("box draw signal receive loop exit");
-        }
-    ));
+    let widget_expose = {
+        let box_motion_transition = box_draw_core.box_motion_transition.clone();
+        let ms = event_handle(&darea, expose.clone(), box_motion_transition, box_ctx);
+        Box::new(BoxWidgetExpose::new(ms.downgrade()))
+    };
 
     darea.set_draw_func(glib::clone!(
         #[weak]
@@ -142,8 +134,7 @@ pub fn init_widget(
         }
     ));
 
-    let ms = event_handle(&darea, expose.clone(), box_motion_transition, box_ctx);
-    Ok(Box::new(BoxWidgetExpose::new(ms.downgrade(), expose)))
+    Ok(widget_expose)
 }
 
 fn init_boxed_widgets(bx: &mut GridBox, expose: BoxExposeRc, ws: Vec<BoxedWidgetConfig>) {
@@ -163,7 +154,7 @@ fn init_boxed_widgets(bx: &mut GridBox, expose: BoxExposeRc, ws: Vec<BoxedWidget
                 }
                 Err(e) => Err(format!("Fail to create text widget: {e}")),
             },
-            _ => unreachable!(),
+            _ => Err("Unsupported widget type for box".to_string()),
         }
         .inspect_err(|e| {
             crate::notify_send("Way-edges boxed widgets", e.as_str(), true);
