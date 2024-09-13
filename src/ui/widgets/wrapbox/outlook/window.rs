@@ -116,8 +116,8 @@ impl BoxOutlookWindow {
             };
 
             let shadow_surf = {
-                fn inside_grandient(p: [f64; 4], c: &RGBA) -> cairo::LinearGradient {
-                    let (r, g, b) = (c.red() as f64, c.green() as f64, c.blue() as f64);
+                fn inside_grandient(p: [f64; 4], color: [f64; 3]) -> cairo::LinearGradient {
+                    let [r, g, b] = color;
 
                     let t = cairo::LinearGradient::new(p[0], p[1], p[2], p[3]);
                     t.add_color_stop_rgba(0., r, g, b, 0.4);
@@ -128,7 +128,7 @@ impl BoxOutlookWindow {
 
                 let surf = new_surface(map_size);
                 let ctx = cairo::Context::new(&surf).unwrap();
-                let g = |p: [f64; 4], c: &RGBA| {
+                let g = |p: [f64; 4], c: [f64; 3]| {
                     let t = inside_grandient(p, c);
                     ctx.set_source(t).unwrap();
                     ctx.append_path(&path);
@@ -136,9 +136,17 @@ impl BoxOutlookWindow {
                 };
 
                 let shadow_size = 10.0_f64.min(f_content_box_size.0 * 0.3);
+                let color = {
+                    let color = RGBA::BLACK;
+                    [
+                        color.red() as f64,
+                        color.green() as f64,
+                        color.blue() as f64,
+                    ]
+                };
                 // left, top, right, bottom
-                g([Z, Z, shadow_size, Z], &RGBA::BLACK);
-                g([Z, Z, Z, shadow_size], &RGBA::BLACK);
+                g([Z, Z, shadow_size, Z], color);
+                g([Z, Z, Z, shadow_size], color);
                 g(
                     [
                         f_content_box_size.0,
@@ -146,7 +154,7 @@ impl BoxOutlookWindow {
                         f_content_box_size.0 - shadow_size,
                         Z,
                     ],
-                    &RGBA::BLACK,
+                    color,
                 );
                 g(
                     [
@@ -155,7 +163,7 @@ impl BoxOutlookWindow {
                         Z,
                         f_content_box_size.1 - shadow_size,
                     ],
-                    &RGBA::BLACK,
+                    color,
                 );
                 surf
             };
