@@ -32,7 +32,7 @@ pub fn get_config_path() -> &'static Path {
 fn get_config_file() -> Result<String, String> {
     let p = get_config_path();
     let mut f = match OpenOptions::new()
-        .create(true)
+        // .create(true)
         .append(true)
         .read(true)
         .open(p)
