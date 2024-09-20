@@ -245,7 +245,7 @@ pub fn init_hyprland_listener() {
         log::info!("hyprland workspace listener is running");
 
         if let Err(e) = listener.start_listener() {
-            notify_send("Way-Edges Hyprland error", e.to_string().as_str(), true);
+            notify_hyprland_log(e.to_string().as_str(), true);
             process::exit(-1)
         }
 
