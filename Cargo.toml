@@ -23,7 +23,7 @@ hyprland = { version = "0.4.0-alpha.3", default-features = false, features = [
   "silent",
 ] }
 educe = { version = "0.6.0", default-features = false, features = ["Debug"] }
-regex = "1.10"
+regex = "1.11"
 log = "0.4"
 env_logger = "0.11"
 notify-rust = "4.11"
