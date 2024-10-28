@@ -178,9 +178,10 @@ pub fn init_hyprland_listener() {
     let mut listener = event_listener::EventListener::new();
     {
         let s = s.clone();
-        listener.add_workspace_change_handler(move |id| {
-            log::debug!("received workspace change: {id}");
-            if let Some(id) = id.regular_to_i32() {
+        listener.add_workspace_changed_handler(move |data| {
+            let workspace_type = data.name;
+            log::debug!("received workspace change: {workspace_type}");
+            if let Some(id) = workspace_type.regular_to_i32() {
                 match id {
                     Ok(int) => {
                         // ignore result
@@ -196,9 +197,10 @@ pub fn init_hyprland_listener() {
     }
     {
         let s = s.clone();
-        listener.add_workspace_added_handler(move |id| {
-            log::debug!("received workspace add: {id}");
-            if let WorkspaceType::Regular(sid) = id {
+        listener.add_workspace_added_handler(move |data| {
+            let workspace_type = data.name;
+            log::debug!("received workspace add: {workspace_type}");
+            if let WorkspaceType::Regular(sid) = workspace_type {
                 if let Ok(id) = i32::from_str(&sid) {
                     // ignore result
                     let _ = s.send_blocking(Signal::Add(id));
@@ -208,26 +210,28 @@ pub fn init_hyprland_listener() {
     }
     {
         let s = s.clone();
-        listener.add_workspace_destroy_handler(move |e| {
+        listener.add_workspace_deleted_handler(move |e| {
             log::debug!("received workspace destroy: {e:?}");
             // ignore result
-            let _ = s.send_blocking(Signal::Destroy(e.workspace_id));
+            let _ = s.send_blocking(Signal::Destroy(e.id));
         });
     }
     {
         let s = s.clone();
-        listener.add_active_monitor_change_handler(move |e| {
+        listener.add_active_monitor_changed_handler(move |e| {
             log::debug!("received monitor change: {e:?}");
-            if let Some(id) = e.workspace.regular_to_i32() {
-                match id {
-                    Ok(int) => {
-                        // ignore result
-                        let _ = s.send_blocking(Signal::Event(HyprEvent::Workspace(int)));
+            if let Some(workspace_name) = e.workspace_name {
+                if let Some(id) = workspace_name.regular_to_i32() {
+                    match id {
+                        Ok(int) => {
+                            // ignore result
+                            let _ = s.send_blocking(Signal::Event(HyprEvent::Workspace(int)));
+                        }
+                        Err(e) => notify_hyprland_log(
+                            format!("Fail to parse workspace id: {e}").as_str(),
+                            false,
+                        ),
                     }
-                    Err(e) => notify_hyprland_log(
-                        format!("Fail to parse workspace id: {e}").as_str(),
-                        false,
-                    ),
                 }
             }
         });
