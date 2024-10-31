@@ -22,6 +22,14 @@ use pa::{
 pub type PaCallback = dyn FnMut(&VInfo);
 // pub type PaErrCallback = dyn FnMut(String);
 
+#[derive(Debug)]
+enum PulseAudioDevice {
+    DefaultSink,
+    DefaultSource,
+    NamedSink(String),
+    NamedSource(String),
+}
+
 struct PA {
     count: i32,
     sink_cbs: HashMap<i32, (String, Rc<RefCell<PaCallback>>)>,

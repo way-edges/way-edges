@@ -1436,6 +1436,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "libpulse-glib-binding"
+version = "2.28.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "72bb604d4f32d4c60e02581a67f9d9fd7500cb963ad984cee032013edeaf6bee"
+dependencies = [
+ "glib",
+ "glib-sys",
+ "libpulse-binding",
+ "libpulse-mainloop-glib-sys",
+]
+
+[[package]]
+name = "libpulse-mainloop-glib-sys"
+version = "1.21.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "00f9e6fbee0a60ac3f5751e3cc68eeaf9bff9d2687502df17b5c726220217531"
+dependencies = [
+ "glib-sys",
+ "libpulse-sys",
+ "pkg-config",
+]
+
+[[package]]
 name = "libpulse-sys"
 version = "1.21.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2545,7 +2568,9 @@ dependencies = [
  "gtk4-layer-shell",
  "hyprland",
  "interval-task",
+ "lazy_static",
  "libpulse-binding",
+ "libpulse-glib-binding",
  "log",
  "notify",
  "notify-debouncer-mini",
