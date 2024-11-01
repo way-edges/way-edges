@@ -13,7 +13,7 @@ jobs:
           echo "deb http://ftp.us.debian.org/debian unstable main contrib non-free" >> /etc/apt/sources.list.d/unstable.list
 
           apt-get -y update
-          apt-get -y install -t unstable libgtk-4-dev build-essential curl libgtk4-layer-shell-dev pipewire-pulse
+          apt-get -y install -t unstable libgtk-4-dev build-essential curl libgtk4-layer-shell-dev pipewire-pulse libpulse-dev
 
       - uses: moonrepo/setup-rust@v1
 
