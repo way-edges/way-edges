@@ -11,7 +11,8 @@ use crate::{
         Config,
     },
     plug::pulseaudio::{
-        register_callback, set_mute, set_vol, unregister_callback, OptionalSinkOrSource,
+        change::{set_mute, set_vol},
+        register_callback, unregister_callback, PulseAudioDevice,
     },
     ui::{
         draws::{transition_state::TransitionState, util::color_transition},
@@ -27,15 +28,24 @@ pub fn init_widget(
     config: Config,
     mut pa_conf: PAConfig,
 ) -> Result<WidgetExposePtr, String> {
-    let (debug_name, sos) = match pa_conf.is_sink {
-        true => (
+    let (debug_widget_name, device) = if pa_conf.is_sink {
+        (
             NAME_SINK,
-            OptionalSinkOrSource::sink(pa_conf.pa_conf.device),
-        ),
-        false => (
+            if let Some(device_desc) = pa_conf.pa_conf.device {
+                PulseAudioDevice::NamedSink(device_desc)
+            } else {
+                PulseAudioDevice::DefaultSink
+            },
+        )
+    } else {
+        (
             NAME_SOUCE,
-            OptionalSinkOrSource::source(pa_conf.pa_conf.device),
-        ),
+            if let Some(device_desc) = pa_conf.pa_conf.device {
+                PulseAudioDevice::NamedSource(device_desc)
+            } else {
+                PulseAudioDevice::DefaultSource
+            },
+        )
     };
 
     let is_mute = Arc::new(RwLock::new(false));
@@ -44,18 +54,18 @@ pub fn init_widget(
     ))));
     let exposed = {
         // do not let itself queue_draw, but pulseaudio callback
-        let _sos = sos.clone();
+        let _device = device.clone();
         pa_conf.slide.on_change = Some(Box::new(move |f| {
-            set_vol(_sos.clone(), f);
+            set_vol(_device.clone(), f);
             !pa_conf.pa_conf.redraw_only_on_pa_change
         }));
 
-        let _sos = sos.clone();
+        let _device = device.clone();
         let is_mute_clone = is_mute.clone();
         pa_conf.slide.event_map.as_mut().unwrap().insert(
             3,
             Box::new(move || {
-                set_mute(_sos.clone(), !*is_mute_clone.read().unwrap());
+                set_mute(_device.clone(), !*is_mute_clone.read().unwrap());
             }),
         );
 
@@ -84,7 +94,7 @@ pub fn init_widget(
     let cb_key = register_callback(
         Box::new(move |vinfo| {
             if let Some(p) = exposed.progress.upgrade() {
-                log::debug!("update {debug_name} progress: {vinfo:?}");
+                log::debug!("update {debug_widget_name} progress: {vinfo:?}");
                 p.set(vinfo.vol);
                 if *is_mute.read().unwrap() != vinfo.is_muted {
                     *is_mute.write().unwrap() = vinfo.is_muted;
@@ -97,9 +107,9 @@ pub fn init_widget(
                 }
             }
         }),
-        sos,
+        device,
     )?;
-    log::debug!("registered pa callback for {debug_name}: {cb_key}");
+    log::debug!("registered pa callback for {debug_widget_name}: {cb_key}");
 
     window.connect_destroy(move |_| {
         unregister_callback(cb_key);

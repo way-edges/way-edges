@@ -1,8 +1,5 @@
 use std::{
-    cell::Cell,
     collections::HashMap,
-    hint::spin_loop,
-    rc::Rc,
     sync::{
         atomic::{AtomicPtr, Ordering},
         Arc, OnceLock, RwLock,
@@ -25,16 +22,32 @@ fn get_avg_volume(cv: ChannelVolumes) -> f64 {
     cv.avg().0 as f64 / Volume::NORMAL.0 as f64
 }
 
+#[derive(Debug, Hash, PartialEq, Eq, Clone)]
+pub enum PulseAudioDevice {
+    DefaultSink,
+    DefaultSource,
+    NamedSink(String),
+    NamedSource(String),
+}
+impl PulseAudioDevice {
+    pub fn get_vinfo(&self) -> Option<VInfo> {
+        match self {
+            PulseAudioDevice::DefaultSink => {
+                get_default_sink().and_then(|name| get_sink_vol_by_name(name))
+            }
+            PulseAudioDevice::DefaultSource => {
+                get_default_source().and_then(|name| get_source_vol_by_name(name))
+            }
+            PulseAudioDevice::NamedSink(name) => get_sink_vol_by_name(name),
+            PulseAudioDevice::NamedSource(name) => get_source_vol_by_name(name),
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct VInfo {
     pub vol: f64,
     pub is_muted: bool,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub enum SinkOrSource {
-    Sink(String),
-    Source(String),
 }
 
 static DEFAULT_SINK: AtomicPtr<String> = AtomicPtr::new(std::ptr::null_mut());
@@ -62,38 +75,21 @@ fn get_vinfos() -> &'static Arc<RwLock<(VInfoMap, VInfoMap)>> {
 pub fn get_sink_vol_by_name(n: &str) -> Option<VInfo> {
     log::debug!("get_sink_vol_by_name {}", n);
     let a = get_vinfos().read().unwrap().0.get(n).cloned();
-    log::debug!("get_sink_vol_by_name done {}", n);
     a
 }
 pub fn get_source_vol_by_name(n: &str) -> Option<VInfo> {
     log::debug!("get_source_vol_by_name {}", n);
     let a = get_vinfos().read().unwrap().1.get(n).cloned();
-    log::debug!("get_source_vol_by_name done {}", n);
     a
 }
 pub fn set_sink_vol_by_name(n: String, v: VInfo) {
     log::debug!("set_sink_vol_by_name {}", n);
     get_vinfos().write().unwrap().0.insert(n, v);
-    log::debug!("set_sink_vol_by_name done");
 }
 pub fn set_source_vol_by_name(n: String, v: VInfo) {
     log::debug!("set_source_vol_by_name {}", n);
     get_vinfos().write().unwrap().1.insert(n, v);
-    log::debug!("set_source_vol_by_name done");
 }
-
-#[derive(Debug, Clone)]
-pub enum SinkOrSourceIndex {
-    Sink(u32),
-    Source(u32),
-}
-
-pub enum SinkOrSourceInfo<'a, 'b: 'a> {
-    Sink(&'b SinkInfo<'a>),
-    Source(&'b SourceInfo<'a>),
-}
-
-type ReloadCallback = Box<dyn FnOnce(SinkOrSourceInfo)>;
 
 static MAINLOOP: AtomicPtr<libpulse_glib_binding::Mainloop> = AtomicPtr::new(std::ptr::null_mut());
 static CONTEXT: AtomicPtr<Context> = AtomicPtr::new(std::ptr::null_mut());
@@ -105,14 +101,14 @@ fn init_mainloop_and_context() -> &'static mut Context {
     CONTEXT.store(Box::into_raw(Box::new(c)), Ordering::Release);
     unsafe { CONTEXT.load(Ordering::Acquire).as_mut().unwrap() }
 }
-fn with_context<T>(f: impl FnOnce(&mut Context) -> T) -> T {
+pub fn with_context<T>(f: impl FnOnce(&mut Context) -> T) -> T {
     let a = unsafe { CONTEXT.load(Ordering::Acquire).as_mut().unwrap() };
     f(a)
 }
 
-pub type Signal = SinkOrSource;
+pub type Signal = PulseAudioDevice;
 
-fn process_list_result<'a, T: 'a>(ls: ListResult<&'a T>) -> Option<&'a T> {
+pub fn process_list_result<'a, T: 'a>(ls: ListResult<&'a T>) -> Option<&'a T> {
     match ls {
         pulse::callbacks::ListResult::Item(res) => {
             return Some(res);
@@ -125,153 +121,30 @@ fn process_list_result<'a, T: 'a>(ls: ListResult<&'a T>) -> Option<&'a T> {
     None
 }
 
-fn process_sink<'a>(ls: ListResult<&'a SinkInfo>) -> Option<&'a SinkInfo<'a>> {
-    match ls {
-        pulse::callbacks::ListResult::Item(res) => {
-            let avg = get_avg_volume(res.volume);
-            set_sink_vol_by_name(
-                res.description.clone().unwrap().to_string(),
-                VInfo {
-                    vol: avg,
-                    is_muted: res.mute,
-                },
-            );
-            return Some(res);
-        }
-        pulse::callbacks::ListResult::End => {}
-        pulse::callbacks::ListResult::Error => {
-            log::error!("Error getting sink info");
-        }
-    };
-    None
-}
-
-fn process_source<'a>(ls: ListResult<&'a SourceInfo>) -> Option<&'a SourceInfo<'a>> {
-    match ls {
-        pulse::callbacks::ListResult::Item(res) => {
-            let avg = get_avg_volume(res.volume);
-            set_source_vol_by_name(
-                res.description.clone().unwrap().to_string(),
-                VInfo {
-                    vol: avg,
-                    is_muted: res.mute,
-                },
-            );
-            return Some(res);
-        }
-        pulse::callbacks::ListResult::End => {}
-        pulse::callbacks::ListResult::Error => {
-            log::error!("Error getting source info");
-        }
-    };
-    None
-}
-
-pub fn match_name_index_sink(s: &str) -> Result<u32, String> {
-    let index = Rc::new(Cell::new(None));
-    let is_done = Rc::new(Cell::new(false));
-    use gtk::glib;
-    let ss = s.to_string();
-    with_context(|ctx| {
-        ctx.introspect().get_sink_info_list(glib::clone!(
-            #[strong]
-            is_done,
-            #[strong]
-            index,
-            move |l| {
-                if is_done.get() {
-                    return;
-                }
-                match l {
-                    libpulse_binding::callbacks::ListResult::Item(si) => {
-                        let a: &str = si.description.as_ref().unwrap();
-                        if a.eq(&ss) {
-                            index.set(Some(si.index));
-                            is_done.set(true)
-                        };
-                    }
-                    libpulse_binding::callbacks::ListResult::End => is_done.set(true),
-                    libpulse_binding::callbacks::ListResult::Error => {
-                        log::error!("Get source info error");
-                        is_done.set(true)
-                    }
-                };
-            }
-        ));
-    });
-
-    log::debug!("wait for match name index sink");
-    while !is_done.get() {
-        spin_loop();
-    }
-    log::debug!("wait for match name index sink done");
-    if let Some(i) = index.get() {
-        Ok(i)
-    } else {
-        Err(format!("no sink with name: {s}"))
-    }
-}
-pub fn match_name_index_source(s: &str) -> Result<u32, String> {
-    let index = Rc::new(Cell::new(None));
-    let is_done = Rc::new(Cell::new(false));
-    use gtk::glib;
-    let ss = s.to_string();
-    with_context(|ctx| {
-        ctx.introspect().get_source_info_list(glib::clone!(
-            #[strong]
-            is_done,
-            #[strong]
-            index,
-            move |l| {
-                if is_done.get() {
-                    return;
-                }
-                match l {
-                    libpulse_binding::callbacks::ListResult::Item(si) => {
-                        let a: &str = si.description.as_ref().unwrap();
-                        if a.eq(&ss) {
-                            index.set(Some(si.index));
-                            is_done.set(true)
-                        };
-                    }
-                    libpulse_binding::callbacks::ListResult::End => is_done.set(true),
-                    libpulse_binding::callbacks::ListResult::Error => is_done.set(true),
-                };
-            }
-        ));
-    });
-    while !is_done.get() {
-        spin_loop();
-    }
-    if let Some(i) = index.get() {
-        Ok(i)
-    } else {
-        Err(format!("no source with name: {s}"))
-    }
-}
-
 use lazy_static::lazy_static;
 
 use crate::notify_send;
 
 lazy_static! {
-    static ref PaSignalChannel: (
+    pub static ref PaSignalChannel: (
         async_channel::Sender<Signal>,
         async_channel::Receiver<Signal>
     ) = async_channel::bounded::<Signal>(1);
 }
 
 fn signal_callback_group(msg: Signal) {
-    let bak = msg.clone();
-    if PaSignalChannel.0.force_send(msg).is_err() {
-        log::error!("Error sending pulseaudio callback group signal: {bak:?}");
-    }
+    glib::spawn_future_local(async move {
+        let bak = msg.clone();
+        if PaSignalChannel.0.send(msg).await.is_err() {
+            log::error!("Error sending pulseaudio callback group signal: {bak:?}");
+        }
+    });
 }
 
 pub fn sink_cb(list_result: ListResult<&SinkInfo>) {
-    let device_desc = if let Some(sink_info) = process_list_result(list_result) {
+    let device_name = if let Some(sink_info) = process_list_result(list_result) {
         let avg = get_avg_volume(sink_info.volume);
-        let desc = sink_info.description.clone().unwrap().to_string();
+        let desc = sink_info.name.clone().unwrap().to_string();
         set_sink_vol_by_name(
             desc.clone(),
             VInfo {
@@ -283,13 +156,19 @@ pub fn sink_cb(list_result: ListResult<&SinkInfo>) {
     } else {
         return;
     };
-    signal_callback_group(SinkOrSource::Sink(device_desc));
+
+    if let Some(default) = get_default_sink() {
+        if &device_name == default {
+            signal_callback_group(PulseAudioDevice::DefaultSink);
+        }
+    }
+    signal_callback_group(PulseAudioDevice::NamedSink(device_name))
 }
 
 pub fn source_cb(list_result: ListResult<&SourceInfo>) {
-    let device_desc = if let Some(source_info) = process_list_result(list_result) {
+    let device_name = if let Some(source_info) = process_list_result(list_result) {
         let avg = get_avg_volume(source_info.volume);
-        let desc = source_info.description.clone().unwrap().to_string();
+        let desc = source_info.name.clone().unwrap().to_string();
         set_source_vol_by_name(
             desc.clone(),
             VInfo {
@@ -302,7 +181,12 @@ pub fn source_cb(list_result: ListResult<&SourceInfo>) {
         return;
     };
 
-    signal_callback_group(SinkOrSource::Source(device_desc));
+    if let Some(default) = get_default_source() {
+        if &device_name == default {
+            signal_callback_group(PulseAudioDevice::DefaultSource)
+        }
+    }
+    signal_callback_group(PulseAudioDevice::NamedSource(device_name))
 }
 
 fn server_cb(server_info: &ServerInfo) {
