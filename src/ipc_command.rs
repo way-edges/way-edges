@@ -26,7 +26,6 @@ pub const IPC_COMMAND_TOGGLE_PIN: &str = "togglepin";
 
 pub async fn send_command(cmd: &Command) -> Result<(), Box<dyn std::error::Error>> {
     let data = match cmd {
-        Command::Daemon => return Ok(()),
         Command::Add { name } => {
             format!(r#"{{"command": "{IPC_COMMAND_ADD}", "args": ["{name}"]}}"#)
         }
@@ -46,6 +45,7 @@ pub async fn send_command(cmd: &Command) -> Result<(), Box<dyn std::error::Error
                 r#"{{"command": "{IPC_COMMAND_TOGGLE_PIN}", "args": ["{group_name}", "{widget_name}"]}}"#
             )
         }
+        _ => return Ok(()),
     };
 
     let socket = UnixStream::connect(SOCK_FILE).await?;

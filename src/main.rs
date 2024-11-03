@@ -15,6 +15,9 @@ use notify_rust::Notification;
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() {
+    // completion script output, and exit
+    args::if_print_completion_and_exit();
+
     env_logger::init();
 
     // for cmd line help msg.

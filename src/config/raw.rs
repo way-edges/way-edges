@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use serde::Deserialize;
 use serde_jsonrc::Value;
 
@@ -51,7 +53,15 @@ pub struct RawGroup {
     pub widgets: Vec<RawConfig>,
 }
 #[derive(Deserialize, Debug)]
-pub struct RawTemp {
+pub struct RawRoot {
     #[serde(default)]
     pub groups: Vec<RawGroup>,
+}
+
+impl FromStr for RawRoot {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        serde_jsonrc::from_str(s).map_err(|e| format!("JSON parse error: {e}"))
+    }
 }

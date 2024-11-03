@@ -9,7 +9,7 @@ use gtk4_layer_shell::{Edge, Layer};
 use serde_jsonrc::Value;
 
 pub fn parse_config(data: &str, group_name: Option<&str>) -> Result<GroupConfig, String> {
-    let mut res: RawTemp =
+    let mut res: RawRoot =
         serde_jsonrc::from_str(data).map_err(|e| format!("JSON parse error: {e}"))?;
     let group = if let Some(s) = group_name {
         res.groups
