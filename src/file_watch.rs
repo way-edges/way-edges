@@ -21,25 +21,6 @@ pub fn init_file_monitor() -> Receiver<()> {
         r
     }
 }
-// pub fn start_watch_file() {
-//     unsafe {
-//         let watcher = FILE_MONITOR.get_mut().unwrap().watcher();
-//         watcher
-//             .watch(
-//                 get_config_path().parent().unwrap(),
-//                 notify::RecursiveMode::NonRecursive,
-//             )
-//             .unwrap();
-//     }
-// }
-// pub fn stop_watch_file() {
-//     unsafe {
-//         let watcher = FILE_MONITOR.get_mut().unwrap().watcher();
-//         watcher
-//             .unwatch(get_config_path().parent().unwrap())
-//             .unwrap();
-//     }
-// }
 
 pub fn file_monitor(s: Sender<()>) -> Debouncer<INotifyWatcher, NoCache> {
     let res = new_debouncer(
