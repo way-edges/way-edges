@@ -66,7 +66,10 @@ impl<'de> Deserialize<'de> for NumOrRelative {
                 E: serde::de::Error,
             {
                 // just `unwrap`, it's ok
-                let re = regex::Regex::new(r"^(\d+(\.\d+)?)%\s*(.*)$").unwrap();
+                lazy_static::lazy_static! {
+                    static ref re: regex::Regex = regex::Regex::new(r"^(\d+(\.\d+)?)%\s*(.*)$").unwrap();
+                }
+                // let re = regex::Regex::new(r"^(\d+(\.\d+)?)%\s*(.*)$").unwrap();
 
                 if let Some(captures) = re.captures(v) {
                     let percentage_str = captures.get(1).map_or("", |m| m.as_str());
