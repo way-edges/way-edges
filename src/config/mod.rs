@@ -1,6 +1,6 @@
 pub mod conf;
-mod parse;
-mod raw;
+pub mod parse;
+pub mod raw;
 pub mod widgets;
 
 pub use conf::*;
@@ -9,6 +9,7 @@ use std::{
     fs::OpenOptions,
     io::Read,
     path::{Path, PathBuf},
+    str::FromStr,
     sync::OnceLock,
 };
 
@@ -29,7 +30,7 @@ pub fn get_config_path() -> &'static Path {
     b
 }
 
-fn get_config_file() -> Result<String, String> {
+pub fn get_config_file() -> Result<String, String> {
     let p = get_config_path();
     let mut f = match OpenOptions::new()
         // .create(true)
@@ -46,6 +47,11 @@ fn get_config_file() -> Result<String, String> {
         Err(e) => return Err(format!("failed to read config file: {e}")),
     };
     Ok(s)
+}
+
+pub fn get_config_raw() -> Result<raw::RawRoot, String> {
+    let s = get_config_file()?;
+    raw::RawRoot::from_str(&s)
 }
 
 pub fn get_config(group_name: Option<&str>) -> Result<GroupConfig, String> {

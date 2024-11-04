@@ -14,6 +14,7 @@ serde_jsonrc = "0.1"
 serde = { version = "1.0", features = ["derive"] }
 xdg = "2.5"
 clap = { version = "4.5", features = ["derive"] }
+clap_complete = { version = "4.5.36", features = ["unstable-dynamic"] }
 hyprland = { version = "0.4.0-beta.1", default-features = false, features = [
   "data",
   "tokio",
@@ -27,11 +28,10 @@ regex = "1.10"
 log = "0.4"
 env_logger = "0.11"
 notify-rust = "4.11"
-scopeguard = "1.2"
+# scopeguard = "1.2"
 async-channel = "2.3"
-notify-debouncer-mini = "0.5"
+# notify-debouncer-mini = "0.5"
 cairo-rs = { version = "0.20", features = ["freetype", "freetype-rs", "png"] }
-libpulse-binding = "2.28"
 blight = "0.7"
 zbus = "5.0"
 pangocairo = "0.20"
@@ -41,7 +41,9 @@ tokio-timerfd = "0.2.0"
 chrono = "0.4.38"
 chrono-tz = "0.10.0"
 lazy_static = "1.5.0"
+libpulse-binding = "2.28"
 libpulse-glib-binding = "2.28.1"
+notify-debouncer-full = "0.4.0"
 
 [dependencies.way-edges-derive]
 path = "way-edges-derive"
