@@ -3,8 +3,9 @@ use std::{process, sync::OnceLock, time::Duration};
 use crate::config::get_config_path;
 use crate::notify_send;
 use async_channel::{Receiver, Sender};
-use notify::INotifyWatcher;
-use notify_debouncer_mini::{new_debouncer, DebouncedEventKind, Debouncer};
+use notify::{EventKind, INotifyWatcher};
+// use notify_debouncer_mini::{new_debouncer, DebouncedEventKind, Debouncer};
+use notify_debouncer_full::{new_debouncer, DebounceEventResult, Debouncer, NoCache};
 
 fn file_monitor_error(msg: String) {
     notify_send("Way-edges file monitor", &msg, true);
@@ -12,7 +13,7 @@ fn file_monitor_error(msg: String) {
     process::exit(1)
 }
 
-static mut FILE_MONITOR: OnceLock<Debouncer<INotifyWatcher>> = OnceLock::new();
+static mut FILE_MONITOR: OnceLock<Debouncer<INotifyWatcher, NoCache>> = OnceLock::new();
 pub fn init_file_monitor() -> Receiver<()> {
     unsafe {
         let (s, r) = async_channel::bounded(1);
@@ -20,39 +21,43 @@ pub fn init_file_monitor() -> Receiver<()> {
         r
     }
 }
-pub fn start_watch_file() {
-    unsafe {
-        let watcher = FILE_MONITOR.get_mut().unwrap().watcher();
-        watcher
-            .watch(
-                get_config_path().parent().unwrap(),
-                notify::RecursiveMode::NonRecursive,
-            )
-            .unwrap();
-    }
-}
-pub fn stop_watch_file() {
-    unsafe {
-        let watcher = FILE_MONITOR.get_mut().unwrap().watcher();
-        watcher
-            .unwatch(get_config_path().parent().unwrap())
-            .unwrap();
-    }
-}
+// pub fn start_watch_file() {
+//     unsafe {
+//         let watcher = FILE_MONITOR.get_mut().unwrap().watcher();
+//         watcher
+//             .watch(
+//                 get_config_path().parent().unwrap(),
+//                 notify::RecursiveMode::NonRecursive,
+//             )
+//             .unwrap();
+//     }
+// }
+// pub fn stop_watch_file() {
+//     unsafe {
+//         let watcher = FILE_MONITOR.get_mut().unwrap().watcher();
+//         watcher
+//             .unwatch(get_config_path().parent().unwrap())
+//             .unwrap();
+//     }
+// }
 
-pub fn file_monitor(s: Sender<()>) -> Debouncer<INotifyWatcher> {
-    use notify::Result;
+pub fn file_monitor(s: Sender<()>) -> Debouncer<INotifyWatcher, NoCache> {
     let res = new_debouncer(
         Duration::from_millis(700),
+        None,
         // move |res: Result<Vec<notify_debouncer_mini::DebouncedEvent>>| match res {
-        move |res: Result<Vec<notify_debouncer_mini::DebouncedEvent>>| match res {
-            Ok(event) => {
-                log::debug!("{event:?}");
-                let config_changed = event.into_iter().any(|de| {
-                    if de.kind == DebouncedEventKind::Any {
-                        de.path.as_path().eq(get_config_path())
-                    } else {
-                        false
+        move |res: DebounceEventResult| match res {
+            Ok(events) => {
+                log::debug!("{events:?}");
+                let config_changed = events.into_iter().any(|de| {
+                    match de.kind {
+                        EventKind::Create(_) | EventKind::Modify(_) | EventKind::Remove(_) => de
+                            .paths
+                            .iter()
+                            .any(|path_buf| path_buf.as_path().eq(get_config_path())),
+                        _ => false, // EventKind::Any => todo!(),
+                                    // EventKind::Access(access_kind) => todo!(),
+                                    // EventKind::Other => todo!(),
                     }
                 });
                 if config_changed {
@@ -71,12 +76,13 @@ pub fn file_monitor(s: Sender<()>) -> Debouncer<INotifyWatcher> {
     .and_then(|mut debouncer| {
         // Add a path to be watched. All files and directories at that path and
         // below will be monitored for changes.
-        debouncer.watcher().watch(
+        debouncer.watch(
             get_config_path().parent().unwrap(),
             notify::RecursiveMode::NonRecursive,
         )?;
         Ok(debouncer)
     });
+
     match res {
         Ok(w) => w,
         Err(e) => panic!("Failed to create file watcher: Error: {e}"),

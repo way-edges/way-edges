@@ -18,12 +18,14 @@ use tokio::net::UnixStream;
 
 use crate::{
     activate::{self, GroupCtx},
-    config, init_file_monitor,
+    config,
+    init_file_monitor,
     ipc_command::{
         CommandBody, IPCCommand, IPC_COMMAND_ADD, IPC_COMMAND_QUIT, IPC_COMMAND_REMOVE,
         IPC_COMMAND_TOGGLE_PIN,
     },
-    notify_send, start_watch_file, stop_watch_file,
+    // notify_send, start_watch_file, stop_watch_file,
+    notify_send,
 };
 
 // pub const TEMP_DIR: &str = "/tmp/way-edges";
@@ -32,9 +34,9 @@ pub const SOCK_FILE: &str = "/tmp/way-edges/way-edges.sock";
 
 // fn init_app(app: &Application, reload_signal_receiver: &Receiver<i32>) {
 fn init_group(app: &Application, name: &str) -> Result<Box<dyn GroupCtx>, String> {
-    stop_watch_file();
+    // stop_watch_file();
     let conf = config::get_config(Some(name));
-    start_watch_file();
+    // start_watch_file();
     let res = conf.and_then(|vc| {
         debug!("Parsed Config: {vc:?}");
         {
