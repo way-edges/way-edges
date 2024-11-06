@@ -93,7 +93,7 @@ mod globals {
     }
 
     pub static mut MONITORS: Option<Vec<Monitor>> = None;
-    // pub fn init_monitor() -> Result<&'static Vec<Monitor>, String> {
+
     pub fn init_monitor() -> Result<(), String> {
         let dt_display = gtk::gdk::Display::default().ok_or("display for monitor not found")?;
         let mms = dt_display
@@ -119,19 +119,12 @@ mod globals {
             let geoms: Vec<Rectangle> = mms.iter().map(|m| m.geometry()).collect();
             set_monitor_size_map(geoms);
         }
-        unsafe {
-            WORKING_AREA_SIZE_MAP = Some(HashMap::new());
-        }
         unsafe { MONITORS = Some(mms) };
         Ok(())
-        // get_monitors()
     }
     pub fn get_monitors() -> Result<&'static Vec<Monitor>, String> {
         unsafe { MONITORS.as_ref().ok_or("MONITORS is NONE".to_string()) }
     }
-    // pub fn take_monitor() -> Result<Vec<Monitor>, String> {
-    //     unsafe { MONITORS.take().ok_or("MONITORS is NONE".to_string()) }
-    // }
 
     pub type MonitorNameIndexMap = HashMap<String, usize>;
     pub static mut MONITOR_NAME_INDEX_MAP: Option<MonitorNameIndexMap> = None;
@@ -148,43 +141,6 @@ mod globals {
     }
 
     pub type Size = (i32, i32);
-
-    // pub static mut MONITOR_SIZE_MAP: Option<Vec<(Monitor, (i32, i32))>> = None;
-    /// working area size
-    pub static mut WORKING_AREA_SIZE_MAP: Option<HashMap<usize, Rectangle>> = None;
-    // do not run this directly, unless you know what you are doing
-    fn get_working_area_size_map() -> Result<&'static mut HashMap<usize, Rectangle>, String> {
-        unsafe {
-            WORKING_AREA_SIZE_MAP
-                .as_mut()
-                .ok_or("MONITOR_SIZE_MAP has not been initialized, this is unexpected".to_string())
-        }
-    }
-    pub fn set_working_area_size_map(index: usize, v: Rectangle) -> Result<(), String> {
-        let map = get_working_area_size_map()?;
-        map.insert(index, v);
-        Ok(())
-    }
-    pub fn set_working_area_size_map_multiple(v: Vec<(usize, Rectangle)>) -> Result<(), String> {
-        let map = get_working_area_size_map()?;
-        for (i, r) in v.into_iter() {
-            map.insert(i, r);
-        }
-        log::debug!("Calculated layer map sizes: {map:?}");
-        Ok(())
-    }
-    pub fn get_working_area_size(index: usize) -> Result<Option<Size>, String> {
-        unsafe {
-            let map = WORKING_AREA_SIZE_MAP
-                .as_ref()
-                .ok_or("WORKING_AREA_SIZE_MAP has not been initialized")?;
-            if let Some(geom) = map.get(&index) {
-                Ok(Some((geom.width(), geom.height())))
-            } else {
-                Ok(None)
-            }
-        }
-    }
 
     /// monitor size
     pub static mut MONITOR_SIZE_MAP: Option<HashMap<usize, Rectangle>> = None;
