@@ -4,7 +4,7 @@ mod pre_draw;
 
 use std::time::Duration;
 
-use crate::activate::get_monior_size;
+use crate::activate::get_monitor_context;
 use crate::config::{widgets::button::BtnConfig, Config, NumOrRelative};
 use crate::ui::draws::transition_state::TransitionStateList;
 use crate::ui::{WidgetExpose, WidgetExposePtr};
@@ -61,10 +61,9 @@ pub fn init_widget(
 }
 
 fn calculate_rel(config: &Config, btn_config: &mut BtnConfig) -> Result<(), String> {
-    let index = config.monitor.to_index()?;
-    let size =
-        // get_working_area_size(index)?.ok_or(format!("Failed to get working area size: {index}"))?;
-        get_monior_size(index)?.ok_or(format!("Failed to get working area size: {index}"))?;
+    let size = get_monitor_context()
+        .get_monitor_size(&config.monitor)
+        .ok_or(format!("Failed to get monitor size: {:?}", config.monitor))?;
 
     if let NumOrRelative::Relative(_) = &mut btn_config.extra_trigger_size {
         let max = match config.edge {

@@ -8,7 +8,7 @@ use std::{
 };
 
 use crate::{
-    activate::get_monior_size,
+    activate::get_monitor_context,
     config::{widgets::slide::SlideConfig, Config},
     ui::{
         draws::{mouse_state::MouseState, transition_state::TransitionStateRc},
@@ -76,10 +76,9 @@ pub fn init_widget_as_plug(
 }
 
 fn calculate_rel(config: &Config, slide_config: &mut SlideConfig) -> Result<(), String> {
-    let index = config.monitor.to_index()?;
-    let size =
-        // get_working_area_size(index)?.ok_or(format!("Failed to get working area size: {index}"))?;
-        get_monior_size(index)?.ok_or(format!("Failed to get working area size: {index}"))?;
+    let size = get_monitor_context()
+        .get_monitor_size(&config.monitor)
+        .ok_or(format!("Failed to get monitor size: {:?}", config.monitor))?;
 
     common::calculate_rel_extra_trigger_size(
         &mut slide_config.extra_trigger_size,

@@ -17,16 +17,13 @@ pub struct SlidePredraw {
     pub slope_position: f64,
 }
 
-// fn predraw_err_handle(e: cairo::Error) -> String {
-//     format!("Slide Predraw error: {e}")
-// }
 fn draw_slide_path(
     obtuse_angle: f64,
     radius: f64,
     size: (f64, f64),
     map_size: (i32, i32),
 ) -> Result<(Path, f64), String> {
-    let ctx = cairo::Context::new(&new_surface((map_size.0, map_size.1))).unwrap();
+    let ctx = cairo::Context::new(new_surface((map_size.0, map_size.1))).unwrap();
 
     // calculate
     let acute_angel = 180. - obtuse_angle;

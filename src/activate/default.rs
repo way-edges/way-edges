@@ -1,5 +1,5 @@
 use super::{
-    calculate_config_relative, create_widgets, find_monitor, get_monitors, WidgetItem, WidgetMap,
+    calculate_config_relative, create_widgets, get_monitor_context, WidgetItem, WidgetMap,
 };
 use crate::config::GroupConfig;
 use gtk::prelude::MonitorExt;
@@ -7,23 +7,25 @@ use gtk::prelude::MonitorExt;
 pub struct Default(WidgetMap);
 impl Default {
     pub fn init_window(app: &gtk::Application, cfgs: GroupConfig) -> Result<Self, String> {
-        let res = get_monitors().and_then(|monitors| {
-            let btis: Vec<WidgetItem> = cfgs
-                .into_iter()
-                .map(|mut cfg| {
-                    let monitor = find_monitor(monitors, &cfg.monitor)?.clone();
-                    let geom = monitor.geometry();
-                    let size = (geom.width(), geom.height());
-                    calculate_config_relative(&mut cfg, size)?;
-                    Ok(WidgetItem { cfg, monitor })
-                })
-                .collect::<Result<Vec<WidgetItem>, String>>()?;
-            let vw = create_widgets(app, btis)?;
-            Ok(Self(vw))
-        });
-        res.inspect_err(|e| {
-            super::notify_app_error(e);
-        })
+        let monitor_ctx = get_monitor_context();
+
+        let btis: Vec<WidgetItem> = cfgs
+            .into_iter()
+            .map(|mut cfg| {
+                let monitor = monitor_ctx
+                    .get_monitor(&cfg.monitor)
+                    .ok_or("failed to get monitor")?
+                    .clone();
+                let geom = monitor.geometry();
+                let size = (geom.width(), geom.height());
+                calculate_config_relative(&mut cfg, size)?;
+                Ok(WidgetItem { cfg, monitor })
+            })
+            .collect::<Result<Vec<WidgetItem>, String>>()?;
+
+        let widget_map = create_widgets(app, btis)?;
+
+        Ok(Self(widget_map))
     }
 }
 impl Drop for Default {

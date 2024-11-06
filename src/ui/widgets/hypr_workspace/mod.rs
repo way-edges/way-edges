@@ -16,7 +16,7 @@ use gtk::{
 };
 
 use crate::{
-    activate::get_monior_size,
+    activate::get_monitor_context,
     config::widgets::hypr_workspace::HyprWorkspaceConfig,
     plug::hypr_workspace::init_hyprland_listener,
     ui::{
@@ -40,9 +40,9 @@ fn calculate_raletive(
     config: &crate::config::Config,
     wp_conf: &mut HyprWorkspaceConfig,
 ) -> Result<(), String> {
-    let monitor = config.monitor.to_index()?;
-
-    let size = get_monior_size(monitor)?.ok_or(format!("Failed to get monitor size: {monitor}"))?;
+    let size = get_monitor_context()
+        .get_monitor_size(&config.monitor)
+        .ok_or(format!("Failed to get monitor size: {:?}", config.monitor))?;
 
     match config.edge {
         gtk4_layer_shell::Edge::Left | gtk4_layer_shell::Edge::Right => {
