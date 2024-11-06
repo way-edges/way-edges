@@ -5,7 +5,7 @@ use gtk::cairo::{self, Context, ImageSurface, LinearGradient};
 use gtk::gdk::prelude::*;
 use gtk::gdk::RGBA;
 
-fn draw_2(context: &Context, radius: f64, h: f64) {
+fn draw_basic_shape_to_context(context: &Context, radius: f64, h: f64) {
     let lg_height = h - radius * 2.;
 
     draw_fan_no_close(context, (0., radius), radius, 1., 2.);
@@ -49,7 +49,7 @@ pub fn draw_to_surface(
             let surf = {
                 let mut surf = new_surface();
                 let ctx = cairo::Context::new(&surf).unwrap();
-                draw_2(&ctx, item_size.0, item_size.1);
+                draw_basic_shape_to_context(&ctx, item_size.0, item_size.1);
                 ctx.set_source_color(&main_color);
                 ctx.fill().unwrap();
                 draws::blur::blur_image_surface(&mut surf, (extra_trigger_size * 2.) as i32)
@@ -67,7 +67,7 @@ pub fn draw_to_surface(
         {
             base_ctx.save().unwrap();
             // vertical_center(&base_ctx);
-            draw_2(&base_ctx, item_size.0, item_size.1);
+            draw_basic_shape_to_context(&base_ctx, item_size.0, item_size.1);
             path = base_ctx.copy_path().unwrap();
             base_ctx.set_source_color(&main_color);
             base_ctx.fill().unwrap();

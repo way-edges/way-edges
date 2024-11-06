@@ -4,7 +4,6 @@ use crate::ui::draws::mouse_state::MouseStateRc;
 use crate::ui::draws::transition_state::{self, TransitionStateList, TransitionStateRc};
 use crate::ui::draws::util::{draw_motion, draw_rotation, ensure_input_region};
 
-use super::event::*;
 use super::pre_draw::PreDrawCache;
 use super::BtnConfig;
 use clap::error::Result;
@@ -13,42 +12,24 @@ use gtk::glib;
 use gtk::prelude::*;
 use gtk::DrawingArea;
 use gtk4_layer_shell::Edge;
-use std::time::Duration;
 
 pub fn setup_draw(
     window: &gtk::ApplicationWindow,
+    darea: &gtk::DrawingArea,
     cfg: Config,
-    mut btn_cfg: BtnConfig,
-) -> Result<DrawingArea, String> {
-    let darea = DrawingArea::new();
-    let size = btn_cfg.get_size()?;
-    let edge = cfg.edge;
-    // let extra_trigger_size = btn_cfg.extra_trigger_size.get_num_into()?;
-    // let map_size = ((size.0 + extra_trigger_size) as i32, size.1 as i32);
-    let map_size = (size.0 as i32, size.1 as i32);
-    match edge {
-        Edge::Left | Edge::Right => {
-            darea.set_width_request(map_size.0);
-            darea.set_height_request(map_size.1);
-        }
-        Edge::Top | Edge::Bottom => {
-            darea.set_width_request(map_size.1);
-            darea.set_height_request(map_size.0);
-        }
-        _ => unreachable!(),
-    };
-
-    // visible range is 0 -> width
-    let mut ts_list = TransitionStateList::new();
-    let pop_ts = ts_list
-        .new_transition(Duration::from_millis(btn_cfg.transition_duration))
-        .item;
-    let ms = setup_event(
-        &darea,
-        btn_cfg.event_map.take().ok_or("EventMap is None")?,
-        pop_ts.clone(),
+    btn_cfg: BtnConfig,
+    mouse_state: MouseStateRc,
+    transition_state_list: TransitionStateList,
+    popup_transition: TransitionStateRc,
+) -> Result<(), String> {
+    let mut dc = DrawCore::new(
+        darea,
+        &cfg,
+        &btn_cfg,
+        mouse_state,
+        transition_state_list,
+        popup_transition,
     );
-    let mut dc = DrawCore::new(&darea, &cfg, &btn_cfg, ms, ts_list, pop_ts);
     darea.set_draw_func(glib::clone!(
         #[weak]
         window,
@@ -56,8 +37,8 @@ pub fn setup_draw(
             dc.draw(context, &window);
         }
     ));
-    window.set_child(Some(&darea));
-    Ok(darea)
+
+    Ok(())
 }
 
 struct DrawCore {
