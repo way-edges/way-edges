@@ -2,7 +2,7 @@ mod draw;
 mod event;
 
 use std::{
-    cell::{Cell, RefCell},
+    cell::RefCell,
     rc::{Rc, Weak},
     time::Duration,
 };
@@ -11,7 +11,7 @@ use draw::DrawCore;
 use gio::glib::clone::Downgrade;
 use gtk::{
     glib,
-    prelude::{DrawingAreaExtManual, GtkWindowExt, WidgetExt},
+    prelude::{DrawingAreaExtManual, GtkWindowExt},
     ApplicationWindow, DrawingArea,
 };
 
@@ -27,7 +27,6 @@ use crate::{
 
 struct HyprWorkspaceExpose {
     ms: Weak<RefCell<MouseState>>,
-    // darea: WeakRef<DrawingArea>,
 }
 impl WidgetExpose for HyprWorkspaceExpose {
     fn toggle_pin(&mut self) {
@@ -73,21 +72,6 @@ pub fn init_widget(
 
     let darea = DrawingArea::new();
     window.set_child(Some(&darea));
-    match config.edge {
-        gtk4_layer_shell::Edge::Left | gtk4_layer_shell::Edge::Right => {
-            darea.set_size_request(
-                wp_conf.thickness.get_num().unwrap().ceil() as i32,
-                wp_conf.length.get_num().unwrap().ceil() as i32,
-            );
-        }
-        gtk4_layer_shell::Edge::Top | gtk4_layer_shell::Edge::Bottom => {
-            darea.set_size_request(
-                wp_conf.length.get_num().unwrap().ceil() as i32,
-                wp_conf.thickness.get_num().unwrap().ceil() as i32,
-            );
-        }
-        _ => todo!(),
-    };
 
     let mut ts_list = TransitionStateList::new();
     let pop_ts = ts_list
@@ -98,9 +82,8 @@ pub fn init_widget(
         .new_transition(Duration::from_millis(wp_conf.workspace_transition_duration))
         .item;
 
-    let workspace_draw_data = Rc::new(Cell::new(draw::DrawData::new(config.edge)));
-    let hover_id = Rc::new(Cell::new(-1));
-    let ms = event::setup_event(&pop_ts, &darea, &workspace_draw_data, &hover_id);
+    let hover_data = Rc::new(RefCell::new(draw::HoverData::new(config.edge)));
+    let ms = event::setup_event(&pop_ts, &darea, &hover_data);
 
     let mut core = DrawCore::new(
         &darea,
@@ -109,8 +92,7 @@ pub fn init_widget(
         workspace_ts,
         pop_ts.clone(),
         ts_list,
-        workspace_draw_data,
-        hover_id,
+        hover_data,
         &ms,
     );
 
@@ -122,8 +104,5 @@ pub fn init_widget(
         }
     ));
 
-    Ok(Box::new(HyprWorkspaceExpose {
-        ms: ms.downgrade(),
-        // darea: darea.downgrade(),
-    }))
+    Ok(Box::new(HyprWorkspaceExpose { ms: ms.downgrade() }))
 }

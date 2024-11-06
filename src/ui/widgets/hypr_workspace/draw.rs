@@ -1,6 +1,10 @@
-use std::{cell::Cell, ops::Not, rc::Rc};
+use std::{
+    cell::{Cell, RefCell},
+    ops::Not,
+    rc::Rc,
+};
 
-use cairo::{Context, ImageSurface, LinearGradient, RectangleInt, Region};
+use cairo::{Context, ImageSurface, RectangleInt, Region};
 use gtk::{
     gdk::RGBA,
     glib,
@@ -22,32 +26,59 @@ use crate::{
     },
 };
 
-pub struct DrawData {
-    data: Vec<[f64; 2]>, // [[0, 2], [4, 9]]
-    //                         2       5
+pub struct HoverData {
+    // [[0, 2], [4, 9]]
+    //    2       5
+    item_location: Vec<[f64; 2]>,
     edge: Edge,
+    pub hover_id: isize,
 }
 
-impl DrawData {
+impl HoverData {
     pub fn new(edge: Edge) -> Self {
-        Self { data: vec![], edge }
-    }
-    pub fn match_workspace(&self, mouse_pos: (f64, f64)) -> isize {
-        match self.edge {
-            Edge::Left | Edge::Right => self.data.len() as isize - 1 - self.m(mouse_pos.1),
-            Edge::Top | Edge::Bottom => self.m(mouse_pos.0),
-            _ => unreachable!(),
+        Self {
+            item_location: vec![],
+            edge,
+            hover_id: -1,
         }
+    }
+
+    pub fn update_hover_data(&mut self, item_location: Vec<[f64; 2]>) {
+        self.item_location = item_location;
+    }
+
+    pub fn match_hover_id(&self, mouse_pos: (f64, f64)) -> isize {
+        let id = match self.edge {
+            // Edge::Top | Edge::Bottom => self.item_location.len() as isize - 1 - self.m(mouse_pos.1),
+            Edge::Top | Edge::Bottom => self.m(mouse_pos.0),
+            Edge::Left | Edge::Right => self.m(mouse_pos.1),
+            _ => unreachable!(),
+        };
+        if id < 0 {
+            id
+        } else {
+            // to match workspace id
+            id + 1
+        }
+    }
+
+    pub fn update_hover_id_with_mouse_position(&mut self, mouse_pos: (f64, f64)) -> isize {
+        self.hover_id = self.match_hover_id(mouse_pos);
+        self.hover_id
+    }
+
+    pub fn force_update_hover_id(&mut self, id: isize) {
+        self.hover_id = id
     }
 
     // binary search
     fn m(&self, pos: f64) -> isize {
-        if self.data.is_empty() {
+        if self.item_location.is_empty() {
             return -1;
         }
 
-        let mut index = self.data.len() - 1;
-        let mut half = self.data.len();
+        let mut index = self.item_location.len() - 1;
+        let mut half = self.item_location.len();
 
         fn half_index(index: &mut usize, half: &mut usize, is_left: bool) {
             *half = (*half / 2).max(1);
@@ -62,16 +93,16 @@ impl DrawData {
         half_index(&mut index, &mut half, true);
 
         loop {
-            let current = self.data[index];
+            let current = self.item_location[index];
 
             if pos < current[0] {
-                if index == 0 || self.data[index - 1][1] <= pos {
+                if index == 0 || self.item_location[index - 1][1] <= pos {
                     return -1;
                 } else {
                     half_index(&mut index, &mut half, true);
                 }
             } else if pos >= current[1] {
-                if index == self.data.len() - 1 || pos < self.data[index + 1][0] {
+                if index == self.item_location.len() - 1 || pos < self.item_location[index + 1][0] {
                     return -1;
                 } else {
                     half_index(&mut index, &mut half, false);
@@ -86,8 +117,7 @@ impl DrawData {
 pub struct DrawCore {
     data: Rc<Cell<HyprGlobalData>>,
 
-    workspace_draw_data: Rc<Cell<DrawData>>,
-    hover_id: Rc<Cell<isize>>,
+    hover_data: Rc<RefCell<HoverData>>,
 
     edge: Edge,
     thickness: i32,
@@ -96,7 +126,6 @@ pub struct DrawCore {
     active_increase: f64,
     extra_trigger_size: f64,
 
-    backlight: Option<RGBA>,
     deactive_color: RGBA,
     active_color: RGBA,
     hover_color: Option<RGBA>,
@@ -106,7 +135,7 @@ pub struct DrawCore {
     pop_ts: TransitionStateRc,
     frame_manager: FrameManager,
 
-    // for lifetime usage:
+    // for lifetime usage(drop):
     hypr_event_callback_id: u32,
 }
 
@@ -117,6 +146,8 @@ impl Drop for DrawCore {
     }
 }
 
+// default horizontal shape(bottom or top)
+// rotate clockwise 90 degree to fit for left and right
 impl DrawCore {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
@@ -127,11 +158,26 @@ impl DrawCore {
         workspace_transition: TransitionStateRc,
         pop_ts: TransitionStateRc,
         ts_list: TransitionStateList,
-        workspace_draw_data: Rc<Cell<DrawData>>,
-        hover_id: Rc<Cell<isize>>,
+        hover_data: Rc<RefCell<HoverData>>,
 
         ms: &MouseStateRc,
     ) -> Self {
+        match conf.edge {
+            gtk4_layer_shell::Edge::Left | gtk4_layer_shell::Edge::Right => {
+                darea.set_size_request(
+                    wp_conf.thickness.get_num().unwrap().ceil() as i32,
+                    wp_conf.length.get_num().unwrap().ceil() as i32,
+                );
+            }
+            gtk4_layer_shell::Edge::Top | gtk4_layer_shell::Edge::Bottom => {
+                darea.set_size_request(
+                    wp_conf.length.get_num().unwrap().ceil() as i32,
+                    wp_conf.thickness.get_num().unwrap().ceil() as i32,
+                );
+            }
+            _ => todo!(),
+        };
+
         // data related
         let data = Rc::new(Cell::new(HyprGlobalData::default()));
         let (id, init_data) = register_hypr_event_callback(glib::clone!(
@@ -172,8 +218,7 @@ impl DrawCore {
         Self {
             data,
 
-            workspace_draw_data,
-            hover_id,
+            hover_data,
 
             edge: conf.edge,
             thickness: wp_conf.thickness.get_num_into().unwrap() as i32,
@@ -182,7 +227,6 @@ impl DrawCore {
             active_increase: wp_conf.active_increase,
             extra_trigger_size: wp_conf.extra_trigger_size.get_num_into().unwrap(),
 
-            backlight: wp_conf.backlight,
             deactive_color: wp_conf.deactive_color,
             active_color: wp_conf.active_color,
             hover_color: wp_conf.hover_color,
@@ -211,11 +255,11 @@ impl DrawCore {
 
     fn draw_rotation(&mut self, ctx: &Context) {
         match self.edge {
-            Edge::Left | Edge::Right => {}
-            Edge::Top | Edge::Bottom => {
+            Edge::Left | Edge::Right => {
                 ctx.rotate(90.0_f64.to_radians());
                 ctx.translate(0., -self.length as f64);
             }
+            Edge::Top | Edge::Bottom => {}
             _ => unreachable!(),
         }
     }
@@ -224,10 +268,10 @@ impl DrawCore {
         let w = self.thickness as f64;
         match self.edge {
             Edge::Left | Edge::Top => {
-                ctx.translate(w * (y - 1.), Z);
+                ctx.translate(Z, w * (y - 1.));
             }
             Edge::Right | Edge::Bottom => {
-                ctx.translate(w * (1. - y), Z);
+                ctx.translate(Z, w * (1. - y));
             }
             _ => unreachable!(),
         }
@@ -270,90 +314,73 @@ impl DrawCore {
         let item_min_length =
             item_base_length - item_changable_length / (data.max_workspace - 1) as f64;
 
-        let surf = new_surface((self.thickness, self.length));
-        // let surf = ImageSurface::create(Format::ARgb32, self.thickness.ceil() as i32, self.length)
-        // .unwrap();
+        // let surf = new_surface((self.thickness, self.length));
+        let surf = new_surface((self.length, self.thickness));
         let ctx = Context::new(&surf).unwrap();
 
-        if let Some(backlight_color) = self.backlight {
-            let backlight = LinearGradient::new(
-                Z,
-                self.length as f64 / 2.,
-                self.thickness as f64,
-                self.length as f64 / 2.,
-            );
-            backlight.add_color_stop_rgba(
-                Z,
-                backlight_color.red().into(),
-                backlight_color.green().into(),
-                backlight_color.blue().into(),
-                0.5,
-            );
-            backlight.add_color_stop_rgba(
-                1.,
-                backlight_color.red().into(),
-                backlight_color.green().into(),
-                backlight_color.blue().into(),
-                Z,
-            );
-            ctx.set_source(backlight).unwrap();
-            ctx.paint().unwrap();
-        }
+        let y = self.workspace_transition.borrow().get_abs_y();
 
-        let y = {
-            let a = self.workspace_transition.borrow();
-            a.get_abs_y()
-        };
-
-        let mut draw_data = DrawData::new(self.edge);
+        let mut item_location = vec![];
         let mut draw_start_pos = 0.;
 
-        let hover_id = self.hover_id.get();
+        let mut hover_data = self.hover_data.borrow_mut();
+        let hover_id = hover_data.hover_id;
 
-        let a: Vec<(f64, RGBA)> = (1..=data.max_workspace)
-            .map(|id| {
-                let (size, mut color) = if id == data.current_workspace {
-                    (
-                        item_min_length + (item_max_length - item_min_length) * y,
-                        color_transition(self.deactive_color, self.active_color, y as f32),
-                    )
-                } else if id == data.last_workspace {
-                    (
-                        item_min_length + (item_max_length - item_min_length) * (1. - y),
-                        color_transition(self.active_color, self.deactive_color, y as f32),
-                    )
-                } else {
-                    (item_min_length, self.deactive_color)
-                };
+        let border_width = self.thickness as f64 / 10.;
 
-                if let Some(hover_color) = self.hover_color {
-                    if id as isize == hover_id {
-                        color = color_mix(hover_color, color);
-                    }
+        // let a: Vec<(f64, RGBA)> = (1..=data.max_workspace).map(|id| {
+        (1..=data.max_workspace).for_each(|id| {
+            // size and color
+            let (length, mut color) = if id == data.current_workspace {
+                (
+                    item_min_length + (item_max_length - item_min_length) * y,
+                    color_transition(self.deactive_color, self.active_color, y as f32),
+                )
+            } else if id == data.prev_workspace {
+                (
+                    item_min_length + (item_max_length - item_min_length) * (1. - y),
+                    color_transition(self.active_color, self.deactive_color, y as f32),
+                )
+            } else {
+                (item_min_length, self.deactive_color)
+            };
+
+            // mouse hover color
+            if let Some(hover_color) = self.hover_color {
+                if id as isize == hover_id {
+                    color = color_mix(hover_color, color);
                 }
-
-                {
-                    let end = draw_start_pos + size;
-                    draw_data.data.push([draw_start_pos, draw_start_pos + size]);
-                    draw_start_pos = end + self.gap as f64;
-                }
-
-                (size, color)
-            })
-            .collect();
-
-        a.iter().rev().enumerate().for_each(|(index, (t, color))| {
-            if index != 0 {
-                ctx.translate(Z, self.gap as f64);
             }
-            ctx.set_source_color(color);
-            ctx.rectangle(Z, Z, self.thickness as f64, *t);
-            ctx.fill().unwrap();
 
-            ctx.translate(Z, *t);
+            // draw
+            if id == data.current_workspace {
+                ctx.set_source_color(&color);
+                ctx.rectangle(Z, Z, length, self.thickness as f64);
+                ctx.fill().unwrap();
+            } else {
+                ctx.set_source_color(&self.active_color);
+                ctx.rectangle(Z, Z, length, self.thickness as f64);
+                ctx.fill().unwrap();
+                ctx.set_source_color(&color);
+                ctx.rectangle(
+                    border_width,
+                    border_width,
+                    length - 2. * border_width,
+                    self.thickness as f64 - 2. * border_width,
+                );
+                ctx.fill().unwrap();
+            }
+            if id != data.max_workspace {
+                ctx.translate(length + self.gap as f64, Z);
+            };
+
+            // record calculated size for mouse locate
+            let end = draw_start_pos + length;
+            item_location.push([draw_start_pos, draw_start_pos + length]);
+            draw_start_pos = end + self.gap as f64;
         });
 
-        self.workspace_draw_data.set(draw_data);
+        hover_data.update_hover_data(item_location);
 
         surf
     }

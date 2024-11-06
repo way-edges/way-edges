@@ -23,9 +23,6 @@ pub struct HyprWorkspaceConfig {
     #[serde(default = "common::dt_transition_duration")]
     pub workspace_transition_duration: u64,
 
-    #[serde(default)]
-    #[serde(deserialize_with = "common::option_color_translate")]
-    pub backlight: Option<RGBA>,
     #[serde(default = "dt_deactive_color")]
     #[serde(deserialize_with = "common::color_translate")]
     pub deactive_color: RGBA,

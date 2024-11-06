@@ -1,7 +1,7 @@
 use std::{collections::HashMap, num::ParseIntError, process, str::FromStr, thread};
 
 use hyprland::{
-    event_listener::{self, WindowEventData},
+    event_listener,
     shared::{HyprData, HyprDataActive, WorkspaceType},
 };
 
@@ -16,11 +16,6 @@ fn notify_hyprland_log(msg: &str, is_critical: bool) {
     }
 }
 
-pub enum HyprEvent {
-    Workspace(i32),
-    ActiveWindow(WindowEventData),
-}
-
 pub type HyprCallbackId = u32;
 pub type HyprCallback = Box<dyn 'static + FnMut(&HyprGlobalData)>;
 
@@ -28,20 +23,20 @@ pub type HyprCallback = Box<dyn 'static + FnMut(&HyprGlobalData)>;
 pub struct HyprGlobalData {
     pub max_workspace: i32,
     pub current_workspace: i32,
-    pub last_workspace: i32,
+    pub prev_workspace: i32,
 }
 impl HyprGlobalData {
     fn new() -> Self {
         let mut s = Self {
             max_workspace: 0,
             current_workspace: 0,
-            last_workspace: 0,
+            prev_workspace: 0,
         };
         s.reload_max_worksapce();
         s
     }
     fn move_current(&mut self, id: i32) {
-        self.last_workspace = self.current_workspace;
+        self.prev_workspace = self.current_workspace;
         self.current_workspace = id;
     }
     fn reload_max_worksapce(&mut self) {
@@ -107,14 +102,9 @@ impl HyprListenerCtx {
                     call = true;
                 }
             }
-            Signal::Event(e) => {
-                match e {
-                    HyprEvent::Workspace(s) => {
-                        self.data.move_current(s);
-                        call = true;
-                    }
-                    HyprEvent::ActiveWindow(_) => {}
-                };
+            Signal::Change(id) => {
+                self.data.move_current(id);
+                call = true;
             }
             Signal::Destroy(id) => {
                 if self.data.max_workspace == id {
@@ -138,7 +128,6 @@ unsafe impl Sync for HyprListenerCtx {}
 
 static mut GLOBAL_HYPR_LISTENER_CTX: Option<HyprListenerCtx> = None;
 
-// fn get_hypr_listener() -> MutexGuard<'static, HyprListenerCtx> {
 fn get_hypr_listener() -> &'static mut HyprListenerCtx {
     unsafe {
         if GLOBAL_HYPR_LISTENER_CTX.is_none() {
@@ -160,10 +149,21 @@ impl WorkspaceIDToInt for WorkspaceType {
     }
 }
 
+pub fn register_hypr_event_callback(
+    cb: impl FnMut(&HyprGlobalData) + 'static,
+) -> (HyprCallbackId, HyprGlobalData) {
+    let hypr = get_hypr_listener();
+    (hypr.add_cb(Box::new(cb)), hypr.data)
+}
+
+pub fn unregister_hypr_event_callback(id: HyprCallbackId) {
+    get_hypr_listener().remove_cb(id)
+}
+
 enum Signal {
     Add(i32),
     Destroy(i32),
-    Event(HyprEvent),
+    Change(i32),
 }
 
 pub fn init_hyprland_listener() {
@@ -185,7 +185,7 @@ pub fn init_hyprland_listener() {
                 match id {
                     Ok(int) => {
                         // ignore result
-                        let _ = s.send_blocking(Signal::Event(HyprEvent::Workspace(int)));
+                        let _ = s.send_blocking(Signal::Change(int));
                     }
                     Err(e) => notify_hyprland_log(
                         format!("Fail to parse workspace id: {e}").as_str(),
@@ -225,7 +225,7 @@ pub fn init_hyprland_listener() {
                     match id {
                         Ok(int) => {
                             // ignore result
-                            let _ = s.send_blocking(Signal::Event(HyprEvent::Workspace(int)));
+                            let _ = s.send_blocking(Signal::Change(int));
                         }
                         Err(e) => notify_hyprland_log(
                             format!("Fail to parse workspace id: {e}").as_str(),
@@ -255,17 +255,6 @@ pub fn init_hyprland_listener() {
 
         log::info!("hyprland workspace listener stopped");
     });
-}
-
-pub fn register_hypr_event_callback(
-    cb: impl FnMut(&HyprGlobalData) + 'static,
-) -> (HyprCallbackId, HyprGlobalData) {
-    let hypr = get_hypr_listener();
-    (hypr.add_cb(Box::new(cb)), hypr.data)
-}
-
-pub fn unregister_hypr_event_callback(id: HyprCallbackId) {
-    get_hypr_listener().remove_cb(id)
 }
 
 pub fn change_to_workspace(id: i32) {

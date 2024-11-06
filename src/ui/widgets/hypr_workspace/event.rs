@@ -1,4 +1,4 @@
-use std::cell::Cell;
+use std::cell::RefCell;
 use std::rc::Rc;
 
 use gtk::prelude::WidgetExt;
@@ -12,13 +12,12 @@ use crate::ui::draws::{
     transition_state::TransitionStateRc,
 };
 
-use super::draw::DrawData;
+use super::draw::HoverData;
 
 pub fn setup_event(
     pop_ts: &TransitionStateRc,
     darea: &DrawingArea,
-    workspace_draw_data: &Rc<Cell<DrawData>>,
-    hover_id: &Rc<Cell<isize>>,
+    hover_data: &Rc<RefCell<HoverData>>,
 ) -> MouseStateRc {
     let mouse_state = new_mouse_state(darea, MouseState::new(true, true, true, pop_ts.clone()));
 
@@ -26,44 +25,34 @@ pub fn setup_event(
         #[weak]
         darea,
         #[weak]
-        workspace_draw_data,
-        #[weak]
-        hover_id,
+        hover_data,
         move |e| {
-            fn get_pos(workspace_draw_data: &Rc<Cell<DrawData>>, pos: (f64, f64)) -> isize {
-                unsafe {
-                    workspace_draw_data
-                        .as_ptr()
-                        .as_ref()
-                        .unwrap()
-                        .match_workspace(pos)
-                        + 1
-                }
-            }
             match e {
                 MouseEvent::Press(_, _) => return,
-                MouseEvent::Release(pos, key) => {
+                MouseEvent::Release(_, key) => {
                     if key == BUTTON_PRIMARY {
-                        let pos = get_pos(&workspace_draw_data, pos);
+                        let id = hover_data.borrow().hover_id;
                         // set workspace
-                        if pos > 0 {
-                            change_to_workspace(pos as i32);
+                        if id > 0 {
+                            change_to_workspace(id as i32);
                         }
                     };
                 }
                 MouseEvent::Enter(pos) => {
-                    hover_id.set(get_pos(&workspace_draw_data, pos));
+                    hover_data
+                        .borrow_mut()
+                        .update_hover_id_with_mouse_position(pos);
                     darea.queue_draw();
                 }
                 MouseEvent::Motion(pos) => {
-                    let pos = get_pos(&workspace_draw_data, pos);
-                    if hover_id.get() != pos {
-                        hover_id.set(pos);
+                    let mut h = hover_data.borrow_mut();
+                    let old = h.hover_id;
+                    if h.update_hover_id_with_mouse_position(pos) != old {
                         darea.queue_draw();
-                    };
+                    }
                 }
                 MouseEvent::Leave => {
-                    hover_id.set(-1);
+                    hover_data.borrow_mut().force_update_hover_id(-1);
                     darea.queue_draw();
                 }
                 _ => {
