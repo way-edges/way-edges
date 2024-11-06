@@ -18,13 +18,11 @@ use tokio::net::UnixStream;
 
 use crate::{
     activate::{self, GroupCtx},
-    config,
-    init_file_monitor,
+    config, init_file_monitor,
     ipc_command::{
         CommandBody, IPCCommand, IPC_COMMAND_ADD, IPC_COMMAND_QUIT, IPC_COMMAND_REMOVE,
         IPC_COMMAND_TOGGLE_PIN,
     },
-    // notify_send, start_watch_file, stop_watch_file,
     notify_send,
 };
 
@@ -32,47 +30,12 @@ use crate::{
 // pub const LOCK_FILE: &str = "way-edges.lock";
 pub const SOCK_FILE: &str = "/tmp/way-edges/way-edges.sock";
 
-// fn init_app(app: &Application, reload_signal_receiver: &Receiver<i32>) {
-fn init_group(app: &Application, name: &str) -> Result<Box<dyn GroupCtx>, String> {
-    // stop_watch_file();
-    let conf = config::get_config(Some(name));
-    // start_watch_file();
-    let res = conf.and_then(|vc| {
-        debug!("Parsed Config: {vc:?}");
-        {
-            #[cfg(feature = "hyprland")]
-            {
-                use activate::hyprland::Hyprland;
-                Hyprland::init_window(app, cfgs)
-            }
-            #[cfg(not(feature = "hyprland"))]
-            {
-                use activate::default::Default;
-                Default::init_window(app, vc)
-            }
-        }
-    });
-    match res {
-        Ok(v) => Ok(Box::new(v)),
-        Err(e) => {
-            log::error!("{e}");
-            crate::notify_send("Way-edges app error", &e, true);
-            Err(e)
-        }
-    }
-}
-
-fn on_active(app: &Application) {
-    if let Err(e) = activate::init_monitor() {
-        let msg = format!("Failed to init monitor: {e}");
-        notify_send("Way-edges monitor", &msg, true);
-        app.quit();
-    };
-}
-
+// used when ipc input
 struct GroupMapCtx {
     map: GroupMap,
     app: Option<WeakRef<Application>>,
+
+    // keep reference alive
     hold: Option<ApplicationHoldGuard>,
 }
 impl GroupMapCtx {
@@ -93,7 +56,7 @@ impl GroupMapCtx {
     fn add_group(&mut self, name: &str) {
         if !self.map.contains_key(name) {
             if let Some(app) = &self.app {
-                let s = init_group(&app.upgrade().unwrap(), name).ok();
+                let s = GroupMapCtx::init_group(&app.upgrade().unwrap(), name).ok();
                 self.map.insert(name.to_string(), s);
             } else {
                 self.map.insert(name.to_string(), None);
@@ -112,7 +75,7 @@ impl GroupMapCtx {
                 if let Some(mut v) = v.take() {
                     v.close()
                 }
-                let a = init_group(&app, k.as_str());
+                let a = GroupMapCtx::init_group(&app, k.as_str());
                 *v = a.ok();
             });
         }
@@ -137,58 +100,76 @@ impl GroupMapCtx {
             }
         }
     }
+
+    fn init_group(app: &Application, name: &str) -> Result<Box<dyn GroupCtx>, String> {
+        let conf = config::get_config(Some(name));
+        let res = conf.and_then(|vc| {
+            debug!("Parsed Config: {vc:?}");
+            use activate::default::Default;
+            Default::init_window(app, vc)
+        });
+        match res {
+            Ok(v) => Ok(Box::new(v)),
+            Err(e) => {
+                log::error!("{e}");
+                crate::notify_send("Way-edges app error", &e, true);
+                Err(e)
+            }
+        }
+    }
 }
 
 type GroupMap = HashMap<String, Option<Box<dyn GroupCtx>>>;
 type GroupMapCtxRc = Rc<RefCell<GroupMapCtx>>;
+
 fn new_app() -> (GroupMapCtxRc, Application) {
     // that flag is for command line arguments
     let app = gtk::Application::new(Some("com.ogios.way-edges"), ApplicationFlags::HANDLES_OPEN);
-    // gtk::Application::new(None::<String>, ApplicationFlags::HANDLES_OPEN);
 
     let group_map = Rc::new(RefCell::new(GroupMapCtx::new()));
 
     let is_already_active = Rc::new(Cell::new(false));
 
+    let on_app_start = glib::clone!(
+        #[weak]
+        group_map,
+        #[to_owned]
+        is_already_active,
+        move |app: &gtk::Application| {
+            if is_already_active.get() {
+                notify_send(
+                    "Way-edges",
+                    "A way-edges daemon already running, something trys to run one more",
+                    true,
+                );
+            } else {
+                is_already_active.set(true);
+
+                debug!("connect open or activate");
+
+                // monitor
+                if let Err(e) = activate::init_monitor() {
+                    let msg = format!("Failed to init monitor: {e}");
+                    notify_send("Way-edges monitor", &msg, true);
+                    app.quit();
+                };
+
+                // group map
+                group_map.borrow_mut().inited(app);
+            }
+        }
+    );
+
     // when args passed, `open` will be signaled instead of `activate`
     app.connect_open(glib::clone!(
-        #[weak]
-        group_map,
         #[strong]
-        is_already_active,
+        on_app_start,
         move |app, _, _| {
-            if is_already_active.get() {
-                notify_send(
-                    "Way-edges",
-                    "A way-edges daemon already running, something trys to run one more",
-                    true,
-                );
-            } else {
-                is_already_active.set(true);
-                debug!("connect open");
-                on_active(app);
-                group_map.borrow_mut().inited(app);
-            }
+            on_app_start(app);
         }
     ));
-    app.connect_activate(glib::clone!(
-        #[weak]
-        group_map,
-        move |app| {
-            if is_already_active.get() {
-                notify_send(
-                    "Way-edges",
-                    "A way-edges daemon already running, something trys to run one more",
-                    true,
-                );
-            } else {
-                is_already_active.set(true);
-                debug!("connect activate");
-                on_active(app);
-                group_map.borrow_mut().inited(app);
-            }
-        }
-    ));
+    app.connect_activate(on_app_start);
+
     (group_map, app)
 }
 
@@ -207,6 +188,7 @@ pub async fn daemon() {
     // normally till here it will be 10-12 threads already (1 + 2 + 2 + <glib/gio additional threads>)
     let glib_mainloop = thread::spawn(move || {
         let (group_ctx, app) = new_app();
+
         glib::spawn_future_local(glib::clone!(
             #[weak]
             group_ctx,
@@ -220,6 +202,7 @@ pub async fn daemon() {
                 notify_send("Way-edges file watcher", "watcher exited", true);
             }
         ));
+
         glib::spawn_future_local(async move {
             while let Ok(command) = ipc_command_receiver.recv().await {
                 log::debug!("recv ipc command: {command:?}");
@@ -239,6 +222,7 @@ pub async fn daemon() {
                 }
             }
         });
+
         if app.run_with_args::<String>(&[]).value() == 1 {
             notify_send(
                 "Way-edges",
@@ -246,6 +230,7 @@ pub async fn daemon() {
                 true,
             );
         };
+
         log::info!("Application exit");
     });
 

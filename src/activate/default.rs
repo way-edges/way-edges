@@ -1,5 +1,3 @@
-// #![cfg(not(feature = "hyprland"))]
-
 use super::{
     calculate_config_relative, create_widgets, find_monitor, get_monitors, WidgetItem, WidgetMap,
 };

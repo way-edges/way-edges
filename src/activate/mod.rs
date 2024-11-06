@@ -1,8 +1,5 @@
 pub mod default;
 
-#[cfg(feature = "hyprland")]
-pub mod hyprland;
-
 use std::collections::HashMap;
 
 use crate::config::Config;

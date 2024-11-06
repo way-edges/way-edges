@@ -21,7 +21,6 @@ hyprland = { version = "0.4.0-beta.1", default-features = false, features = [
   "listener",
   "unsafe-impl",
   "async-lite",
-  # "silent",
 ] }
 educe = { version = "0.6.0", default-features = false, features = ["Debug"] }
 regex = "1.10"
@@ -48,12 +47,6 @@ notify-debouncer-full = "0.4.0"
 [dependencies.way-edges-derive]
 path = "way-edges-derive"
 
-
-[features]
-default = ["normal"]
-# hyprland = ["dep:hyprland"]
-hyprland = []
-normal = []
 
 [profile.release]
 opt-level = 3
