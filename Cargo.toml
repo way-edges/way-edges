@@ -43,6 +43,9 @@ lazy_static = "1.5.0"
 libpulse-binding = "2.28"
 libpulse-glib-binding = "2.28.1"
 notify-debouncer-full = "0.4.0"
+smithay-client-toolkit = { version = "0.19.2", default-features = false, features = [
+  "calloop",
+] }
 
 [dependencies.way-edges-derive]
 path = "way-edges-derive"
@@ -52,5 +55,4 @@ path = "way-edges-derive"
 opt-level = 3
 lto = true
 codegen-units = 3
-# lto = "fat"
-strip = true # Strip symbols from binary*
+strip = true      # Strip symbols from binary*
