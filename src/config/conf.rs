@@ -1,18 +1,12 @@
 use crate::activate::monitor::MonitorSpecifier;
 use educe::Educe;
 use gtk4_layer_shell::{Edge, Layer};
-use serde::Deserialize;
-use std::str::FromStr;
+use serde::{Deserialize, Deserializer};
+use std::{collections::HashMap, str::FromStr};
 
 use super::widgets::{
-    // button::BtnConfig, pulseaudio::PAConfig, slide::SlideConfig, speaker::SpeakerConfig,
-    backlight::BLConfig,
-    button::BtnConfig,
-    hypr_workspace::HyprWorkspaceConfig,
-    pulseaudio::PAConfig,
-    ring::RingConfig,
-    slide::SlideConfig,
-    text::TextConfig,
+    self, backlight::BLConfig, button::BtnConfig, hypr_workspace::HyprWorkspaceConfig,
+    pulseaudio::PAConfig, ring::RingConfig, slide::SlideConfig, text::TextConfig,
     wrapbox::BoxConfig,
 };
 
@@ -69,24 +63,10 @@ impl<'de> Deserialize<'de> for NumOrRelative {
                 lazy_static::lazy_static! {
                     static ref re: regex::Regex = regex::Regex::new(r"^(\d+(\.\d+)?)%\s*(.*)$").unwrap();
                 }
-                // let re = regex::Regex::new(r"^(\d+(\.\d+)?)%\s*(.*)$").unwrap();
 
                 if let Some(captures) = re.captures(v) {
                     let percentage_str = captures.get(1).map_or("", |m| m.as_str());
                     let percentage = f64::from_str(percentage_str).map_err(E::custom)?;
-
-                    // // description
-                    // let description = captures
-                    //     .get(3)
-                    //     .map(|m| {
-                    //         let desc = m.as_str().trim();
-                    //         if desc.is_empty() {
-                    //             None
-                    //         } else {
-                    //             Some(desc.to_string())
-                    //         }
-                    //     })
-                    //     .flatten();
 
                     Ok(NumOrRelative::Relative(percentage * 0.01))
                 } else {
@@ -150,7 +130,7 @@ impl NumOrRelative {
     }
 }
 
-#[derive(Educe)]
+#[derive(Educe, Clone)]
 #[educe(Debug)]
 pub enum Widget {
     Btn(Box<BtnConfig>),
@@ -163,21 +143,233 @@ pub enum Widget {
     HyprWorkspace(Box<HyprWorkspaceConfig>),
 }
 
-#[derive(Educe)]
+impl<'de> Deserialize<'de> for Widget {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let raw = serde_jsonrc::value::Value::deserialize(deserializer)?;
+
+        if !raw.is_object() {
+            return Err(serde::de::Error::custom("Widget must be object"));
+        }
+        let t = raw
+            .get("type")
+            .ok_or(serde::de::Error::missing_field("type"))?
+            .as_str()
+            .ok_or(serde::de::Error::custom("widget type must be string"))?;
+
+        match t {
+            widgets::button::NAME => widgets::button::visit_config(raw),
+            widgets::slide::NAME => widgets::slide::visit_config(raw),
+            widgets::pulseaudio::NAME_SOUCE | widgets::pulseaudio::NAME_SINK => {
+                widgets::pulseaudio::visit_config(raw)
+            }
+            widgets::backlight::NAME => widgets::backlight::visit_config(raw),
+            widgets::wrapbox::NAME => widgets::wrapbox::visit_config(raw),
+            widgets::ring::NAME => widgets::ring::visit_config(raw),
+            widgets::text::NAME => widgets::text::visit_config(raw),
+            widgets::hypr_workspace::NAME => widgets::hypr_workspace::visit_config(raw),
+            _ => Err(format!("unknown widget type: {t}")),
+        }
+        .map_err(|e| serde::de::Error::custom(e))
+    }
+}
+
+#[derive(Educe, Deserialize, Clone)]
 #[educe(Debug)]
 pub struct Config {
+    #[serde(default = "dt_edge")]
+    #[serde(deserialize_with = "deserialize_edge")]
     pub edge: Edge,
-    pub position: Option<Edge>,
-    pub layer: Layer,
-    pub monitor: MonitorSpecifier,
-    pub margins: Vec<(Edge, NumOrRelative)>,
 
+    #[serde(deserialize_with = "deserialize_optional_edge")]
+    pub position: Option<Edge>,
+
+    #[serde(default = "dt_layer")]
+    #[serde(deserialize_with = "deserialize_layer")]
+    pub layer: Layer,
+
+    #[serde(deserialize_with = "deserialize_margins")]
+    pub margins: HashMap<Edge, NumOrRelative>,
+
+    // #[serde(deserialize_with = "common::event_map_translate")]
+    pub monitor: MonitorSpecifier,
     pub name: String,
     pub widget: Option<Widget>,
+}
+
+fn dt_edge() -> Edge {
+    Edge::Left
+}
+fn dt_layer() -> Layer {
+    Layer::Top
 }
 
 impl Drop for Config {
     fn drop(&mut self) {
         log::debug!("dropping config: {self:?}")
     }
+}
+
+fn match_edge(edge: &str) -> Option<Edge> {
+    Some(match edge {
+        "top" => Edge::Top,
+        "left" => Edge::Left,
+        "bottom" => Edge::Bottom,
+        "right" => Edge::Right,
+        _ => return None,
+    })
+}
+
+fn deserialize_optional_edge<'de, D>(d: D) -> Result<Option<Edge>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    struct EventMapVisitor;
+    impl<'de> serde::de::Visitor<'de> for EventMapVisitor {
+        type Value = Option<Edge>;
+
+        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            formatter.write_str("edge only support: left, right, top, bottom")
+        }
+
+        fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            if let Some(edge) = match_edge(v) {
+                Ok(Some(edge))
+            } else {
+                Err(serde::de::Error::invalid_value(
+                    serde::de::Unexpected::Str(v),
+                    &self,
+                ))
+            }
+        }
+
+        fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            self.visit_str(v.as_str())
+        }
+    }
+
+    d.deserialize_any(EventMapVisitor)
+}
+
+fn deserialize_edge<'de, D>(d: D) -> Result<Edge, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    if let Some(edge) = deserialize_optional_edge(d)? {
+        Ok(edge)
+    } else {
+        Err(serde::de::Error::missing_field("edge is not optional"))
+    }
+}
+
+fn deserialize_layer<'de, D>(d: D) -> Result<Layer, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    struct EventMapVisitor;
+    impl<'de> serde::de::Visitor<'de> for EventMapVisitor {
+        type Value = Layer;
+
+        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            formatter.write_str("layer only support: background, bottom, top, overlay")
+        }
+
+        fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            let edge = match v {
+                "background" => Layer::Background,
+                "bottom" => Layer::Bottom,
+                "top" => Layer::Top,
+                "overlay" => Layer::Overlay,
+                _ => {
+                    return Err(serde::de::Error::invalid_value(
+                        serde::de::Unexpected::Str(v),
+                        &self,
+                    ));
+                }
+            };
+            Ok(edge)
+        }
+
+        fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            self.visit_str(v.as_str())
+        }
+    }
+
+    d.deserialize_any(EventMapVisitor)
+}
+
+fn deserialize_margins<'de, D>(d: D) -> Result<HashMap<Edge, NumOrRelative>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    struct EventMapVisitor;
+    impl<'de> serde::de::Visitor<'de> for EventMapVisitor {
+        type Value = HashMap<Edge, NumOrRelative>;
+
+        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            formatter.write_str("margins for `left/right/top/bottom` only support: int or str")
+        }
+
+        fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
+        where
+            A: serde::de::MapAccess<'de>,
+        {
+            let mut v = HashMap::new();
+            while let Some((key, value)) = map.next_entry::<&str, _>()? {
+                let Some(edge) = match_edge(key) else {
+                    return Err(serde::de::Error::invalid_value(
+                        serde::de::Unexpected::Str(key),
+                        &self,
+                    ));
+                };
+                v.insert(edge, value);
+            }
+            Ok(v)
+        }
+    }
+
+    d.deserialize_any(EventMapVisitor)
+}
+
+#[derive(Deserialize, Debug, Clone)]
+pub struct Group {
+    #[serde(default)]
+    pub name: String,
+    #[serde(default)]
+    pub widgets: Vec<Config>,
+}
+#[derive(Deserialize, Debug)]
+pub struct Root {
+    #[serde(default)]
+    pub groups: Vec<Group>,
+}
+
+impl Root {
+    pub fn take_group(&mut self, name: &str) -> Option<Group> {
+        self.groups.iter().find(|g| g.name == name).cloned()j
+    }
+    pub fn get_group(&self, name: &str) -> Option<&Group> {
+        self.groups.iter().find(|g| g.name == name)
+    }
+    pub fn get_first(&self) -> Option<&Group> {
+        self.groups.first()
+    }
+}
+
+pub fn parse_config(data: &str) -> Result<Root, String> {
+    serde_jsonrc::from_str(data).map_err(|e| format!("JSON parse error: {e}"))
 }

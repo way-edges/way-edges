@@ -9,7 +9,7 @@ use way_edges_derive::GetSize;
 
 pub const NAME: &str = "btn";
 
-#[derive(Educe, Deserialize, GetSize)]
+#[derive(Educe, Deserialize, GetSize, Clone)]
 #[educe(Debug)]
 pub struct BtnConfig {
     pub width: NumOrRelative,

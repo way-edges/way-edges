@@ -1,5 +1,5 @@
 pub mod conf;
-pub mod parse;
+// pub mod parse;
 pub mod raw;
 pub mod widgets;
 
@@ -30,7 +30,7 @@ pub fn get_config_path() -> &'static Path {
     b
 }
 
-pub fn get_config_file() -> Result<String, String> {
+pub fn get_config_file_content() -> Result<String, String> {
     let p = get_config_path();
     let mut f = match OpenOptions::new()
         // .create(true)
@@ -50,11 +50,16 @@ pub fn get_config_file() -> Result<String, String> {
 }
 
 pub fn get_config_raw() -> Result<raw::RawRoot, String> {
-    let s = get_config_file()?;
+    let s = get_config_file_content()?;
     raw::RawRoot::from_str(&s)
 }
 
-pub fn get_config(group_name: Option<&str>) -> Result<GroupConfig, String> {
-    let s = get_config_file()?;
-    parse::parse_config(&s, group_name)
+pub fn get_config_by_group(group_name: Option<&str>) -> Result<Option<Group>, String> {
+    let s = get_config_file_content()?;
+    let root = conf::parse_config(&s)?;
+    if let Some(group_name) = group_name {
+        Ok(root.get_group(group_name))
+    } else {
+        Ok(root.get_first())
+    }
 }
