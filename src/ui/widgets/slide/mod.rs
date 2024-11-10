@@ -8,7 +8,7 @@ use std::{
 };
 
 use crate::{
-    activate::get_monitor_context,
+    activate::monitor::get_monitor_context,
     config::{widgets::slide::SlideConfig, Config},
     ui::{
         draws::{mouse_state::MouseState, transition_state::TransitionStateRc},

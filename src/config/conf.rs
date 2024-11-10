@@ -1,4 +1,4 @@
-use crate::activate::MonitorSpecifier;
+use crate::activate::monitor::MonitorSpecifier;
 use educe::Educe;
 use gtk4_layer_shell::{Edge, Layer};
 use serde::Deserialize;

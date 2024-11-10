@@ -4,7 +4,7 @@ mod pre_draw;
 
 use std::time::Duration;
 
-use crate::activate::get_monitor_context;
+use crate::activate::monitor::get_monitor_context;
 use crate::config::{widgets::button::BtnConfig, Config, NumOrRelative};
 use crate::ui::draws::transition_state::TransitionStateList;
 use crate::ui::{WidgetExpose, WidgetExposePtr};
