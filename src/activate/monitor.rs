@@ -1,6 +1,7 @@
 use gio::prelude::*;
 use gtk::gdk::Monitor;
 use gtk::prelude::{DisplayExt, MonitorExt};
+use serde::Deserialize;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, AtomicPtr};
 
@@ -8,7 +9,7 @@ use crate::notify_send;
 
 use super::GroupMapCtxRc;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Deserialize)]
 pub enum MonitorSpecifier {
     ID(usize),
     Name(String),

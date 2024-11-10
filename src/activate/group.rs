@@ -79,7 +79,7 @@ impl GroupMapCtx {
     }
 
     fn init_group(app: &Application, name: &str) -> Result<WidgetMap, String> {
-        let conf = config::get_config(Some(name));
+        let conf = config::get_config_by_group(Some(name));
         let res = conf.and_then(|vc| {
             debug!("Parsed Config: {vc:?}");
             WidgetMap::init_window(app, vc)
