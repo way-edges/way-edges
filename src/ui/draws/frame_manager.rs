@@ -1,48 +1,13 @@
 use std::cell::{Cell, RefCell};
-use std::future::Future;
-use std::pin::Pin;
 use std::rc::Rc;
-use std::sync::OnceLock;
-use std::thread;
 use std::time::{Duration, Instant};
 
 use gtk::glib;
 use tokio::sync::oneshot::error::TryRecvError;
 
+use crate::get_main_runtime_handle;
+
 use super::transition_state::TransitionStateList;
-
-type BoxFuture = Pin<Box<dyn Future<Output = ()> + Send>>;
-type FutureSender = async_channel::Sender<BoxFuture>;
-
-fn get_future_sender() -> &'static FutureSender {
-    static FUTURE_SENDER: OnceLock<FutureSender> = OnceLock::new();
-
-    FUTURE_SENDER.get_or_init(|| {
-        let (started_signal_sender, started_signal_receiver) = tokio::sync::oneshot::channel();
-        let (future_sender, future_receiver) = async_channel::bounded::<BoxFuture>(1);
-
-        // NOTE: one async thread created just for sending signals
-        thread::spawn(move || {
-            let rt = tokio::runtime::Builder::new_current_thread()
-                .enable_all()
-                .build()
-                .unwrap();
-
-            let spawn_future = |fut: BoxFuture| {
-                rt.spawn(fut);
-            };
-            rt.block_on(async move {
-                started_signal_sender.send(()).unwrap();
-
-                while let Ok(fut) = future_receiver.recv().await {
-                    spawn_future(fut);
-                }
-            });
-        });
-        started_signal_receiver.blocking_recv().unwrap();
-        future_sender
-    })
-}
 
 fn add_frame_manage_future(
     interval: Duration,
@@ -52,6 +17,7 @@ fn add_frame_manage_future(
 ) {
     let (signal_sender, signal_receiver) = async_channel::bounded(1);
     let (stop_sender, mut stop_receiver) = tokio::sync::oneshot::channel::<()>();
+
     let fut = async move {
         while let Err(TryRecvError::Empty) = stop_receiver.try_recv() {
             let frame_start = Instant::now();
@@ -67,7 +33,11 @@ fn add_frame_manage_future(
             }
         }
     };
-    get_future_sender().send_blocking(Box::pin(fut)).unwrap();
+
+    let handle = get_main_runtime_handle();
+    handle.spawn(fut);
+
+    // get_future_sender().send_blocking(Box::pin(fut)).unwrap();
     (stop_sender, signal_receiver)
 }
 
