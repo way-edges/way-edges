@@ -54,15 +54,20 @@ fn new_app() -> (GroupMapCtxRc, Application) {
 
                 debug!("connect open or activate");
 
+                // group map
+                group_map.borrow_mut().init_with_app(app);
+
                 // monitor
-                if let Err(e) = activate::init_monitor() {
+                if let Err(e) = activate::init_monitor(group_map.clone()) {
                     let msg = format!("Failed to init monitor: {e}");
                     notify_send("Way-edges monitor", &msg, true);
                     app.quit();
                 };
 
-                // group map
-                group_map.borrow_mut().inited(app);
+                let mut group_map_mut = group_map.borrow_mut();
+                if !group_map_mut.map.is_empty() {
+                    group_map_mut.reload();
+                }
             }
         }
     );

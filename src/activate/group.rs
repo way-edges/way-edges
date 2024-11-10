@@ -27,12 +27,9 @@ impl GroupMapCtx {
             hold: None,
         }
     }
-    pub fn inited(&mut self, app: &Application) {
+    pub fn init_with_app(&mut self, app: &Application) {
         self.hold = Some(app.hold());
         self.app = Some(Downgrade::downgrade(app));
-        if !self.map.is_empty() {
-            self.reload();
-        }
     }
     pub fn add_group(&mut self, name: &str) {
         if !self.map.contains_key(name) {
