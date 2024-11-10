@@ -1,6 +1,5 @@
 use std::{
     cell::{Cell, RefCell},
-    collections::HashMap,
     io,
     path::Path,
     rc::Rc,
@@ -8,17 +7,17 @@ use std::{
 };
 
 use gio::{
-    glib::{self, clone::Downgrade, WeakRef},
+    glib::{self},
     prelude::{ApplicationExt, ApplicationExtManual},
-    ApplicationFlags, ApplicationHoldGuard,
+    ApplicationFlags,
 };
 use gtk::Application;
 use log::debug;
 use tokio::net::UnixStream;
 
 use crate::{
-    activate::{self, GroupCtx},
-    config, init_file_monitor,
+    activate::{self, GroupMapCtx, GroupMapCtxRc},
+    init_file_monitor,
     ipc_command::{
         CommandBody, IPCCommand, IPC_COMMAND_ADD, IPC_COMMAND_QUIT, IPC_COMMAND_REMOVE,
         IPC_COMMAND_TOGGLE_PIN,
@@ -29,98 +28,6 @@ use crate::{
 // pub const TEMP_DIR: &str = "/tmp/way-edges";
 // pub const LOCK_FILE: &str = "way-edges.lock";
 pub const SOCK_FILE: &str = "/tmp/way-edges/way-edges.sock";
-
-// used when ipc input
-struct GroupMapCtx {
-    map: GroupMap,
-    app: Option<WeakRef<Application>>,
-
-    // keep reference alive
-    hold: Option<ApplicationHoldGuard>,
-}
-impl GroupMapCtx {
-    fn new() -> Self {
-        Self {
-            map: HashMap::new(),
-            app: None,
-            hold: None,
-        }
-    }
-    fn inited(&mut self, app: &Application) {
-        self.hold = Some(app.hold());
-        self.app = Some(Downgrade::downgrade(app));
-        if !self.map.is_empty() {
-            self.reload();
-        }
-    }
-    fn add_group(&mut self, name: &str) {
-        if !self.map.contains_key(name) {
-            if let Some(app) = &self.app {
-                let s = GroupMapCtx::init_group(&app.upgrade().unwrap(), name).ok();
-                self.map.insert(name.to_string(), s);
-            } else {
-                self.map.insert(name.to_string(), None);
-            }
-        }
-    }
-    fn rm_group(&mut self, name: &str) {
-        if let Some(Some(mut v)) = self.map.remove(name) {
-            v.close()
-        }
-    }
-    fn reload(&mut self) {
-        if let Some(app) = &self.app {
-            let app = app.upgrade().unwrap();
-            self.map.iter_mut().for_each(|(k, v)| {
-                if let Some(mut v) = v.take() {
-                    v.close()
-                }
-                let a = GroupMapCtx::init_group(&app, k.as_str());
-                *v = a.ok();
-            });
-        }
-    }
-    fn dispose(&mut self) {
-        self.map.iter_mut().for_each(|(_, v)| {
-            if let Some(v) = v.as_mut() {
-                v.close()
-            }
-        });
-        if let Some(app) = &self.app {
-            if let Some(app) = app.upgrade() {
-                app.quit()
-            }
-        }
-        drop(self.hold.take());
-    }
-    fn toggle_pin(&mut self, gn: &str, wn: &str) {
-        if let Some(Some(v)) = self.map.get_mut(gn) {
-            if let Some(v) = v.widget_map().get_mut(wn) {
-                v.widget_expose.toggle_pin()
-            }
-        }
-    }
-
-    fn init_group(app: &Application, name: &str) -> Result<Box<dyn GroupCtx>, String> {
-        let conf = config::get_config(Some(name));
-        let res = conf.and_then(|vc| {
-            debug!("Parsed Config: {vc:?}");
-            use activate::default::Default;
-            Default::init_window(app, vc)
-        });
-        match res {
-            Ok(v) => Ok(Box::new(v)),
-            Err(e) => {
-                log::error!("{e}");
-                crate::notify_send("Way-edges app error", &e, true);
-                Err(e)
-            }
-        }
-    }
-}
-
-type GroupMap = HashMap<String, Option<Box<dyn GroupCtx>>>;
-type GroupMapCtxRc = Rc<RefCell<GroupMapCtx>>;
 
 fn new_app() -> (GroupMapCtxRc, Application) {
     // that flag is for command line arguments
@@ -183,9 +90,6 @@ pub async fn daemon() {
 
     let (ipc_command_sender, ipc_command_receiver) = async_channel::unbounded::<IPCCommand>();
 
-    // this is where glib mainloop will be
-    // NOTE: glib here 2 threads, also glib it self needs lots of other thread
-    // normally till here it will be 10-12 threads already (1 + 2 + 2 + <glib/gio additional threads>)
     let glib_mainloop = thread::spawn(move || {
         let (group_ctx, app) = new_app();
 

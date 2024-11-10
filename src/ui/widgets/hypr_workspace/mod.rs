@@ -16,7 +16,7 @@ use gtk::{
 };
 
 use crate::{
-    activate::get_monitor_context,
+    activate::monitor::get_monitor_context,
     config::widgets::hypr_workspace::HyprWorkspaceConfig,
     plug::hypr_workspace::init_hyprland_listener,
     ui::{

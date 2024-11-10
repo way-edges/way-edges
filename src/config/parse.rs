@@ -1,4 +1,4 @@
-use crate::activate::MonitorSpecifier;
+use crate::activate::monitor::MonitorSpecifier;
 
 use super::conf::*;
 use super::raw::*;
