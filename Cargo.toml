@@ -54,5 +54,5 @@ path = "way-edges-derive"
 [profile.release]
 opt-level = 3
 lto = true
-codegen-units = 3
+codegen-units = 4
 strip = true      # Strip symbols from binary*
