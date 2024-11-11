@@ -10,9 +10,15 @@ use crate::notify_send;
 use super::GroupMapCtxRc;
 
 #[derive(Debug, Clone, Deserialize)]
+#[serde(untagged)]
 pub enum MonitorSpecifier {
     ID(usize),
     Name(String),
+}
+impl Default for MonitorSpecifier {
+    fn default() -> Self {
+        Self::ID(0)
+    }
 }
 
 pub struct MonitorCtx {
