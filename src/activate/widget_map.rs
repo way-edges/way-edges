@@ -1,6 +1,3 @@
-use std::collections::HashMap;
-use std::ops::{Deref, DerefMut};
-
 use gtk::prelude::{GtkWindowExt, MonitorExt};
 use gtk4_layer_shell::{Edge, LayerShell};
 
@@ -19,7 +16,7 @@ fn calculate_config_relative(cfg: &mut Config, max_size_raw: (i32, i32)) -> Resu
     Ok(())
 }
 
-type _WidgetHashMap = HashMap<String, WidgetCtx>;
+type _WidgetHashMap = Vec<(String, WidgetCtx)>;
 
 pub struct WidgetMap(_WidgetHashMap);
 
@@ -56,21 +53,16 @@ impl WidgetMap {
     pub fn close(&mut self) {
         self.0.iter_mut().for_each(|(_, v)| v.close());
     }
+
+    pub fn get_widget(&mut self, name: &str) -> Option<&mut WidgetCtx> {
+        self.0
+            .iter_mut()
+            .find(|(widget_name, _)| name == widget_name)
+            .map(|(_, widget)| widget)
+    }
 }
 impl Drop for WidgetMap {
     fn drop(&mut self) {
         self.close();
-    }
-}
-impl Deref for WidgetMap {
-    // type Target = HashMap<String, WidgetCtx>;
-    type Target = _WidgetHashMap;
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-impl DerefMut for WidgetMap {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
     }
 }
