@@ -72,7 +72,7 @@ impl GroupMapCtx {
     }
     pub fn toggle_pin(&mut self, gn: &str, wn: &str) {
         if let Some(Some(v)) = self.map.get_mut(gn) {
-            if let Some(v) = v.get_mut(wn) {
+            if let Some(v) = v.get_widget(wn) {
                 v.widget_expose.toggle_pin()
             }
         }
