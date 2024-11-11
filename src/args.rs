@@ -28,15 +28,14 @@ fn complete_only_group(current: &std::ffi::OsStr) -> Vec<CompletionCandidate> {
         return vec![];
     };
 
-    let Ok(raw_root) = config::get_config_raw() else {
+    let Ok(root) = config::get_config_root() else {
         return vec![];
     };
 
-    raw_root
-        .groups
+    root.groups
         .iter()
-        .filter(|raw_group| raw_group.name.starts_with(current))
-        .map(|raw_group| CompletionCandidate::new(&raw_group.name))
+        .filter(|group| group.name.starts_with(current))
+        .map(|group| CompletionCandidate::new(&group.name))
         .collect()
 }
 
@@ -45,7 +44,7 @@ fn complete_group_and_widget(current: &std::ffi::OsStr) -> Vec<CompletionCandida
         return vec![];
     };
 
-    let Ok(raw_root) = config::get_config_raw() else {
+    let Ok(raw_root) = config::get_config_root() else {
         return vec![];
     };
 

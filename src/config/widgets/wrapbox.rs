@@ -4,7 +4,7 @@ use gtk::gdk::RGBA;
 use serde::Deserialize;
 use serde_jsonrc::{Map, Value};
 
-use crate::config::{parse::parse_widget, NumOrRelative, Widget};
+use crate::config::{NumOrRelative, Widget};
 
 use super::common::{self, from_value};
 
@@ -102,7 +102,9 @@ pub fn visit_config(d: Value) -> Result<Widget, String> {
                 };
                 let widget = {
                     let wv = v.get("widget").ok_or("widget must be specified")?.clone();
-                    let widget = parse_widget(wv)?;
+                    let widget = serde_jsonrc::from_value(wv)
+                        .map_err(|e| format!("widget parse error {e}"))?;
+                    // let widget = parse_widget(wv)?;
                     match &widget {
                         Widget::Ring(_) => Ok(widget),
                         Widget::Text(_) => Ok(widget),

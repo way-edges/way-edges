@@ -130,7 +130,7 @@ impl NumOrRelative {
     }
 }
 
-#[derive(Educe, Clone)]
+#[derive(Educe)]
 #[educe(Debug)]
 pub enum Widget {
     Btn(Box<BtnConfig>),
@@ -172,17 +172,18 @@ impl<'de> Deserialize<'de> for Widget {
             widgets::hypr_workspace::NAME => widgets::hypr_workspace::visit_config(raw),
             _ => Err(format!("unknown widget type: {t}")),
         }
-        .map_err(|e| serde::de::Error::custom(e))
+        .map_err(serde::de::Error::custom)
     }
 }
 
-#[derive(Educe, Deserialize, Clone)]
+#[derive(Educe, Deserialize)]
 #[educe(Debug)]
-pub struct Config {
+struct ConfigShadow {
     #[serde(default = "dt_edge")]
     #[serde(deserialize_with = "deserialize_edge")]
     pub edge: Edge,
 
+    #[serde(default)]
     #[serde(deserialize_with = "deserialize_optional_edge")]
     pub position: Option<Edge>,
 
@@ -190,11 +191,61 @@ pub struct Config {
     #[serde(deserialize_with = "deserialize_layer")]
     pub layer: Layer,
 
+    #[serde(default)]
     #[serde(deserialize_with = "deserialize_margins")]
     pub margins: HashMap<Edge, NumOrRelative>,
 
-    // #[serde(deserialize_with = "common::event_map_translate")]
+    #[serde(default)]
     pub monitor: MonitorSpecifier,
+    #[serde(default)]
+    pub name: String,
+    pub widget: Option<Widget>,
+}
+
+impl From<ConfigShadow> for Config {
+    fn from(value: ConfigShadow) -> Self {
+        let position;
+        if let Some(pos) = value.position {
+            position = pos
+        } else {
+            position = value.edge
+        }
+        Self {
+            edge: value.edge,
+            position,
+            layer: value.layer,
+            margins: value.margins,
+            monitor: value.monitor,
+            name: value.name,
+            widget: value.widget,
+        }
+    }
+}
+
+#[derive(Educe, Deserialize)]
+#[educe(Debug)]
+#[serde(from = "ConfigShadow")]
+pub struct Config {
+    // #[serde(default = "dt_edge")]
+    // #[serde(deserialize_with = "deserialize_edge")]
+    pub edge: Edge,
+
+    // #[serde(default)]
+    // // #[serde(deserialize_with = "deserialize_optional_edge")]
+    // #[serde(deserialize_with = "deserialize_edge")]
+    pub position: Edge,
+
+    // #[serde(default = "dt_layer")]
+    // #[serde(deserialize_with = "deserialize_layer")]
+    pub layer: Layer,
+
+    // #[serde(default)]
+    // #[serde(deserialize_with = "deserialize_margins")]
+    pub margins: HashMap<Edge, NumOrRelative>,
+
+    // #[serde(default)]
+    pub monitor: MonitorSpecifier,
+    // #[serde(default)]
     pub name: String,
     pub widget: Option<Widget>,
 }
@@ -345,7 +396,7 @@ where
     d.deserialize_any(EventMapVisitor)
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug)]
 pub struct Group {
     #[serde(default)]
     pub name: String,
@@ -360,13 +411,15 @@ pub struct Root {
 
 impl Root {
     pub fn take_group(&mut self, name: &str) -> Option<Group> {
-        self.groups.iter().find(|g| g.name == name).cloned()j
+        let position = self.groups.iter().position(|g| g.name == name)?;
+        Some(self.groups.swap_remove(position))
     }
-    pub fn get_group(&self, name: &str) -> Option<&Group> {
-        self.groups.iter().find(|g| g.name == name)
-    }
-    pub fn get_first(&self) -> Option<&Group> {
-        self.groups.first()
+    pub fn take_first(&mut self) -> Option<Group> {
+        if !self.groups.is_empty() {
+            Some(self.groups.swap_remove(0))
+        } else {
+            None
+        }
     }
 }
 

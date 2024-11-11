@@ -39,6 +39,7 @@ pub fn new_window(
     monitor: &Monitor,
 ) -> Result<WidgetCtx, String> {
     let window = gtk::ApplicationWindow::new(app);
+    println!("ONCE!!!");
 
     // init layer
     window.init_layer_shell();
@@ -47,9 +48,7 @@ pub fn new_window(
 
     // edge and position
     window.set_anchor(config.edge, true);
-    if let Some(pos) = config.position {
-        window.set_anchor(pos, true);
-    }
+    window.set_anchor(config.position, true);
 
     // set something after show
     window.connect_show(|w: &gtk::ApplicationWindow| {

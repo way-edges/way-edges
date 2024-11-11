@@ -95,7 +95,7 @@ pub fn init_widget(
     mut box_conf: BoxConfig,
 ) -> Result<WidgetExposePtr, String> {
     let edge = conf.edge;
-    let position = conf.position.unwrap();
+    let position = conf.position;
     let extra_trigger_size = box_conf.box_conf.extra_trigger_size.get_num_into().unwrap();
 
     let darea = {

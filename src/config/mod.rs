@@ -1,6 +1,6 @@
 pub mod conf;
 // pub mod parse;
-pub mod raw;
+// pub mod raw;
 pub mod widgets;
 
 pub use conf::*;
@@ -9,7 +9,7 @@ use std::{
     fs::OpenOptions,
     io::Read,
     path::{Path, PathBuf},
-    str::FromStr,
+    // str::FromStr,
     sync::OnceLock,
 };
 
@@ -49,17 +49,17 @@ pub fn get_config_file_content() -> Result<String, String> {
     Ok(s)
 }
 
-pub fn get_config_raw() -> Result<raw::RawRoot, String> {
+pub fn get_config_root() -> Result<Root, String> {
     let s = get_config_file_content()?;
-    raw::RawRoot::from_str(&s)
+    conf::parse_config(&s)
 }
 
 pub fn get_config_by_group(group_name: Option<&str>) -> Result<Option<Group>, String> {
-    let s = get_config_file_content()?;
-    let root = conf::parse_config(&s)?;
+    let mut root = get_config_root()?;
+
     if let Some(group_name) = group_name {
-        Ok(root.get_group(group_name))
+        Ok(root.take_group(group_name))
     } else {
-        Ok(root.get_first())
+        Ok(root.take_first())
     }
 }
