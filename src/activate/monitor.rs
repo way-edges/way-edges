@@ -222,7 +222,7 @@ mod monitor_watch {
             _output: wl_output::WlOutput,
         ) {
             log::debug!("New wayland output: {_output:?}");
-            self.on_change();
+            // self.on_change();
         }
 
         fn update_output(
@@ -242,7 +242,7 @@ mod monitor_watch {
             _output: wl_output::WlOutput,
         ) {
             log::debug!("remove wayland output: {_output:?}");
-            self.on_change();
+            // self.on_change();
         }
     }
 
