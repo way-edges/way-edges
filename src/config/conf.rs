@@ -226,26 +226,11 @@ impl From<ConfigShadow> for Config {
 #[educe(Debug)]
 #[serde(from = "ConfigShadow")]
 pub struct Config {
-    // #[serde(default = "dt_edge")]
-    // #[serde(deserialize_with = "deserialize_edge")]
     pub edge: Edge,
-
-    // #[serde(default)]
-    // // #[serde(deserialize_with = "deserialize_optional_edge")]
-    // #[serde(deserialize_with = "deserialize_edge")]
     pub position: Edge,
-
-    // #[serde(default = "dt_layer")]
-    // #[serde(deserialize_with = "deserialize_layer")]
     pub layer: Layer,
-
-    // #[serde(default)]
-    // #[serde(deserialize_with = "deserialize_margins")]
     pub margins: HashMap<Edge, NumOrRelative>,
-
-    // #[serde(default)]
     pub monitor: MonitorSpecifier,
-    // #[serde(default)]
     pub name: String,
     pub widget: Option<Widget>,
 }
