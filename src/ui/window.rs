@@ -39,7 +39,6 @@ pub fn new_window(
     monitor: &Monitor,
 ) -> Result<WidgetCtx, String> {
     let window = gtk::ApplicationWindow::new(app);
-    println!("ONCE!!!");
 
     // init layer
     window.init_layer_shell();
