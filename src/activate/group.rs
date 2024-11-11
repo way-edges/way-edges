@@ -81,8 +81,11 @@ impl GroupMapCtx {
     fn init_group(app: &Application, name: &str) -> Result<WidgetMap, String> {
         let conf = config::get_config_by_group(Some(name));
         let res = conf.and_then(|vc| {
+            let Some(vc) = vc else {
+                return Err(format!("Not found config by group: {name}"));
+            };
             debug!("Parsed Config: {vc:?}");
-            WidgetMap::init_window(app, vc)
+            WidgetMap::init_window(app, vc.widgets)
         });
         res.inspect_err(|e| {
             log::error!("{e}");
