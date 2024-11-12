@@ -33,6 +33,8 @@ cd way-edges && cargo build --release
 
 Place `config.jsonc` under `~/.config/way-edges/`
 
+Example config: https://github.com/ogios/dots/tree/master/way-edges
+
 ### Full doc
 
 Doc: https://way-edges.github.io/basic_config
