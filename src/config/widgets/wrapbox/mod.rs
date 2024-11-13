@@ -1,8 +1,14 @@
+pub mod ring;
+pub mod text;
+
 use std::str::FromStr;
 
+use educe::Educe;
 use gtk::gdk::RGBA;
-use serde::Deserialize;
+use ring::RingConfig;
+use serde::{Deserialize, Deserializer};
 use serde_jsonrc::{Map, Value};
+use text::TextConfig;
 
 use crate::config::{NumOrRelative, Widget};
 
@@ -43,7 +49,7 @@ pub enum Outlook {
 #[derive(Debug)]
 pub struct BoxedWidgetConfig {
     pub index: [isize; 2],
-    pub widget: Widget,
+    pub widget: BoxedWidget,
 }
 
 #[derive(Deserialize, Debug, Default, Clone, Copy)]
@@ -102,14 +108,7 @@ pub fn visit_config(d: Value) -> Result<Widget, String> {
                 };
                 let widget = {
                     let wv = v.get("widget").ok_or("widget must be specified")?.clone();
-                    let widget = serde_jsonrc::from_value(wv)
-                        .map_err(|e| format!("widget parse error {e}"))?;
-                    // let widget = parse_widget(wv)?;
-                    match &widget {
-                        Widget::Ring(_) => Ok(widget),
-                        Widget::Text(_) => Ok(widget),
-                        _ => Err("Unsupported boxed widget"),
-                    }?
+                    serde_jsonrc::from_value(wv).map_err(|e| format!("widget parse error {e}"))?
                 };
                 Ok(BoxedWidgetConfig { index, widget })
             })
@@ -147,4 +146,36 @@ pub fn visit_config(d: Value) -> Result<Widget, String> {
         box_conf,
         outlook: Some(outlook),
     })))
+}
+
+#[derive(Educe)]
+#[educe(Debug)]
+pub enum BoxedWidget {
+    Ring(Box<RingConfig>),
+    Text(Box<TextConfig>),
+}
+
+impl<'de> Deserialize<'de> for BoxedWidget {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let raw = serde_jsonrc::value::Value::deserialize(deserializer)?;
+
+        if !raw.is_object() {
+            return Err(serde::de::Error::custom("Widget must be object"));
+        }
+        let t = raw
+            .get("type")
+            .ok_or(serde::de::Error::missing_field("type"))?
+            .as_str()
+            .ok_or(serde::de::Error::custom("widget type must be string"))?;
+
+        match t {
+            ring::NAME => ring::visit_config(raw),
+            text::NAME => text::visit_config(raw),
+            _ => Err(format!("unknown widget type: {t}")),
+        }
+        .map_err(serde::de::Error::custom)
+    }
 }

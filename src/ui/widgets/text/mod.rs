@@ -1,4 +1,3 @@
-/// NOTE: This widget can not be used directly
 use std::cell::Cell;
 use std::{rc::Rc, time::Duration};
 
@@ -10,7 +9,7 @@ use gtk::glib;
 use gtk::pango::Layout;
 use interval_task::runner::Runner;
 
-use crate::config::widgets::text::{TextConfig, TextPreset, TextUpdateTask};
+use crate::config::widgets::wrapbox::text::{TextConfig, TextPreset, TextUpdateTask};
 use crate::ui::draws::util::{draw_text, ImageData};
 
 use super::wrapbox::display::grid::DisplayWidget;

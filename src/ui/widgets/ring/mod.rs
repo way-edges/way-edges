@@ -1,4 +1,3 @@
-/// NOTE: This widget can not be used directly
 mod draw;
 
 use std::cell::Cell;
@@ -10,7 +9,7 @@ use draw::{ProgressCache, Ring};
 use gtk::glib;
 use interval_task::runner::Runner;
 
-use crate::config::widgets::ring::{RingConfig, RingPreset};
+use crate::config::widgets::wrapbox::ring::{RingConfig, RingPreset};
 use crate::plug::system::{
     get_battery_info, get_cpu_info, get_disk_info, get_ram_info, get_swap_info,
 };
@@ -66,7 +65,7 @@ struct RingEvents {
 type RunnerTask = Box<dyn Send + FnMut(&mut Ring) -> Result<ProgressCache, String>>;
 fn parse_preset(preset: &mut RingPreset) -> (u64, RunnerTask) {
     match preset {
-        crate::config::widgets::ring::RingPreset::Ram => (
+        crate::config::widgets::wrapbox::ring::RingPreset::Ram => (
             1000,
             Box::new(|inner| {
                 let (progress, text) = if let Some([ava, total]) = get_ram_info() {
@@ -86,7 +85,7 @@ fn parse_preset(preset: &mut RingPreset) -> (u64, RunnerTask) {
                 Ok(inner.draw_progress(progress, text))
             }),
         ),
-        crate::config::widgets::ring::RingPreset::Swap => (
+        crate::config::widgets::wrapbox::ring::RingPreset::Swap => (
             1000,
             Box::new(|inner| {
                 let (progress, text) = if let Some([ava, total]) = get_swap_info() {
@@ -106,7 +105,7 @@ fn parse_preset(preset: &mut RingPreset) -> (u64, RunnerTask) {
                 Ok(inner.draw_progress(progress, text))
             }),
         ),
-        crate::config::widgets::ring::RingPreset::Cpu => (
+        crate::config::widgets::wrapbox::ring::RingPreset::Cpu => (
             1000,
             Box::new(|inner| {
                 let (progress, text) = if let Some((progress, temp)) = get_cpu_info() {
@@ -119,7 +118,7 @@ fn parse_preset(preset: &mut RingPreset) -> (u64, RunnerTask) {
                 Ok(inner.draw_progress(progress, text))
             }),
         ),
-        crate::config::widgets::ring::RingPreset::Battery => (
+        crate::config::widgets::wrapbox::ring::RingPreset::Battery => (
             1000,
             Box::new(|inner| {
                 let (progress, text) = if let Some(progress) = get_battery_info() {
@@ -132,7 +131,7 @@ fn parse_preset(preset: &mut RingPreset) -> (u64, RunnerTask) {
                 Ok(inner.draw_progress(progress, text))
             }),
         ),
-        crate::config::widgets::ring::RingPreset::Disk(s) => {
+        crate::config::widgets::wrapbox::ring::RingPreset::Disk(s) => {
             let s = s.clone();
             (
                 1000,
@@ -156,7 +155,7 @@ fn parse_preset(preset: &mut RingPreset) -> (u64, RunnerTask) {
                 }),
             )
         }
-        crate::config::widgets::ring::RingPreset::Custom(f) => {
+        crate::config::widgets::wrapbox::ring::RingPreset::Custom(f) => {
             if let Some((ms, mut f)) = f.update_with_interval_ms.take() {
                 (
                     ms,

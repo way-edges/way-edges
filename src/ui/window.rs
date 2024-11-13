@@ -80,8 +80,7 @@ pub fn new_window(
         config::Widget::WrapBox(c) => widgets::wrapbox::init_widget(&window, config, *c),
         config::Widget::HyprWorkspace(c) => {
             widgets::hypr_workspace::init_widget(&window, config, *c)
-        }
-        _ => return Err("Unsupported window widget".to_string()),
+        } // _ => return Err("Unsupported window widget".to_string()),
     }?;
 
     window.connect_destroy(|_| {

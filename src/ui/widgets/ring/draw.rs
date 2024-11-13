@@ -3,7 +3,7 @@ use educe::Educe;
 use gtk::pango::Layout;
 use gtk::{gdk::RGBA, prelude::GdkCairoContextExt};
 
-use crate::config::widgets::ring::RingConfig;
+use crate::config::widgets::wrapbox::ring::RingConfig;
 use crate::ui::draws::util::{draw_text, horizon_center_combine, new_surface, ImageData};
 use crate::ui::draws::{shape::draw_fan, util::Z};
 

@@ -6,8 +6,7 @@ use std::{collections::HashMap, str::FromStr};
 
 use super::widgets::{
     self, backlight::BLConfig, button::BtnConfig, hypr_workspace::HyprWorkspaceConfig,
-    pulseaudio::PAConfig, ring::RingConfig, slide::SlideConfig, text::TextConfig,
-    wrapbox::BoxConfig,
+    pulseaudio::PAConfig, slide::SlideConfig, wrapbox::BoxConfig,
 };
 
 pub type GroupConfig = Vec<Config>;
@@ -138,8 +137,8 @@ pub enum Widget {
     PulseAudio(Box<PAConfig>),
     Backlight(Box<BLConfig>),
     WrapBox(Box<BoxConfig>),
-    Ring(Box<RingConfig>),
-    Text(Box<TextConfig>),
+    // Ring(Box<RingConfig>),
+    // Text(Box<TextConfig>),
     HyprWorkspace(Box<HyprWorkspaceConfig>),
 }
 
@@ -167,8 +166,8 @@ impl<'de> Deserialize<'de> for Widget {
             }
             widgets::backlight::NAME => widgets::backlight::visit_config(raw),
             widgets::wrapbox::NAME => widgets::wrapbox::visit_config(raw),
-            widgets::ring::NAME => widgets::ring::visit_config(raw),
-            widgets::text::NAME => widgets::text::visit_config(raw),
+            // widgets::ring::NAME => widgets::ring::visit_config(raw),
+            // widgets::text::NAME => widgets::text::visit_config(raw),
             widgets::hypr_workspace::NAME => widgets::hypr_workspace::visit_config(raw),
             _ => Err(format!("unknown widget type: {t}")),
         }

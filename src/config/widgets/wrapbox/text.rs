@@ -3,12 +3,9 @@ use gtk::gdk::RGBA;
 use serde::{Deserialize, Deserializer};
 use serde_jsonrc::Value;
 
-use crate::{
-    config::{widgets::common, Widget},
-    plug::common::shell_cmd,
-};
+use crate::{config::widgets::common, plug::common::shell_cmd};
 
-use super::common::from_value;
+use super::{common::from_value, BoxedWidget};
 
 pub const NAME: &str = "text";
 
@@ -55,12 +52,12 @@ fn dt_font_size() -> i32 {
     12
 }
 
-pub fn visit_config(v: Value) -> Result<Widget, String> {
+pub fn visit_config(v: Value) -> Result<BoxedWidget, String> {
     let conf: TextConfig = from_value(v)?;
     if conf.preset.is_none() {
         return Err("preset must be set".to_string());
     }
-    Ok(Widget::Text(Box::new(conf)))
+    Ok(BoxedWidget::Text(Box::new(conf)))
 }
 
 fn update_task_interval<'de, D>(d: D) -> Result<Option<(u64, TextUpdateTask)>, D::Error>

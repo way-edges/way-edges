@@ -140,21 +140,20 @@ pub fn init_widget(
 fn init_boxed_widgets(bx: &mut GridBox, expose: BoxExposeRc, ws: Vec<BoxedWidgetConfig>) {
     ws.into_iter().for_each(|w| {
         let _ = match w.widget {
-            crate::config::Widget::Ring(r) => match init_ring(&expose, *r) {
+            crate::config::widgets::wrapbox::BoxedWidget::Ring(r) => match init_ring(&expose, *r) {
                 Ok(ring) => {
                     bx.add(Rc::new(RefCell::new(ring)), (w.index[0], w.index[1]));
                     Ok(())
                 }
                 Err(e) => Err(format!("Fail to create ring widget: {e}")),
             },
-            crate::config::Widget::Text(t) => match init_text(&expose, *t) {
+            crate::config::widgets::wrapbox::BoxedWidget::Text(t) => match init_text(&expose, *t) {
                 Ok(text) => {
                     bx.add(Rc::new(RefCell::new(text)), (w.index[0], w.index[1]));
                     Ok(())
                 }
                 Err(e) => Err(format!("Fail to create text widget: {e}")),
             },
-            _ => Err("Unsupported widget type for box".to_string()),
         }
         .inspect_err(|e| {
             crate::notify_send("Way-edges boxed widgets", e.as_str(), true);

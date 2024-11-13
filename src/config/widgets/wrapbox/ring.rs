@@ -1,14 +1,14 @@
 use std::str::FromStr;
 
-use crate::{
-    config::Widget,
-    plug::{
-        common::shell_cmd,
-        system::{init_mem_info, init_system_info, register_disk_partition},
-    },
+use crate::plug::{
+    common::shell_cmd,
+    system::{init_mem_info, init_system_info, register_disk_partition},
 };
 
-use super::common::{color_translate, dt_frame_rate};
+use super::{
+    common::{color_translate, dt_frame_rate},
+    BoxedWidget,
+};
 use educe::Educe;
 use gtk::gdk::RGBA;
 use serde::{Deserialize, Deserializer};
@@ -93,7 +93,7 @@ impl Drop for RingConfig {
     }
 }
 
-pub fn visit_config(d: Value) -> Result<Widget, String> {
+pub fn visit_config(d: Value) -> Result<BoxedWidget, String> {
     let preset = {
         let preset = d.get("preset").ok_or("Ring preset not provided")?;
         let preset_type = {
@@ -150,7 +150,7 @@ pub fn visit_config(d: Value) -> Result<Widget, String> {
     if common.font_size.is_none() {
         common.font_size = Some(common.radius * 1.5);
     }
-    Ok(Widget::Ring(Box::new(RingConfig { common, preset })))
+    Ok(BoxedWidget::Ring(Box::new(RingConfig { common, preset })))
 }
 
 fn update_task_interval<'de, D>(d: D) -> Result<Option<(u64, UpdateTask)>, D::Error>
