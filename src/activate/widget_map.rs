@@ -30,7 +30,7 @@ impl WidgetMap {
                 // get monitor and calculate size
                 let monitor = monitor_ctx
                     .get_monitor(&cfg.monitor)
-                    .ok_or("failed to get monitor")?
+                    .ok_or(format!("failed to get monitor: {:?}", cfg.monitor))?
                     .clone();
                 let geom = monitor.geometry();
                 calculate_config_relative(&mut cfg, (geom.width(), geom.height()))?;
