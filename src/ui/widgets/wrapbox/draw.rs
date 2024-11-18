@@ -121,34 +121,63 @@ impl DrawCore {
     fn make_motion_func(edge: Edge, position: Edge) -> DrawMotion {
         type DrawMotionFunc = Box<dyn Fn(&cairo::Context, &DrawingArea, (f64, f64), f64)>;
         let draw_motion: DrawMotionFunc = Box::new(match edge {
-            Edge::Left => |ctx, _, size, visible_y| ctx.translate((-size.0 + visible_y).floor(), Z),
-            Edge::Right => |ctx, darea, size, visible_y| {
-                ctx.translate(
-                    (size.0 - visible_y).ceil() + (darea.width() as f64 - size.0).ceil(),
-                    Z,
-                )
+            Edge::Left => match position {
+                Edge::Left | Edge::Right => |ctx, darea, size, visible_y| {
+                    let y = (calculate_y_additional(darea, size) / 2.).floor();
+                    ctx.translate((-size.0 + visible_y).floor(), y)
+                },
+                Edge::Top => {
+                    |ctx, _, size, visible_y| ctx.translate((-size.0 + visible_y).floor(), Z)
+                }
+                Edge::Bottom => |ctx, darea, size, visible_y| {
+                    let y = calculate_y_additional(darea, size).floor();
+                    ctx.translate((-size.0 + visible_y).floor(), y)
+                },
+                _ => unreachable!(),
+            },
+            Edge::Right => match position {
+                Edge::Left | Edge::Right => |ctx, darea, size, visible_y| {
+                    let x = calculate_x_additional(darea, size).ceil();
+                    let y = (calculate_y_additional(darea, size) / 2.).floor();
+                    ctx.translate((size.0 - visible_y).ceil() + x, y)
+                },
+                Edge::Top => |ctx, darea, size, visible_y| {
+                    let x = calculate_x_additional(darea, size).ceil();
+                    ctx.translate((size.0 - visible_y).ceil() + x, Z)
+                },
+                Edge::Bottom => |ctx, darea, size, visible_y| {
+                    let x = calculate_x_additional(darea, size).ceil();
+                    let y = (calculate_y_additional(darea, size)).floor();
+                    ctx.translate((size.0 - visible_y).ceil() + x, y)
+                },
+                _ => unreachable!(),
             },
             Edge::Top => match position {
                 Edge::Right => |ctx, darea, size, visible_y| {
-                    let x = (darea.width() as f64 - size.0).floor();
+                    let x = calculate_x_additional(darea, size).floor();
                     ctx.translate(x, (-size.1 + visible_y).floor())
                 },
                 Edge::Top | Edge::Bottom => |ctx, darea, size, visible_y| {
-                    let x = ((darea.width() as f64 - size.0) / 2.).floor();
+                    let x = (calculate_x_additional(darea, size) / 2.).floor();
                     ctx.translate(x, (-size.1 + visible_y).floor())
                 },
                 _ => |ctx, _, size, visible_y| ctx.translate(Z, (-size.1 + visible_y).floor()),
             },
             Edge::Bottom => match position {
                 Edge::Right => |ctx, darea, size, visible_y| {
-                    let x = (darea.width() as f64 - size.0).floor();
-                    ctx.translate(x, (size.1 - visible_y).ceil())
+                    let x = calculate_x_additional(darea, size).floor();
+                    let y = calculate_y_additional(darea, size).floor();
+                    ctx.translate(x, (size.1 - visible_y + y).ceil())
                 },
                 Edge::Top | Edge::Bottom => |ctx, darea, size, visible_y| {
-                    let x = ((darea.width() as f64 - size.0) / 2.).floor();
-                    ctx.translate(x, (size.1 - visible_y).ceil())
+                    let x = (calculate_x_additional(darea, size) / 2.).floor();
+                    let y = calculate_y_additional(darea, size).floor();
+                    ctx.translate(x, (size.1 - visible_y + y).ceil())
                 },
-                _ => |ctx, _, size, visible_y| ctx.translate(Z, (size.1 - visible_y).ceil()),
+                _ => |ctx, darea, size, visible_y| {
+                    let y = calculate_y_additional(darea, size).floor();
+                    ctx.translate(Z, (size.1 - visible_y + y).ceil())
+                },
             },
             _ => unreachable!(),
         });
@@ -191,34 +220,59 @@ fn set_window_input_size_func(
         | (Edge::Right, Edge::Right)
         | (Edge::Right, Edge::Top)
         | (Edge::Right, Edge::Bottom) => |darea, size, ts_y| {
-            ((size.0 as f64) * (1. - ts_y)) as i32 + (darea.width().max(size.0) - size.0)
+            ((size.0 as f64) * (1. - ts_y)) as i32
+                + calculate_x_additional(darea, (size.0 as f64, size.1 as f64)).floor() as i32
         },
-        (Edge::Top, Edge::Right) | (Edge::Bottom, Edge::Right) => {
-            |darea, size, _| darea.width().max(size.0) - size.0
-        }
+        (Edge::Top, Edge::Right) | (Edge::Bottom, Edge::Right) => |darea, size, _| {
+            calculate_x_additional(darea, (size.0 as f64, size.1 as f64)).floor() as i32
+        },
         (Edge::Top, Edge::Top)
         | (Edge::Top, Edge::Bottom)
         | (Edge::Bottom, Edge::Top)
-        | (Edge::Bottom, Edge::Bottom) => |darea, size, _| (darea.width().max(size.0) - size.0) / 2,
+        | (Edge::Bottom, Edge::Bottom) => |darea, size, _| {
+            (calculate_x_additional(darea, (size.0 as f64, size.1 as f64)) / 2.).floor() as i32
+        },
         _ => unreachable!(),
     });
 
-    type GetYH = Box<dyn Fn((i32, i32), f64) -> (i32, i32)>;
-    let get_yh: GetYH = Box::new(match edge {
-        Edge::Top => |size, ts_y| (Z as i32, (size.1 as f64 * ts_y) as i32),
-        Edge::Bottom => |size, ts_y| {
-            (
-                (size.1 as f64 * (1. - ts_y)) as i32,
-                (size.1 as f64 * ts_y).ceil() as i32,
-            )
+    type GetY = Box<dyn Fn(&DrawingArea, (i32, i32), f64) -> i32>;
+    let get_y: GetY = Box::new(match (edge, position) {
+        (Edge::Right, Edge::Left)
+        | (Edge::Right, Edge::Right)
+        | (Edge::Left, Edge::Left)
+        | (Edge::Left, Edge::Right) => |darea, size, _| {
+            (calculate_y_additional(darea, (size.0 as f64, size.1 as f64)) / 2.).ceil() as i32
         },
-        _ => |size, _| (Z as i32, size.1),
+        (Edge::Top, Edge::Left)
+        | (Edge::Top, Edge::Right)
+        | (Edge::Top, Edge::Top)
+        | (Edge::Top, Edge::Bottom)
+        | (Edge::Right, Edge::Top)
+        | (Edge::Left, Edge::Top) => |_, _, _| 0,
+        (Edge::Right, Edge::Bottom) | (Edge::Left, Edge::Bottom) => |darea, size, _| {
+            calculate_y_additional(darea, (size.0 as f64, size.1 as f64)).floor() as i32
+        },
+        (Edge::Bottom, Edge::Left)
+        | (Edge::Bottom, Edge::Right)
+        | (Edge::Bottom, Edge::Top)
+        | (Edge::Bottom, Edge::Bottom) => |darea, size, ts_y| {
+            ((size.1 as f64) * (1. - ts_y)) as i32
+                + calculate_y_additional(darea, (size.0 as f64, size.1 as f64)).floor() as i32
+        },
+        _ => unreachable!(),
     });
 
     type GetW = Box<dyn Fn((i32, i32), f64) -> i32>;
     let get_w: GetW = Box::new(match edge {
         Edge::Left | Edge::Right => |size, ts_y| (size.0 as f64 * ts_y).ceil() as i32,
         Edge::Top | Edge::Bottom => |size, _| size.0,
+        _ => unreachable!(),
+    });
+
+    type GetH = Box<dyn Fn((i32, i32), f64) -> i32>;
+    let get_h: GetH = Box::new(match edge {
+        Edge::Bottom | Edge::Top => |size, ts_y| (size.1 as f64 * ts_y) as i32,
+        Edge::Left | Edge::Right => |size, _| size.1,
         _ => unreachable!(),
     });
 
@@ -243,8 +297,9 @@ fn set_window_input_size_func(
 
     Box::new(move |window, darea, size, ts_y| {
         let x = get_x(darea, size, ts_y);
-        let (y, h) = get_yh(size, ts_y);
+        let y = get_y(darea, size, ts_y);
         let w = get_w(size, ts_y);
+        let h = get_h(size, ts_y);
 
         // box normal input region
         let rec_int = RectangleInt::new(x, y, w, h);
@@ -260,4 +315,11 @@ fn set_window_input_size_func(
 
         rec_int
     })
+}
+
+fn calculate_x_additional(darea: &DrawingArea, size: (f64, f64)) -> f64 {
+    (darea.width() as f64).max(size.0) - size.0
+}
+fn calculate_y_additional(darea: &DrawingArea, size: (f64, f64)) -> f64 {
+    (darea.height() as f64).max(size.1) - size.1
 }
