@@ -1,5 +1,5 @@
 {
-  "$schema": "https://raw.githubusercontent.com/ogios/way-edges/master/config/config.schema.json",
+  "$schema": "https://raw.githubusercontent.com/way-edges/way-edges/master/config/config.schema.json",
   "groups": [
     {
       "name": "hyprland",
