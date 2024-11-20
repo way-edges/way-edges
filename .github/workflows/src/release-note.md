@@ -1,9 +1,7 @@
 ## 💻 Way-Edges
 
-- Better code
-- Add hyprland workspace widget border
-- fps control use tokio mainthread runtime
-- change config:
-  - `monitor_id/monitor_name` -> `monitor`
-  - `margin` -> `margins`
-- reload when monitor changed(This is still unstable)
+- remove wayland-client crate, use gdk for monitor watch instead
+- move `ring` and `text` from common widgets to `boxed widgets`
+- update font related schema.
+- fix: schema issues. The configuration JsonSchema is working as it should be now.
+- fix: box y input region and transformation. Box widget should be stable now.
