@@ -5,10 +5,8 @@ use crate::plug::{
     system::{init_mem_info, init_system_info, register_disk_partition},
 };
 
-use super::{
-    common::{color_translate, dt_frame_rate},
-    BoxedWidget,
-};
+use super::BoxedWidget;
+use crate::config::widgets::common::{color_translate, dt_frame_rate, from_value};
 use educe::Educe;
 use gtk::gdk::RGBA;
 use serde::{Deserialize, Deserializer};
@@ -26,7 +24,8 @@ pub enum RingPreset {
     Custom(RingCustom),
 }
 
-pub type UpdateTask = Box<dyn Send + FnMut() -> Result<(f64, Option<String>), String>>;
+// pub type UpdateTask = Box<dyn Send + FnMut() -> Result<(f64, Option<String>), String>>;
+pub type UpdateTask = Box<dyn Send + FnMut() -> Result<f64, String>>;
 
 #[derive(Deserialize, Educe)]
 #[educe(Debug)]
@@ -137,15 +136,13 @@ pub fn visit_config(d: Value) -> Result<BoxedWidget, String> {
                 register_disk_partition(partition.clone());
                 RingPreset::Disk(partition)
             }
-            "custom" => {
-                RingPreset::Custom(super::common::from_value::<RingCustom>(preset.clone())?)
-            }
+            "custom" => RingPreset::Custom(from_value::<RingCustom>(preset.clone())?),
             _ => {
                 return Err(format!("Unknown preset type: {preset_type}"));
             }
         }
     };
-    let mut common = super::common::from_value::<RingCommon>(d)?;
+    let mut common = from_value::<RingCommon>(d)?;
 
     if common.font_size.is_none() {
         common.font_size = Some(common.radius * 1.5);
@@ -180,17 +177,9 @@ fn create_update_task(value: String) -> UpdateTask {
     Box::new(move || {
         let value = value.clone();
         let a = shell_cmd(value)?;
-        Ok(if let Some((p, text)) = a.split_once('\n') {
-            (
-                f64::from_str(p).map_err(|e| format!("Fail to convert result({a}) to f64: {e}"))?,
-                Some(text.to_string()),
-            )
-        } else {
-            (
-                f64::from_str(&a)
-                    .map_err(|e| format!("Fail to convert result({a}) to f64: {e}"))?,
-                None,
-            )
-        })
+        let trimed = a.trim();
+        trimed
+            .parse::<f64>()
+            .map_err(|e| format!("Fail to parse result({a}) to f64: {e}"))
     })
 }
