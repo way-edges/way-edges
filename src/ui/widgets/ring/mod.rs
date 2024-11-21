@@ -71,7 +71,7 @@ fn parse_preset(preset: &mut RingPreset) -> (u64, RunnerTask) {
                     let (total, avaibale, surfix) = from_kib(total, ava);
                     let progress = avaibale / total;
                     let text = Some(format!(
-                        " {:.2}{surfix} / {:.2}{surfix} [{:.2}%]",
+                        "{:.2}{surfix} / {:.2}{surfix} [{:.2}%]",
                         avaibale,
                         total,
                         progress * 100.
@@ -91,7 +91,7 @@ fn parse_preset(preset: &mut RingPreset) -> (u64, RunnerTask) {
                     let (total, avaibale, surfix) = from_kib(total, ava);
                     let progress = avaibale / total;
                     let text = Some(format!(
-                        " {:.2}{surfix} / {:.2}{surfix} [{:.2}%]",
+                        "{:.2}{surfix} / {:.2}{surfix} [{:.2}%]",
                         avaibale,
                         total,
                         progress * 100.
@@ -108,7 +108,7 @@ fn parse_preset(preset: &mut RingPreset) -> (u64, RunnerTask) {
             1000,
             Box::new(|inner| {
                 let (progress, text) = if let Some((progress, temp)) = get_cpu_info() {
-                    let text = Some(format!(" {:.2}% {temp:.2}°C", progress * 100.));
+                    let text = Some(format!("{:.2}% {temp:.2}°C", progress * 100.));
                     (progress, text)
                 } else {
                     (0., None)
@@ -121,7 +121,7 @@ fn parse_preset(preset: &mut RingPreset) -> (u64, RunnerTask) {
             1000,
             Box::new(|inner| {
                 let (progress, text) = if let Some(progress) = get_battery_info() {
-                    let text = Some(format!(" {:.2}%", progress * 100.));
+                    let text = Some(format!("{:.2}%", progress * 100.));
                     (progress, text)
                 } else {
                     (0., None)
@@ -139,7 +139,7 @@ fn parse_preset(preset: &mut RingPreset) -> (u64, RunnerTask) {
                         let (total, avaibale, surfix) = from_kb(total, ava);
                         let progress = avaibale / total;
                         let text = Some(format!(
-                            " [Partition: {}] {:.2}{surfix} / {:.2}{surfix} [{:.2}%]",
+                            "[Partition: {}] {:.2}{surfix} / {:.2}{surfix} [{:.2}%]",
                             s,
                             avaibale,
                             total,
