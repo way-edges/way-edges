@@ -49,6 +49,10 @@ pub fn new_window(
     window.set_anchor(config.edge, true);
     window.set_anchor(config.position, true);
 
+    if config.ignore_exclusive {
+        window.set_exclusive_zone(-1);
+    }
+
     // set something after show
     window.connect_show(|w: &gtk::ApplicationWindow| {
         // transparency background !! may not work for some gtk4 theme, and idk what to do with it !!

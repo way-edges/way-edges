@@ -196,8 +196,13 @@ struct ConfigShadow {
 
     #[serde(default)]
     pub monitor: MonitorSpecifier,
+
     #[serde(default)]
     pub name: String,
+
+    #[serde(default)]
+    pub ignore_exclusive: bool,
+
     pub widget: Option<Widget>,
 }
 
@@ -217,6 +222,7 @@ impl From<ConfigShadow> for Config {
             monitor: value.monitor,
             name: value.name,
             widget: value.widget,
+            ignore_exclusive: value.ignore_exclusive,
         }
     }
 }
@@ -231,6 +237,7 @@ pub struct Config {
     pub margins: HashMap<Edge, NumOrRelative>,
     pub monitor: MonitorSpecifier,
     pub name: String,
+    pub ignore_exclusive: bool,
     pub widget: Option<Widget>,
 }
 
