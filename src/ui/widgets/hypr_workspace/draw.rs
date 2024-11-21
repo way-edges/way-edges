@@ -171,8 +171,8 @@ impl DrawCore {
             }
             gtk4_layer_shell::Edge::Top | gtk4_layer_shell::Edge::Bottom => {
                 darea.set_size_request(
-                    wp_conf.size.thickness.get_num().unwrap().ceil() as i32,
                     wp_conf.size.length.get_num().unwrap().ceil() as i32,
+                    wp_conf.size.thickness.get_num().unwrap().ceil() as i32,
                 );
             }
             _ => todo!(),
