@@ -48,17 +48,13 @@ impl BoxOutlookWindow {
             _ => unreachable!(),
         };
         Self {
-            cache: Self::_redraw(&config, initial_content_size, corners),
+            cache: Self::redraw(&config, initial_content_size, corners),
             config,
             corners,
         }
     }
 
-    fn _redraw(
-        config: &OutlookWindowConfig,
-        content_size: (i32, i32),
-        corners: [bool; 4],
-    ) -> Cache {
+    fn redraw(config: &OutlookWindowConfig, content_size: (i32, i32), corners: [bool; 4]) -> Cache {
         let margins = config.margins;
         let color = config.color;
         let border_radius = config.border_radius;
@@ -189,7 +185,7 @@ impl BoxOutlookWindow {
     pub fn redraw_if_size_change(&mut self, content_size: (i32, i32)) {
         let size = self.cache.content_size;
         if size != content_size {
-            self.cache = Self::_redraw(&self.config, content_size, self.corners);
+            self.cache = Self::redraw(&self.config, content_size, self.corners);
         }
     }
 
