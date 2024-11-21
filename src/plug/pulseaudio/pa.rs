@@ -221,7 +221,7 @@ fn server_cb(server_info: &ServerInfo) {
     };
 }
 
-pub fn subscribe_cb(facility: Option<Facility>, o: Option<Operation>, index: u32) {
+pub fn subscribe_cb(facility: Option<Facility>, _: Option<Operation>, index: u32) {
     let facility = if let Some(facility) = facility {
         facility
     } else {

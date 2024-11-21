@@ -245,20 +245,20 @@ pub mod common {
     }
 
     #[derive(Debug)]
-    enum AvailableRingTemplate {
+    pub enum AvailableRingTemplate {
         Preset,
         Float(FloatNumTemplate),
     }
 
     #[derive(Debug)]
-    enum TemplateContent {
+    pub enum TemplateContent {
         String(String),
         Template(AvailableRingTemplate),
     }
 
     #[derive(Debug)]
     pub struct Template {
-        contents: Vec<TemplateContent>,
+        pub contents: Vec<TemplateContent>,
     }
     impl<'de> Deserialize<'de> for Template {
         fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
