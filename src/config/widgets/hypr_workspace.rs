@@ -12,7 +12,11 @@ pub const NAME: &str = "hyprland-workspace";
 #[derive(Educe, Deserialize, GetSize)]
 #[educe(Debug)]
 pub struct HyprWorkspaceConfig {
-    #[serde(default = "dt_size")]
+    #[serde(flatten)]
+    // flatten does not support `default` yet.
+    // issue: https://github.com/serde-rs/serde/issues/1626
+    // PR: https://github.com/serde-rs/serde/pull/2687
+    // #[serde(default = "dt_size")]
     pub size: CommonSize,
 
     #[serde(default = "dt_gap")]
@@ -41,12 +45,12 @@ pub struct HyprWorkspaceConfig {
     pub extra_trigger_size: NumOrRelative,
 }
 
-fn dt_size() -> CommonSize {
-    CommonSize {
-        thickness: NumOrRelative::Num(10.0),
-        length: NumOrRelative::Num(200.0),
-    }
-}
+// fn dt_size() -> CommonSize {
+//     CommonSize {
+//         thickness: NumOrRelative::Num(10.0),
+//         length: NumOrRelative::Num(200.0),
+//     }
+// }
 
 fn dt_gap() -> i32 {
     5
