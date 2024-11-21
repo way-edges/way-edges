@@ -5,7 +5,7 @@ use std::{cell::RefCell, rc::Rc, time::Duration};
 
 use async_channel::Sender;
 use cairo::ImageSurface;
-use draw::{ProgressCache, Ring};
+use draw::{Ring, RingCache};
 use gtk::glib;
 use interval_task::runner::Runner;
 
@@ -16,7 +16,6 @@ use crate::plug::system::{
 use crate::ui::draws::frame_manager::FrameManager;
 use crate::ui::draws::mouse_state::MouseEvent;
 use crate::ui::draws::transition_state::{self, TransitionState, TransitionStateRc};
-use crate::ui::draws::util::{horizon_center_combine, new_surface, Z};
 
 use super::wrapbox::display::grid::DisplayWidget;
 use super::wrapbox::expose::BoxExposeRc;
@@ -62,7 +61,7 @@ struct RingEvents {
     queue_draw: Box<dyn FnMut() + 'static>,
 }
 
-type RunnerTask = Box<dyn Send + FnMut(&mut Ring) -> Result<ProgressCache, String>>;
+type RunnerTask = Box<dyn Send + FnMut(&mut Ring) -> Result<RingCache, String>>;
 fn parse_preset(preset: &mut RingPreset) -> (u64, RunnerTask) {
     match preset {
         crate::config::widgets::wrapbox::ring::RingPreset::Ram => (
@@ -82,7 +81,7 @@ fn parse_preset(preset: &mut RingPreset) -> (u64, RunnerTask) {
                     (0., None)
                 };
 
-                Ok(inner.draw_progress(progress, text))
+                Ok(inner.draw_ring(progress, text))
             }),
         ),
         crate::config::widgets::wrapbox::ring::RingPreset::Swap => (
@@ -102,7 +101,7 @@ fn parse_preset(preset: &mut RingPreset) -> (u64, RunnerTask) {
                     (0., None)
                 };
 
-                Ok(inner.draw_progress(progress, text))
+                Ok(inner.draw_ring(progress, text))
             }),
         ),
         crate::config::widgets::wrapbox::ring::RingPreset::Cpu => (
@@ -115,7 +114,7 @@ fn parse_preset(preset: &mut RingPreset) -> (u64, RunnerTask) {
                     (0., None)
                 };
 
-                Ok(inner.draw_progress(progress, text))
+                Ok(inner.draw_ring(progress, text))
             }),
         ),
         crate::config::widgets::wrapbox::ring::RingPreset::Battery => (
@@ -128,7 +127,7 @@ fn parse_preset(preset: &mut RingPreset) -> (u64, RunnerTask) {
                     (0., None)
                 };
 
-                Ok(inner.draw_progress(progress, text))
+                Ok(inner.draw_ring(progress, text))
             }),
         ),
         crate::config::widgets::wrapbox::ring::RingPreset::Disk(s) => {
@@ -151,7 +150,7 @@ fn parse_preset(preset: &mut RingPreset) -> (u64, RunnerTask) {
                         (0., None)
                     };
 
-                    Ok(inner.draw_progress(progress, text))
+                    Ok(inner.draw_ring(progress, text))
                 }),
             )
         }
@@ -160,18 +159,18 @@ fn parse_preset(preset: &mut RingPreset) -> (u64, RunnerTask) {
                 (
                     ms,
                     Box::new(move |inner| {
-                        let (progress, text) = f()?;
-                        Ok(inner.draw_progress(progress, text))
+                        let progress = f()?;
+                        Ok(inner.draw_ring(progress, None))
                     }),
                 )
             } else {
-                (999999, Box::new(|inner| Ok(inner.draw_progress(0., None))))
+                (999999, Box::new(|inner| Ok(inner.draw_ring(0., None))))
             }
         }
     }
 }
 
-type RingUpdateSignal = Option<ProgressCache>;
+type RingUpdateSignal = Option<RingCache>;
 
 pub struct RingCtx {
     cache_content: Rc<Cell<ImageSurface>>,
@@ -211,15 +210,19 @@ impl RingCtx {
             }
         };
 
+        let prefix_hide = config.common.prefix_hide;
+        let suffix_hide = config.common.suffix_hide;
+
         // just use separate threads to run rather than one async thread.
         // incase some task takes too much of cpu time.
-        let (runner, cache_content, mut progress_cache_img) = {
+        // let (runner, cache_content, mut ring_cache) = {
+        let runner = {
             let update_signal = ring_update_signal_sender.clone();
             let mut uf = update_ctx.1;
             // NOTE: one thread each ring widget
             let mut runner = interval_task::runner::new_runner(
                 Duration::from_millis(update_ctx.0),
-                move || Ring::new(&config),
+                move || Ring::new(&mut config),
                 move |ring| {
                     let res = uf(ring);
                     if let Ok(res) = res {
@@ -231,20 +234,18 @@ impl RingCtx {
             // start progress update interval thread
             runner.start().unwrap();
 
-            // wait for first progress
-            let (cache_content, progress_cache_img) =
-                if let Ok(Some(mut cache)) = ring_update_signal_receiver.recv_blocking() {
-                    let prefix = unsafe { cache.prefix_ring.temp_surface() };
-                    let text = cache.text.as_mut().map(|d| unsafe { d.temp_surface() });
-                    let content = Self::_combine(&prefix, text.as_ref(), 0.);
-
-                    (Rc::new(Cell::new(content)), cache)
-                } else {
-                    return Err("first frame fail to create".to_string());
-                };
-
-            (runner, cache_content, progress_cache_img)
+            runner
         };
+
+        // wait for first progress
+        let (cache_content, mut ring_cache) =
+            if let Ok(Some(cache)) = ring_update_signal_receiver.recv_blocking() {
+                let content = cache.merge(prefix_hide, suffix_hide, 0.);
+
+                (Rc::new(Cell::new(content)), cache)
+            } else {
+                return Err("first frame fail to create".to_string());
+            };
 
         let mut queue_draw = events.queue_draw;
         // it's a while loop inside async block, so no matter weak or strong
@@ -259,19 +260,11 @@ impl RingCtx {
                     pop_ts.borrow_mut().refresh();
 
                     // if new progress cache drawed, replace
-                    if let Some(cache) = res {
-                        progress_cache_img = cache;
+                    if let Some(new_cache) = res {
+                        ring_cache = new_cache;
                     }
                     let y = pop_ts.borrow().get_y();
-                    let (prefix, text) = {
-                        let prefix = unsafe { progress_cache_img.prefix_ring.temp_surface() };
-                        let text = progress_cache_img
-                            .text
-                            .as_mut()
-                            .map(|d| unsafe { d.temp_surface() });
-                        (prefix, text)
-                    };
-                    cache_content.set(Self::_combine(&prefix, text.as_ref(), y));
+                    cache_content.set(ring_cache.merge(prefix_hide, suffix_hide, y));
                     ensure_fm(y);
                     queue_draw()
                 }
@@ -287,21 +280,6 @@ impl RingCtx {
 
             ring_update_signal_sender,
         })
-    }
-
-    fn _combine(r: &ImageSurface, t: Option<&ImageSurface>, y: f64) -> ImageSurface {
-        if let Some(text) = t {
-            let visible_text_width =
-                transition_state::calculate_transition(y, (0., text.width() as f64));
-            let text_visible_surf = new_surface((visible_text_width.ceil() as i32, text.height()));
-            let ctx = cairo::Context::new(&text_visible_surf).unwrap();
-            ctx.translate(-(text.width() - visible_text_width.ceil() as i32) as f64, Z);
-            ctx.set_source_surface(text, Z, Z).unwrap();
-            ctx.paint().unwrap();
-            horizon_center_combine(r, &text_visible_surf)
-        } else {
-            r.clone()
-        }
     }
 }
 

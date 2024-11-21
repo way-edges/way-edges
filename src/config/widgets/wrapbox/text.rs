@@ -3,9 +3,10 @@ use gtk::gdk::RGBA;
 use serde::{Deserialize, Deserializer};
 use serde_jsonrc::Value;
 
+use crate::config::widgets::common::from_value;
 use crate::{config::widgets::common, plug::common::shell_cmd};
 
-use super::{common::from_value, BoxedWidget};
+use super::BoxedWidget;
 
 pub const NAME: &str = "text";
 
