@@ -16,7 +16,6 @@ use crate::plug::system::{
 use crate::ui::draws::frame_manager::FrameManager;
 use crate::ui::draws::mouse_state::MouseEvent;
 use crate::ui::draws::transition_state::{self, TransitionState, TransitionStateRc};
-use crate::ui::draws::util::{horizon_center_combine, new_surface, Z};
 
 use super::wrapbox::display::grid::DisplayWidget;
 use super::wrapbox::expose::BoxExposeRc;
@@ -282,21 +281,6 @@ impl RingCtx {
             ring_update_signal_sender,
         })
     }
-
-    // fn _combine(r: &ImageSurface, t: Option<&ImageSurface>, y: f64) -> ImageSurface {
-    //     if let Some(text) = t {
-    //         let visible_text_width =
-    //             transition_state::calculate_transition(y, (0., text.width() as f64));
-    //         let text_visible_surf = new_surface((visible_text_width.ceil() as i32, text.height()));
-    //         let ctx = cairo::Context::new(&text_visible_surf).unwrap();
-    //         ctx.translate(-(text.width() - visible_text_width.ceil() as i32) as f64, Z);
-    //         ctx.set_source_surface(text, Z, Z).unwrap();
-    //         ctx.paint().unwrap();
-    //         horizon_center_combine(r, &text_visible_surf)
-    //     } else {
-    //         r.clone()
-    //     }
-    // }
 }
 
 impl DisplayWidget for RingCtx {
