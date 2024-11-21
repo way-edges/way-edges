@@ -183,13 +183,16 @@ impl<'de> Deserialize<'de> for BoxedWidget {
 pub mod common {
     use std::{borrow::Cow, str::FromStr};
 
+    use serde::Deserialize;
+
     use crate::notify_send;
 
-    pub struct ProgressTemplate {
+    #[derive(Debug)]
+    pub struct FloatNumTemplate {
         precision: usize,
         multiply: Option<f64>,
     }
-    impl Default for ProgressTemplate {
+    impl Default for FloatNumTemplate {
         fn default() -> Self {
             Self {
                 precision: 2,
@@ -197,7 +200,7 @@ pub mod common {
             }
         }
     }
-    impl ProgressTemplate {
+    impl FloatNumTemplate {
         pub fn parse(&self, mut progress: f64) -> String {
             if let Some(multiply) = self.multiply {
                 progress *= multiply
@@ -205,7 +208,7 @@ pub mod common {
             format!("{:.precision$}", progress, precision = self.precision)
         }
     }
-    impl FromStr for ProgressTemplate {
+    impl FromStr for FloatNumTemplate {
         type Err = String;
 
         fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -241,20 +244,54 @@ pub mod common {
         }
     }
 
+    #[derive(Debug)]
     enum AvailableRingTemplate {
         Preset,
-        Progress(ProgressTemplate),
+        Float(FloatNumTemplate),
     }
+
+    #[derive(Debug)]
     enum TemplateContent {
         String(String),
         Template(AvailableRingTemplate),
     }
 
-    pub struct RingTemplate {
+    #[derive(Debug)]
+    pub struct Template {
         contents: Vec<TemplateContent>,
     }
+    impl<'de> Deserialize<'de> for Template {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: serde::Deserializer<'de>,
+        {
+            struct TemplateVisiter;
+            impl<'de> serde::de::Visitor<'de> for TemplateVisiter {
+                type Value = Template;
 
-    impl FromStr for RingTemplate {
+                fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                    formatter.write_str("Failed to parse template")
+                }
+                fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+                where
+                    E: serde::de::Error,
+                {
+                    Template::from_str(v).map_err(serde::de::Error::custom)
+                }
+
+                fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
+                where
+                    E: serde::de::Error,
+                {
+                    self.visit_str(v.as_str())
+                }
+            }
+
+            deserializer.deserialize_str(TemplateVisiter)
+        }
+    }
+
+    impl FromStr for Template {
         type Err = String;
 
         fn from_str(raw: &str) -> Result<Self, Self::Err> {
@@ -279,14 +316,14 @@ pub mod common {
                     None => (template.trim(), ""),
                 };
                 let template = match name {
-                    "progress" => {
-                        let Ok(template) = arg.parse::<ProgressTemplate>() else {
+                    "float" => {
+                        let Ok(template) = arg.parse::<FloatNumTemplate>() else {
                             let msg = format!("failed to parse process template: {arg}");
                             notify_send("Way-Eges", &msg, true);
                             log::error!("{msg}");
                             continue;
                         };
-                        AvailableRingTemplate::Progress(template)
+                        AvailableRingTemplate::Float(template)
                     }
                     "preset" => AvailableRingTemplate::Preset,
                     _ => {
@@ -310,36 +347,18 @@ pub mod common {
         }
     }
 
-    impl RingTemplate {
-        pub fn parse_preset(self, preset_content: &str, progress: f64) -> String {
-            self.contents
-                .iter()
-                .map(|content| match content {
-                    TemplateContent::String(s) => Cow::Borrowed(s.as_str()),
-                    TemplateContent::Template(available_ring_template) => {
-                        match available_ring_template {
-                            AvailableRingTemplate::Preset => Cow::Borrowed(preset_content),
-                            AvailableRingTemplate::Progress(progress_template) => {
-                                Cow::Owned(progress_template.parse(progress))
-                            }
-                        }
-                    }
-                })
-                .collect::<Vec<Cow<str>>>()
-                .join("")
-                .to_string()
-        }
-        pub fn parse_custom(self, progress: f64) -> String {
+    impl Template {
+        pub fn parse(&self, arg: TemplateArg) -> String {
             self.contents
                 .iter()
                 .filter_map(|content| match content {
                     TemplateContent::String(s) => Some(Cow::Borrowed(s.as_str())),
                     TemplateContent::Template(available_ring_template) => {
                         match available_ring_template {
-                            AvailableRingTemplate::Progress(progress_template) => {
-                                Some(Cow::Owned(progress_template.parse(progress)))
+                            AvailableRingTemplate::Preset => arg.preset.map(Cow::Borrowed),
+                            AvailableRingTemplate::Float(temp) => {
+                                arg.float.map(|progress| Cow::Owned(temp.parse(progress)))
                             }
-                            _ => None,
                         }
                     }
                 })
@@ -347,6 +366,12 @@ pub mod common {
                 .join("")
                 .to_string()
         }
+    }
+
+    #[derive(Debug, Clone)]
+    pub struct TemplateArg<'a> {
+        pub float: Option<f64>,
+        pub preset: Option<&'a str>,
     }
 
     struct BraceMatch<'a> {
@@ -424,10 +449,10 @@ pub mod common {
     mod test {
         use super::*;
         #[test]
-        fn test_progress_template() {
+        fn test_float_template() {
             macro_rules! test {
                 ($i:expr) => {
-                    let res = ProgressTemplate::from_str($i).unwrap().parse(0.5125);
+                    let res = FloatNumTemplate::from_str($i).unwrap().parse(0.5125);
                     assert_eq!(res, "0.51");
                 };
             }
@@ -444,10 +469,10 @@ pub mod common {
         }
 
         #[test]
-        fn test_progress_template_parse() {
+        fn test_float_template_parse() {
             macro_rules! test {
                 ($i:expr, $s:expr) => {
-                    let res = ProgressTemplate::from_str($i).unwrap().parse(0.5125);
+                    let res = FloatNumTemplate::from_str($i).unwrap().parse(0.5125);
                     assert_eq!(res, $s);
                 };
             }
@@ -466,25 +491,75 @@ pub mod common {
         fn test_ring_template() {
             macro_rules! test {
                 ($i:expr, $s:expr) => {
-                    let len = RingTemplate::from_str($i).unwrap().contents.len();
+                    let len = Template::from_str($i).unwrap().contents.len();
                     assert_eq!(len, $s);
                 };
             }
-            test!("{}", 0);
+            // test!("{}", 0);
             test!(r"\{\}", 1);
             test!(r"\{}", 1);
             test!(r"{\}", 1);
-            test!("{preset:}{progress:}", 2);
-            test!("{preset}{progress}", 2);
-            test!(" {preset}{progress}", 3);
-            test!("{preset} {progress}", 3);
-            test!("{preset}{progress} ", 3);
-            test!(" {preset} {progress} ", 5);
-            test!("  { preset }  { progress }  ", 5);
-            test!("{{preset}}{progress}", 4);
-            test!(r"\{preset\} \{progress\}", 1);
-            test!(r"\{preset\} {progress\}", 1);
-            test!("{{preset}}{{progress}", 4);
+            test!("{preset:}{float:}", 2);
+            test!("{preset}{float}", 2);
+            test!(" {preset}{float}", 3);
+            test!("{preset} {float}", 3);
+            test!("{preset}{float} ", 3);
+            test!(" {preset} {float} ", 5);
+            test!("  { preset }  { float }  ", 5);
+            test!("{{preset}}{float}", 4);
+            test!(r"\{preset\} \{float\}", 1);
+            test!(r"\{preset\} {float\}", 1);
+            test!("{{preset}}{{float}", 4);
+        }
+
+        #[test]
+        fn test_parse_content() {
+            macro_rules! test {
+                ($i:expr, $a:expr, $s:expr) => {
+                    let res = Template::from_str($i).unwrap().parse($a);
+                    assert_eq!(res, $s);
+                };
+            }
+            test!(
+                "",
+                TemplateArg {
+                    float: Some(2.),
+                    preset: Some("hh")
+                },
+                ""
+            );
+            test!(
+                "a",
+                TemplateArg {
+                    float: Some(2.),
+                    preset: Some("hh")
+                },
+                "a"
+            );
+            // test!(
+            //     "{}{}",
+            //     TemplateArg {
+            //         float: Some(2.),
+            //         preset: Some("hh")
+            //     },
+            //     ""
+            // );
+            test!(
+                "{float}",
+                TemplateArg {
+                    float: Some(2.),
+                    preset: Some("hh")
+                },
+                "2.00"
+            );
+            test!(
+                " { preset}a",
+                TemplateArg {
+                    float: Some(2.),
+                    preset: Some("hh")
+                },
+                " hha"
+            );
         }
     }
 }

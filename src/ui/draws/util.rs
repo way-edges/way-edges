@@ -96,9 +96,10 @@ pub struct ImageData {
 }
 unsafe impl Send for ImageData {}
 impl ImageData {
-    pub unsafe fn temp_surface(&mut self) -> ImageSurface {
+    /// you should not mutate this
+    pub unsafe fn temp_surface(&self) -> ImageSurface {
         ImageSurface::create_for_data_unsafe(
-            self.data.as_ptr() as *mut _,
+            self.data.as_ptr() as *const _ as *mut _,
             self.format,
             self.width,
             self.height,

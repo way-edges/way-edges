@@ -5,7 +5,7 @@ use crate::plug::{
     system::{init_mem_info, init_system_info, register_disk_partition},
 };
 
-use super::BoxedWidget;
+use super::{common::Template, BoxedWidget};
 use crate::config::widgets::common::{color_translate, dt_frame_rate, from_value};
 use educe::Educe;
 use gtk::gdk::RGBA;
@@ -56,7 +56,14 @@ pub struct RingCommon {
     pub text_transition_ms: u64,
 
     #[serde(default)]
-    pub prefix: Option<String>,
+    pub prefix: Option<Template>,
+    #[serde(default)]
+    pub prefix_hide: bool,
+    #[serde(default)]
+    pub suffix: Option<Template>,
+    #[serde(default)]
+    pub suffix_hide: bool,
+
     #[serde(default)]
     pub font_family: Option<String>,
     #[serde(default)]
