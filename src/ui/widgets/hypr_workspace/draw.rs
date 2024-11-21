@@ -165,14 +165,14 @@ impl DrawCore {
         match conf.edge {
             gtk4_layer_shell::Edge::Left | gtk4_layer_shell::Edge::Right => {
                 darea.set_size_request(
-                    wp_conf.thickness.get_num().unwrap().ceil() as i32,
-                    wp_conf.length.get_num().unwrap().ceil() as i32,
+                    wp_conf.size.thickness.get_num().unwrap().ceil() as i32,
+                    wp_conf.size.length.get_num().unwrap().ceil() as i32,
                 );
             }
             gtk4_layer_shell::Edge::Top | gtk4_layer_shell::Edge::Bottom => {
                 darea.set_size_request(
-                    wp_conf.length.get_num().unwrap().ceil() as i32,
-                    wp_conf.thickness.get_num().unwrap().ceil() as i32,
+                    wp_conf.size.thickness.get_num().unwrap().ceil() as i32,
+                    wp_conf.size.length.get_num().unwrap().ceil() as i32,
                 );
             }
             _ => todo!(),
@@ -221,8 +221,8 @@ impl DrawCore {
             hover_data,
 
             edge: conf.edge,
-            thickness: wp_conf.thickness.get_num_into().unwrap() as i32,
-            length: wp_conf.length.get_num_into().unwrap() as i32,
+            thickness: wp_conf.size.thickness.get_num_into().unwrap() as i32,
+            length: wp_conf.size.length.get_num_into().unwrap() as i32,
             gap: wp_conf.gap,
             active_increase: wp_conf.active_increase,
             extra_trigger_size: wp_conf.extra_trigger_size.get_num_into().unwrap(),

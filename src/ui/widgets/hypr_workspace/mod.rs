@@ -25,6 +25,8 @@ use crate::{
     },
 };
 
+use super::common::calculate_rel_extra_trigger_size;
+
 struct HyprWorkspaceExpose {
     ms: Weak<RefCell<MouseState>>,
 }
@@ -44,21 +46,9 @@ fn calculate_raletive(
         .get_monitor_size(&config.monitor)
         .ok_or(format!("Failed to get monitor size: {:?}", config.monitor))?;
 
-    match config.edge {
-        gtk4_layer_shell::Edge::Left | gtk4_layer_shell::Edge::Right => {
-            wp_conf.thickness.calculate_relative(size.0 as f64);
-            wp_conf.length.calculate_relative(size.1 as f64);
-            wp_conf.extra_trigger_size.calculate_relative(size.0 as f64);
-        }
-        gtk4_layer_shell::Edge::Top | gtk4_layer_shell::Edge::Bottom => {
-            wp_conf.thickness.calculate_relative(size.1 as f64);
-            wp_conf.length.calculate_relative(size.0 as f64);
-            wp_conf.extra_trigger_size.calculate_relative(size.1 as f64);
-        }
-        _ => unreachable!(),
-    }
+    calculate_rel_extra_trigger_size(&mut wp_conf.extra_trigger_size, size, config.edge);
 
-    Ok(())
+    wp_conf.size.ensure_no_relative(size, config.edge)
 }
 
 pub fn init_widget(
