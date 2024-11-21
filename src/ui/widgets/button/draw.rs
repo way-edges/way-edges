@@ -64,7 +64,7 @@ impl DrawCore {
         ts_list: TransitionStateList,
         pop_ts: TransitionStateRc,
     ) -> Self {
-        let size = btn_cfg.get_size().unwrap();
+        let size = btn_cfg.size().unwrap();
         let edge = cfg.edge;
         let extra_trigger_size = btn_cfg.extra_trigger_size.get_num_into().unwrap();
         let f_map_size = ((size.0 + extra_trigger_size), size.1);

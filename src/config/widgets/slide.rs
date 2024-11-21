@@ -11,7 +11,7 @@ use crate::{
     plug::common::{shell_cmd, shell_cmd_non_block},
 };
 
-use super::common::{self, from_value, EventMap};
+use super::common::{self, from_value, CommonSize, EventMap};
 
 pub const NAME: &str = "slide";
 
@@ -30,8 +30,8 @@ pub enum Direction {
 #[educe(Debug)]
 pub struct SlideConfig {
     // draw related
-    pub width: NumOrRelative,
-    pub height: NumOrRelative,
+    #[serde(flatten)]
+    pub size: CommonSize,
 
     #[serde(default = "common::dt_transition_duration")]
     pub transition_duration: u64,

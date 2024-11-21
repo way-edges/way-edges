@@ -40,7 +40,7 @@ pub fn setup_draw(
     mut additional: SlideAdditionalConfig,
 ) -> Result<SlideExpose, String> {
     let darea = DrawingArea::new();
-    let size = slide_cfg.get_size()?;
+    let size = slide_cfg.size()?;
     let edge = cfg.edge;
     let direction = slide_cfg.progress_direction;
     let extra_trigger_size = slide_cfg.extra_trigger_size.get_num()?;

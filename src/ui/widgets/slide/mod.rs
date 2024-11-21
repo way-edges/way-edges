@@ -76,21 +76,17 @@ pub fn init_widget_as_plug(
 }
 
 fn calculate_rel(config: &Config, slide_config: &mut SlideConfig) -> Result<(), String> {
-    let size = get_monitor_context()
+    let monitor_size = get_monitor_context()
         .get_monitor_size(&config.monitor)
         .ok_or(format!("Failed to get monitor size: {:?}", config.monitor))?;
 
     common::calculate_rel_extra_trigger_size(
         &mut slide_config.extra_trigger_size,
-        size,
+        monitor_size,
         config.edge,
     );
 
-    common::calculate_rel_width_height(
-        &mut slide_config.width,
-        &mut slide_config.height,
-        size,
-        config.edge,
-    )?;
-    Ok(())
+    slide_config
+        .size
+        .ensure_no_relative(monitor_size, config.edge)
 }

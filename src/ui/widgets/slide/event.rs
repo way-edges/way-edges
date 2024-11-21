@@ -79,7 +79,7 @@ pub(super) fn setup_event(
 ) -> (Rc<Cell<f64>>, MouseStateRc) {
     let xory = cfg.edge.into();
     let direction = slide_cfg.progress_direction;
-    let max = slide_cfg.get_size().unwrap().1;
+    let max = slide_cfg.size().unwrap().1;
     let on_change = slide_cfg.on_change.take();
     let mut event_map = slide_cfg.event_map.take().unwrap();
     let update_with_interval_ms = slide_cfg.update_with_interval_ms.take();

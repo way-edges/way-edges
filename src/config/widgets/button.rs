@@ -1,4 +1,4 @@
-use super::common::{self, from_value, EventMap};
+use super::common::{self, from_value, CommonSize, EventMap};
 use crate::config::{NumOrRelative, Widget};
 use educe::Educe;
 use gtk::gdk::RGBA;
@@ -12,8 +12,8 @@ pub const NAME: &str = "btn";
 #[derive(Educe, Deserialize, GetSize)]
 #[educe(Debug)]
 pub struct BtnConfig {
-    pub width: NumOrRelative,
-    pub height: NumOrRelative,
+    #[serde(flatten)]
+    pub size: CommonSize,
 
     #[educe(Debug(ignore))]
     #[serde(default = "common::dt_event_map")]

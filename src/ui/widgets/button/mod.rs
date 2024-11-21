@@ -13,8 +13,6 @@ use gtk::ApplicationWindow;
 use gtk::DrawingArea;
 use gtk4_layer_shell::Edge;
 
-use super::common;
-
 struct ButtonWidgetExpose;
 impl WidgetExpose for ButtonWidgetExpose {}
 
@@ -27,9 +25,12 @@ pub fn init_widget(
 
     let darea = DrawingArea::new();
     window.set_child(Some(&darea));
-    let size = btn_config.get_size()?;
+    let size = &btn_config.size;
     let edge = config.edge;
-    let map_size = (size.0 as i32, size.1 as i32);
+    let map_size = (
+        size.thickness.get_num().unwrap() as i32,
+        size.length.get_num().unwrap() as i32,
+    );
 
     // set widget size
     match edge {
@@ -61,24 +62,20 @@ pub fn init_widget(
 }
 
 fn calculate_rel(config: &Config, btn_config: &mut BtnConfig) -> Result<(), String> {
-    let size = get_monitor_context()
+    let monitor_size = get_monitor_context()
         .get_monitor_size(&config.monitor)
         .ok_or(format!("Failed to get monitor size: {:?}", config.monitor))?;
 
     if let NumOrRelative::Relative(_) = &mut btn_config.extra_trigger_size {
         let max = match config.edge {
-            Edge::Left | Edge::Right => size.0,
-            Edge::Top | Edge::Bottom => size.1,
+            Edge::Left | Edge::Right => monitor_size.0,
+            Edge::Top | Edge::Bottom => monitor_size.1,
             _ => unreachable!(),
         };
         btn_config.extra_trigger_size.calculate_relative(max as f64);
     };
 
-    common::calculate_rel_width_height(
-        &mut btn_config.width,
-        &mut btn_config.height,
-        size,
-        config.edge,
-    )?;
-    Ok(())
+    btn_config
+        .size
+        .ensure_no_relative(monitor_size, config.edge)
 }

@@ -1,20 +1,20 @@
-use super::common::{self, from_value};
+use super::common::{self, from_value, CommonSize};
 use crate::config::{NumOrRelative, Widget};
 use educe::Educe;
 use gtk::gdk::RGBA;
 use serde::Deserialize;
 use serde_jsonrc::Value;
 use std::str::FromStr;
+use way_edges_derive::GetSize;
 
 pub const NAME: &str = "hyprland-workspace";
 
-#[derive(Educe, Deserialize)]
+#[derive(Educe, Deserialize, GetSize)]
 #[educe(Debug)]
 pub struct HyprWorkspaceConfig {
-    #[serde(default = "dt_thickness")]
-    pub thickness: NumOrRelative,
-    #[serde(default = "dt_length")]
-    pub length: NumOrRelative,
+    #[serde(default = "dt_size")]
+    pub size: CommonSize,
+
     #[serde(default = "dt_gap")]
     pub gap: i32,
     #[serde(default = "dt_active_increase")]
@@ -41,12 +41,13 @@ pub struct HyprWorkspaceConfig {
     pub extra_trigger_size: NumOrRelative,
 }
 
-fn dt_thickness() -> NumOrRelative {
-    NumOrRelative::Num(10.0)
+fn dt_size() -> CommonSize {
+    CommonSize {
+        thickness: NumOrRelative::Num(10.0),
+        length: NumOrRelative::Num(200.0),
+    }
 }
-fn dt_length() -> NumOrRelative {
-    NumOrRelative::Num(200.0)
-}
+
 fn dt_gap() -> i32 {
     5
 }

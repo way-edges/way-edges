@@ -9,8 +9,8 @@ pub fn derive_size(input: TokenStream) -> TokenStream {
 
     quote::quote! {
         impl #struct_name {
-            pub fn get_size(&self) -> Result<(f64, f64), String> {
-                Ok((self.width.get_num()?, self.height.get_num()?))
+            pub fn size(&self) -> Result<(f64, f64), String> {
+                Ok((self.size.thickness.get_num()?, self.size.length.get_num()?))
             }
         }
     }
