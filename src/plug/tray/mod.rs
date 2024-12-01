@@ -58,12 +58,13 @@ impl Default for TrayIcon {
 }
 impl TrayIcon {
     fn parse_icon_paintable(p: IconPaintable) -> ImageData {
-        if let Some(path) = p.icon_name() {
-            println!("icon name: {:?}", path);
-        }
+        // if let Some(f) = p.file() {
+        //     let a = f.path().unwrap();
+        //     println!("icon file: {:?}", a);
+        // }
         todo!()
     }
-    pub fn get_icon_with_size(self, size: i32, scale: i32, direction: TextDirection) -> ImageData {
+    pub fn get_icon_with_size(&self, size: i32, scale: i32, direction: TextDirection) -> ImageData {
         match self {
             TrayIcon::Name(name) => {
                 // backup
@@ -75,28 +76,18 @@ impl TrayIcon {
                     direction,
                     IconLookupFlags::empty(),
                 );
-                // Self::parse_icon_paintable(icon_paintable)
-
-                {
-                    ImageData {
-                        width: 0,
-                        height: 0,
-                        stride: 0,
-                        format: cairo::Format::Rgb24,
-                        data: Vec::new(),
-                    }
-                }
+                Self::parse_icon_paintable(icon_paintable)
             }
             TrayIcon::Data(vec) => ImageSurface::create_from_png(&mut Cursor::new(vec))
                 .unwrap()
                 .into(),
-            TrayIcon::Pixmap(mut vec) => {
+            TrayIcon::Pixmap(vec) => {
                 if vec.is_empty() {
                     Self::default().get_icon_with_size(size, scale, direction)
                 } else {
-                    let a = vec.swap_remove(0);
+                    let a = vec.first().unwrap();
                     ImageSurface::create_for_data(
-                        a.pixels,
+                        a.pixels.clone(),
                         cairo::Format::ARgb32,
                         a.width,
                         a.height,

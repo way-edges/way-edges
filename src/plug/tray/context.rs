@@ -3,7 +3,7 @@ use std::{
     sync::atomic::{AtomicBool, AtomicPtr},
 };
 
-use gtk::IconTheme;
+use gtk::{gdk::Display, IconTheme};
 use system_tray::client::Client;
 
 use crate::{get_main_runtime_handle, plug::tray::event::match_event};
@@ -19,9 +19,12 @@ pub(super) struct TrayContext {
 }
 impl TrayContext {
     fn new(client: Client) -> Self {
+        // NOTE: INVESTIGATE LATER
+        let display = Display::default().unwrap();
+        let icon_theme = IconTheme::for_display(&display);
         Self {
             client,
-            icon_theme: IconTheme::new(),
+            icon_theme,
             cbs: HashMap::new(),
             count: 0,
         }
