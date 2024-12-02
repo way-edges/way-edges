@@ -5,6 +5,7 @@ pub mod pulseaudio;
 pub mod ring;
 pub mod slide;
 pub mod text;
+pub mod tray;
 pub mod wrapbox;
 
 mod common {
