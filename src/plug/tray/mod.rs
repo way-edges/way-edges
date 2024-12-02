@@ -5,7 +5,8 @@ use std::{io::Cursor, path::PathBuf};
 
 use cairo::ImageSurface;
 use context::get_tray_context;
-use gtk::{IconLookupFlags, IconPaintable, TextDirection};
+use gio::prelude::FileExt;
+use gtk::{gdk_pixbuf::Pixbuf, IconLookupFlags, IconPaintable, TextDirection};
 use system_tray::item::{IconPixmap, StatusNotifierItem};
 
 use crate::ui::draws::util::ImageData;
@@ -57,19 +58,36 @@ impl Default for TrayIcon {
     }
 }
 impl TrayIcon {
-    fn parse_icon_paintable(p: IconPaintable) -> ImageData {
-        // if let Some(f) = p.file() {
-        //     let a = f.path().unwrap();
-        //     println!("icon file: {:?}", a);
-        // }
-        todo!()
+    fn parse_icon_paintable(p: IconPaintable) -> Option<ImageData> {
+        let f = p.file()?;
+        let path = f.path()?;
+        let pixbuf = Pixbuf::from_file(path.as_path()).ok()?;
+
+        let width = pixbuf.width();
+        let height = pixbuf.height();
+        let stride = pixbuf.rowstride();
+        let format = cairo::Format::ARgb32;
+        let data = pixbuf.read_pixel_bytes().to_vec();
+
+        Some(ImageData {
+            width,
+            height,
+            stride,
+            format,
+            data,
+        })
     }
-    pub fn get_icon_with_size(&self, size: i32, scale: i32, direction: TextDirection) -> ImageData {
+    pub fn get_icon_with_size(
+        &self,
+        size: i32,
+        scale: i32,
+        direction: TextDirection,
+    ) -> Option<ImageData> {
         match self {
             TrayIcon::Name(name) => {
                 // backup
                 let icon_paintable = get_tray_context().get_icon_theme().lookup_icon(
-                    &name,
+                    name,
                     &[],
                     size,
                     scale,
@@ -78,23 +96,27 @@ impl TrayIcon {
                 );
                 Self::parse_icon_paintable(icon_paintable)
             }
-            TrayIcon::Data(vec) => ImageSurface::create_from_png(&mut Cursor::new(vec))
-                .unwrap()
-                .into(),
+            TrayIcon::Data(vec) => Some(
+                ImageSurface::create_from_png(&mut Cursor::new(vec))
+                    .ok()?
+                    .into(),
+            ),
             TrayIcon::Pixmap(vec) => {
                 if vec.is_empty() {
                     Self::default().get_icon_with_size(size, scale, direction)
                 } else {
                     let a = vec.first().unwrap();
-                    ImageSurface::create_for_data(
-                        a.pixels.clone(),
-                        cairo::Format::ARgb32,
-                        a.width,
-                        a.height,
-                        1,
+                    Some(
+                        ImageSurface::create_for_data(
+                            a.pixels.clone(),
+                            cairo::Format::ARgb32,
+                            a.width,
+                            a.height,
+                            1,
+                        )
+                        .unwrap()
+                        .into(),
                     )
-                    .unwrap()
-                    .into()
                 }
             }
         }
