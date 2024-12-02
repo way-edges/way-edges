@@ -55,9 +55,15 @@ pub struct BoxedWidgetConfig {
 #[derive(Deserialize, Debug, Default, Clone, Copy)]
 pub enum Align {
     #[default]
-    Left,
-    Center,
-    Right,
+    TopLeft,
+    TopCenter,
+    TopRight,
+    CenterLeft,
+    CenterCenter,
+    CenterRight,
+    BottomLeft,
+    BottomCenter,
+    BottomRight,
 }
 
 #[derive(Deserialize, Debug)]
