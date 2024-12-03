@@ -157,10 +157,16 @@ fn match_item(box_ctx: &BoxCtxRc, pos: (f64, f64)) -> Option<(BoxedWidgetRc, Mou
     let box_ctx = box_ctx.borrow();
 
     let pos = {
-        let rectint = box_ctx.rec_int; //input_region.as_ref().clone().into_inner();
+        let rectint = box_ctx.input_region; //input_region.as_ref().clone().into_inner();
         let pos = (pos.0 - rectint.x() as f64, pos.1 - rectint.y() as f64);
         box_ctx.outlook.transform_mouse_pos(pos)
     };
 
-    box_ctx.item_map.match_item(pos)
+    box_ctx
+        .grid_box
+        .position_map
+        .as_ref()
+        .unwrap()
+        .match_item(pos)
+        .map(|(widget, pos)| (widget.clone(), pos))
 }

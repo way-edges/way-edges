@@ -111,7 +111,7 @@ pub fn init_monitor(group_map: GroupMapCtxRc) -> Result<(), String> {
     let debouncer_context: Cell<Option<Rc<Cell<bool>>>> = Cell::new(None);
 
     list_model.connect_items_changed(move |_, _, _, _| {
-        println!("Monitor changed");
+        log::info!("Monitor changed");
         use gtk::glib;
 
         if let Some(removed) = debouncer_context.take() {
