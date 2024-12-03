@@ -1,5 +1,6 @@
 mod activate;
 mod args;
+mod common;
 mod config;
 mod daemon;
 mod file_watch;

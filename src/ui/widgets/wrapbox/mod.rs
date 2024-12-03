@@ -4,7 +4,7 @@
 use std::{cell::RefCell, rc::Rc};
 
 use cairo::RectangleInt;
-use display::grid::{GridBox, GridItemSizeMap};
+use display::grid::{BoxedWidgetRc, GridBox, GrideBoxBuilder};
 use draw::DrawCore;
 use event::event_handle;
 use expose::{BoxExpose, BoxExposeRc, BoxWidgetExpose};
@@ -13,7 +13,7 @@ use gtk::glib;
 use gtk::prelude::{DrawingAreaExtManual, GtkWindowExt, WidgetExt};
 use gtk::DrawingArea;
 
-use crate::config::widgets::wrapbox::{BoxConfig, BoxedWidgetConfig};
+use crate::config::widgets::wrapbox::BoxConfig;
 use crate::config::Config;
 use crate::ui::WidgetExposePtr;
 
@@ -32,28 +32,20 @@ type BoxCtxRc = Rc<RefCell<BoxCtx>>;
 
 struct BoxCtx {
     // use
-    item_map: GridItemSizeMap,
-    rec_int: RectangleInt,
+    input_region: RectangleInt,
     outlook: outlook::window::BoxOutlookWindow,
-    grid_box: GridBox,
+    pub grid_box: GridBox<BoxedWidgetRc>,
 }
 
 impl BoxCtx {
     fn new(config: &Config, box_conf: &mut BoxConfig, darea: &DrawingArea) -> (Self, BoxExposeRc) {
-        let mut grid_box =
-            display::grid::GridBox::new(box_conf.box_conf.gap, box_conf.box_conf.align);
-
         // define box expose and create boxed widgets
         let expose = BoxExpose::new(darea);
-        init_boxed_widgets(
-            &mut grid_box,
-            expose.clone(),
-            std::mem::take(&mut box_conf.widgets),
-        );
+        let mut grid_box = init_boxed_widgets(box_conf, expose.clone());
 
         // draw first frame
         // first draw
-        let (content, item_map) = grid_box.draw_content();
+        let content = grid_box.draw_content();
 
         // create outlook
         let ol = match box_conf.outlook.take().unwrap() {
@@ -68,8 +60,7 @@ impl BoxCtx {
 
         (
             Self {
-                item_map,
-                rec_int: RectangleInt::new(0, 0, 0, 0),
+                input_region: RectangleInt::new(0, 0, 0, 0),
                 outlook: ol,
                 grid_box,
             },
@@ -77,9 +68,8 @@ impl BoxCtx {
         )
     }
 
-    fn update_box_ctx(&mut self, item_size_map: GridItemSizeMap, rec_int: RectangleInt) {
-        self.item_map = item_size_map;
-        self.rec_int = rec_int;
+    fn update_input_region(&mut self, input_region: RectangleInt) {
+        self.input_region = input_region;
     }
 }
 
@@ -137,19 +127,22 @@ pub fn init_widget(
     Ok(widget_expose)
 }
 
-fn init_boxed_widgets(bx: &mut GridBox, expose: BoxExposeRc, ws: Vec<BoxedWidgetConfig>) {
+fn init_boxed_widgets(box_conf: &mut BoxConfig, expose: BoxExposeRc) -> GridBox<BoxedWidgetRc> {
+    let mut builder = GrideBoxBuilder::<BoxedWidgetRc>::new();
+    let ws = std::mem::take(&mut box_conf.widgets);
+
     ws.into_iter().for_each(|w| {
         let _ = match w.widget {
             crate::config::widgets::wrapbox::BoxedWidget::Ring(r) => match init_ring(&expose, *r) {
                 Ok(ring) => {
-                    bx.add(Rc::new(RefCell::new(ring)), (w.index[0], w.index[1]));
+                    builder.add(Rc::new(RefCell::new(ring)), (w.index[0], w.index[1]));
                     Ok(())
                 }
                 Err(e) => Err(format!("Fail to create ring widget: {e}")),
             },
             crate::config::widgets::wrapbox::BoxedWidget::Text(t) => match init_text(&expose, *t) {
                 Ok(text) => {
-                    bx.add(Rc::new(RefCell::new(text)), (w.index[0], w.index[1]));
+                    builder.add(Rc::new(RefCell::new(text)), (w.index[0], w.index[1]));
                     Ok(())
                 }
                 Err(e) => Err(format!("Fail to create text widget: {e}")),
@@ -160,4 +153,6 @@ fn init_boxed_widgets(bx: &mut GridBox, expose: BoxExposeRc, ws: Vec<BoxedWidget
             log::error!("{e}");
         });
     });
+
+    builder.build(box_conf.box_conf.gap, box_conf.box_conf.align)
 }
