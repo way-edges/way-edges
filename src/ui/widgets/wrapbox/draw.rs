@@ -56,7 +56,7 @@ impl DrawCore {
 
         {
             let mut box_ctx = box_ctx.borrow_mut();
-            let (content, _) = box_ctx.grid_box.draw_content();
+            let content = box_ctx.grid_box.draw_content();
             let content = {
                 let content_size = (content.width(), content.height());
                 box_ctx.outlook.redraw_if_size_change(content_size);
@@ -89,7 +89,7 @@ impl DrawCore {
             let mut box_ctx = self.box_ctx.borrow_mut();
             self.ts_list.refresh();
 
-            let (content, filtered_map) = box_ctx.grid_box.draw_content();
+            let content = box_ctx.grid_box.draw_content();
             let content = {
                 let content_size = (content.width(), content.height());
                 box_ctx.outlook.redraw_if_size_change(content_size);
@@ -100,10 +100,10 @@ impl DrawCore {
             let y = self.box_motion_transition.borrow().get_y();
 
             set_window_max_size(darea, wh);
-            let rec_int = (self.input_size_func)(window, darea, wh, y);
+            let input_region = (self.input_size_func)(window, darea, wh, y);
             self.box_frame_manager.ensure_frame_run(&self.ts_list);
 
-            box_ctx.update_box_ctx(filtered_map, rec_int);
+            box_ctx.update_input_region(input_region);
 
             (content, y)
         };

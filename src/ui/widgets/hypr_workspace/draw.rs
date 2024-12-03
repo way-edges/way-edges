@@ -14,6 +14,7 @@ use gtk::{
 use gtk4_layer_shell::Edge;
 
 use crate::{
+    common::binary_search_within_range,
     config::{widgets::hypr_workspace::HyprWorkspaceConfig, Config},
     plug::hypr_workspace::{
         register_hypr_event_callback, unregister_hypr_event_callback, HyprGlobalData,
@@ -49,9 +50,12 @@ impl HoverData {
 
     pub fn match_hover_id(&self, mouse_pos: (f64, f64)) -> isize {
         let id = match self.edge {
-            // Edge::Top | Edge::Bottom => self.item_location.len() as isize - 1 - self.m(mouse_pos.1),
-            Edge::Top | Edge::Bottom => self.m(mouse_pos.0),
-            Edge::Left | Edge::Right => self.m(mouse_pos.1),
+            Edge::Top | Edge::Bottom => {
+                binary_search_within_range(&self.item_location, mouse_pos.0)
+            }
+            Edge::Left | Edge::Right => {
+                binary_search_within_range(&self.item_location, mouse_pos.1)
+            }
             _ => unreachable!(),
         };
         if id < 0 {
@@ -72,46 +76,46 @@ impl HoverData {
     }
 
     // binary search
-    fn m(&self, pos: f64) -> isize {
-        if self.item_location.is_empty() {
-            return -1;
-        }
-
-        let mut index = self.item_location.len() - 1;
-        let mut half = self.item_location.len();
-
-        fn half_index(index: &mut usize, half: &mut usize, is_left: bool) {
-            *half = (*half / 2).max(1);
-
-            if is_left {
-                *index -= *half
-            } else {
-                *index += *half
-            }
-        }
-
-        half_index(&mut index, &mut half, true);
-
-        loop {
-            let current = self.item_location[index];
-
-            if pos < current[0] {
-                if index == 0 || self.item_location[index - 1][1] <= pos {
-                    return -1;
-                } else {
-                    half_index(&mut index, &mut half, true);
-                }
-            } else if pos >= current[1] {
-                if index == self.item_location.len() - 1 || pos < self.item_location[index + 1][0] {
-                    return -1;
-                } else {
-                    half_index(&mut index, &mut half, false);
-                }
-            } else {
-                return index as isize;
-            }
-        }
-    }
+    // fn m(&self, pos: f64) -> isize {
+    //     if self.item_location.is_empty() {
+    //         return -1;
+    //     }
+    //
+    //     let mut index = self.item_location.len() - 1;
+    //     let mut half = self.item_location.len();
+    //
+    //     fn half_index(index: &mut usize, half: &mut usize, is_left: bool) {
+    //         *half = (*half / 2).max(1);
+    //
+    //         if is_left {
+    //             *index -= *half
+    //         } else {
+    //             *index += *half
+    //         }
+    //     }
+    //
+    //     half_index(&mut index, &mut half, true);
+    //
+    //     loop {
+    //         let current = self.item_location[index];
+    //
+    //         if pos < current[0] {
+    //             if index == 0 || self.item_location[index - 1][1] <= pos {
+    //                 return -1;
+    //             } else {
+    //                 half_index(&mut index, &mut half, true);
+    //             }
+    //         } else if pos >= current[1] {
+    //             if index == self.item_location.len() - 1 || pos < self.item_location[index + 1][0] {
+    //                 return -1;
+    //             } else {
+    //                 half_index(&mut index, &mut half, false);
+    //             }
+    //         } else {
+    //             return index as isize;
+    //         }
+    //     }
+    // }
 }
 
 pub struct DrawCore {
