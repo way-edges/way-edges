@@ -53,6 +53,7 @@ pub struct BoxedWidgetConfig {
 }
 
 #[derive(Deserialize, Debug, Default, Clone, Copy)]
+#[serde(rename_all = "snake_case")]
 pub enum Align {
     #[default]
     TopLeft,
