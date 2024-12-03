@@ -74,48 +74,6 @@ impl HoverData {
     pub fn force_update_hover_id(&mut self, id: isize) {
         self.hover_id = id
     }
-
-    // binary search
-    // fn m(&self, pos: f64) -> isize {
-    //     if self.item_location.is_empty() {
-    //         return -1;
-    //     }
-    //
-    //     let mut index = self.item_location.len() - 1;
-    //     let mut half = self.item_location.len();
-    //
-    //     fn half_index(index: &mut usize, half: &mut usize, is_left: bool) {
-    //         *half = (*half / 2).max(1);
-    //
-    //         if is_left {
-    //             *index -= *half
-    //         } else {
-    //             *index += *half
-    //         }
-    //     }
-    //
-    //     half_index(&mut index, &mut half, true);
-    //
-    //     loop {
-    //         let current = self.item_location[index];
-    //
-    //         if pos < current[0] {
-    //             if index == 0 || self.item_location[index - 1][1] <= pos {
-    //                 return -1;
-    //             } else {
-    //                 half_index(&mut index, &mut half, true);
-    //             }
-    //         } else if pos >= current[1] {
-    //             if index == self.item_location.len() - 1 || pos < self.item_location[index + 1][0] {
-    //                 return -1;
-    //             } else {
-    //                 half_index(&mut index, &mut half, false);
-    //             }
-    //         } else {
-    //             return index as isize;
-    //         }
-    //     }
-    // }
 }
 
 pub struct DrawCore {
