@@ -9,7 +9,7 @@ use std::{io::Cursor, path::PathBuf};
 use cairo::ImageSurface;
 use context::get_tray_context;
 use gio::prelude::FileExt;
-use gtk::{gdk_pixbuf::Pixbuf, IconLookupFlags, IconPaintable, TextDirection};
+use gtk::{gdk_pixbuf::Pixbuf, IconLookupFlags, IconPaintable, TextDirection, PAPER_NAME_B5};
 use system_tray::item::{IconPixmap, StatusNotifierItem};
 
 pub struct TrayItem {
@@ -31,13 +31,21 @@ impl From<StatusNotifierItem> for TrayItem {
                 icon_theme.add_search_path(theme);
             }
         }
-        let icon = if let Some(icon) = value.icon_name {
-            TrayIcon::Name(icon)
-        } else if let Some(icon) = value.icon_pixmap {
-            TrayIcon::Pixmap(icon)
-        } else {
-            TrayIcon::default()
-        };
+
+        let icon = value
+            .icon_name
+            .filter(|icon_name| !icon_name.is_empty())
+            .map(TrayIcon::Name)
+            .or_else(|| {
+                if let Some(icon_pix_map) = value.icon_pixmap {
+                    println!("icon_pixmap: {icon_pix_map:?}");
+                    Some(TrayIcon::Pixmap(icon_pix_map))
+                } else {
+                    None
+                }
+            })
+            .unwrap_or_default();
+
         let menu_path = value.menu;
         Self {
             id,
@@ -86,27 +94,20 @@ impl TrayIcon {
                 );
                 Self::parse_icon_paintable(icon_paintable)
             }
-            TrayIcon::Data(vec) => Some(
-                ImageSurface::create_from_png(&mut Cursor::new(vec))
-                    .ok()?
-                    .into(),
-            ),
+            TrayIcon::Data(vec) => ImageSurface::create_from_png(&mut Cursor::new(vec)).ok(),
             TrayIcon::Pixmap(vec) => {
                 if vec.is_empty() {
                     Self::default().get_icon_with_size(size, scale)
                 } else {
                     let a = vec.first().unwrap();
-                    Some(
-                        ImageSurface::create_for_data(
-                            a.pixels.clone(),
-                            cairo::Format::ARgb32,
-                            a.width,
-                            a.height,
-                            1,
-                        )
-                        .unwrap()
-                        .into(),
+                    ImageSurface::create_for_data(
+                        a.pixels.clone(),
+                        cairo::Format::ARgb32,
+                        a.width,
+                        a.height,
+                        a.width * 4,
                     )
+                    .ok()
                 }
             }
         }
