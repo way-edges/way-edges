@@ -9,7 +9,7 @@ use crate::{
 
 use super::wrapbox::{
     display::grid::{DisplayWidget, GridBox},
-    expose::BoxExpose,
+    expose::{BoxExpose, BoxRedrawFunc},
 };
 
 struct Menu {}
@@ -28,6 +28,17 @@ impl Tray {
     fn update_title(&mut self, title: Option<String>) {}
     fn update_icon(&mut self, icon: TrayIcon) {}
     fn update_menu(&mut self, menu: Menu) {}
+}
+impl DisplayWidget for Tray {
+    fn get_size(&self) -> (f64, f64) {
+        (self.icon.width() as f64, self.icon.height() as f64)
+    }
+
+    fn content(&self) -> ImageSurface {
+        self.icon.clone()
+    }
+
+    fn on_mouse_event(&mut self, _: crate::ui::draws::mouse_state::MouseEvent) {}
 }
 
 impl GridBox<TrayID> {
@@ -87,13 +98,21 @@ struct TrayModule {
     // id
     grid: GridBox<TrayID>,
     id_tray_map: HashMap<TrayID, Tray>,
+    redraw_signal: BoxRedrawFunc,
 }
 impl TrayModule {
-    fn new() -> Self {
+    fn draw_content(&mut self) -> ImageSurface {
+        self.grid.draw(
+            |id| self.id_tray_map.get(id).unwrap().get_size(),
+            |id| self.id_tray_map.get(id).unwrap().content(),
+        )
+    }
+    fn new(redraw_signal: BoxRedrawFunc) -> Self {
         let grid = GridBox::new(0., Align::CenterCenter);
         Self {
             grid,
             id_tray_map: HashMap::new(),
+            redraw_signal,
         }
     }
     fn add_tray(&mut self, id: String, tray_item: &TrayItem) {
@@ -102,10 +121,14 @@ impl TrayModule {
 
         self.grid.add(id.clone());
         self.id_tray_map.insert(id, tray);
+
+        (self.redraw_signal)()
     }
     fn remove_tray(&mut self, id: &String) {
         self.grid.rm(id);
         self.id_tray_map.remove(id);
+
+        (self.redraw_signal)()
     }
 
     fn parse_tray_icon(value: &TrayIcon, size: i32) -> ImageSurface {
@@ -129,15 +152,15 @@ impl TrayModule {
     }
 }
 
-struct TrayCtx {
+pub struct TrayCtx {
     module: TrayModule,
     backend_cb_id: i32,
     content: cairo::ImageSurface,
 }
-impl Default for TrayCtx {
-    fn default() -> Self {
+impl TrayCtx {
+    fn new(module: TrayModule) -> Self {
         Self {
-            module: TrayModule::new(),
+            module,
             backend_cb_id: Default::default(),
             content: ImageSurface::create(cairo::Format::ARgb32, 0, 0).unwrap(),
         }
@@ -150,23 +173,35 @@ impl Drop for TrayCtx {
 }
 
 impl DisplayWidget for TrayCtx {
-    fn get_size(&mut self) -> (f64, f64) {
-        todo!()
+    fn get_size(&self) -> (f64, f64) {
+        (self.content.width() as f64, self.content.height() as f64)
     }
 
-    fn content(&mut self) -> cairo::ImageSurface {
-        todo!()
+    fn content(&self) -> cairo::ImageSurface {
+        self.content.clone()
     }
 
     fn on_mouse_event(&mut self, _: crate::ui::draws::mouse_state::MouseEvent) {}
 }
 
-pub fn init_tray(expose: &BoxExpose) {
+pub fn init_tray(expose: &BoxExpose) -> Rc<RefCell<TrayCtx>> {
     use gtk::glib;
 
-    let update_func = expose.update_func();
+    let ctx = Rc::<RefCell<TrayCtx>>::new_cyclic(|me| {
+        // make module
+        let update_func = expose.update_func();
+        let me = me.clone();
+        let tray_redraw_func = Rc::new(move || {
+            if let Some(ctx) = me.upgrade() {
+                let ctx = unsafe { ctx.as_ptr().as_mut() }.unwrap();
+                ctx.content = ctx.module.draw_content();
+                update_func();
+            }
+        });
+        let module = TrayModule::new(tray_redraw_func);
 
-    let ctx = Rc::new(RefCell::new(TrayCtx::default()));
+        RefCell::new(TrayCtx::new(module))
+    });
 
     let backend_cb_id = register_tray(Box::new(glib::clone!(
         #[weak]
@@ -187,4 +222,8 @@ pub fn init_tray(expose: &BoxExpose) {
             }
         }
     )));
+
+    ctx.borrow_mut().backend_cb_id = backend_cb_id;
+
+    ctx
 }

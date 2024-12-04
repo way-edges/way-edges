@@ -9,8 +9,8 @@ use crate::{
 use gtk::gdk::cairo::{self, Format, ImageSurface};
 
 pub trait DisplayWidget {
-    fn get_size(&mut self) -> (f64, f64);
-    fn content(&mut self) -> ImageSurface;
+    fn get_size(&self) -> (f64, f64);
+    fn content(&self) -> ImageSurface;
     fn on_mouse_event(&mut self, _: MouseEvent) {}
 }
 

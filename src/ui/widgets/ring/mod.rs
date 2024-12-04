@@ -284,12 +284,12 @@ impl RingCtx {
 }
 
 impl DisplayWidget for RingCtx {
-    fn get_size(&mut self) -> (f64, f64) {
+    fn get_size(&self) -> (f64, f64) {
         let c = &unsafe { self.cache_content.as_ptr().as_ref().unwrap() };
         (c.width() as f64, c.height() as f64)
     }
 
-    fn content(&mut self) -> ImageSurface {
+    fn content(&self) -> ImageSurface {
         unsafe { self.cache_content.as_ptr().as_ref().unwrap().clone() }
     }
     fn on_mouse_event(&mut self, event: MouseEvent) {

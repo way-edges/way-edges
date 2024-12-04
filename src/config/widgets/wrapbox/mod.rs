@@ -218,6 +218,7 @@ pub fn visit_config(d: Value) -> Result<Widget, String> {
 pub enum BoxedWidget {
     Ring(Box<RingConfig>),
     Text(Box<TextConfig>),
+    Tray,
 }
 
 impl<'de> Deserialize<'de> for BoxedWidget {
@@ -239,6 +240,7 @@ impl<'de> Deserialize<'de> for BoxedWidget {
         match t {
             ring::NAME => ring::visit_config(raw),
             text::NAME => text::visit_config(raw),
+            "tray" => Ok(BoxedWidget::Tray),
             _ => Err(format!("unknown widget type: {t}")),
         }
         .map_err(serde::de::Error::custom)

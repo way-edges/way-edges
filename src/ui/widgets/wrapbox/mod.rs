@@ -15,6 +15,7 @@ use gtk::DrawingArea;
 
 use crate::config::widgets::wrapbox::BoxConfig;
 use crate::config::Config;
+use crate::ui::widgets::tray::init_tray;
 use crate::ui::WidgetExposePtr;
 
 use super::ring::init_ring;
@@ -131,22 +132,28 @@ fn init_boxed_widgets(box_conf: &mut BoxConfig, expose: BoxExpose) -> GridBox<Bo
     let mut builder = GrideBoxBuilder::<BoxedWidgetRc>::new();
     let ws = std::mem::take(&mut box_conf.widgets);
 
+    use crate::config::widgets::wrapbox::BoxedWidget;
     ws.into_iter().for_each(|w| {
         let _ = match w.widget {
-            crate::config::widgets::wrapbox::BoxedWidget::Ring(r) => match init_ring(&expose, *r) {
+            BoxedWidget::Ring(r) => match init_ring(&expose, *r) {
                 Ok(ring) => {
                     builder.add(Rc::new(RefCell::new(ring)), (w.index[0], w.index[1]));
                     Ok(())
                 }
                 Err(e) => Err(format!("Fail to create ring widget: {e}")),
             },
-            crate::config::widgets::wrapbox::BoxedWidget::Text(t) => match init_text(&expose, *t) {
+            BoxedWidget::Text(t) => match init_text(&expose, *t) {
                 Ok(text) => {
                     builder.add(Rc::new(RefCell::new(text)), (w.index[0], w.index[1]));
                     Ok(())
                 }
                 Err(e) => Err(format!("Fail to create text widget: {e}")),
             },
+            BoxedWidget::Tray => {
+                let tray_ctx = init_tray(&expose);
+                builder.add(tray_ctx, (w.index[0], w.index[1]));
+                Ok(())
+            }
         }
         .inspect_err(|e| {
             crate::notify_send("Way-edges boxed widgets", e.as_str(), true);
