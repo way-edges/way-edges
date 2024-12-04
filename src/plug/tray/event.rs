@@ -7,7 +7,7 @@ use super::{context::get_tray_context, TrayIcon};
 pub type TrayEvent = (String, Event);
 
 pub enum Event {
-    TitleUpdate(String),
+    TitleUpdate(Option<String>),
     IconUpdate(TrayIcon),
     MenuNew(super::TrayMenu),
     ItemNew(super::TrayItem),
@@ -23,9 +23,7 @@ pub fn match_event(e: system_tray::client::Event) -> Option<TrayEvent> {
             system_tray::client::UpdateEvent::Menu(tray_menu) => {
                 Some((id, Event::MenuNew(tray_menu.into())))
             }
-            system_tray::client::UpdateEvent::Title(title) => {
-                Some((id, Event::TitleUpdate(title.unwrap_or_default())))
-            }
+            system_tray::client::UpdateEvent::Title(title) => Some((id, Event::TitleUpdate(title))),
             system_tray::client::UpdateEvent::Icon(icon_path) => {
                 let icon = icon_path.map_or(TrayIcon::default(), TrayIcon::Name);
                 Some((id, Event::IconUpdate(icon)))

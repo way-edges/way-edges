@@ -1,6 +1,9 @@
 mod context;
 mod event;
 
+pub use context::{register_tray, unregister_tray};
+pub use event::Event;
+
 use std::{io::Cursor, path::PathBuf};
 
 use cairo::ImageSurface;
@@ -8,8 +11,6 @@ use context::get_tray_context;
 use gio::prelude::FileExt;
 use gtk::{gdk_pixbuf::Pixbuf, IconLookupFlags, IconPaintable, TextDirection};
 use system_tray::item::{IconPixmap, StatusNotifierItem};
-
-use crate::ui::draws::util::ImageData;
 
 pub struct TrayItem {
     pub id: String,
@@ -58,7 +59,7 @@ impl Default for TrayIcon {
     }
 }
 impl TrayIcon {
-    fn parse_icon_paintable(p: IconPaintable) -> Option<ImageData> {
+    fn parse_icon_paintable(p: IconPaintable) -> Option<ImageSurface> {
         let f = p.file()?;
         let path = f.path()?;
         let pixbuf = Pixbuf::from_file(path.as_path()).ok()?;
@@ -69,20 +70,9 @@ impl TrayIcon {
         let format = cairo::Format::ARgb32;
         let data = pixbuf.read_pixel_bytes().to_vec();
 
-        Some(ImageData {
-            width,
-            height,
-            stride,
-            format,
-            data,
-        })
+        ImageSurface::create_for_data(data, format, width, height, stride).ok()
     }
-    pub fn get_icon_with_size(
-        &self,
-        size: i32,
-        scale: i32,
-        direction: TextDirection,
-    ) -> Option<ImageData> {
+    pub fn get_icon_with_size(&self, size: i32, scale: i32) -> Option<ImageSurface> {
         match self {
             TrayIcon::Name(name) => {
                 // backup
@@ -91,7 +81,7 @@ impl TrayIcon {
                     &[],
                     size,
                     scale,
-                    direction,
+                    TextDirection::Ltr,
                     IconLookupFlags::empty(),
                 );
                 Self::parse_icon_paintable(icon_paintable)
@@ -103,7 +93,7 @@ impl TrayIcon {
             ),
             TrayIcon::Pixmap(vec) => {
                 if vec.is_empty() {
-                    Self::default().get_icon_with_size(size, scale, direction)
+                    Self::default().get_icon_with_size(size, scale)
                 } else {
                     let a = vec.first().unwrap();
                     Some(
