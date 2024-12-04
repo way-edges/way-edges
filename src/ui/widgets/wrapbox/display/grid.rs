@@ -2,7 +2,8 @@ use core::fmt::Debug;
 use std::{cell::RefCell, rc::Rc};
 
 use crate::{
-    common::binary_search_within_range, config::widgets::wrapbox::Align,
+    common::binary_search_within_range,
+    config::widgets::wrapbox::{Align, AlignFunc},
     ui::draws::mouse_state::MouseEvent,
 };
 use gtk::gdk::cairo::{self, Format, ImageSurface};
@@ -24,9 +25,17 @@ pub type BoxedWidgetRc = Rc<RefCell<dyn DisplayWidget>>;
 pub type GridMap<T> = Vec<Vec<Option<T>>>;
 
 pub struct GridItemMap<T> {
-    items: Vec<T>,
+    pub items: Vec<T>,
     // record each row start index in `items`
-    row_index: Vec<usize>,
+    pub row_index: Vec<usize>,
+}
+impl<T> Default for GridItemMap<T> {
+    fn default() -> Self {
+        Self {
+            items: Vec::default(),
+            row_index: Vec::default(),
+        }
+    }
 }
 
 type GridItemIndex = (usize, usize);
@@ -88,53 +97,7 @@ impl<T: Clone> GrideBoxBuilder<T> {
     }
 
     pub fn build(self, gap: f64, align: Align) -> GridBox<T> {
-        macro_rules! align_y {
-            (T, $pos:expr, $size:expr, $content_size:expr) => {
-                $pos.1
-            };
-            (C, $pos:expr, $size:expr, $content_size:expr) => {
-                $pos.1 + ($size.1 - $content_size.1) / 2.
-            };
-            (B, $pos:expr, $size:expr, $content_size:expr) => {
-                $pos.1 + ($size.1 - $content_size.1)
-            };
-        }
-
-        macro_rules! align_x {
-            (L, $pos:expr, $size:expr, $content_size:expr) => {
-                $pos.0
-            };
-            (C, $pos:expr, $size:expr, $content_size:expr) => {
-                $pos.0 + ($size.0 - $content_size.0) / 2.
-            };
-            (R, $pos:expr, $size:expr, $content_size:expr) => {
-                $pos.0 + ($size.0 - $content_size.0)
-            };
-        }
-
-        macro_rules! a {
-            ($x:tt $y:tt) => {
-                |pos, size, content_size| {
-                    (
-                        align_x!($x, pos, size, content_size),
-                        align_y!($y, pos, size, content_size),
-                    )
-                }
-            };
-        }
-
-        let align_func: AlignFunc = Box::new(match align {
-            #[allow(unused)]
-            Align::TopLeft => a!(L T),
-            Align::TopCenter => a!(C T),
-            Align::TopRight => a!(R T),
-            Align::CenterLeft => a!(L C),
-            Align::CenterCenter => a!(C C),
-            Align::CenterRight => a!(R C),
-            Align::BottomLeft => a!(L B),
-            Align::BottomCenter => a!(C B),
-            Align::BottomRight => a!(R B),
-        });
+        let align_func: AlignFunc = align.to_func();
 
         let mut items = vec![];
         let mut row_index = vec![];
@@ -168,12 +131,6 @@ impl<T: Clone> GrideBoxBuilder<T> {
         }
     }
 }
-
-type AlignFuncPos = (f64, f64);
-type AlignFuncGridBlockSize = (f64, f64);
-type AlignFuncContentSize = (f64, f64);
-type AlignFunc =
-    Box<fn(AlignFuncPos, AlignFuncGridBlockSize, AlignFuncContentSize) -> AlignFuncPos>;
 
 pub struct GridPositionMap<T> {
     // use i32 to save memory
@@ -221,8 +178,21 @@ pub struct GridBox<T> {
 
     pub position_map: Option<GridPositionMap<T>>,
 }
-impl GridBox<BoxedWidgetRc> {
-    pub fn draw_content(&mut self) -> ImageSurface {
+impl<T> GridBox<T> {
+    pub fn new(gap: f64, align: Align) -> Self {
+        Self {
+            map: GridItemMap::default(),
+            row_col_num: (0, 0),
+            gap,
+            align_func: align.to_func(),
+            position_map: None,
+        }
+    }
+    pub fn draw(
+        &mut self,
+        get_size_func: impl Fn(&T) -> (f64, f64),
+        get_content_func: impl Fn(&T) -> ImageSurface,
+    ) -> ImageSurface {
         if self.map.row_index.is_empty() {
             return ImageSurface::create(Format::ARgb32, 0, 0).unwrap();
         }
@@ -263,7 +233,7 @@ impl GridBox<BoxedWidgetRc> {
                     widget_render_map[which_row].push(widget);
 
                     // calculate size
-                    let widget_content_size = widget.borrow_mut().get_size();
+                    let widget_content_size = get_size_func(widget);
                     // max height for each row
                     let height: &mut f64 = &mut grid_block_size_map[0][which_row];
                     *height = height.max(widget_content_size.1);
@@ -307,7 +277,7 @@ impl GridBox<BoxedWidgetRc> {
             let max_col = row.len() - 1;
 
             for (which_col, widget) in row.into_iter().enumerate() {
-                let surf = widget.borrow_mut().content();
+                let surf = get_content_func(widget);
                 let content_size = (surf.width() as f64, surf.height() as f64);
 
                 // calculate start position considering align
@@ -379,78 +349,17 @@ impl GridBox<BoxedWidgetRc> {
     }
 }
 
+impl GridBox<BoxedWidgetRc> {
+    pub fn draw_content(&mut self) -> ImageSurface {
+        self.draw(
+            |widget| widget.borrow_mut().get_size(),
+            |widget| widget.borrow_mut().content(),
+        )
+    }
+}
+
 impl<T> Drop for GridBox<T> {
     fn drop(&mut self) {
         log::debug!("drop grid box");
     }
 }
-
-// pub type GridItemSizeMapRc = Rc<Cell<GridItemSizeMap>>;
-// pub struct GridItemSizeMap {
-//     map: [Vec<f64>; 2],
-//     gap: f64,
-//     total_size: (f64, f64),
-//     item_map: FilteredGridMap,
-// }
-// impl GridItemSizeMap {
-//     fn new(
-//         map: [Vec<f64>; 2],
-//         gap: f64,
-//         total_size: (f64, f64),
-//         item_map: FilteredGridMap,
-//     ) -> Self {
-//         Self {
-//             map,
-//             gap,
-//             total_size,
-//             item_map,
-//         }
-//     }
-//     pub fn match_item(&self, pos: MousePosition) -> Option<(BoxedWidgetRc, MousePosition)> {
-//         if pos.0 < 0. || pos.1 < 0. || pos.0 > self.total_size.0 || pos.1 > self.total_size.1 {
-//             None
-//         } else {
-//             let (row, y) = {
-//                 let mut start = 0.;
-//                 let mut row_idx = None;
-//                 for (i, h) in self.map[0].iter().enumerate() {
-//                     let s = *h;
-//                     let y = pos.1 - start;
-//                     let range = s + self.gap;
-//                     if y <= s {
-//                         row_idx = Some((i, y));
-//                         break;
-//                     } else if y < range {
-//                         return None;
-//                     };
-//
-//                     start += range;
-//                 }
-//                 row_idx.unwrap()
-//             };
-//             let (col, x) = {
-//                 let mut start = 0.;
-//                 let mut col_idx = None;
-//                 for (i, w) in self.map[1].iter().enumerate() {
-//                     let s = *w;
-//                     let x = pos.0 - start;
-//                     let range = s + self.gap;
-//                     if x <= s {
-//                         col_idx = Some((i, x));
-//                         break;
-//                     } else if x < range {
-//                         return None;
-//                     };
-//
-//                     start += range;
-//                 }
-//                 col_idx.unwrap()
-//             };
-//             Some(((row, col), (x, y)))
-//         }
-//         .map(|(idx, pos)| {
-//             let item = self.item_map[idx.0][idx.1].clone();
-//             (item, pos)
-//         })
-//     }
-// }
