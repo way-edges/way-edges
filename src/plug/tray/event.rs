@@ -1,4 +1,8 @@
-use super::TrayIcon;
+use std::future::Future;
+
+use system_tray::client::ActivateRequest;
+
+use super::{context::get_tray_context, TrayIcon};
 
 pub type TrayEvent = (String, Event);
 
@@ -59,4 +63,10 @@ pub fn match_event(e: system_tray::client::Event) -> Option<TrayEvent> {
         },
         system_tray::client::Event::Remove(id) => Some((id, Event::ItemRemove)),
     }
+}
+
+pub fn request_event(
+    req: ActivateRequest,
+) -> impl Future<Output = Result<(), system_tray::error::Error>> {
+    get_tray_context().client.activate(req)
 }

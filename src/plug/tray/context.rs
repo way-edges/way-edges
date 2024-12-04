@@ -12,7 +12,7 @@ use super::event::TrayEvent;
 
 type TrayCallback = Box<dyn FnMut(&TrayEvent)>;
 pub(super) struct TrayContext {
-    client: Client,
+    pub client: Client,
     icon_theme: IconTheme,
     cbs: HashMap<i32, TrayCallback>,
     count: i32,
