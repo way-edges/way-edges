@@ -24,10 +24,9 @@ pub fn match_event(e: system_tray::client::Event) -> Option<TrayEvent> {
                 Some((id, Event::MenuNew(tray_menu.into())))
             }
             system_tray::client::UpdateEvent::Title(title) => Some((id, Event::TitleUpdate(title))),
-            system_tray::client::UpdateEvent::Icon(icon_path) => {
-                let icon = icon_path.map_or(TrayIcon::default(), TrayIcon::Name);
-                Some((id, Event::IconUpdate(icon)))
-            }
+            system_tray::client::UpdateEvent::Icon(icon_path) => icon_path
+                .filter(|name| !name.is_empty())
+                .map(|name| (id, Event::IconUpdate(TrayIcon::Name(name)))),
 
             // not implemented
             system_tray::client::UpdateEvent::AttentionIcon(_) => {
