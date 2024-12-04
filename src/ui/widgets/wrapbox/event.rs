@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
 use super::display::grid::BoxedWidgetRc;
-use super::expose::BoxExposeRc;
+use super::expose::BoxExpose;
 use super::{BoxCtxRc, MousePosition};
 use gtk::DrawingArea;
 
@@ -63,7 +63,7 @@ impl LastWidget {
 
 pub fn event_handle(
     darea: &DrawingArea,
-    expose: BoxExposeRc,
+    expose: BoxExpose,
     ts: TransitionStateRc,
     box_ctx: BoxCtxRc,
 ) -> MouseStateRc {
@@ -77,7 +77,7 @@ pub fn event_handle(
     let mut leave_box_state = false;
 
     let cb = {
-        let f = expose.borrow().update_func();
+        let f = expose.update_func();
         new_mouse_event_func(move |e| {
             let mut should_redraw = false;
 

@@ -18,7 +18,7 @@ use crate::ui::draws::mouse_state::MouseEvent;
 use crate::ui::draws::transition_state::{self, TransitionState, TransitionStateRc};
 
 use super::wrapbox::display::grid::DisplayWidget;
-use super::wrapbox::expose::BoxExposeRc;
+use super::wrapbox::expose::{BoxExpose, BoxRedrawFunc};
 
 fn from_kb(total: u64, avaibale: u64) -> (f64, f64, &'static str) {
     let mut c = 0;
@@ -58,7 +58,7 @@ fn from_kib(total: u64, avaibale: u64) -> (f64, f64, &'static str) {
 }
 
 struct RingEvents {
-    queue_draw: Box<dyn FnMut() + 'static>,
+    queue_draw: BoxRedrawFunc,
 }
 
 type RunnerTask = Box<dyn Send + FnMut(&mut Ring) -> Result<RingCache, String>>;
@@ -322,13 +322,9 @@ impl Drop for RingCtx {
     }
 }
 
-pub fn init_ring(expose: &BoxExposeRc, config: RingConfig) -> Result<RingCtx, String> {
-    let re = {
-        let expose = expose.borrow_mut();
-        let s = expose.update_func();
-        RingEvents {
-            queue_draw: Box::new(s),
-        }
+pub fn init_ring(expose: &BoxExpose, config: RingConfig) -> Result<RingCtx, String> {
+    let re = RingEvents {
+        queue_draw: expose.update_func(),
     };
     RingCtx::new(re, config)
 }

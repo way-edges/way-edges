@@ -7,7 +7,7 @@ use cairo::RectangleInt;
 use display::grid::{BoxedWidgetRc, GridBox, GrideBoxBuilder};
 use draw::DrawCore;
 use event::event_handle;
-use expose::{BoxExpose, BoxExposeRc, BoxWidgetExpose};
+use expose::{BoxExpose, BoxWidgetExpose};
 use gio::glib::clone::Downgrade;
 use gtk::glib;
 use gtk::prelude::{DrawingAreaExtManual, GtkWindowExt, WidgetExt};
@@ -38,7 +38,7 @@ struct BoxCtx {
 }
 
 impl BoxCtx {
-    fn new(config: &Config, box_conf: &mut BoxConfig, darea: &DrawingArea) -> (Self, BoxExposeRc) {
+    fn new(config: &Config, box_conf: &mut BoxConfig, darea: &DrawingArea) -> (Self, BoxExpose) {
         // define box expose and create boxed widgets
         let expose = BoxExpose::new(darea);
         let mut grid_box = init_boxed_widgets(box_conf, expose.clone());
@@ -127,7 +127,7 @@ pub fn init_widget(
     Ok(widget_expose)
 }
 
-fn init_boxed_widgets(box_conf: &mut BoxConfig, expose: BoxExposeRc) -> GridBox<BoxedWidgetRc> {
+fn init_boxed_widgets(box_conf: &mut BoxConfig, expose: BoxExpose) -> GridBox<BoxedWidgetRc> {
     let mut builder = GrideBoxBuilder::<BoxedWidgetRc>::new();
     let ws = std::mem::take(&mut box_conf.widgets);
 
