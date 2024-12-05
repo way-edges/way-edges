@@ -9,12 +9,9 @@ use system_tray::item::StatusNotifierItem;
 
 use crate::{
     config::widgets::wrapbox::Align,
-    plug::{
-        self,
-        tray::{
-            icon::{parse_icon_given_data, parse_icon_given_name, parse_icon_given_pixmaps},
-            register_tray, tray_update_item_theme_search_path, unregister_tray, TrayMenu,
-        },
+    plug::tray::{
+        icon::{parse_icon_given_data, parse_icon_given_name, parse_icon_given_pixmaps},
+        register_tray, tray_update_item_theme_search_path, unregister_tray,
     },
 };
 
@@ -90,7 +87,7 @@ impl MenuState {
                     }
                 }
             }
-            fn iter_menus(&mut self, vec: &Vec<Menu>) {
+            fn iter_menus(&mut self, vec: &[Menu]) {
                 vec.iter().for_each(|menu| {
                     self.check_open_state(menu);
                     self.check_hover_state(menu);
@@ -107,6 +104,24 @@ struct RootMenu {
     id: i32,
     submenus: Vec<Menu>,
 }
+impl RootMenu {
+    fn from_tray_menu(tray_menu: &system_tray::menu::TrayMenu, icon_size: i32) -> Self {
+        Self {
+            id: tray_menu.id as i32,
+            submenus: tray_menu.submenus.vec_into_menu(icon_size),
+        }
+    }
+}
+trait VecTrayMenuIntoVecMenu {
+    fn vec_into_menu(&self, icon_size: i32) -> Vec<Menu>;
+}
+impl VecTrayMenuIntoVecMenu for Vec<system_tray::menu::MenuItem> {
+    fn vec_into_menu(&self, icon_size: i32) -> Vec<Menu> {
+        self.iter()
+            .map(|item| Menu::from_menu_item(item, icon_size))
+            .collect()
+    }
+}
 
 struct Menu {
     id: i32,
@@ -117,16 +132,17 @@ struct Menu {
 }
 
 impl Menu {
-    fn from_menu_item(value: system_tray::menu::MenuItem, icon_size: i32) -> Self {
+    fn from_menu_item(value: &system_tray::menu::MenuItem, icon_size: i32) -> Self {
         let id = value.id;
-        let label = value.label;
+        let label = value.label.clone();
         let enabled = value.enabled;
 
         let icon = value
             .icon_name
+            .clone()
             .filter(|name| !name.is_empty())
             .and_then(|name| parse_icon_given_name(&name, icon_size))
-            .or_else(|| value.icon_data.and_then(|vec| parse_icon_given_data(vec)));
+            .or(value.icon_data.clone().and_then(parse_icon_given_data));
 
         let menu_type = match value.menu_type {
             system_tray::menu::MenuType::Separator => MenuType::Separator,
@@ -159,7 +175,7 @@ impl Menu {
                             MenuType::Parent(
                                 value
                                     .submenu
-                                    .into_iter()
+                                    .iter()
                                     .map(|item| Menu::from_menu_item(item, icon_size))
                                     .collect(),
                             )
@@ -181,7 +197,7 @@ impl Menu {
     }
 }
 
-pub enum MenuType {
+enum MenuType {
     Radio(bool),
     Check(bool),
     // should the menu wtih submenus have toggle states?
@@ -246,13 +262,11 @@ impl Tray {
             .icon_name
             .clone()
             .filter(|icon_name| !icon_name.is_empty())
-            .map(|name| parse_icon_given_name(&name, icon_size))
-            .unwrap_or(
-                value
-                    .icon_pixmap
-                    .as_ref()
-                    .and_then(|icon_pix_map| parse_icon_given_pixmaps(icon_pix_map, icon_size)),
-            )
+            .and_then(|name| parse_icon_given_name(&name, icon_size))
+            .or(value
+                .icon_pixmap
+                .as_ref()
+                .and_then(|icon_pix_map| parse_icon_given_pixmaps(icon_pix_map, icon_size)))
             .unwrap_or(ImageSurface::create(cairo::Format::ARgb32, icon_size, icon_size).unwrap());
 
         let menu_path = value.menu.clone();
@@ -378,17 +392,6 @@ impl TrayModule {
 
     fn find_tray(&mut self, id: &String) -> Option<&mut Tray> {
         self.id_tray_map.get_mut(id)
-    }
-
-    fn parse_menu(menu: &plug::tray::Menu, icon_size: i32) -> Menu {}
-    fn parse_tray_menu(tray_menu: &TrayMenu, icon_size: i32) -> RootMenu {
-        let id = tray_menu.id as i32;
-        let submenus = tray_menu
-            .menus
-            .iter()
-            .map(|menu| TrayModule::parse_menu(menu, icon_size))
-            .collect();
-        RootMenu { id, submenus }
     }
 }
 
