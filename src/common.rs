@@ -51,3 +51,16 @@ pub fn binary_search_within_range<T: Debug + PartialOrd + Copy + Display>(
         }
     }
 }
+
+// pub trait VecInto<D> {
+//     fn vec_into(self) -> Vec<D>;
+// }
+//
+// impl<E, D> VecInto<D> for Vec<E>
+// where
+//     D: From<E>,
+// {
+//     fn vec_into(self) -> Vec<D> {
+//         self.into_iter().map(std::convert::Into::into).collect()
+//     }
+// }
