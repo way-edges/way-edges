@@ -12,7 +12,7 @@ use gio::prelude::FileExt;
 use gtk::{
     gdk_pixbuf::{Colorspace, Pixbuf},
     prelude::GdkCairoContextExt,
-    IconLookupFlags, IconPaintable, TextDirection, PAPER_NAME_B5,
+    IconLookupFlags, IconPaintable, TextDirection,
 };
 use system_tray::item::{IconPixmap, StatusNotifierItem};
 
@@ -85,7 +85,7 @@ fn scale_image_to_size(img: ImageSurface, size: i32) -> ImageSurface {
     let context = cairo::Context::new(&surf).unwrap();
     let scale = size as f64 / img.width() as f64;
     context.scale(scale, scale);
-    context.set_source_surface(&img, Z, Z);
+    context.set_source_surface(&img, Z, Z).unwrap();
     context.paint().unwrap();
 
     surf
@@ -93,6 +93,7 @@ fn scale_image_to_size(img: ImageSurface, size: i32) -> ImageSurface {
 
 pub enum TrayIcon {
     Name(String),
+    // `Data` only happens for menu
     Data(Vec<u8>),
     Pixmap(Vec<IconPixmap>),
 }
@@ -106,6 +107,7 @@ impl TrayIcon {
         let f = p.file()?.path()?;
         Pixbuf::from_file(f.as_path()).ok()
     }
+    /// `TrayIcon::Data` do not respect `size`
     pub fn get_icon_with_size(&self, size: i32) -> Option<ImageSurface> {
         match self {
             TrayIcon::Name(name) => {
@@ -124,9 +126,7 @@ impl TrayIcon {
                     size,
                 ))
             }
-            TrayIcon::Data(vec) => ImageSurface::create_from_png(&mut Cursor::new(vec))
-                .ok()
-                .map(|img| scale_image_to_size(img, size)),
+            TrayIcon::Data(vec) => ImageSurface::create_from_png(&mut Cursor::new(vec)).ok(),
             TrayIcon::Pixmap(vec) => {
                 if vec.is_empty() {
                     Self::default().get_icon_with_size(size)
@@ -168,8 +168,8 @@ impl TrayIcon {
 
 // represent the root menu(click on the icon and this menu gets triggered)
 pub struct TrayMenu {
-    id: u32,
-    menus: Vec<Menu>,
+    pub id: u32,
+    pub menus: Vec<Menu>,
 }
 
 impl From<system_tray::menu::TrayMenu> for TrayMenu {
@@ -181,14 +181,14 @@ impl From<system_tray::menu::TrayMenu> for TrayMenu {
 }
 
 pub struct Menu {
-    id: i32,
-    label: Option<String>,
-    enabled: bool,
+    pub id: i32,
+    pub label: Option<String>,
+    pub enabled: bool,
 
     // icon can only be used once
     // we should preserve the data afterwards
-    icon: Option<TrayIcon>,
-    menu_type: MenuType,
+    pub icon: Option<TrayIcon>,
+    pub menu_type: MenuType,
 }
 
 impl From<system_tray::menu::MenuItem> for Menu {
