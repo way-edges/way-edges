@@ -2,22 +2,22 @@ use std::future::Future;
 
 use system_tray::client::ActivateRequest;
 
-use super::{context::get_tray_context, TrayIcon};
+use super::context::get_tray_context;
 
 pub type TrayEvent = (String, Event);
 
 pub enum Event {
     TitleUpdate(Option<String>),
-    IconUpdate(TrayIcon),
-    MenuNew(super::TrayMenu),
-    ItemNew(super::TrayItem),
+    IconUpdate(String),
+    MenuNew(system_tray::menu::TrayMenu),
+    ItemNew(Box<system_tray::item::StatusNotifierItem>),
     ItemRemove,
 }
 
 pub fn match_event(e: system_tray::client::Event) -> Option<TrayEvent> {
     match e {
         system_tray::client::Event::Add(id, status_notifier_item) => {
-            Some((id, Event::ItemNew((*status_notifier_item).into())))
+            Some((id, Event::ItemNew(status_notifier_item)))
         }
         system_tray::client::Event::Update(id, update_event) => match update_event {
             system_tray::client::UpdateEvent::Menu(tray_menu) => {
@@ -27,7 +27,7 @@ pub fn match_event(e: system_tray::client::Event) -> Option<TrayEvent> {
             // TODO: why icon update can only have name update
             system_tray::client::UpdateEvent::Icon(icon_path) => icon_path
                 .filter(|name| !name.is_empty())
-                .map(|name| (id, Event::IconUpdate(TrayIcon::Name(name)))),
+                .map(|name| (id, Event::IconUpdate(name))),
 
             // not implemented
             system_tray::client::UpdateEvent::AttentionIcon(_) => {

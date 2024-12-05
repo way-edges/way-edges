@@ -5,12 +5,16 @@ use std::{
 };
 
 use cairo::ImageSurface;
+use system_tray::item::StatusNotifierItem;
 
 use crate::{
     config::widgets::wrapbox::Align,
     plug::{
         self,
-        tray::{register_tray, unregister_tray, TrayIcon, TrayItem, TrayMenu},
+        tray::{
+            icon::{parse_icon_given_data, parse_icon_given_name, parse_icon_given_pixmaps},
+            register_tray, tray_update_item_theme_search_path, unregister_tray, TrayMenu,
+        },
     },
 };
 
@@ -24,7 +28,79 @@ struct MenuState {
     hover_state: i32,
 }
 impl MenuState {
-    fn filter_state_with_new_menu(&mut self, menu: &RootMenu) {}
+    fn filter_state_with_new_menu(&mut self, menu: &RootMenu) {
+        Checker::run(self, menu);
+
+        struct Checker<'a> {
+            need_check_open_state: bool,
+            need_check_hover: bool,
+            state: &'a mut MenuState,
+
+            new_open_state: Option<HashSet<i32>>,
+            found_hover: Option<bool>,
+        }
+        impl<'a> Checker<'a> {
+            fn run(state: &'a mut MenuState, menu: &RootMenu) {
+                let need_check_open_state = !state.open_state.is_empty();
+                let need_check_hover = state.hover_state != -1;
+
+                let mut checker = Checker {
+                    need_check_open_state,
+                    need_check_hover,
+                    state,
+
+                    new_open_state: if need_check_open_state {
+                        Some(HashSet::new())
+                    } else {
+                        None
+                    },
+                    found_hover: if need_check_hover { Some(false) } else { None },
+                };
+
+                checker.iter_menus(&menu.submenus);
+                checker.post_check_open_state();
+                checker.post_check_hover_state();
+            }
+            fn check_open_state(&mut self, menu: &Menu) {
+                if !self.need_check_open_state {
+                    return;
+                }
+
+                if let MenuType::Parent(_) = &menu.menu_type {
+                    self.new_open_state.as_mut().unwrap().insert(menu.id);
+                }
+            }
+            fn post_check_open_state(&mut self) {
+                if let Some(new_open_state) = self.new_open_state.take() {
+                    self.state.open_state = new_open_state;
+                }
+            }
+            fn check_hover_state(&mut self, menu: &Menu) {
+                if !self.need_check_hover {
+                    return;
+                }
+                if menu.id == self.state.hover_state {
+                    self.found_hover.replace(true);
+                }
+            }
+            fn post_check_hover_state(&mut self) {
+                if let Some(found_hover) = self.found_hover.take() {
+                    if !found_hover {
+                        self.state.hover_state = -1;
+                    }
+                }
+            }
+            fn iter_menus(&mut self, vec: &Vec<Menu>) {
+                vec.iter().for_each(|menu| {
+                    self.check_open_state(menu);
+                    self.check_hover_state(menu);
+                    if let MenuType::Parent(submenus) = &menu.menu_type {
+                        self.iter_menus(submenus);
+                    }
+                });
+            }
+        }
+    }
 }
 
 struct RootMenu {
@@ -32,28 +108,86 @@ struct RootMenu {
     submenus: Vec<Menu>,
 }
 
-struct CommonMenu {
-    pub id: i32,
-    pub label: Option<String>,
-    pub enabled: bool,
-    pub icon: Option<TrayIcon>,
+struct Menu {
+    id: i32,
+    label: Option<String>,
+    enabled: bool,
+    icon: Option<ImageSurface>,
+    menu_type: MenuType,
 }
 
-enum Menu {
-    Radio {
-        common: CommonMenu,
-        choosed: bool,
-    },
-    Check {
-        common: CommonMenu,
-        checked: bool,
-    },
-    WithSubmenu {
-        common: CommonMenu,
-        submenu: Vec<Menu>,
-    },
-    Normal(CommonMenu),
+impl Menu {
+    fn from_menu_item(value: system_tray::menu::MenuItem, icon_size: i32) -> Self {
+        let id = value.id;
+        let label = value.label;
+        let enabled = value.enabled;
+
+        let icon = value
+            .icon_name
+            .filter(|name| !name.is_empty())
+            .and_then(|name| parse_icon_given_name(&name, icon_size))
+            .or_else(|| value.icon_data.and_then(|vec| parse_icon_given_data(vec)));
+
+        let menu_type = match value.menu_type {
+            system_tray::menu::MenuType::Separator => MenuType::Separator,
+            system_tray::menu::MenuType::Standard => {
+                match value.toggle_type {
+                    system_tray::menu::ToggleType::Checkmark => {
+                        MenuType::Check(match value.toggle_state {
+                            system_tray::menu::ToggleState::On => true,
+                            system_tray::menu::ToggleState::Off => false,
+                            system_tray::menu::ToggleState::Indeterminate => {
+                                log::error!("THIS SHOULD NOT HAPPEN. menu item has toggle but not toggle state");
+                                // ???
+                                false
+                            }
+                        })
+                    }
+                    system_tray::menu::ToggleType::Radio => {
+                        MenuType::Radio(match value.toggle_state {
+                            system_tray::menu::ToggleState::On => true,
+                            system_tray::menu::ToggleState::Off => false,
+                            system_tray::menu::ToggleState::Indeterminate => {
+                                log::error!("THIS SHOULD NOT HAPPEN. menu item has toggle but not toggle state");
+                                // ???
+                                false
+                            }
+                        })
+                    }
+                    system_tray::menu::ToggleType::CannotBeToggled => {
+                        if !value.submenu.is_empty() {
+                            MenuType::Parent(
+                                value
+                                    .submenu
+                                    .into_iter()
+                                    .map(|item| Menu::from_menu_item(item, icon_size))
+                                    .collect(),
+                            )
+                        } else {
+                            MenuType::Normal
+                        }
+                    }
+                }
+            }
+        };
+
+        Self {
+            id,
+            label,
+            enabled,
+            icon,
+            menu_type,
+        }
+    }
+}
+
+pub enum MenuType {
+    Radio(bool),
+    Check(bool),
+    // should the menu wtih submenus have toggle states?
+    Parent(Vec<Menu>),
     Separator,
+    Normal,
 }
 
 struct Tray {
@@ -98,7 +232,44 @@ impl Tray {
         }
     }
     fn draw(&mut self) {}
+
+    fn from_notify_item(tray_id: TrayID, value: &StatusNotifierItem, icon_size: i32) -> Self {
+        let id = value.id.clone();
+        let title = value.title.clone();
+
+        if let Some(theme) = value.icon_theme_path.clone() {
+            tray_update_item_theme_search_path(theme);
+        }
+
+        // NOTE: THIS LOOK RIDICULOUS I KNOW, ANY BETTER IDEA? I'M FRUSTRATED.
+        let icon = value
+            .icon_name
+            .clone()
+            .filter(|icon_name| !icon_name.is_empty())
+            .map(|name| parse_icon_given_name(&name, icon_size))
+            .unwrap_or(
+                value
+                    .icon_pixmap
+                    .as_ref()
+                    .and_then(|icon_pix_map| parse_icon_given_pixmaps(icon_pix_map, icon_size)),
+            )
+            .unwrap_or(ImageSurface::create(cairo::Format::ARgb32, icon_size, icon_size).unwrap());
+
+        let menu_path = value.menu.clone();
+
+        Self {
+            tray_id,
+            id,
+            title,
+            icon,
+            menu_path,
+            menu: None,
+            updated: true,
+            content: ImageSurface::create(cairo::Format::ARgb32, 0, 0).unwrap(),
+        }
+    }
 }
+
 impl DisplayWidget for Tray {
     fn get_size(&self) -> (f64, f64) {
         (self.icon.width() as f64, self.icon.height() as f64)
@@ -189,9 +360,9 @@ impl TrayModule {
             icon_size: 16,
         }
     }
-    fn add_tray(&mut self, id: String, tray_item: &TrayItem) {
+    fn add_tray(&mut self, id: String, tray_item: &StatusNotifierItem) {
         let id = Rc::new(id);
-        let tray = Self::parse_tary_item(id.clone(), tray_item, self.icon_size);
+        let tray = Tray::from_notify_item(id.clone(), tray_item, self.icon_size);
 
         self.grid.add(id.clone());
         self.id_tray_map.insert(id, tray);
@@ -209,25 +380,6 @@ impl TrayModule {
         self.id_tray_map.get_mut(id)
     }
 
-    fn parse_tray_icon(value: &TrayIcon, size: i32) -> ImageSurface {
-        value
-            .get_icon_with_size(size)
-            .unwrap_or(ImageSurface::create(cairo::Format::ARgb32, size, size).unwrap())
-    }
-    fn parse_tary_item(tray_id: TrayID, value: &TrayItem, icon_size: i32) -> Tray {
-        let id = value.id.clone();
-        let title = value.title.clone();
-        let icon = Self::parse_tray_icon(&value.icon, icon_size);
-        let menu_path = value.menu_path.clone();
-        Tray {
-            tray_id,
-            id,
-            title,
-            icon,
-            menu_path,
-            menu: None,
-        }
-    }
     fn parse_menu(menu: &plug::tray::Menu, icon_size: i32) -> Menu {}
     fn parse_tray_menu(tray_menu: &TrayMenu, icon_size: i32) -> RootMenu {
         let id = tray_menu.id as i32;
@@ -312,7 +464,10 @@ pub fn init_tray(expose: &BoxExpose) -> Rc<RefCell<TrayCtx>> {
                 Event::IconUpdate(tray_icon) => {
                     let size = ctx.module.icon_size;
                     if let Some(tray) = ctx.module.find_tray(id) {
-                        tray.update_icon(TrayModule::parse_tray_icon(tray_icon, size));
+                        let surf = parse_icon_given_name(tray_icon, size).unwrap_or(
+                            ImageSurface::create(cairo::Format::ARgb32, size, size).unwrap(),
+                        );
+                        tray.update_icon(surf);
                     }
                 }
                 Event::MenuNew(tray_menu) => {}

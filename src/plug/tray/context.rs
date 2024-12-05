@@ -1,5 +1,6 @@
 use std::{
     collections::HashMap,
+    path::PathBuf,
     sync::atomic::{AtomicBool, AtomicPtr},
 };
 
@@ -113,4 +114,14 @@ pub fn register_tray(cb: TrayCallback) -> i32 {
 
 pub fn unregister_tray(id: i32) {
     get_tray_context().remove_cb(id);
+}
+
+pub fn tray_update_item_theme_search_path(theme: String) {
+    let icon_theme = get_tray_context().get_icon_theme();
+    if !icon_theme
+        .search_path()
+        .contains(&PathBuf::from(theme.clone()))
+    {
+        icon_theme.add_search_path(theme);
+    }
 }
