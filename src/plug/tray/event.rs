@@ -21,7 +21,7 @@ pub fn match_event(e: system_tray::client::Event) -> Option<TrayEvent> {
         }
         system_tray::client::Event::Update(id, update_event) => match update_event {
             system_tray::client::UpdateEvent::Menu(tray_menu) => {
-                Some((id, Event::MenuNew(tray_menu.into())))
+                Some((id, Event::MenuNew(tray_menu)))
             }
             system_tray::client::UpdateEvent::Title(title) => Some((id, Event::TitleUpdate(title))),
             // TODO: why icon update can only have name update

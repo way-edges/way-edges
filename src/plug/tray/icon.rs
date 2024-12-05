@@ -60,7 +60,7 @@ pub fn parse_icon_given_name(name: &str, size: i32) -> Option<ImageSurface> {
 pub fn parse_icon_given_data(vec: Vec<u8>) -> Option<ImageSurface> {
     ImageSurface::create_from_png(&mut Cursor::new(vec)).ok()
 }
-pub fn parse_icon_given_pixmaps(vec: &Vec<IconPixmap>, size: i32) -> Option<ImageSurface> {
+pub fn parse_icon_given_pixmaps(vec: &[IconPixmap], size: i32) -> Option<ImageSurface> {
     if vec.is_empty() {
         parse_icon_given_name("image-missing", size)
     } else {

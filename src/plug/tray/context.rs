@@ -52,10 +52,7 @@ impl TrayContext {
                 );
                 cb(&e);
                 if let Some(menu) = menu {
-                    let e = (
-                        id.clone(),
-                        super::event::Event::MenuNew(menu.clone().into()),
-                    );
+                    let e = (id.clone(), super::event::Event::MenuNew(menu.clone()));
                     cb(&e);
                 }
             });
