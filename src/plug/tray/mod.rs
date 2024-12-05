@@ -103,9 +103,6 @@ impl Default for TrayIcon {
 }
 impl TrayIcon {
     fn parse_icon_paintable(p: IconPaintable) -> Option<Pixbuf> {
-        // we can do endian convert, but it's too hard
-        // https://stackoverflow.com/a/10588779/21873016
-
         let f = p.file()?.path()?;
         Pixbuf::from_file(f.as_path()).ok()
     }
@@ -134,6 +131,9 @@ impl TrayIcon {
                 if vec.is_empty() {
                     Self::default().get_icon_with_size(size)
                 } else {
+                    // we can do endian convert, but it's too hard
+                    // https://stackoverflow.com/a/10588779/21873016
+
                     let pixmap = vec.last().unwrap();
                     let mut pixels = pixmap.pixels.clone();
 
