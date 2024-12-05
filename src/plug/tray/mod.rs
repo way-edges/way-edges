@@ -9,8 +9,14 @@ use std::{io::Cursor, path::PathBuf};
 use cairo::ImageSurface;
 use context::get_tray_context;
 use gio::prelude::FileExt;
-use gtk::{gdk_pixbuf::Pixbuf, IconLookupFlags, IconPaintable, TextDirection, PAPER_NAME_B5};
+use gtk::{
+    gdk_pixbuf::{Colorspace, Pixbuf},
+    prelude::GdkCairoContextExt,
+    IconLookupFlags, IconPaintable, TextDirection, PAPER_NAME_B5,
+};
 use system_tray::item::{IconPixmap, StatusNotifierItem};
+
+use crate::ui::draws::util::Z;
 
 pub struct TrayItem {
     pub id: String,
@@ -56,6 +62,35 @@ impl From<StatusNotifierItem> for TrayItem {
     }
 }
 
+fn new_image_surface_from_buf(buf: Pixbuf) -> ImageSurface {
+    let width = buf.width();
+    let height = buf.height();
+    let format = cairo::Format::ARgb32;
+    let surf = ImageSurface::create(format, width, height).unwrap();
+    let context = cairo::Context::new(&surf).unwrap();
+
+    context.set_source_pixbuf(&buf, Z, Z);
+    context.paint().unwrap();
+
+    surf
+}
+
+fn scale_image_to_size(img: ImageSurface, size: i32) -> ImageSurface {
+    if img.width() == size || img.height() == size {
+        return img;
+    }
+
+    let format = cairo::Format::ARgb32;
+    let surf = ImageSurface::create(format, size, size).unwrap();
+    let context = cairo::Context::new(&surf).unwrap();
+    let scale = size as f64 / img.width() as f64;
+    context.scale(scale, scale);
+    context.set_source_surface(&img, Z, Z);
+    context.paint().unwrap();
+
+    surf
+}
+
 pub enum TrayIcon {
     Name(String),
     Data(Vec<u8>),
@@ -67,20 +102,14 @@ impl Default for TrayIcon {
     }
 }
 impl TrayIcon {
-    fn parse_icon_paintable(p: IconPaintable) -> Option<ImageSurface> {
-        let f = p.file()?;
-        let path = f.path()?;
-        let pixbuf = Pixbuf::from_file(path.as_path()).ok()?;
+    fn parse_icon_paintable(p: IconPaintable) -> Option<Pixbuf> {
+        // we can do endian convert, but it's too hard
+        // https://stackoverflow.com/a/10588779/21873016
 
-        let width = pixbuf.width();
-        let height = pixbuf.height();
-        let stride = pixbuf.rowstride();
-        let format = cairo::Format::ARgb32;
-        let data = pixbuf.read_pixel_bytes().to_vec();
-
-        ImageSurface::create_for_data(data, format, width, height, stride).ok()
+        let f = p.file()?.path()?;
+        Pixbuf::from_file(f.as_path()).ok()
     }
-    pub fn get_icon_with_size(&self, size: i32, scale: i32) -> Option<ImageSurface> {
+    pub fn get_icon_with_size(&self, size: i32) -> Option<ImageSurface> {
         match self {
             TrayIcon::Name(name) => {
                 // backup
@@ -88,26 +117,49 @@ impl TrayIcon {
                     name,
                     &[],
                     size,
-                    scale,
+                    1,
                     TextDirection::Ltr,
                     IconLookupFlags::empty(),
                 );
-                Self::parse_icon_paintable(icon_paintable)
+                let pixbuf = Self::parse_icon_paintable(icon_paintable)?;
+                Some(scale_image_to_size(
+                    new_image_surface_from_buf(pixbuf),
+                    size,
+                ))
             }
-            TrayIcon::Data(vec) => ImageSurface::create_from_png(&mut Cursor::new(vec)).ok(),
+            TrayIcon::Data(vec) => ImageSurface::create_from_png(&mut Cursor::new(vec))
+                .ok()
+                .map(|img| scale_image_to_size(img, size)),
             TrayIcon::Pixmap(vec) => {
                 if vec.is_empty() {
-                    Self::default().get_icon_with_size(size, scale)
+                    Self::default().get_icon_with_size(size)
                 } else {
-                    let a = vec.first().unwrap();
-                    ImageSurface::create_for_data(
-                        a.pixels.clone(),
-                        cairo::Format::ARgb32,
-                        a.width,
-                        a.height,
-                        a.width * 4,
-                    )
-                    .ok()
+                    let pixmap = vec.last().unwrap();
+                    let mut pixels = pixmap.pixels.clone();
+
+                    // from ironbar
+                    for i in (0..pixels.len()).step_by(4) {
+                        let alpha = pixels[i];
+                        pixels[i] = pixels[i + 1];
+                        pixels[i + 1] = pixels[i + 2];
+                        pixels[i + 2] = pixels[i + 3];
+                        pixels[i + 3] = alpha;
+                    }
+
+                    let pixbuf = Pixbuf::from_mut_slice(
+                        &mut pixels,
+                        Colorspace::Rgb,
+                        true,
+                        8,
+                        pixmap.width,
+                        pixmap.height,
+                        pixmap.width * 4,
+                    );
+
+                    Some(scale_image_to_size(
+                        new_image_surface_from_buf(pixbuf),
+                        size,
+                    ))
                 }
             }
         }

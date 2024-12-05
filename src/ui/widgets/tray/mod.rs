@@ -133,7 +133,7 @@ impl TrayModule {
 
     fn parse_tray_icon(value: &TrayIcon, size: i32) -> ImageSurface {
         value
-            .get_icon_with_size(size, 1)
+            .get_icon_with_size(size)
             .unwrap_or(ImageSurface::create(cairo::Format::ARgb32, size, size).unwrap())
     }
     fn parse_tary_item(tray_id: TrayID, value: &TrayItem, size: i32) -> Tray {
