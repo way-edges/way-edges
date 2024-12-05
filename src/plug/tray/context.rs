@@ -91,7 +91,9 @@ fn init_tray_client() {
     );
     CONTEXT_INITED.store(true, std::sync::atomic::Ordering::Release);
 
-    get_main_runtime_handle().spawn(async move {
+    use gtk::glib;
+
+    glib::spawn_future_local(async move {
         // do something with initial items...
 
         while let Ok(ev) = tray_rx.recv().await {
@@ -102,6 +104,8 @@ fn init_tray_client() {
             }
         }
     });
+
+    // get_main_runtime_handle().spawn();
 }
 
 pub fn register_tray(cb: TrayCallback) -> i32 {
