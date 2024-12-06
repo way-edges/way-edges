@@ -60,7 +60,7 @@ impl MenuState {
                 checker.post_check_open_state();
                 checker.post_check_hover_state();
             }
-            fn check_open_state(&mut self, menu: &Menu) {
+            fn check_open_state(&mut self, menu: &MenuItem) {
                 if !self.need_check_open_state {
                     return;
                 }
@@ -74,7 +74,7 @@ impl MenuState {
                     self.state.open_state = new_open_state;
                 }
             }
-            fn check_hover_state(&mut self, menu: &Menu) {
+            fn check_hover_state(&mut self, menu: &MenuItem) {
                 if !self.need_check_hover {
                     return;
                 }
@@ -89,7 +89,7 @@ impl MenuState {
                     }
                 }
             }
-            fn iter_menus(&mut self, vec: &[Menu]) {
+            fn iter_menus(&mut self, vec: &[MenuItem]) {
                 vec.iter().for_each(|menu| {
                     self.check_open_state(menu);
                     self.check_hover_state(menu);
@@ -104,7 +104,7 @@ impl MenuState {
 
 pub struct RootMenu {
     pub id: i32,
-    pub submenus: Vec<Menu>,
+    pub submenus: Vec<MenuItem>,
 }
 impl RootMenu {
     pub fn from_tray_menu(tray_menu: &system_tray::menu::TrayMenu, icon_size: i32) -> Self {
@@ -114,18 +114,18 @@ impl RootMenu {
         }
     }
 }
-trait VecTrayMenuIntoVecMenu {
-    fn vec_into_menu(&self, icon_size: i32) -> Vec<Menu>;
+trait VecTrayMenuIntoVecLocalMenuItem {
+    fn vec_into_menu(&self, icon_size: i32) -> Vec<MenuItem>;
 }
-impl VecTrayMenuIntoVecMenu for Vec<system_tray::menu::MenuItem> {
-    fn vec_into_menu(&self, icon_size: i32) -> Vec<Menu> {
+impl VecTrayMenuIntoVecLocalMenuItem for Vec<system_tray::menu::MenuItem> {
+    fn vec_into_menu(&self, icon_size: i32) -> Vec<MenuItem> {
         self.iter()
-            .map(|item| Menu::from_menu_item(item, icon_size))
+            .map(|item| MenuItem::from_menu_item(item, icon_size))
             .collect()
     }
 }
 
-pub struct Menu {
+pub struct MenuItem {
     pub id: i32,
     pub label: Option<String>,
     pub enabled: bool,
@@ -133,7 +133,7 @@ pub struct Menu {
     pub menu_type: MenuType,
 }
 
-impl Menu {
+impl MenuItem {
     fn from_menu_item(value: &system_tray::menu::MenuItem, icon_size: i32) -> Self {
         let id = value.id;
         let label = value.label.clone();
@@ -178,7 +178,7 @@ impl Menu {
                                 value
                                     .submenu
                                     .iter()
-                                    .map(|item| Menu::from_menu_item(item, icon_size))
+                                    .map(|item| MenuItem::from_menu_item(item, icon_size))
                                     .collect(),
                             )
                         } else {
@@ -203,7 +203,7 @@ pub enum MenuType {
     Radio(bool),
     Check(bool),
     // should the menu wtih submenus have toggle states?
-    Parent(Vec<Menu>),
+    Parent(Vec<MenuItem>),
     Separator,
     Normal,
 }

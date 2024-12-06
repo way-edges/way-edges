@@ -1,8 +1,16 @@
+use std::ops::Deref;
+
 use cairo::{Format, ImageSurface};
 
-use crate::{common::binary_search_end, ui::draws::util::Z};
+use crate::{
+    common::binary_search_end,
+    ui::{
+        draws::util::{draw_text, Z},
+        widgets::tray::draw::{MenuDrawArg, MenuDrawConfig},
+    },
+};
 
-use super::module::{MenuState, RootMenu, Tray};
+use super::module::{MenuItem, MenuState, RootMenu, Tray};
 
 enum ClickedItem {
     TrayIcon,
@@ -71,11 +79,33 @@ impl TrayHeadLayout {
     }
 }
 
-struct MenuRow {
+struct MenuCol {
     height_range: Vec<f64>,
     id_vec: Vec<i32>,
 }
-impl MenuRow {
+impl MenuCol {
+    fn draw_and_create(
+        menu_items: &Vec<MenuItem>,
+        state: &MenuState,
+        menu_arg: &mut MenuDrawArg,
+    ) -> Vec<(ImageSurface, Self)> {
+        static GAP_BETWEEN_MARKER_AND_TEXT: i32 = 5;
+
+        let next_col = None;
+        let mut max_text_width = 0;
+        let mut total_height = 0;
+        let text_imgs: Vec<Option<ImageSurface>> = menu_items
+            .iter()
+            .map(|menu| {
+                menu.label.map(|label| {
+                    let text_img = menu_arg.draw_text(&label);
+                    max_text_width = max_text_width.max(text_img.width());
+                    total_height += text_img.height();
+                    text_img
+                })
+            })
+            .collect();
+    }
     fn get_clicked(&self, pos: (f64, f64)) -> Option<i32> {
         let row_index = binary_search_end(&self.height_range, pos.1);
         if row_index == -1 {
@@ -91,10 +121,19 @@ struct MenuLayout {
     // end pixel index of each col
     menu_each_col_x_end: Vec<f64>,
     // same index of `menu_each_col_x_end`
-    menu_row_of_each_col: Vec<MenuRow>,
+    menu_cols: Vec<MenuCol>,
 }
 impl MenuLayout {
-    fn draw_and_create(root_menu: &RootMenu, state: &MenuState) -> (ImageSurface, Self) {}
+    fn draw_and_create(root_menu: &RootMenu, state: &MenuState) -> (ImageSurface, Self) {
+        let config = MenuDrawConfig::default();
+        let mut menu_arg = MenuDrawArg::create_from_config(&config);
+
+        let cols = MenuCol::draw_and_create(&root_menu.submenus, state, &mut menu_arg);
+
+        let max_height = 0;
+        let total_width = 0;
+        let menu_each_col_x_end = vec![];
+    }
     fn get_clicked(&self, pos: (f64, f64)) -> Option<i32> {
         let col_index = binary_search_end(&self.menu_each_col_x_end, pos.0);
         if col_index == -1 {
@@ -106,7 +145,7 @@ impl MenuLayout {
             } else {
                 pos.0 - self.menu_each_col_x_end[col_index - 1]
             };
-            self.menu_row_of_each_col[col_index].get_clicked((new_pos_width, pos.1))
+            self.menu_cols[col_index].get_clicked((new_pos_width, pos.1))
         }
     }
 }

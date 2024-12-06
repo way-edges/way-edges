@@ -134,11 +134,26 @@ impl From<ImageData> for ImageSurface {
 
 pub fn draw_text(pl: &Layout, color: &RGBA, text: &str) -> ImageSurface {
     pl.set_text(text);
-    let size = pl.pixel_size();
-    let surf = new_surface(size);
+    let (ink, _) = pl.pixel_extents();
+    let surf = new_surface((ink.width(), ink.height()));
     let ctx = cairo::Context::new(&surf).unwrap();
-    ctx.set_antialias(cairo::Antialias::None);
     ctx.set_source_color(color);
+    ctx.move_to(Z, -ink.y() as f64);
+    pangocairo::functions::show_layout(&ctx, pl);
+    surf
+}
+
+pub fn draw_text_to_size(pl: &Layout, color: &RGBA, text: &str, height: i32) -> ImageSurface {
+    pl.set_text(text);
+    let (ink, _) = pl.pixel_extents();
+
+    let scale = height as f64 / ink.height() as f64;
+
+    let surf = new_surface(((ink.width() as f64 * scale).ceil() as i32, ink.height()));
+    let ctx = cairo::Context::new(&surf).unwrap();
+    ctx.set_source_color(color);
+    ctx.scale(scale, scale);
+    ctx.move_to(Z, -ink.y() as f64);
     pangocairo::functions::show_layout(&ctx, pl);
     surf
 }
