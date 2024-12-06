@@ -19,10 +19,12 @@ use crate::ui::widgets::wrapbox::{
     expose::BoxRedrawFunc,
 };
 
+use super::layout::TrayLayout;
+
 #[derive(Default)]
-struct MenuState {
-    open_state: HashSet<i32>,
-    hover_state: i32,
+pub struct MenuState {
+    pub open_state: HashSet<i32>,
+    pub hover_state: i32,
 }
 impl MenuState {
     fn filter_state_with_new_menu(&mut self, menu: &RootMenu) {
@@ -101,8 +103,8 @@ impl MenuState {
 }
 
 pub struct RootMenu {
-    id: i32,
-    submenus: Vec<Menu>,
+    pub id: i32,
+    pub submenus: Vec<Menu>,
 }
 impl RootMenu {
     pub fn from_tray_menu(tray_menu: &system_tray::menu::TrayMenu, icon_size: i32) -> Self {
@@ -123,12 +125,12 @@ impl VecTrayMenuIntoVecMenu for Vec<system_tray::menu::MenuItem> {
     }
 }
 
-struct Menu {
-    id: i32,
-    label: Option<String>,
-    enabled: bool,
-    icon: Option<ImageSurface>,
-    menu_type: MenuType,
+pub struct Menu {
+    pub id: i32,
+    pub label: Option<String>,
+    pub enabled: bool,
+    pub icon: Option<ImageSurface>,
+    pub menu_type: MenuType,
 }
 
 impl Menu {
@@ -197,7 +199,7 @@ impl Menu {
     }
 }
 
-enum MenuType {
+pub enum MenuType {
     Radio(bool),
     Check(bool),
     // should the menu wtih submenus have toggle states?
@@ -207,16 +209,18 @@ enum MenuType {
 }
 
 pub struct Tray {
-    tray_id: TrayID,
-    id: String,
-    title: Option<String>,
-    icon: ImageSurface,
-    menu_path: Option<String>,
+    pub tray_id: TrayID,
+    pub id: String,
+    pub title: Option<String>,
+    pub icon: ImageSurface,
+    pub menu_path: Option<String>,
+    pub menu: Option<(RootMenu, MenuState)>,
 
-    menu: Option<(RootMenu, MenuState)>,
+    pub is_open: bool,
 
-    updated: bool,
-    content: ImageSurface,
+    pub updated: bool,
+    pub content: ImageSurface,
+    pub layout: Option<TrayLayout>,
 }
 
 impl Tray {
@@ -250,7 +254,9 @@ impl Tray {
             self.updated = false;
         }
     }
-    fn draw(&mut self) {}
+    fn draw(&mut self) {
+        TrayLayout::draw_and_create(self);
+    }
 
     fn from_notify_item(tray_id: TrayID, value: &StatusNotifierItem, icon_size: i32) -> Self {
         let id = value.id.clone();
@@ -283,6 +289,10 @@ impl Tray {
             menu: None,
             updated: true,
             content: ImageSurface::create(cairo::Format::ARgb32, 0, 0).unwrap(),
+
+            is_open: false,
+
+            layout: None,
         }
     }
 }

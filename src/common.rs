@@ -52,6 +52,51 @@ pub fn binary_search_within_range<T: Debug + PartialOrd + Copy + Display>(
     }
 }
 
+pub fn binary_search_end<T: Debug + PartialOrd + Copy + Display + Default>(l: &[T], v: T) -> isize {
+    if l.is_empty() {
+        return -1;
+    }
+    if l.len() == 1 {
+        if v >= T::default() && v < l[0] {
+            return 0;
+        } else {
+            return -1;
+        }
+    }
+
+    let mut index = 0;
+    let max_index = l.len() - 1;
+    let mut get_half = {
+        let mut half = l.len();
+        move || {
+            half = (half / 2).max(1);
+            half
+        }
+    };
+
+    loop {
+        let current = l[index];
+
+        if v < current {
+            if index == 0 {
+                return -1;
+            }
+            if v >= l[index - 1] {
+                return index as isize;
+            }
+            index -= get_half();
+        } else {
+            if index == max_index {
+                return -1;
+            }
+            if v < l[index + 1] {
+                return (index + 1) as isize;
+            }
+            index += get_half();
+        }
+    }
+}
+
 // pub trait VecInto<D> {
 //     fn vec_into(self) -> Vec<D>;
 // }
