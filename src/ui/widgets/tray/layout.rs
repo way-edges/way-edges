@@ -9,6 +9,7 @@ enum ClickedItem {
     MenuItem(i32),
 }
 
+#[derive(Default)]
 struct TrayHeadLayout {
     size: (i32, i32),
     // x, y
@@ -110,6 +111,7 @@ impl MenuLayout {
     }
 }
 
+#[derive(Default)]
 pub struct TrayLayout {
     tray_head_layout: TrayHeadLayout,
     menu_layout: Option<MenuLayout>,
@@ -123,10 +125,10 @@ impl TrayLayout {
             .map(|(root_menu, menu_state)| MenuLayout::draw_and_create(root_menu, menu_state))
         else {
             tray.content = header_img;
-            tray.layout = Some(TrayLayout {
+            tray.layout = TrayLayout {
                 tray_head_layout: header_layout,
                 menu_layout: None,
-            });
+            };
             return;
         };
 
@@ -147,10 +149,10 @@ impl TrayLayout {
         ctx.paint().unwrap();
 
         tray.content = surf;
-        tray.layout = Some(TrayLayout {
+        tray.layout = TrayLayout {
             tray_head_layout: header_layout,
             menu_layout: Some(menu_layout),
-        });
+        };
     }
 
     pub fn get_clicked(&self, pos: (f64, f64)) -> Option<ClickedItem> {

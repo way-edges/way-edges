@@ -220,7 +220,7 @@ pub struct Tray {
 
     pub updated: bool,
     pub content: ImageSurface,
-    pub layout: Option<TrayLayout>,
+    pub layout: TrayLayout,
 }
 
 impl Tray {
@@ -292,7 +292,7 @@ impl Tray {
 
             is_open: false,
 
-            layout: None,
+            layout: TrayLayout::default(),
         }
     }
 }
