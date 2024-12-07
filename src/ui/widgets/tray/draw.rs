@@ -1,9 +1,9 @@
-use std::{collections::HashMap, f64::consts::PI};
+use std::f64::consts::PI;
 
 use cairo::{Context, ImageSurface};
 use gtk::{gdk::RGBA, pango::Layout, prelude::GdkCairoContextExt};
 
-use crate::ui::draws::util::{draw_text, draw_text_to_size, new_surface, Z};
+use crate::ui::draws::util::{draw_text_to_size, new_surface, Z};
 
 use super::module::{MenuItem, MenuState, MenuType};
 

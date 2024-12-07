@@ -81,7 +81,7 @@ struct MenuCol {
 }
 impl MenuCol {
     fn draw_and_create_from_root_menu(
-        menu_items: &Vec<MenuItem>,
+        menu_items: &[MenuItem],
         state: &MenuState,
         menu_arg: &mut MenuDrawArg,
     ) -> Vec<(ImageSurface, Self)> {
