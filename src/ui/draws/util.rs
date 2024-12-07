@@ -158,6 +158,23 @@ pub fn draw_text_to_size(pl: &Layout, color: &RGBA, text: &str, height: i32) -> 
     surf
 }
 
+pub fn combine_2_image_vertical_left(img1: &ImageSurface, img2: &ImageSurface) -> ImageSurface {
+    let surf = ImageSurface::create(
+        Format::ARgb32,
+        img1.width().max(img2.width()),
+        img1.height() + img2.height(),
+    )
+    .unwrap();
+    let ctx = cairo::Context::new(&surf).unwrap();
+    ctx.set_source_surface(img1, Z, Z).unwrap();
+    ctx.paint().unwrap();
+    ctx.translate(Z, img1.height() as f64);
+    ctx.set_source_surface(img2, Z, Z).unwrap();
+    ctx.paint().unwrap();
+
+    surf
+}
+
 // NOTE: NO USEAGE NOW
 // pub fn horizon_center_combine(surf1: &ImageSurface, surf2: &ImageSurface) -> ImageSurface {
 //     let s1_height = surf1.height();

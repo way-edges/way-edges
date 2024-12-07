@@ -27,6 +27,13 @@ pub struct MenuState {
     pub hover_state: i32,
 }
 impl MenuState {
+    pub fn is_open(&self, id: i32) -> bool {
+        self.open_state.contains(&id)
+    }
+    pub fn is_hover(&self, id: i32) -> bool {
+        self.hover_state == id
+    }
+
     fn filter_state_with_new_menu(&mut self, menu: &RootMenu) {
         Checker::run(self, menu);
 
@@ -65,7 +72,7 @@ impl MenuState {
                     return;
                 }
 
-                if let MenuType::Parent(_) = &menu.menu_type {
+                if menu.submenu.is_some() {
                     self.new_open_state.as_mut().unwrap().insert(menu.id);
                 }
             }
@@ -93,8 +100,8 @@ impl MenuState {
                 vec.iter().for_each(|menu| {
                     self.check_open_state(menu);
                     self.check_hover_state(menu);
-                    if let MenuType::Parent(submenus) = &menu.menu_type {
-                        self.iter_menus(submenus);
+                    if let Some(submenu) = &menu.submenu {
+                        self.iter_menus(submenu);
                     }
                 });
             }
@@ -131,6 +138,8 @@ pub struct MenuItem {
     pub enabled: bool,
     pub icon: Option<ImageSurface>,
     pub menu_type: MenuType,
+
+    pub submenu: Option<Vec<MenuItem>>,
 }
 
 impl MenuItem {
@@ -172,21 +181,21 @@ impl MenuItem {
                             }
                         })
                     }
-                    system_tray::menu::ToggleType::CannotBeToggled => {
-                        if !value.submenu.is_empty() {
-                            MenuType::Parent(
-                                value
-                                    .submenu
-                                    .iter()
-                                    .map(|item| MenuItem::from_menu_item(item, icon_size))
-                                    .collect(),
-                            )
-                        } else {
-                            MenuType::Normal
-                        }
-                    }
+                    system_tray::menu::ToggleType::CannotBeToggled => MenuType::Normal,
                 }
             }
+        };
+
+        let submenu = if !value.submenu.is_empty() {
+            Some(
+                value
+                    .submenu
+                    .iter()
+                    .map(|item| MenuItem::from_menu_item(item, icon_size))
+                    .collect(),
+            )
+        } else {
+            None
         };
 
         Self {
@@ -195,6 +204,7 @@ impl MenuItem {
             enabled,
             icon,
             menu_type,
+            submenu,
         }
     }
 }
@@ -203,7 +213,6 @@ pub enum MenuType {
     Radio(bool),
     Check(bool),
     // should the menu wtih submenus have toggle states?
-    Parent(Vec<MenuItem>),
     Separator,
     Normal,
 }
