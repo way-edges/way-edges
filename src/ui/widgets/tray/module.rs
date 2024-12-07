@@ -308,11 +308,17 @@ impl Tray {
 
 impl DisplayWidget for Tray {
     fn get_size(&self) -> (f64, f64) {
-        (self.icon.width() as f64, self.icon.height() as f64)
+        let ptr = self as *const Tray as *mut Tray;
+        unsafe { ptr.as_mut() }.unwrap().redraw_if_updated();
+
+        (self.content.width() as f64, self.content.height() as f64)
     }
 
     fn content(&self) -> ImageSurface {
-        self.icon.clone()
+        let ptr = self as *const Tray as *mut Tray;
+        unsafe { ptr.as_mut() }.unwrap().redraw_if_updated();
+
+        self.content.clone()
     }
 
     fn on_mouse_event(&mut self, _: crate::ui::draws::mouse_state::MouseEvent) {}
