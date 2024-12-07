@@ -43,6 +43,7 @@ impl MenuItemDrawResult {
 
 static GAP_BETWEEN_MARKER_AND_TEXT: i32 = 5;
 
+// TODO: ICON FOR MENU ITEM
 pub struct MenuDrawArg<'a> {
     draw_config: &'a MenuDrawConfig,
     layout: Layout,
@@ -68,6 +69,8 @@ impl<'a> MenuDrawArg<'a> {
         let mut marker_start_y = 0;
         let mut text_start_y = 0;
         let minused = draw_config.marker_size - draw_config.font_pixel_height;
+
+        #[allow(clippy::comparison_chain)]
         if minused > 0 {
             // marker is bigger
             text_start_y += minused / 2;
@@ -108,11 +111,7 @@ impl<'a> MenuDrawArg<'a> {
         (surf, ctx)
     }
 
-    pub fn draw_menu(
-        &self,
-        menu: &Vec<MenuItem>,
-        menu_state: &MenuState,
-    ) -> (ImageSurface, Vec<f64>) {
+    pub fn draw_menu(&self, menu: &[MenuItem], menu_state: &MenuState) -> (ImageSurface, Vec<f64>) {
         let mut max_width = 0;
         let mut total_height = 0;
         let menu_draw_res: Vec<MenuItemDrawResult> = menu
@@ -131,8 +130,8 @@ impl<'a> MenuDrawArg<'a> {
         static MENU_OUTLINE_WIDTH: i32 = 4;
 
         let surf = new_surface((
-            max_width as i32 + MENU_OUTLINE_WIDTH * 2,
-            total_height as i32 + MENU_OUTLINE_WIDTH * 2,
+            max_width + MENU_OUTLINE_WIDTH * 2,
+            total_height + MENU_OUTLINE_WIDTH * 2,
         ));
         let ctx = Context::new(&surf).unwrap();
         ctx.set_line_width(MENU_OUTLINE_WIDTH as f64);
@@ -285,7 +284,7 @@ impl<'a> MenuDrawArg<'a> {
         let draw_marker = |img: ImageSurface| {
             ctx.set_source_surface(img, self.marker_start_pos.0, self.marker_start_pos.1)
                 .unwrap();
-            ctx.paint();
+            ctx.paint().unwrap();
         };
         match item.menu_type {
             MenuType::Radio(state) => draw_marker(self.draw_marker_radio(state)),
@@ -313,7 +312,7 @@ impl<'a> MenuDrawArg<'a> {
             let img = self.draw_marker_parent();
             ctx.set_source_surface(img, Z, self.marker_start_pos.1)
                 .unwrap();
-            ctx.paint();
+            ctx.paint().unwrap();
         }
 
         MenuItemDrawResult::Item(surf)
