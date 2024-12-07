@@ -4,16 +4,14 @@ use gtk::gdk::RGBA;
 use crate::{
     common::binary_search_end,
     ui::{
-        draws::util::{
-            combine_2_image_vertical_left, draw_text, draw_text_to_size, new_surface, Z,
-        },
+        draws::util::{combine_2_image_vertical_left, draw_text_to_size, new_surface, Z},
         widgets::tray::draw::{MenuDrawArg, MenuDrawConfig},
     },
 };
 
 use super::module::{MenuItem, MenuState, RootMenu, Tray};
 
-enum ClickedItem {
+pub enum HoveringItem {
     TrayIcon,
     MenuItem(i32),
 }
@@ -69,7 +67,7 @@ impl TrayHeadLayout {
             Self { icon_size },
         )
     }
-    fn get_clicked(&self, pos: (f64, f64)) -> bool {
+    fn get_hovering(&self, pos: (f64, f64)) -> bool {
         pos.0 >= Z
             && pos.0 < self.icon_size.0 as f64
             && pos.1 >= Z
@@ -120,7 +118,7 @@ impl MenuCol {
 
         res
     }
-    fn get_clicked(&self, pos: (f64, f64)) -> Option<i32> {
+    fn get_hovering(&self, pos: (f64, f64)) -> Option<i32> {
         let row_index = binary_search_end(&self.height_range, pos.1);
         if row_index == -1 {
             None
@@ -179,7 +177,7 @@ impl MenuLayout {
             },
         )
     }
-    fn get_clicked(&self, pos: (f64, f64)) -> Option<i32> {
+    fn get_hovering(&self, pos: (f64, f64)) -> Option<i32> {
         let col_index = binary_search_end(&self.menu_each_col_x_end, pos.0 as i32);
         if col_index == -1 {
             None
@@ -190,7 +188,7 @@ impl MenuLayout {
             } else {
                 pos.0 - self.menu_each_col_x_end[col_index - 1] as f64
             };
-            self.menu_cols[col_index].get_clicked((new_pos_width, pos.1))
+            self.menu_cols[col_index].get_hovering((new_pos_width, pos.1))
         }
     }
 }
@@ -236,16 +234,16 @@ impl TrayLayout {
         };
     }
 
-    pub fn get_clicked(&self, pos: (f64, f64)) -> Option<ClickedItem> {
+    pub fn get_hovering(&self, pos: (f64, f64)) -> Option<HoveringItem> {
         if pos.1 < self.tray_head_layout.icon_size.1 as f64 {
             self.tray_head_layout
-                .get_clicked(pos)
-                .then_some(ClickedItem::TrayIcon)
+                .get_hovering(pos)
+                .then_some(HoveringItem::TrayIcon)
         } else {
             self.menu_layout.as_ref().and_then(|menu_layout| {
                 menu_layout
-                    .get_clicked((pos.0, pos.1 - self.tray_head_layout.icon_size.1 as f64))
-                    .map(ClickedItem::MenuItem)
+                    .get_hovering((pos.0, pos.1 - self.tray_head_layout.icon_size.1 as f64))
+                    .map(HoveringItem::MenuItem)
             })
         }
     }
