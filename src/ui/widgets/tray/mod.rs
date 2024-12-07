@@ -7,7 +7,7 @@ use std::{cell::RefCell, rc::Rc};
 
 use super::wrapbox::{display::grid::DisplayWidget, expose::BoxExpose};
 use crate::plug::tray::{icon::parse_icon_given_name, register_tray, unregister_tray};
-use module::TrayModule;
+use module::{RootMenu, TrayModule};
 
 pub struct TrayCtx {
     module: TrayModule,
@@ -87,8 +87,12 @@ pub fn init_tray(expose: &BoxExpose) -> Rc<RefCell<TrayCtx>> {
                         tray.update_icon(surf);
                     }
                 }
-                Event::MenuNew(tray_menu) => {}
-                _ => {} // Event::MenuNew(tray_menu) => todo!(),
+                Event::MenuNew(tray_menu) => {
+                    let root_menu = RootMenu::from_tray_menu(tray_menu, ctx.module.icon_size);
+                    if let Some(tray) = ctx.module.find_tray(id) {
+                        tray.update_menu(root_menu);
+                    }
+                }
             }
         }
     )));
