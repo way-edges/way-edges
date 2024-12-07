@@ -1,9 +1,7 @@
-use std::{
-    collections::{HashMap, HashSet},
-    rc::Rc,
-};
+use std::{collections::HashMap, rc::Rc};
 
 use cairo::ImageSurface;
+use gtk::gdk::{BUTTON_PRIMARY, BUTTON_SECONDARY};
 use system_tray::item::StatusNotifierItem;
 
 use crate::{
@@ -23,7 +21,8 @@ use super::layout::TrayLayout;
 
 #[derive(Default)]
 pub struct MenuState {
-    pub open_state: HashSet<i32>,
+    // pub open_state: HashSet<i32>,
+    pub open_state: Box<[i32]>,
     pub hover_state: i32,
 }
 impl MenuState {
@@ -33,16 +32,29 @@ impl MenuState {
     pub fn is_hover(&self, id: i32) -> bool {
         self.hover_state == id
     }
+    fn set_hovering(&mut self, id: i32) -> bool {
+        if self.hover_state != id {
+            self.hover_state = id;
+            true
+        } else {
+            false
+        }
+    }
+    fn set_open_id(&mut self, mut id_chain: Vec<i32>) {
+        let clicked_one = id_chain.last().unwrap();
+        if self.open_state.contains(clicked_one) {
+            id_chain.pop();
+        }
+        self.open_state = id_chain.into_boxed_slice();
+    }
 
     fn filter_state_with_new_menu(&mut self, menu: &RootMenu) {
         Checker::run(self, menu);
 
         struct Checker<'a> {
-            need_check_open_state: bool,
-            need_check_hover: bool,
             state: &'a mut MenuState,
 
-            new_open_state: Option<HashSet<i32>>,
+            new_open_state: Option<Vec<i32>>,
             found_hover: Option<bool>,
         }
         impl<'a> Checker<'a> {
@@ -51,42 +63,40 @@ impl MenuState {
                 let need_check_hover = state.hover_state != -1;
 
                 let mut checker = Checker {
-                    need_check_open_state,
-                    need_check_hover,
                     state,
 
                     new_open_state: if need_check_open_state {
-                        Some(HashSet::new())
+                        Some(vec![])
                     } else {
                         None
                     },
                     found_hover: if need_check_hover { Some(false) } else { None },
                 };
 
-                checker.iter_menus(&menu.submenus);
+                checker.iter_menus(&menu.submenus, 0);
                 checker.post_check_open_state();
                 checker.post_check_hover_state();
             }
-            fn check_open_state(&mut self, menu: &MenuItem) {
-                if !self.need_check_open_state {
-                    return;
-                }
-
-                if menu.submenu.is_some() {
-                    self.new_open_state.as_mut().unwrap().insert(menu.id);
+            fn check_open_state(&mut self, menu: &MenuItem, level: usize) {
+                if let Some(new_open_state) = self.new_open_state.as_mut() {
+                    if level < self.state.open_state.len()
+                        && self.state.open_state[level] == menu.id
+                        && menu.submenu.is_some()
+                    {
+                        new_open_state.push(menu.id);
+                    }
                 }
             }
             fn post_check_open_state(&mut self) {
                 if let Some(new_open_state) = self.new_open_state.take() {
-                    self.state.open_state = new_open_state;
+                    self.state.open_state = new_open_state.into_boxed_slice();
                 }
             }
-            fn check_hover_state(&mut self, menu: &MenuItem) {
-                if !self.need_check_hover {
-                    return;
-                }
-                if menu.id == self.state.hover_state {
-                    self.found_hover.replace(true);
+            fn check_hover_state(&mut self, menu: &MenuItem, _: usize) {
+                if let Some(found_hover) = self.found_hover.as_mut() {
+                    if menu.id == self.state.hover_state {
+                        *found_hover = true;
+                    }
                 }
             }
             fn post_check_hover_state(&mut self) {
@@ -96,12 +106,12 @@ impl MenuState {
                     }
                 }
             }
-            fn iter_menus(&mut self, vec: &[MenuItem]) {
+            fn iter_menus(&mut self, vec: &[MenuItem], level: usize) {
                 vec.iter().for_each(|menu| {
-                    self.check_open_state(menu);
-                    self.check_hover_state(menu);
+                    self.check_open_state(menu, level);
+                    self.check_hover_state(menu, level);
                     if let Some(submenu) = &menu.submenu {
-                        self.iter_menus(submenu);
+                        self.iter_menus(submenu, level + 1);
                     }
                 });
             }
@@ -254,6 +264,9 @@ impl Tray {
     }
 }
 impl Tray {
+    fn get_menu_state(&mut self) -> Option<&mut (RootMenu, MenuState)> {
+        self.menu.as_mut()
+    }
     fn set_updated(&mut self) {
         self.updated = true;
     }
@@ -321,7 +334,80 @@ impl DisplayWidget for Tray {
         self.content.clone()
     }
 
-    fn on_mouse_event(&mut self, _: crate::ui::draws::mouse_state::MouseEvent) {}
+    fn on_mouse_event(&mut self, e: crate::ui::draws::mouse_state::MouseEvent) {
+        use super::layout::HoveringItem;
+        use crate::ui::draws::mouse_state::MouseEvent;
+        match e {
+            MouseEvent::Release(pos, key) => {
+                let Some(hovering) = self.layout.get_hovering(pos) else {
+                    return;
+                };
+
+                self.set_updated();
+
+                if key == BUTTON_SECONDARY {
+                    // toggle state
+                    match hovering {
+                        HoveringItem::TrayIcon => {
+                            self.is_open = !self.is_open;
+                            self.set_updated();
+                        }
+                        HoveringItem::MenuItem(id) => {
+                            // find id chain
+                            fn find_id_chain(
+                                menu: &[MenuItem],
+                                id: i32,
+                                chain: &mut Vec<i32>,
+                            ) -> bool {
+                                for i in menu.iter() {
+                                    // only happens for a parent menu
+                                    if let Some(submenu) = &i.submenu {
+                                        if i.id == id || find_id_chain(submenu, id, chain) {
+                                            chain.push(i.id);
+                                            return true;
+                                        }
+                                    }
+                                }
+                                false
+                            }
+
+                            let mut id_chain = vec![];
+                            let (root, state) = self.get_menu_state().unwrap();
+                            find_id_chain(&root.submenus, id, &mut id_chain);
+
+                            if !id_chain.is_empty() {
+                                id_chain.reverse();
+                                state.set_open_id(id_chain);
+                                self.set_updated();
+                            }
+                        }
+                    }
+                } else if key == BUTTON_PRIMARY {
+                    // TODO:
+                }
+            }
+            MouseEvent::Enter(pos) | MouseEvent::Motion(pos) => {
+                let Some(hovering) = self.layout.get_hovering(pos) else {
+                    return;
+                };
+
+                if let HoveringItem::MenuItem(id) = hovering {
+                    if self.get_menu_state().unwrap().1.set_hovering(id) {
+                        self.set_updated();
+                    }
+                }
+            }
+            MouseEvent::Leave => {
+                if let Some((_, state)) = self.get_menu_state() {
+                    if state.set_hovering(-1) {
+                        self.set_updated();
+                    }
+                }
+            }
+            // ignore press
+            _ => {}
+        }
+    }
 }
 
 impl GridBox<TrayID> {
