@@ -63,7 +63,7 @@ pub fn match_event(e: system_tray::client::Event) -> Option<TrayEvent> {
     }
 }
 
-pub fn request_event(
+pub fn tray_request_event(
     req: ActivateRequest,
 ) -> impl Future<Output = Result<(), system_tray::error::Error>> {
     get_tray_context().client.activate(req)

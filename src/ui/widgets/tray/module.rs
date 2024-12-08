@@ -2,13 +2,14 @@ use std::{collections::HashMap, rc::Rc};
 
 use cairo::ImageSurface;
 use gtk::gdk::{BUTTON_PRIMARY, BUTTON_SECONDARY};
-use system_tray::item::StatusNotifierItem;
+use system_tray::{client::ActivateRequest, item::StatusNotifierItem};
 
 use crate::{
     config::widgets::wrapbox::tray::TrayConfig,
+    get_main_runtime_handle, notify_send,
     plug::tray::{
         icon::{parse_icon_given_data, parse_icon_given_name, parse_icon_given_pixmaps},
-        tray_update_item_theme_search_path,
+        tray_request_event, tray_update_item_theme_search_path,
     },
 };
 
@@ -266,6 +267,46 @@ impl Tray {
         self.set_updated();
     }
 
+    fn send_request(req: ActivateRequest) {
+        get_main_runtime_handle().spawn(async move {
+            if let Err(e) = tray_request_event(req).await {
+                let msg = format!("error requesting tray activation: {e}");
+                log::error!("{msg}");
+                notify_send("Tray activation", &msg, true);
+            }
+        });
+    }
+
+    pub fn tray_clicked_req(&self) {
+        if let Some((submenu_id, menu_path)) = self
+            .menu_path
+            .as_ref()
+            .and_then(|menu_path| self.menu.as_ref().map(|(root, _)| (root.id, menu_path)))
+        {
+            let address = String::clone(&self.tray_id);
+            let menu_path = menu_path.clone();
+
+            Self::send_request(ActivateRequest {
+                address,
+                menu_path,
+                submenu_id,
+            });
+        }
+    }
+
+    pub fn menu_item_clicked_req(&self, submenu_id: i32) {
+        if let Some(menu_path) = self.menu_path.as_ref() {
+            let address = String::clone(&self.tray_id);
+            let menu_path = menu_path.clone();
+
+            Self::send_request(ActivateRequest {
+                address,
+                menu_path,
+                submenu_id,
+            });
+        }
+    }
+
     pub fn get_module(&self) -> &TrayModule {
         unsafe { self.tary_module.as_ref() }.unwrap()
     }
@@ -396,7 +437,10 @@ impl DisplayWidget for Tray {
                         }
                     }
                 } else if key == BUTTON_PRIMARY {
-                    // TODO:
+                    match hovering {
+                        HoveringItem::TrayIcon => self.tray_clicked_req(),
+                        HoveringItem::MenuItem(id) => self.menu_item_clicked_req(id),
+                    }
                 }
             }
             MouseEvent::Enter(pos) | MouseEvent::Motion(pos) => {
