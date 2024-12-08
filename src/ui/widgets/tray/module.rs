@@ -352,7 +352,6 @@ impl DisplayWidget for Tray {
     fn on_mouse_event(&mut self, e: crate::ui::draws::mouse_state::MouseEvent) {
         use super::layout::HoveringItem;
         use crate::ui::draws::mouse_state::MouseEvent;
-        println!("{e:?}");
         match e {
             MouseEvent::Release(pos, key) => {
                 let Some(hovering) = self.layout.get_hovering(pos) else {

@@ -2,7 +2,9 @@ use cairo::{Context, ImageSurface};
 
 use crate::{
     common::binary_search_end,
-    config::widgets::wrapbox::tray::{HeaderDrawConfig, HeaderMenuStack, MenuDrawConfig},
+    config::widgets::wrapbox::tray::{
+        HeaderDrawConfig, HeaderMenuAlign, HeaderMenuStack, MenuDrawConfig,
+    },
     ui::{
         draws::util::{combine_vertcal, new_surface, Z},
         widgets::tray::draw::MenuDrawArg,
@@ -23,22 +25,17 @@ pub enum HoveringItem {
 #[derive(Default)]
 struct TrayHeadLayout {
     // icon should always be at 0,0
-    content_size: (i32, i32),
+    header_height: i32,
 }
 impl TrayHeadLayout {
     fn draw_and_create(tray: &Tray, header_draw_config: &HeaderDrawConfig) -> (ImageSurface, Self) {
         let draw_arg = HeaderDrawArg::create_from_config(header_draw_config);
 
         let img = draw_arg.draw_header(tray);
-        let content_size = (img.width(), img.height());
+        // let content_size = (img.width(), img.height());
+        let header_height = img.height();
 
-        (img, Self { content_size })
-    }
-    fn get_hovering(&self, pos: (f64, f64)) -> bool {
-        pos.0 >= Z
-            && pos.0 < self.content_size.0 as f64
-            && pos.1 >= Z
-            && pos.1 < self.content_size.1 as f64
+        (img, Self { header_height })
     }
 }
 
@@ -87,11 +84,7 @@ impl MenuCol {
         res
     }
     fn get_hovering(&self, pos: (f64, f64)) -> Option<i32> {
-        println!("self: {:?}, pos: {pos:?}", self);
-
         let row_index = binary_search_end(&self.height_range, pos.1);
-
-        println!("row index: {row_index}");
 
         if row_index == -1 {
             None
@@ -103,6 +96,7 @@ impl MenuCol {
 
 #[derive(Debug)]
 struct MenuLayout {
+    menu_size: (i32, i32),
     // end pixel index of each col
     menu_each_col_x_end: Vec<i32>,
     // same index of `menu_each_col_x_end`
@@ -146,11 +140,13 @@ impl MenuLayout {
             })
             .collect();
 
+        let menu_size = (surf.width(), surf.height());
         (
             surf,
             Self {
                 menu_each_col_x_end,
                 menu_cols,
+                menu_size,
             },
         )
     }
@@ -170,8 +166,15 @@ impl MenuLayout {
     }
 }
 
+static GAP_HEADER_MENU: i32 = 6;
+
 #[derive(Default)]
 pub struct TrayLayout {
+    total_size: (i32, i32),
+
+    header_menu_stack: HeaderMenuStack,
+    header_menu_align: HeaderMenuAlign,
+
     tray_head_layout: TrayHeadLayout,
     menu_layout: Option<MenuLayout>,
 }
@@ -183,56 +186,119 @@ impl TrayLayout {
             TrayHeadLayout::draw_and_create(tray, &tray_config.header_draw_config);
 
         macro_rules! done_with_only_header {
-            ($tray:expr, $header_img:expr, $header_layout:expr) => {
+            ($tray:expr, $tray_config:expr, $header_img:expr, $header_layout:expr) => {
+                let header_menu_stack = $tray_config.header_menu_stack.clone();
+                let header_menu_align = $tray_config.header_menu_align.clone();
+                let total_size = ($header_img.width(), $header_img.height());
                 $tray.content = $header_img;
                 $tray.layout = TrayLayout {
                     tray_head_layout: $header_layout,
                     menu_layout: None,
+
+                    total_size,
+
+                    header_menu_stack,
+                    header_menu_align,
                 };
             };
         }
 
         if !tray.is_open {
-            done_with_only_header!(tray, header_img, header_layout);
+            done_with_only_header!(tray, tray_config, header_img, header_layout);
             return;
         }
 
         let Some((menu_img, menu_layout)) = tray.menu.as_ref().map(|(root_menu, menu_state)| {
             MenuLayout::draw_and_create(root_menu, menu_state, &tray_config.menu_draw_config)
         }) else {
-            done_with_only_header!(tray, header_img, header_layout);
+            done_with_only_header!(tray, tray_config, header_img, header_layout);
             return;
         };
-
-        static GAP_HEADER_MENU: i32 = 6;
 
         // combine header and menu
         let imgs = match tray_config.header_menu_stack {
             HeaderMenuStack::HeaderTop => [header_img, menu_img],
             HeaderMenuStack::MenuTop => [menu_img, header_img],
         };
-        tray.content = combine_vertcal(
+        let combined = combine_vertcal(
             &imgs,
             Some(GAP_HEADER_MENU),
             tray_config.header_menu_align.is_left(),
         );
+
+        let total_size = (combined.width(), combined.height());
+        let header_menu_stack = tray_config.header_menu_stack.clone();
+        let header_menu_align = tray_config.header_menu_align.clone();
+
+        tray.content = combined;
         tray.layout = TrayLayout {
             tray_head_layout: header_layout,
             menu_layout: Some(menu_layout),
+
+            total_size,
+            header_menu_stack,
+            header_menu_align,
         };
     }
 
     pub fn get_hovering(&self, pos: (f64, f64)) -> Option<HoveringItem> {
-        if pos.1 < self.tray_head_layout.content_size.1 as f64 {
-            self.tray_head_layout
-                .get_hovering(pos)
-                .then_some(HoveringItem::TrayIcon)
-        } else {
-            self.menu_layout.as_ref().and_then(|menu_layout| {
-                menu_layout
-                    .get_hovering((pos.0, pos.1 - self.tray_head_layout.content_size.1 as f64))
-                    .map(HoveringItem::MenuItem)
-            })
+        if pos.0 < Z
+            && pos.0 > self.total_size.0 as f64
+            && pos.1 < Z
+            && pos.1 > self.total_size.1 as f64
+        {
+            return None;
+        }
+
+        let get_menu_x_when_at_left = || pos.0;
+        let get_menu_x_when_at_right =
+            || pos.0 - (self.total_size.0 - self.menu_layout.as_ref().unwrap().menu_size.0) as f64;
+
+        let get_menu_y_when_at_top = || pos.1;
+        let get_menu_y_when_at_bottom =
+            || pos.1 - self.tray_head_layout.header_height as f64 - GAP_HEADER_MENU as f64;
+
+        macro_rules! stack {
+            (header $self:expr, $pos:expr, $menu_x:expr, $menu_y:expr) => {{
+                let header_height = self.tray_head_layout.header_height as f64;
+                if $pos.1 < header_height {
+                    Some(HoveringItem::TrayIcon)
+                } else if let Some(layout) = &self.menu_layout {
+                    layout
+                        .get_hovering(($menu_x, $menu_y))
+                        .map(HoveringItem::MenuItem)
+                } else {
+                    None
+                }
+            }};
+            (bottom $self:expr, $pos:expr, $menu_x:expr, $menu_y:expr) => {{
+                if let Some(layout) = &$self
+                    .menu_layout
+                    .as_ref()
+                    .filter(|layout| $pos.1 < layout.menu_size.1 as f64)
+                {
+                    layout
+                        .get_hovering(($menu_x, $menu_y))
+                        .map(HoveringItem::MenuItem)
+                } else {
+                    Some(HoveringItem::TrayIcon)
+                }
+            }};
+        }
+
+        match (&self.header_menu_stack, &self.header_menu_align) {
+            (HeaderMenuStack::HeaderTop, HeaderMenuAlign::Left) => {
+                stack!(header self, pos, get_menu_x_when_at_left(), get_menu_y_when_at_bottom())
+            }
+            (HeaderMenuStack::HeaderTop, HeaderMenuAlign::Right) => {
+                stack!(header self, pos, get_menu_x_when_at_right(), get_menu_y_when_at_bottom())
+            }
+            (HeaderMenuStack::MenuTop, HeaderMenuAlign::Left) => {
+                stack!(bottom self, pos, get_menu_x_when_at_left(), get_menu_y_when_at_top())
+            }
+            (HeaderMenuStack::MenuTop, HeaderMenuAlign::Right) => {
+                stack!(bottom self, pos, get_menu_x_when_at_right(), get_menu_y_when_at_top())
+            }
         }
     }
 }
