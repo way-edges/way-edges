@@ -1,5 +1,6 @@
 pub mod ring;
 pub mod text;
+pub mod tray;
 
 use std::str::FromStr;
 
@@ -9,6 +10,7 @@ use ring::RingConfig;
 use serde::{Deserialize, Deserializer};
 use serde_jsonrc::{Map, Value};
 use text::TextConfig;
+use tray::TrayConfig;
 
 use crate::config::{NumOrRelative, Widget};
 
@@ -218,7 +220,7 @@ pub fn visit_config(d: Value) -> Result<Widget, String> {
 pub enum BoxedWidget {
     Ring(Box<RingConfig>),
     Text(Box<TextConfig>),
-    Tray,
+    Tray(Box<TrayConfig>),
 }
 
 impl<'de> Deserialize<'de> for BoxedWidget {
@@ -240,7 +242,7 @@ impl<'de> Deserialize<'de> for BoxedWidget {
         match t {
             ring::NAME => ring::visit_config(raw),
             text::NAME => text::visit_config(raw),
-            "tray" => Ok(BoxedWidget::Tray),
+            tray::NAME => tray::visit_config(raw),
             _ => Err(format!("unknown widget type: {t}")),
         }
         .map_err(serde::de::Error::custom)

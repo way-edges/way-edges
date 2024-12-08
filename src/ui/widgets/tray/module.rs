@@ -5,7 +5,7 @@ use gtk::gdk::{BUTTON_PRIMARY, BUTTON_SECONDARY};
 use system_tray::item::StatusNotifierItem;
 
 use crate::{
-    config::widgets::wrapbox::Align,
+    config::widgets::wrapbox::tray::TrayConfig,
     plug::tray::{
         icon::{parse_icon_given_data, parse_icon_given_name, parse_icon_given_pixmaps},
         tray_update_item_theme_search_path,
@@ -265,11 +265,12 @@ impl Tray {
         }
         self.set_updated();
     }
-}
-impl Tray {
-    fn get_module(&self) -> &TrayModule {
+
+    pub fn get_module(&self) -> &TrayModule {
         unsafe { self.tary_module.as_ref() }.unwrap()
     }
+}
+impl Tray {
     fn get_menu_state(&mut self) -> Option<&mut (RootMenu, MenuState)> {
         self.menu.as_mut()
     }
@@ -509,7 +510,7 @@ pub struct TrayModule {
     pub id_tray_map: HashMap<TrayID, Tray>,
     pub redraw_signal: BoxRedrawFunc,
 
-    pub icon_size: i32,
+    pub config: TrayConfig,
 
     pub module_state: TrayModuleState,
 }
@@ -520,21 +521,21 @@ impl TrayModule {
             |id| self.id_tray_map.get(id).unwrap().content(),
         )
     }
-    pub fn new(redraw_signal: BoxRedrawFunc) -> Self {
-        let grid = GridBox::new(0., Align::TopCenter);
+    pub fn new(redraw_signal: BoxRedrawFunc, config: TrayConfig) -> Self {
+        let grid = GridBox::new(config.tray_gap as f64, config.grid_align);
         Self {
             grid,
             id_tray_map: HashMap::new(),
             redraw_signal,
 
-            icon_size: 20,
+            config,
 
             module_state: TrayModuleState::new(),
         }
     }
     pub fn add_tray(&mut self, id: String, tray_item: &StatusNotifierItem) {
         let id = Rc::new(id);
-        let tray = Tray::from_notify_item(self, id.clone(), tray_item, self.icon_size);
+        let tray = Tray::from_notify_item(self, id.clone(), tray_item, self.config.icon_size);
 
         self.grid.add(id.clone());
         self.id_tray_map.insert(id, tray);
@@ -575,14 +576,5 @@ impl TrayModule {
         {
             f.on_mouse_event(crate::ui::draws::mouse_state::MouseEvent::Leave);
         }
-    }
-
-    pub fn match_from_pos(&mut self, pos: (f64, f64)) -> Option<(&mut Tray, (f64, f64))> {
-        self.grid
-            .position_map
-            .as_ref()
-            .unwrap()
-            .match_item(pos)
-            .map(|(id, pos)| (self.id_tray_map.get_mut(id).unwrap(), pos))
     }
 }

@@ -157,63 +157,75 @@ pub fn draw_text_to_size(pl: &Layout, color: &RGBA, text: &str, height: i32) -> 
     surf
 }
 
-pub fn combine_2_image_vertical_left(
-    img1: &ImageSurface,
-    img2: &ImageSurface,
-    gap: Option<i32>,
-) -> ImageSurface {
-    let gap = gap.unwrap_or(0);
-    let surf = ImageSurface::create(
-        Format::ARgb32,
-        img1.width().max(img2.width()),
-        img1.height() + img2.height() + gap,
-    )
-    .unwrap();
-    let ctx = cairo::Context::new(&surf).unwrap();
-    ctx.set_source_surface(img1, Z, Z).unwrap();
-    ctx.paint().unwrap();
-    ctx.translate(Z, (img1.height() + gap) as f64);
-    ctx.set_source_surface(img2, Z, Z).unwrap();
-    ctx.paint().unwrap();
-
-    surf
-}
-
-// pub fn combine_vertcal_left(imgs: &[ImageSurface], gap: Option<i32>) -> ImageSurface {
-//     let last_index = imgs.len() - 1;
+// pub fn combine_2_image_vertical(
+//     img1: &ImageSurface,
+//     img2: &ImageSurface,
+//     gap: Option<i32>,
+//     align_left: bool,
+// ) -> ImageSurface {
+//     let gap = gap.unwrap_or(0);
+//     let surf = ImageSurface::create(
+//         Format::ARgb32,
+//         img1.width().max(img2.width()),
+//         img1.height() + img2.height() + gap,
+//     )
+//     .unwrap();
+//     let ctx = cairo::Context::new(&surf).unwrap();
+//     ctx.set_source_surface(img1, Z, Z).unwrap();
+//     ctx.paint().unwrap();
+//     ctx.translate(Z, (img1.height() + gap) as f64);
 //
-//     let mut max_width = 0;
-//     let mut total_height = 0;
-//     imgs.iter().enumerate().for_each(|(index, img)| {
-//         max_width = max_width.max(img.width());
-//         total_height += img.height();
-//
-//         // count in gap
-//         if index != last_index {
-//             if let Some(gap) = gap {
-//                 total_height += gap;
-//             }
-//         }
-//     });
-//
-//     let surf = new_surface((max_width, total_height));
-//     let ctx = Context::new(&surf).unwrap();
-//
-//     imgs.iter().enumerate().for_each(|(index, img)| {
-//         ctx.set_source_surface(img, Z, Z).unwrap();
-//         ctx.paint().unwrap();
-//         ctx.translate(Z, img.height() as f64);
-//
-//         // translate for gap
-//         if index != last_index {
-//             if let Some(gap) = gap {
-//                 ctx.translate(gap as f64, Z);
-//             }
-//         }
-//     });
+//     if align_left {
+//         ctx.set_source_surface(img2, Z, Z).unwrap();
+//     } else {
+//         ctx.set_source_surface(img2, (surf.width() - img2.width()) as f64, Z)
+//             .unwrap();
+//     }
+//     ctx.paint().unwrap();
 //
 //     surf
 // }
+
+pub fn combine_vertcal(imgs: &[ImageSurface], gap: Option<i32>, align_left: bool) -> ImageSurface {
+    let last_index = imgs.len() - 1;
+
+    let mut max_width = 0;
+    let mut total_height = 0;
+    imgs.iter().enumerate().for_each(|(index, img)| {
+        max_width = max_width.max(img.width());
+        total_height += img.height();
+
+        // count in gap
+        if index != last_index {
+            if let Some(gap) = gap {
+                total_height += gap;
+            }
+        }
+    });
+
+    let surf = new_surface((max_width, total_height));
+    let ctx = Context::new(&surf).unwrap();
+
+    imgs.iter().enumerate().for_each(|(index, img)| {
+        if align_left {
+            ctx.set_source_surface(img, Z, Z).unwrap();
+        } else {
+            ctx.set_source_surface(img, (surf.width() - img.width()) as f64, Z)
+                .unwrap();
+        }
+        ctx.paint().unwrap();
+        ctx.translate(Z, img.height() as f64);
+
+        // translate for gap
+        if index != last_index {
+            if let Some(gap) = gap {
+                ctx.translate(Z, gap as f64);
+            }
+        }
+    });
+
+    surf
+}
 
 pub fn combine_horizonal_center(imgs: &[ImageSurface], gap: Option<i32>) -> ImageSurface {
     let last_index = imgs.len() - 1;

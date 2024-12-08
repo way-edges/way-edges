@@ -149,8 +149,8 @@ fn init_boxed_widgets(box_conf: &mut BoxConfig, expose: BoxExpose) -> GridBox<Bo
                 }
                 Err(e) => Err(format!("Fail to create text widget: {e}")),
             },
-            BoxedWidget::Tray => {
-                let tray_ctx = init_tray(&expose);
+            BoxedWidget::Tray(c) => {
+                let tray_ctx = init_tray(&expose, *c);
                 builder.add(tray_ctx, (w.index[0], w.index[1]));
                 Ok(())
             }

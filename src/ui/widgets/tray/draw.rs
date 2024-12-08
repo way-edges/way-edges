@@ -1,24 +1,14 @@
 use std::f64::consts::PI;
 
 use cairo::{Context, ImageSurface};
-use gtk::{gdk::RGBA, pango::Layout, prelude::GdkCairoContextExt};
+use gtk::{pango::Layout, prelude::GdkCairoContextExt};
 
-use crate::ui::draws::util::{combine_horizonal_center, draw_text_to_size, new_surface, Z};
+use crate::{
+    config::widgets::wrapbox::tray::{HeaderDrawConfig, MenuDrawConfig},
+    ui::draws::util::{combine_horizonal_center, draw_text_to_size, new_surface, Z},
+};
 
 use super::module::{MenuItem, MenuState, MenuType, Tray};
-
-pub struct HeaderDrawConfig {
-    font_pixel_height: i32,
-    text_color: RGBA,
-}
-impl Default for HeaderDrawConfig {
-    fn default() -> Self {
-        Self {
-            font_pixel_height: 16,
-            text_color: RGBA::WHITE,
-        }
-    }
-}
 
 pub struct HeaderDrawArg<'a> {
     draw_config: &'a HeaderDrawConfig,
@@ -65,29 +55,6 @@ impl<'a> HeaderDrawArg<'a> {
             text,
             self.draw_config.font_pixel_height,
         )
-    }
-}
-
-pub struct MenuDrawConfig {
-    margin: [i32; 2],
-    font_pixel_height: i32,
-    marker_size: i32,
-    separator_height: i32,
-    border_color: RGBA,
-    text_color: RGBA,
-    marker_color: Option<RGBA>,
-}
-impl Default for MenuDrawConfig {
-    fn default() -> Self {
-        Self {
-            margin: [12, 16],
-            marker_size: 20,
-            font_pixel_height: 20,
-            separator_height: 5,
-            border_color: RGBA::WHITE,
-            text_color: RGBA::WHITE,
-            marker_color: None,
-        }
     }
 }
 

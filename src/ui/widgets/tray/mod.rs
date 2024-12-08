@@ -6,7 +6,10 @@ use cairo::ImageSurface;
 use std::{cell::RefCell, rc::Rc};
 
 use super::wrapbox::{display::grid::DisplayWidget, expose::BoxExpose};
-use crate::plug::tray::{icon::parse_icon_given_name, register_tray, unregister_tray};
+use crate::{
+    config::widgets::wrapbox::tray::TrayConfig,
+    plug::tray::{icon::parse_icon_given_name, register_tray, unregister_tray},
+};
 use module::{RootMenu, TrayModule};
 
 pub struct TrayCtx {
@@ -69,7 +72,7 @@ impl DisplayWidget for TrayCtx {
     }
 }
 
-pub fn init_tray(expose: &BoxExpose) -> Rc<RefCell<TrayCtx>> {
+pub fn init_tray(expose: &BoxExpose, config: TrayConfig) -> Rc<RefCell<TrayCtx>> {
     use gtk::glib;
 
     let ctx = Rc::<RefCell<TrayCtx>>::new_cyclic(|me| {
@@ -83,7 +86,7 @@ pub fn init_tray(expose: &BoxExpose) -> Rc<RefCell<TrayCtx>> {
                 update_func();
             }
         });
-        let module = TrayModule::new(tray_redraw_func);
+        let module = TrayModule::new(tray_redraw_func, config);
 
         RefCell::new(TrayCtx::new(module))
     });
@@ -107,7 +110,7 @@ pub fn init_tray(expose: &BoxExpose) -> Rc<RefCell<TrayCtx>> {
                     }
                 }
                 Event::IconUpdate(tray_icon) => {
-                    let size = ctx.module.icon_size;
+                    let size = ctx.module.config.icon_size;
                     if let Some(tray) = ctx.module.find_tray(id) {
                         let surf = parse_icon_given_name(tray_icon, size).unwrap_or(
                             ImageSurface::create(cairo::Format::ARgb32, size, size).unwrap(),
@@ -116,7 +119,8 @@ pub fn init_tray(expose: &BoxExpose) -> Rc<RefCell<TrayCtx>> {
                     }
                 }
                 Event::MenuNew(tray_menu) => {
-                    let root_menu = RootMenu::from_tray_menu(tray_menu, ctx.module.icon_size);
+                    let root_menu =
+                        RootMenu::from_tray_menu(tray_menu, ctx.module.config.icon_size);
                     if let Some(tray) = ctx.module.find_tray(id) {
                         tray.update_menu(root_menu);
                     }
