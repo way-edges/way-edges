@@ -278,20 +278,12 @@ impl Tray {
     }
 
     pub fn tray_clicked_req(&self) {
-        if let Some((submenu_id, menu_path)) = self
-            .menu_path
-            .as_ref()
-            .and_then(|menu_path| self.menu.as_ref().map(|(root, _)| (root.id, menu_path)))
-        {
-            let address = String::clone(&self.tray_id);
-            let menu_path = menu_path.clone();
-
-            Self::send_request(ActivateRequest::Default {
-                address,
-                x: 0,
-                y: 0,
-            });
-        }
+        let address = String::clone(&self.tray_id);
+        Self::send_request(ActivateRequest::Default {
+            address,
+            x: 0,
+            y: 0,
+        });
     }
 
     pub fn menu_item_clicked_req(&self, submenu_id: i32) {
