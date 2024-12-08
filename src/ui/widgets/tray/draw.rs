@@ -54,23 +54,9 @@ impl<'a> HeaderDrawArg<'a> {
 
         let text_surf = self.draw_text(title);
 
-        let icon_size = (tray.icon.width(), tray.icon.height());
-
         static ICON_TEXT_GAP: i32 = 4;
 
-        let surf = new_surface((icon_size.0 + text_surf.width() + ICON_TEXT_GAP, icon_size.1));
-        let ctx = cairo::Context::new(&surf).unwrap();
-
-        // draw icon
-        ctx.set_source_surface(&tray.icon, Z, Z).unwrap();
-        ctx.paint().unwrap();
-        ctx.translate(icon_size.0 as f64 + ICON_TEXT_GAP as f64, Z);
-
-        // draw text
-        ctx.set_source_surface(text_surf, Z, Z).unwrap();
-        ctx.paint().unwrap();
-
-        surf
+        combine_horizonal_center(&[tray.icon.clone(), text_surf], Some(ICON_TEXT_GAP))
     }
     fn draw_text(&self, text: &str) -> ImageSurface {
         draw_text_to_size(
