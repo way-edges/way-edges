@@ -286,10 +286,10 @@ impl Tray {
             let address = String::clone(&self.tray_id);
             let menu_path = menu_path.clone();
 
-            Self::send_request(ActivateRequest {
+            Self::send_request(ActivateRequest::Default {
                 address,
-                menu_path,
-                submenu_id,
+                x: 0,
+                y: 0,
             });
         }
     }
@@ -299,7 +299,7 @@ impl Tray {
             let address = String::clone(&self.tray_id);
             let menu_path = menu_path.clone();
 
-            Self::send_request(ActivateRequest {
+            Self::send_request(ActivateRequest::MenuItem {
                 address,
                 menu_path,
                 submenu_id,
