@@ -240,6 +240,8 @@ pub struct Tray {
     pub updated: bool,
     pub content: ImageSurface,
     pub layout: TrayLayout,
+
+    redraw_signal: BoxRedrawFunc,
 }
 
 impl Tray {
@@ -269,6 +271,7 @@ impl Tray {
     }
     fn set_updated(&mut self) {
         self.updated = true;
+        (self.redraw_signal)()
     }
     fn redraw_if_updated(&mut self) {
         if self.updated {
@@ -280,7 +283,12 @@ impl Tray {
         TrayLayout::draw_and_create(self);
     }
 
-    fn from_notify_item(tray_id: TrayID, value: &StatusNotifierItem, icon_size: i32) -> Self {
+    fn from_notify_item(
+        redraw_signal: BoxRedrawFunc,
+        tray_id: TrayID,
+        value: &StatusNotifierItem,
+        icon_size: i32,
+    ) -> Self {
         let id = value.id.clone();
         let title = value.title.clone();
 
@@ -315,6 +323,8 @@ impl Tray {
             is_open: false,
 
             layout: TrayLayout::default(),
+
+            redraw_signal,
         }
     }
 }
@@ -337,15 +347,19 @@ impl DisplayWidget for Tray {
     fn on_mouse_event(&mut self, e: crate::ui::draws::mouse_state::MouseEvent) {
         use super::layout::HoveringItem;
         use crate::ui::draws::mouse_state::MouseEvent;
+        println!("{e:?}");
         match e {
             MouseEvent::Release(pos, key) => {
                 let Some(hovering) = self.layout.get_hovering(pos) else {
                     return;
                 };
+                println!("{hovering:?}");
 
-                self.set_updated();
+                // self.set_updated();
 
                 if key == BUTTON_SECONDARY {
+                    println!("RIGHT CLICK");
+
                     // toggle state
                     match hovering {
                         HoveringItem::TrayIcon => {
@@ -490,7 +504,12 @@ impl TrayModule {
     }
     pub fn add_tray(&mut self, id: String, tray_item: &StatusNotifierItem) {
         let id = Rc::new(id);
-        let tray = Tray::from_notify_item(id.clone(), tray_item, self.icon_size);
+        let tray = Tray::from_notify_item(
+            self.redraw_signal.clone(),
+            id.clone(),
+            tray_item,
+            self.icon_size,
+        );
 
         self.grid.add(id.clone());
         self.id_tray_map.insert(id, tray);
@@ -506,5 +525,14 @@ impl TrayModule {
 
     pub fn find_tray(&mut self, id: &String) -> Option<&mut Tray> {
         self.id_tray_map.get_mut(id)
+    }
+
+    pub fn match_from_pos(&mut self, pos: (f64, f64)) -> Option<(&mut Tray, (f64, f64))> {
+        self.grid
+            .position_map
+            .as_ref()
+            .unwrap()
+            .match_item(pos)
+            .map(|(id, pos)| (self.id_tray_map.get_mut(id).unwrap(), pos))
     }
 }

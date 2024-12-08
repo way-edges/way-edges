@@ -3,26 +3,28 @@ use std::f64::consts::PI;
 use cairo::{Context, ImageSurface};
 use gtk::{gdk::RGBA, pango::Layout, prelude::GdkCairoContextExt};
 
-use crate::ui::draws::util::{draw_text_to_size, new_surface, Z};
+use crate::ui::draws::util::{combine_horizonal_center, draw_text_to_size, new_surface, Z};
 
 use super::module::{MenuItem, MenuState, MenuType};
 
 pub struct MenuDrawConfig {
-    margin: [i32; 4],
+    margin: [i32; 2],
     font_pixel_height: i32,
     marker_size: i32,
     separator_height: i32,
+    border_color: RGBA,
     text_color: RGBA,
     marker_color: Option<RGBA>,
 }
 impl Default for MenuDrawConfig {
     fn default() -> Self {
         Self {
-            margin: [5; 4],
-            marker_size: 16,
-            font_pixel_height: 16,
+            margin: [12, 16],
+            marker_size: 20,
+            font_pixel_height: 20,
             separator_height: 5,
-            text_color: RGBA::BLACK,
+            border_color: RGBA::WHITE,
+            text_color: RGBA::WHITE,
             marker_color: None,
         }
     }
@@ -47,97 +49,67 @@ static GAP_BETWEEN_MARKER_AND_TEXT: i32 = 5;
 pub struct MenuDrawArg<'a> {
     draw_config: &'a MenuDrawConfig,
     layout: Layout,
-    cell_height: i32,
-    marker_start_pos: (f64, f64),
-    text_start_pos: (f64, f64),
 }
 impl<'a> MenuDrawArg<'a> {
     pub fn create_from_config(draw_config: &'a MenuDrawConfig) -> Self {
         let layout = {
             let font_size = draw_config.font_pixel_height;
             let pc = pangocairo::pango::Context::new();
+            let fm = pangocairo::FontMap::default();
+            pc.set_font_map(Some(&fm));
+
             let mut desc = pc.font_description().unwrap();
             desc.set_absolute_size(font_size as f64 * 1024.);
             pc.set_font_description(Some(&desc));
             pangocairo::pango::Layout::new(&pc)
         };
 
-        let cell_height = draw_config.font_pixel_height.max(draw_config.marker_size)
-            + draw_config.margin[1]
-            + draw_config.margin[3];
-
-        let mut marker_start_y = 0;
-        let mut text_start_y = 0;
-        let minused = draw_config.marker_size - draw_config.font_pixel_height;
-
-        #[allow(clippy::comparison_chain)]
-        if minused > 0 {
-            // marker is bigger
-            text_start_y += minused / 2;
-        } else if minused < 0 {
-            // text is bigger
-            marker_start_y += -minused / 2;
-        }
-
-        let marker_start_pos = (draw_config.margin[0] as f64, marker_start_y as f64);
-        let text_start_pos = (
-            draw_config.margin[0] as f64
-                + draw_config.marker_size as f64
-                + GAP_BETWEEN_MARKER_AND_TEXT as f64,
-            text_start_y as f64,
-        );
-
         Self {
             draw_config,
             layout,
-
-            cell_height,
-            marker_start_pos,
-            text_start_pos,
         }
     }
 
-    fn get_marker_surf_context(&self) -> (ImageSurface, Context) {
-        let size = self.draw_config.marker_size;
-        let color = self
-            .draw_config
-            .marker_color
-            .unwrap_or(self.draw_config.text_color);
-
-        let surf = new_surface((size, size));
-        let ctx = Context::new(&surf).unwrap();
-        ctx.set_source_color(&color);
-
-        (surf, ctx)
-    }
-
     pub fn draw_menu(&self, menu: &[MenuItem], menu_state: &MenuState) -> (ImageSurface, Vec<f64>) {
+        // this should be in config, or?
+        static MENU_ITEM_BORDER_WIDTH: i32 = 4;
+
+        let last_menu_index = menu.len() - 1;
         let mut max_width = 0;
         let mut total_height = 0;
         let menu_draw_res: Vec<MenuItemDrawResult> = menu
             .iter()
-            .map(|item| {
+            .enumerate()
+            .map(|(index, item)| {
                 // current_item
                 let menu_res = self.draw_menu_item(item);
+
+                // count size
                 let size = menu_res.get_size();
                 max_width = max_width.max(size.0);
                 total_height += size.1;
+
+                // count in menu border
+                if index != last_menu_index {
+                    total_height += MENU_ITEM_BORDER_WIDTH;
+                }
+
                 menu_res
             })
             .collect();
 
-        // this should be in config, or?
-        static MENU_OUTLINE_WIDTH: i32 = 4;
-
-        let surf = new_surface((
-            max_width + MENU_OUTLINE_WIDTH * 2,
-            total_height + MENU_OUTLINE_WIDTH * 2,
-        ));
+        // context and surface
+        let size = (
+            max_width + MENU_ITEM_BORDER_WIDTH * 2,
+            total_height + MENU_ITEM_BORDER_WIDTH * 2,
+        );
+        let surf = new_surface(size);
         let ctx = Context::new(&surf).unwrap();
-        ctx.set_line_width(MENU_OUTLINE_WIDTH as f64);
+        ctx.set_source_color(&self.draw_config.border_color);
+        ctx.set_line_width(MENU_ITEM_BORDER_WIDTH as f64);
 
         // outline of the menu
-        let half_line = MENU_OUTLINE_WIDTH as f64 / 2.;
+        let half_line = MENU_ITEM_BORDER_WIDTH as f64 / 2.;
         ctx.rectangle(
             half_line,
             half_line,
@@ -147,60 +119,76 @@ impl<'a> MenuDrawArg<'a> {
         ctx.stroke().unwrap();
         ctx.translate(half_line, half_line);
 
-        let item_len = menu.len();
+        // menu item draw func
+        let draw_menu_border = || {
+            // draw a bottom border line
+            ctx.set_source_color(&self.draw_config.border_color);
+            ctx.move_to(Z, half_line);
+            ctx.rel_line_to(max_width as f64, Z);
+            ctx.stroke().unwrap();
+
+            // translate
+            ctx.translate(Z, MENU_ITEM_BORDER_WIDTH as f64);
+        };
         let draw_menu_img = |index: usize, img: ImageSurface| {
             let height = img.height() as f64;
 
             ctx.set_source_surface(&img, Z, Z).unwrap();
             ctx.paint().unwrap();
 
-            // hover
+            // menu state
             let menu_item = &menu[index];
-            if menu_state.is_hover(menu_item.id) {
+            if !menu_item.enabled {
+                // not enable
+                ctx.save().unwrap();
+                ctx.set_source_rgba(0., 0., 0., 0.2);
+                ctx.rectangle(Z, Z, max_width as f64, height);
+                ctx.fill().unwrap();
+                ctx.restore().unwrap();
+            } else if menu_state.is_hover(menu_item.id) {
+                // hover
                 ctx.save().unwrap();
                 ctx.set_source_rgba(1., 1., 1., 0.2);
-                ctx.rectangle(Z, Z, img.width() as f64, img.height() as f64);
+                ctx.rectangle(Z, Z, max_width as f64, height);
                 ctx.fill().unwrap();
                 ctx.restore().unwrap();
             }
 
-            if index < item_len - 1 {
-                // draw a separator line
-                ctx.move_to(Z, height + half_line);
-                ctx.rel_line_to(max_width as f64, Z);
-                ctx.stroke().unwrap();
-
-                // translate
-                ctx.translate(Z, height + MENU_OUTLINE_WIDTH as f64);
+            if index < last_menu_index {
+                ctx.translate(Z, height);
+                draw_menu_border();
             }
         };
         let draw_menu_sep = |index: usize, height: i32| {
-            ctx.translate(Z, height as f64);
-            if index < item_len - 1 {
-                // draw a separator line
-                ctx.move_to(Z, height as f64 + half_line);
-                ctx.rel_line_to(max_width as f64, Z);
-                ctx.stroke().unwrap();
+            ctx.set_source_color(&self.draw_config.border_color);
+            ctx.rectangle(Z, Z, max_width as f64, height as f64);
+            ctx.fill().unwrap();
 
-                // translate
-                ctx.translate(Z, MENU_OUTLINE_WIDTH as f64);
+            ctx.translate(Z, height as f64);
+            if index < last_menu_index {
+                draw_menu_border();
             }
         };
 
+        // y map for layout
         let mut y_map = vec![];
         let mut y_count = 0.;
         let mut count_y_map = |index, height: i32| {
-            if index == 0 || index == item_len - 1 {
-                let item_height = half_line + MENU_OUTLINE_WIDTH as f64 + height as f64;
-                y_map.push(item_height);
-                y_count += item_height;
+            let item_height = if index == 0 {
+                half_line + MENU_ITEM_BORDER_WIDTH as f64 + height as f64
+            } else if index == last_menu_index {
+                size.1 as f64
             } else {
-                let item_height = 2. * MENU_OUTLINE_WIDTH as f64 + height as f64;
-                y_map.push(item_height);
+                MENU_ITEM_BORDER_WIDTH as f64 + height as f64
+            };
+
+            y_map.push(item_height);
+            if index != last_menu_index {
                 y_count += item_height;
             }
         };
 
+        // iter menu item and draw
         menu_draw_res
             .into_iter()
             .enumerate()
@@ -219,6 +207,83 @@ impl<'a> MenuDrawArg<'a> {
         (surf, y_map)
     }
 
+    fn draw_menu_item(&self, item: &MenuItem) -> MenuItemDrawResult {
+        let mut imgs = Vec::with_capacity(4);
+
+        // marker
+        match item.menu_type {
+            MenuType::Radio(state) => imgs.push(self.draw_marker_radio(state)),
+            MenuType::Check(state) => imgs.push(self.draw_marker_check(state)),
+            // empty marker
+            MenuType::Normal => imgs.push(new_surface((
+                self.draw_config.marker_size,
+                self.draw_config.marker_size,
+            ))),
+            // do not draw anything
+            MenuType::Separator => {
+                return MenuItemDrawResult::Separator(self.draw_config.separator_height)
+            }
+        }
+
+        // icon
+        if let Some(icon) = item.icon.as_ref() {
+            imgs.push(icon.clone());
+        }
+
+        // text
+        if let Some(label) = item.label.as_ref() {
+            imgs.push(self.draw_text(label))
+        }
+
+        // submenu marker
+        if item.submenu.is_some() {
+            imgs.push(self.draw_marker_parent());
+        }
+
+        // combined
+        let combined = combine_horizonal_center(&imgs, Some(GAP_BETWEEN_MARKER_AND_TEXT));
+
+        // margin
+        let surf = new_surface((
+            combined.width() + 2 * self.draw_config.margin[0],
+            combined.height() + 2 * self.draw_config.margin[1],
+        ));
+        let ctx = Context::new(&surf).unwrap();
+        ctx.set_source_surface(
+            &combined,
+            self.draw_config.margin[0] as f64,
+            self.draw_config.margin[1] as f64,
+        )
+        .unwrap();
+        ctx.paint().unwrap();
+
+        MenuItemDrawResult::Item(surf)
+    }
+}
+
+// supports: markers, text
+impl<'a> MenuDrawArg<'a> {
+    fn draw_text(&self, text: &str) -> ImageSurface {
+        draw_text_to_size(
+            &self.layout,
+            &self.draw_config.text_color,
+            text,
+            self.draw_config.font_pixel_height,
+        )
+    }
+    fn get_marker_surf_context(&self) -> (ImageSurface, Context) {
+        let size = self.draw_config.marker_size;
+        let color = self
+            .draw_config
+            .marker_color
+            .unwrap_or(self.draw_config.text_color);
+
+        let surf = new_surface((size, size));
+        let ctx = Context::new(&surf).unwrap();
+        ctx.set_source_color(&color);
+
+        (surf, ctx)
+    }
     fn draw_marker_radio(&self, state: bool) -> ImageSurface {
         let (surf, ctx) = self.get_marker_surf_context();
 
@@ -266,64 +331,5 @@ impl<'a> MenuDrawArg<'a> {
         ctx.close_path();
         ctx.fill().unwrap();
         surf
-    }
-
-    fn draw_menu_item(&self, item: &MenuItem) -> MenuItemDrawResult {
-        let mut width = self.text_start_pos.0 + self.draw_config.margin[3] as f64;
-
-        let mut text_img = None;
-        if let Some(label) = item.label.as_ref() {
-            let img = self.draw_text(label);
-            width += img.width() as f64;
-            text_img = Some(img);
-        }
-
-        let surf = new_surface((width as i32, self.cell_height));
-        let ctx = Context::new(&surf).unwrap();
-
-        let draw_marker = |img: ImageSurface| {
-            ctx.set_source_surface(img, self.marker_start_pos.0, self.marker_start_pos.1)
-                .unwrap();
-            ctx.paint().unwrap();
-        };
-        match item.menu_type {
-            MenuType::Radio(state) => draw_marker(self.draw_marker_radio(state)),
-            MenuType::Check(state) => draw_marker(self.draw_marker_check(state)),
-            MenuType::Separator => {
-                return MenuItemDrawResult::Separator(self.draw_config.separator_height)
-            }
-            MenuType::Normal => {}
-        }
-
-        if let Some(img) = text_img {
-            ctx.set_source_surface(&img, self.text_start_pos.0, self.text_start_pos.1)
-                .unwrap();
-            ctx.paint().unwrap();
-
-            // for submenu
-            ctx.translate(
-                self.text_start_pos.0 + img.width() as f64 + GAP_BETWEEN_MARKER_AND_TEXT as f64,
-                Z,
-            );
-        }
-
-        // submenu marker
-        if item.submenu.is_some() {
-            let img = self.draw_marker_parent();
-            ctx.set_source_surface(img, Z, self.marker_start_pos.1)
-                .unwrap();
-            ctx.paint().unwrap();
-        }
-
-        MenuItemDrawResult::Item(surf)
-    }
-
-    pub fn draw_text(&self, text: &str) -> ImageSurface {
-        draw_text_to_size(
-            &self.layout,
-            &self.draw_config.text_color,
-            text,
-            self.draw_config.font_pixel_height,
-        )
     }
 }

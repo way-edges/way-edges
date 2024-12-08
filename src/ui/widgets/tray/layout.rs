@@ -11,6 +11,7 @@ use crate::{
 
 use super::module::{MenuItem, MenuState, RootMenu, Tray};
 
+#[derive(Debug)]
 pub enum HoveringItem {
     TrayIcon,
     MenuItem(i32),
@@ -34,6 +35,9 @@ impl TrayHeadLayout {
                 // NOTE: ASSUME TITLE IS NOT EMPTY
                 let layout = {
                     let pc = pangocairo::pango::Context::new();
+                    let fm = pangocairo::FontMap::default();
+                    pc.set_font_map(Some(&fm));
+
                     let mut desc = pc.font_description().unwrap();
                     desc.set_absolute_size((icon_size.1 << 10) as f64);
                     pc.set_font_description(Some(&desc));

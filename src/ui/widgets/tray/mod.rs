@@ -38,7 +38,25 @@ impl DisplayWidget for TrayCtx {
         self.content.clone()
     }
 
-    fn on_mouse_event(&mut self, _: crate::ui::draws::mouse_state::MouseEvent) {}
+    fn on_mouse_event(&mut self, e: crate::ui::draws::mouse_state::MouseEvent) {
+        use crate::ui::draws::mouse_state::MouseEvent;
+        match e {
+            MouseEvent::Release(pos, key) => {
+                if let Some((tray, pos)) = self.module.match_from_pos(pos) {
+                    tray.on_mouse_event(MouseEvent::Release(pos, key));
+                }
+            }
+            MouseEvent::Enter(pos) | MouseEvent::Motion(pos) => {
+                if let Some((tray, pos)) = self.module.match_from_pos(pos) {
+                    tray.on_mouse_event(MouseEvent::Motion(pos));
+                }
+            }
+            MouseEvent::Leave => self.module.id_tray_map.values_mut().for_each(|tray| {
+                tray.on_mouse_event(MouseEvent::Leave);
+            }),
+            _ => {}
+        }
+    }
 }
 
 pub fn init_tray(expose: &BoxExpose) -> Rc<RefCell<TrayCtx>> {
