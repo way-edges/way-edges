@@ -157,17 +157,22 @@ pub fn draw_text_to_size(pl: &Layout, color: &RGBA, text: &str, height: i32) -> 
     surf
 }
 
-pub fn combine_2_image_vertical_left(img1: &ImageSurface, img2: &ImageSurface) -> ImageSurface {
+pub fn combine_2_image_vertical_left(
+    img1: &ImageSurface,
+    img2: &ImageSurface,
+    gap: Option<i32>,
+) -> ImageSurface {
+    let gap = gap.unwrap_or(0);
     let surf = ImageSurface::create(
         Format::ARgb32,
         img1.width().max(img2.width()),
-        img1.height() + img2.height(),
+        img1.height() + img2.height() + gap,
     )
     .unwrap();
     let ctx = cairo::Context::new(&surf).unwrap();
     ctx.set_source_surface(img1, Z, Z).unwrap();
     ctx.paint().unwrap();
-    ctx.translate(Z, img1.height() as f64);
+    ctx.translate(Z, (img1.height() + gap) as f64);
     ctx.set_source_surface(img2, Z, Z).unwrap();
     ctx.paint().unwrap();
 

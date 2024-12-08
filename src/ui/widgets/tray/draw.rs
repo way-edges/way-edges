@@ -5,7 +5,82 @@ use gtk::{gdk::RGBA, pango::Layout, prelude::GdkCairoContextExt};
 
 use crate::ui::draws::util::{combine_horizonal_center, draw_text_to_size, new_surface, Z};
 
-use super::module::{MenuItem, MenuState, MenuType};
+use super::module::{MenuItem, MenuState, MenuType, Tray};
+
+pub struct HeaderDrawConfig {
+    font_pixel_height: i32,
+    text_color: RGBA,
+}
+impl Default for HeaderDrawConfig {
+    fn default() -> Self {
+        Self {
+            font_pixel_height: 16,
+            text_color: RGBA::WHITE,
+        }
+    }
+}
+
+pub struct HeaderDrawArg<'a> {
+    draw_config: &'a HeaderDrawConfig,
+    layout: Layout,
+}
+impl<'a> HeaderDrawArg<'a> {
+    pub fn create_from_config(draw_config: &'a HeaderDrawConfig) -> Self {
+        let layout = {
+            let font_size = draw_config.font_pixel_height;
+            let pc = pangocairo::pango::Context::new();
+            let fm = pangocairo::FontMap::default();
+            pc.set_font_map(Some(&fm));
+
+            let mut desc = pc.font_description().unwrap();
+            desc.set_absolute_size(font_size as f64 * 1024.);
+            pc.set_font_description(Some(&desc));
+            pangocairo::pango::Layout::new(&pc)
+        };
+
+        Self {
+            draw_config,
+            layout,
+        }
+    }
+    pub fn draw_header(&self, tray: &Tray) -> ImageSurface {
+        if !tray.is_open {
+            return tray.icon.clone();
+        }
+
+        let Some(title) = tray.title.as_ref().filter(|title| !title.is_empty()) else {
+            return tray.icon.clone();
+        };
+
+        let text_surf = self.draw_text(title);
+
+        let icon_size = (tray.icon.width(), tray.icon.height());
+
+        static ICON_TEXT_GAP: i32 = 4;
+
+        let surf = new_surface((icon_size.0 + text_surf.width() + ICON_TEXT_GAP, icon_size.1));
+        let ctx = cairo::Context::new(&surf).unwrap();
+
+        // draw icon
+        ctx.set_source_surface(&tray.icon, Z, Z).unwrap();
+        ctx.paint().unwrap();
+        ctx.translate(icon_size.0 as f64 + ICON_TEXT_GAP as f64, Z);
+
+        // draw text
+        ctx.set_source_surface(text_surf, Z, Z).unwrap();
+        ctx.paint().unwrap();
+
+        surf
+    }
+    fn draw_text(&self, text: &str) -> ImageSurface {
+        draw_text_to_size(
+            &self.layout,
+            &self.draw_config.text_color,
+            text,
+            self.draw_config.font_pixel_height,
+        )
+    }
+}
 
 pub struct MenuDrawConfig {
     margin: [i32; 2],
@@ -182,10 +257,8 @@ impl<'a> MenuDrawArg<'a> {
                 MENU_ITEM_BORDER_WIDTH as f64 + height as f64
             };
 
-            y_map.push(item_height);
-            if index != last_menu_index {
-                y_count += item_height;
-            }
+            y_count += item_height;
+            y_map.push(y_count);
         };
 
         // iter menu item and draw

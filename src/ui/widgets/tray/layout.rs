@@ -1,15 +1,17 @@
-use cairo::{Context, Format, ImageSurface};
-use gtk::gdk::RGBA;
+use cairo::{Context, ImageSurface};
 
 use crate::{
     common::binary_search_end,
     ui::{
-        draws::util::{combine_2_image_vertical_left, draw_text_to_size, new_surface, Z},
+        draws::util::{combine_2_image_vertical_left, new_surface, Z},
         widgets::tray::draw::{MenuDrawArg, MenuDrawConfig},
     },
 };
 
-use super::module::{MenuItem, MenuState, RootMenu, Tray};
+use super::{
+    draw::{HeaderDrawArg, HeaderDrawConfig},
+    module::{MenuItem, MenuState, RootMenu, Tray},
+};
 
 #[derive(Debug)]
 pub enum HoveringItem {
@@ -20,65 +22,28 @@ pub enum HoveringItem {
 #[derive(Default)]
 struct TrayHeadLayout {
     // icon should always be at 0,0
-    icon_size: (i32, i32),
+    content_size: (i32, i32),
 }
 impl TrayHeadLayout {
     fn draw_and_create(tray: &Tray) -> (ImageSurface, Self) {
-        let icon_size = (tray.icon.width(), tray.icon.height());
-        // let icon_range = [[0., size.0 as f64], [0., size.1 as f64]];
+        let draw_config = HeaderDrawConfig::default();
 
-        let mut icon_with_text = None;
+        let draw_arg = HeaderDrawArg::create_from_config(&draw_config);
 
-        if tray.is_open {
-            if let Some(title) = tray.title.as_ref().filter(|title| !title.is_empty()) {
-                // icon and title
-                // NOTE: ASSUME TITLE IS NOT EMPTY
-                let layout = {
-                    let pc = pangocairo::pango::Context::new();
-                    let fm = pangocairo::FontMap::default();
-                    pc.set_font_map(Some(&fm));
+        let img = draw_arg.draw_header(tray);
+        let content_size = (img.width(), img.height());
 
-                    let mut desc = pc.font_description().unwrap();
-                    desc.set_absolute_size((icon_size.1 << 10) as f64);
-                    pc.set_font_description(Some(&desc));
-                    pangocairo::pango::Layout::new(&pc)
-                };
-                let text_surf = draw_text_to_size(&layout, &RGBA::BLACK, title, icon_size.1);
-
-                let surf = ImageSurface::create(
-                    Format::ARgb32,
-                    icon_size.0 + text_surf.width(),
-                    icon_size.1,
-                )
-                .unwrap();
-                let ctx = cairo::Context::new(&surf).unwrap();
-
-                // draw icon
-                ctx.set_source_surface(&tray.icon, Z, Z).unwrap();
-                ctx.paint().unwrap();
-                ctx.translate(icon_size.0 as f64, icon_size.1 as f64);
-
-                // draw text
-                ctx.set_source_surface(text_surf, Z, Z).unwrap();
-                ctx.paint().unwrap();
-
-                icon_with_text = Some(surf);
-            }
-        }
-
-        (
-            icon_with_text.unwrap_or(tray.icon.clone()),
-            Self { icon_size },
-        )
+        (img, Self { content_size })
     }
     fn get_hovering(&self, pos: (f64, f64)) -> bool {
         pos.0 >= Z
-            && pos.0 < self.icon_size.0 as f64
+            && pos.0 < self.content_size.0 as f64
             && pos.1 >= Z
-            && pos.1 < self.icon_size.1 as f64
+            && pos.1 < self.content_size.1 as f64
     }
 }
 
+#[derive(Debug)]
 struct MenuCol {
     height_range: Vec<f64>,
     id_vec: Vec<i32>,
@@ -123,7 +88,12 @@ impl MenuCol {
         res
     }
     fn get_hovering(&self, pos: (f64, f64)) -> Option<i32> {
+        println!("self: {:?}, pos: {pos:?}", self);
+
         let row_index = binary_search_end(&self.height_range, pos.1);
+
+        println!("row index: {row_index}");
+
         if row_index == -1 {
             None
         } else {
@@ -132,6 +102,7 @@ impl MenuCol {
     }
 }
 
+#[derive(Debug)]
 struct MenuLayout {
     // end pixel index of each col
     menu_each_col_x_end: Vec<i32>,
@@ -230,8 +201,10 @@ impl TrayLayout {
             return;
         };
 
+        static GAP_HEADER_MENU: i32 = 6;
+
         // combine header and menu
-        tray.content = combine_2_image_vertical_left(&header_img, &menu_img);
+        tray.content = combine_2_image_vertical_left(&header_img, &menu_img, Some(GAP_HEADER_MENU));
         tray.layout = TrayLayout {
             tray_head_layout: header_layout,
             menu_layout: Some(menu_layout),
@@ -239,14 +212,14 @@ impl TrayLayout {
     }
 
     pub fn get_hovering(&self, pos: (f64, f64)) -> Option<HoveringItem> {
-        if pos.1 < self.tray_head_layout.icon_size.1 as f64 {
+        if pos.1 < self.tray_head_layout.content_size.1 as f64 {
             self.tray_head_layout
                 .get_hovering(pos)
                 .then_some(HoveringItem::TrayIcon)
         } else {
             self.menu_layout.as_ref().and_then(|menu_layout| {
                 menu_layout
-                    .get_hovering((pos.0, pos.1 - self.tray_head_layout.icon_size.1 as f64))
+                    .get_hovering((pos.0, pos.1 - self.tray_head_layout.content_size.1 as f64))
                     .map(HoveringItem::MenuItem)
             })
         }

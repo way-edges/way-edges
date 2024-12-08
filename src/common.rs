@@ -78,17 +78,18 @@ pub fn binary_search_end<T: Debug + PartialOrd + Copy + Display + Default>(l: &[
         let current = l[index];
 
         if v < current {
-            if index == 0 {
-                return -1;
-            }
-            if v >= l[index - 1] {
+            // if at the first, or there's no smaller to the left
+            if index == 0 || v >= l[index - 1] {
                 return index as isize;
             }
             index -= get_half();
         } else {
+            // if it's the last
             if index == max_index {
                 return -1;
             }
+
+            // if smaller than the right
             if v < l[index + 1] {
                 return (index + 1) as isize;
             }

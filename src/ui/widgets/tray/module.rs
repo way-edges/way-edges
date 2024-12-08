@@ -241,7 +241,8 @@ pub struct Tray {
     pub content: ImageSurface,
     pub layout: TrayLayout,
 
-    redraw_signal: BoxRedrawFunc,
+    tary_module: *const TrayModule,
+    // redraw_signal: BoxRedrawFunc,
 }
 
 impl Tray {
@@ -266,12 +267,15 @@ impl Tray {
     }
 }
 impl Tray {
+    fn get_module(&self) -> &TrayModule {
+        unsafe { self.tary_module.as_ref() }.unwrap()
+    }
     fn get_menu_state(&mut self) -> Option<&mut (RootMenu, MenuState)> {
         self.menu.as_mut()
     }
     fn set_updated(&mut self) {
         self.updated = true;
-        (self.redraw_signal)()
+        (self.get_module().redraw_signal)();
     }
     fn redraw_if_updated(&mut self) {
         if self.updated {
@@ -284,7 +288,7 @@ impl Tray {
     }
 
     fn from_notify_item(
-        redraw_signal: BoxRedrawFunc,
+        module: &TrayModule,
         tray_id: TrayID,
         value: &StatusNotifierItem,
         icon_size: i32,
@@ -324,7 +328,7 @@ impl Tray {
 
             layout: TrayLayout::default(),
 
-            redraw_signal,
+            tary_module: module as *const TrayModule,
         }
     }
 }
@@ -353,13 +357,8 @@ impl DisplayWidget for Tray {
                 let Some(hovering) = self.layout.get_hovering(pos) else {
                     return;
                 };
-                println!("{hovering:?}");
-
-                // self.set_updated();
 
                 if key == BUTTON_SECONDARY {
-                    println!("RIGHT CLICK");
-
                     // toggle state
                     match hovering {
                         HoveringItem::TrayIcon => {
@@ -401,14 +400,14 @@ impl DisplayWidget for Tray {
                 }
             }
             MouseEvent::Enter(pos) | MouseEvent::Motion(pos) => {
-                let Some(hovering) = self.layout.get_hovering(pos) else {
-                    return;
-                };
+                let mut hover_id = -1;
 
-                if let HoveringItem::MenuItem(id) = hovering {
-                    if self.get_menu_state().unwrap().1.set_hovering(id) {
-                        self.set_updated();
-                    }
+                if let Some(HoveringItem::MenuItem(id)) = self.layout.get_hovering(pos) {
+                    hover_id = id;
+                }
+
+                if self.get_menu_state().unwrap().1.set_hovering(hover_id) {
+                    self.set_updated();
                 }
             }
             MouseEvent::Leave => {
@@ -475,6 +474,33 @@ impl GridBox<TrayID> {
     }
 }
 
+pub struct TrayModuleState {
+    current_mouse_in: Option<TrayID>,
+}
+impl TrayModuleState {
+    fn new() -> Self {
+        Self {
+            current_mouse_in: None,
+        }
+    }
+    pub fn set_current_tary(&mut self, id: TrayID) -> Option<TrayID> {
+        let Some(old) = self.current_mouse_in.as_mut() else {
+            return self.current_mouse_in.replace(id);
+        };
+
+        if old == &id {
+            return None;
+        }
+
+        // drop the mut reference
+        // though this can be not written explicitly
+        #[allow(dropping_references)]
+        drop(old);
+
+        self.current_mouse_in.replace(id)
+    }
+}
+
 pub type TrayID = Rc<String>;
 
 pub struct TrayModule {
@@ -484,6 +510,8 @@ pub struct TrayModule {
     pub redraw_signal: BoxRedrawFunc,
 
     pub icon_size: i32,
+
+    pub module_state: TrayModuleState,
 }
 impl TrayModule {
     pub fn draw_content(&mut self) -> ImageSurface {
@@ -493,23 +521,20 @@ impl TrayModule {
         )
     }
     pub fn new(redraw_signal: BoxRedrawFunc) -> Self {
-        let grid = GridBox::new(0., Align::CenterCenter);
+        let grid = GridBox::new(0., Align::TopCenter);
         Self {
             grid,
             id_tray_map: HashMap::new(),
             redraw_signal,
 
-            icon_size: 16,
+            icon_size: 20,
+
+            module_state: TrayModuleState::new(),
         }
     }
     pub fn add_tray(&mut self, id: String, tray_item: &StatusNotifierItem) {
         let id = Rc::new(id);
-        let tray = Tray::from_notify_item(
-            self.redraw_signal.clone(),
-            id.clone(),
-            tray_item,
-            self.icon_size,
-        );
+        let tray = Tray::from_notify_item(self, id.clone(), tray_item, self.icon_size);
 
         self.grid.add(id.clone());
         self.id_tray_map.insert(id, tray);
@@ -525,6 +550,31 @@ impl TrayModule {
 
     pub fn find_tray(&mut self, id: &String) -> Option<&mut Tray> {
         self.id_tray_map.get_mut(id)
+    }
+
+    pub fn match_tray_id_from_pos(&self, pos: (f64, f64)) -> Option<(&TrayID, (f64, f64))> {
+        self.grid.position_map.as_ref().unwrap().match_item(pos)
+    }
+
+    pub fn leave_last_tray(&mut self) {
+        if let Some(f) = self
+            .module_state
+            .current_mouse_in
+            .take()
+            .and_then(|last_id| self.id_tray_map.get_mut(&last_id))
+        {
+            f.on_mouse_event(crate::ui::draws::mouse_state::MouseEvent::Leave);
+        }
+    }
+
+    pub fn replace_current_tray(&mut self, id: TrayID) {
+        if let Some(f) = self
+            .module_state
+            .set_current_tary(id)
+            .and_then(|last_id| self.id_tray_map.get_mut(&last_id))
+        {
+            f.on_mouse_event(crate::ui::draws::mouse_state::MouseEvent::Leave);
+        }
     }
 
     pub fn match_from_pos(&mut self, pos: (f64, f64)) -> Option<(&mut Tray, (f64, f64))> {
