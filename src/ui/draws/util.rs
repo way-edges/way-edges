@@ -134,39 +134,136 @@ impl From<ImageData> for ImageSurface {
 
 pub fn draw_text(pl: &Layout, color: &RGBA, text: &str) -> ImageSurface {
     pl.set_text(text);
-    let size = pl.pixel_size();
-    let surf = new_surface(size);
+    let (ink, _) = pl.pixel_extents();
+    let surf = new_surface((ink.width(), ink.height()));
     let ctx = cairo::Context::new(&surf).unwrap();
-    ctx.set_antialias(cairo::Antialias::None);
     ctx.set_source_color(color);
+    ctx.move_to(Z, -ink.y() as f64);
     pangocairo::functions::show_layout(&ctx, pl);
     surf
 }
 
-// NOTE: NO USEAGE NOW
-// pub fn horizon_center_combine(surf1: &ImageSurface, surf2: &ImageSurface) -> ImageSurface {
-//     let s1_height = surf1.height();
-//     let s2_height = surf2.height();
-//     let mut surf = new_surface((surf1.width() + surf2.width(), s1_height.max(s2_height)));
-//     let ctx = cairo::Context::new(&mut surf).unwrap();
+pub fn draw_text_to_size(pl: &Layout, color: &RGBA, text: &str, height: i32) -> ImageSurface {
+    pl.set_text(text);
+    let (ink, logic) = pl.pixel_extents();
+    let scale = height as f64 / (logic.height() - ink.y()) as f64;
+
+    let surf = new_surface(((ink.width() as f64 * scale).ceil() as i32, ink.height()));
+    let ctx = cairo::Context::new(&surf).unwrap();
+    ctx.set_source_color(color);
+    ctx.scale(scale, scale);
+    ctx.move_to(Z, -ink.y() as f64);
+    pangocairo::functions::show_layout(&ctx, pl);
+    surf
+}
+
+// pub fn combine_2_image_vertical(
+//     img1: &ImageSurface,
+//     img2: &ImageSurface,
+//     gap: Option<i32>,
+//     align_left: bool,
+// ) -> ImageSurface {
+//     let gap = gap.unwrap_or(0);
+//     let surf = ImageSurface::create(
+//         Format::ARgb32,
+//         img1.width().max(img2.width()),
+//         img1.height() + img2.height() + gap,
+//     )
+//     .unwrap();
+//     let ctx = cairo::Context::new(&surf).unwrap();
+//     ctx.set_source_surface(img1, Z, Z).unwrap();
+//     ctx.paint().unwrap();
+//     ctx.translate(Z, (img1.height() + gap) as f64);
 //
-//     let positions = {
-//         match s1_height.cmp(&s2_height) {
-//             std::cmp::Ordering::Less => [(s2_height as f64 - s1_height as f64) / 2., Z],
-//             std::cmp::Ordering::Equal => [Z, Z],
-//             std::cmp::Ordering::Greater => [Z, (s1_height as f64 - s2_height as f64) / 2.],
-//         }
-//     };
-//
-//     ctx.set_source_surface(surf1, Z, positions[0]).unwrap();
+//     if align_left {
+//         ctx.set_source_surface(img2, Z, Z).unwrap();
+//     } else {
+//         ctx.set_source_surface(img2, (surf.width() - img2.width()) as f64, Z)
+//             .unwrap();
+//     }
 //     ctx.paint().unwrap();
 //
-//     ctx.translate(surf1.width() as f64, Z);
-//
-//     ctx.set_source_surface(surf2, Z, positions[1]).unwrap();
-//     ctx.paint().unwrap();
 //     surf
 // }
+
+pub fn combine_vertcal(imgs: &[ImageSurface], gap: Option<i32>, align_left: bool) -> ImageSurface {
+    let last_index = imgs.len() - 1;
+
+    let mut max_width = 0;
+    let mut total_height = 0;
+    imgs.iter().enumerate().for_each(|(index, img)| {
+        max_width = max_width.max(img.width());
+        total_height += img.height();
+
+        // count in gap
+        if index != last_index {
+            if let Some(gap) = gap {
+                total_height += gap;
+            }
+        }
+    });
+
+    let surf = new_surface((max_width, total_height));
+    let ctx = Context::new(&surf).unwrap();
+
+    imgs.iter().enumerate().for_each(|(index, img)| {
+        if align_left {
+            ctx.set_source_surface(img, Z, Z).unwrap();
+        } else {
+            ctx.set_source_surface(img, (surf.width() - img.width()) as f64, Z)
+                .unwrap();
+        }
+        ctx.paint().unwrap();
+        ctx.translate(Z, img.height() as f64);
+
+        // translate for gap
+        if index != last_index {
+            if let Some(gap) = gap {
+                ctx.translate(Z, gap as f64);
+            }
+        }
+    });
+
+    surf
+}
+
+pub fn combine_horizonal_center(imgs: &[ImageSurface], gap: Option<i32>) -> ImageSurface {
+    let last_index = imgs.len() - 1;
+
+    let mut max_height = 0;
+    let mut total_width = 0;
+    imgs.iter().enumerate().for_each(|(index, img)| {
+        max_height = max_height.max(img.height());
+        total_width += img.width();
+
+        // count in gap
+        if index != last_index {
+            if let Some(gap) = gap {
+                total_width += gap;
+            }
+        }
+    });
+
+    let surf = new_surface((total_width, max_height));
+    let ctx = Context::new(&surf).unwrap();
+
+    imgs.iter().enumerate().for_each(|(index, img)| {
+        let height = img.height();
+        let y = (max_height - height) / 2;
+        ctx.set_source_surface(img, Z, y as f64).unwrap();
+        ctx.paint().unwrap();
+        ctx.translate(img.width() as f64, Z);
+
+        // translate for gap
+        if index != last_index {
+            if let Some(gap) = gap {
+                ctx.translate(gap as f64, Z);
+            }
+        }
+    });
+
+    surf
+}
 
 pub fn color_transition(start_color: RGBA, stop_color: RGBA, v: f32) -> RGBA {
     let r = start_color.red() + (stop_color.red() - start_color.red()) * v;

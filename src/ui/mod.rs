@@ -1,4 +1,4 @@
-mod draws;
+pub mod draws;
 pub mod widgets;
 mod window;
 

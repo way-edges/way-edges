@@ -13,7 +13,7 @@ use crate::config::widgets::wrapbox::text::{TextConfig, TextPreset, TextUpdateTa
 use crate::ui::draws::util::{draw_text, ImageData};
 
 use super::wrapbox::display::grid::DisplayWidget;
-use super::wrapbox::expose::BoxExposeRc;
+use super::wrapbox::expose::{BoxExpose, BoxRedrawFunc};
 
 #[derive(Educe)]
 #[educe(Debug)]
@@ -55,7 +55,7 @@ impl Drop for TextDrawer {
 }
 
 struct TextEvents {
-    queue_draw: Box<dyn FnMut() + 'static>,
+    queue_draw: BoxRedrawFunc,
 }
 
 fn match_preset(preset: TextPreset) -> (u64, TextUpdateTask) {
@@ -118,7 +118,7 @@ impl TextCtx {
                     .into(),
             ));
 
-            let mut queue_draw = events.queue_draw;
+            let queue_draw = events.queue_draw;
             // it's a while loop inside async block, so no matter weak or strong
             glib::spawn_future_local(glib::clone!(
                 #[strong]
@@ -143,11 +143,11 @@ impl TextCtx {
 }
 
 impl DisplayWidget for TextCtx {
-    fn get_size(&mut self) -> (f64, f64) {
+    fn get_size(&self) -> (f64, f64) {
         let c = &unsafe { self.cache_content.as_ptr().as_ref().unwrap() };
         (c.width() as f64, c.height() as f64)
     }
-    fn content(&mut self) -> ImageSurface {
+    fn content(&self) -> ImageSurface {
         unsafe { self.cache_content.as_ptr().as_ref().unwrap().clone() }
     }
 }
@@ -160,13 +160,9 @@ impl Drop for TextCtx {
     }
 }
 
-pub fn init_text(expose: &BoxExposeRc, config: TextConfig) -> Result<TextCtx, String> {
-    let re = {
-        let expose = expose.borrow_mut();
-        let s = expose.update_func();
-        TextEvents {
-            queue_draw: Box::new(s),
-        }
+pub fn init_text(expose: &BoxExpose, config: TextConfig) -> Result<TextCtx, String> {
+    let re = TextEvents {
+        queue_draw: expose.update_func(),
     };
     TextCtx::new(re, config)
 }
