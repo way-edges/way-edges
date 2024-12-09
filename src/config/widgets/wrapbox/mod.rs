@@ -129,10 +129,12 @@ impl Align {
 
 #[derive(Deserialize, Debug)]
 pub struct BoxSelf {
+    // grid
     #[serde(default = "dt_gap")]
     pub gap: f64,
     #[serde(default)]
     pub align: Align,
+
     #[serde(default = "super::common::dt_extra_trigger_size")]
     pub extra_trigger_size: NumOrRelative,
     #[serde(default = "super::common::dt_transition_duration")]
