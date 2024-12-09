@@ -91,10 +91,8 @@ fn init_tray_client() {
     use gtk::glib;
 
     glib::spawn_future_local(async move {
-        // do something with initial items...
-
         while let Ok(ev) = tray_rx.recv().await {
-            println!("{ev:?}\n"); // do something with event...
+            // println!("{ev:?}\n"); // do something with event...
             let e = match_event(ev);
             if let Some(e) = e {
                 get_tray_context().call(e);
