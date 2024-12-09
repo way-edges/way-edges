@@ -99,6 +99,8 @@ pub struct Ring {
     pub inner_radius: f64,
     pub layout: Layout,
 
+    pub font_pixel_size: i32,
+
     pub prefix: Option<Template>,
     pub suffix: Option<Template>,
 }
@@ -109,7 +111,7 @@ impl Ring {
         let bg_color = config.common.bg_color;
         let fg_color = config.common.fg_color;
         let font_family = config.common.font_family.clone();
-        let font_size = config.common.font_size;
+        let font_size = config.common.font_size.unwrap();
         let (layout, bg_arc, inner_radius) =
             Self::initialize(radius, ring_width, &bg_color, font_family, font_size);
 
@@ -122,6 +124,7 @@ impl Ring {
             bg_arc,
             inner_radius,
             layout,
+            font_pixel_size: font_size as i32,
             prefix,
             suffix,
         }
@@ -131,7 +134,7 @@ impl Ring {
         ring_width: f64,
         bg_color: &RGBA,
         font_family: Option<String>,
-        font_size: Option<f64>,
+        font_size: f64,
     ) -> (Layout, ImageSurface, f64) {
         let big_radius = radius;
         let small_radius = big_radius - ring_width;
@@ -152,7 +155,7 @@ impl Ring {
         let fm = pangocairo::FontMap::default();
         pc.set_font_map(Some(&fm));
         let mut desc = pc.font_description().unwrap();
-        desc.set_absolute_size(font_size.unwrap() * 1024.);
+        desc.set_absolute_size(font_size * 1024.);
         if let Some(font_family) = font_family {
             desc.set_family(font_family.as_str());
         }
@@ -186,17 +189,35 @@ impl Ring {
             float: Some(progress),
             preset: preset.as_deref(),
         };
-        let prefix = self.prefix.as_ref().map(|t| {
+
+        let prefix: Option<ImageData> = self.prefix.as_ref().and_then(|t| {
             let text = t.parse(a.clone());
-            util::draw_text(&self.layout, &self.fg_color, text.as_str()).into()
-        });
-        let suffix = self.suffix.as_ref().map(|t| {
-            let text = t.parse(a);
-            util::draw_text(&self.layout, &self.fg_color, text.as_str()).into()
+            util::draw_text_to_size(
+                &self.layout,
+                &self.fg_color,
+                text.as_str(),
+                self.font_pixel_size,
+            )
+            .try_into()
+            .ok()
         });
 
+        let suffix = self.suffix.as_ref().and_then(|t| {
+            let text = t.parse(a);
+            util::draw_text_to_size(
+                &self.layout,
+                &self.fg_color,
+                text.as_str(),
+                self.font_pixel_size,
+            )
+            .try_into()
+            .ok()
+        });
+
+        let ring: ImageData = ring.try_into().unwrap();
+
         RingCache {
-            ring: ring.into(),
+            ring,
             prefix,
             suffix,
         }

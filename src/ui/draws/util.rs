@@ -108,15 +108,31 @@ impl ImageData {
         .unwrap()
     }
 }
-impl From<ImageSurface> for ImageData {
-    fn from(value: ImageSurface) -> Self {
-        Self {
-            width: value.width(),
-            height: value.height(),
-            stride: value.stride(),
-            format: value.format(),
-            data: value.take_data().unwrap().to_vec(),
-        }
+impl TryFrom<ImageSurface> for ImageData {
+    type Error = cairo::BorrowError;
+
+    fn try_from(value: ImageSurface) -> Result<Self, Self::Error> {
+        let width = value.width();
+        let height = value.height();
+        let stride = value.stride();
+        let format = value.format();
+        // TODO: THIS THING SOMETIMES RETURNS A NULL, IDK WHY
+        let data = match value.take_data() {
+            Ok(data) => data.to_vec(),
+            Err(e) => {
+                let msg = format!("Failed to take data from surface: {e}");
+                log::error!("{}", msg);
+                return Err(e);
+            }
+        };
+
+        Ok(Self {
+            width,
+            height,
+            stride,
+            format,
+            data,
+        })
     }
 }
 impl From<ImageData> for ImageSurface {
@@ -132,59 +148,19 @@ impl From<ImageData> for ImageSurface {
     }
 }
 
-pub fn draw_text(pl: &Layout, color: &RGBA, text: &str) -> ImageSurface {
-    pl.set_text(text);
-    let (ink, _) = pl.pixel_extents();
-    let surf = new_surface((ink.width(), ink.height()));
-    let ctx = cairo::Context::new(&surf).unwrap();
-    ctx.set_source_color(color);
-    ctx.move_to(Z, -ink.y() as f64);
-    pangocairo::functions::show_layout(&ctx, pl);
-    surf
-}
-
 pub fn draw_text_to_size(pl: &Layout, color: &RGBA, text: &str, height: i32) -> ImageSurface {
     pl.set_text(text);
-    let (ink, logic) = pl.pixel_extents();
-    let scale = height as f64 / (logic.height() - ink.y()) as f64;
+    let (_, logic) = pl.pixel_extents();
+    let scale = height as f64 / logic.height() as f64;
 
-    let surf = new_surface(((ink.width() as f64 * scale).ceil() as i32, ink.height()));
+    let size = ((logic.width() as f64 * scale).ceil() as i32, height);
+    let surf = new_surface(size);
     let ctx = cairo::Context::new(&surf).unwrap();
     ctx.set_source_color(color);
     ctx.scale(scale, scale);
-    ctx.move_to(Z, -ink.y() as f64);
     pangocairo::functions::show_layout(&ctx, pl);
     surf
 }
-
-// pub fn combine_2_image_vertical(
-//     img1: &ImageSurface,
-//     img2: &ImageSurface,
-//     gap: Option<i32>,
-//     align_left: bool,
-// ) -> ImageSurface {
-//     let gap = gap.unwrap_or(0);
-//     let surf = ImageSurface::create(
-//         Format::ARgb32,
-//         img1.width().max(img2.width()),
-//         img1.height() + img2.height() + gap,
-//     )
-//     .unwrap();
-//     let ctx = cairo::Context::new(&surf).unwrap();
-//     ctx.set_source_surface(img1, Z, Z).unwrap();
-//     ctx.paint().unwrap();
-//     ctx.translate(Z, (img1.height() + gap) as f64);
-//
-//     if align_left {
-//         ctx.set_source_surface(img2, Z, Z).unwrap();
-//     } else {
-//         ctx.set_source_surface(img2, (surf.width() - img2.width()) as f64, Z)
-//             .unwrap();
-//     }
-//     ctx.paint().unwrap();
-//
-//     surf
-// }
 
 pub fn combine_vertcal(imgs: &[ImageSurface], gap: Option<i32>, align_left: bool) -> ImageSurface {
     let last_index = imgs.len() - 1;

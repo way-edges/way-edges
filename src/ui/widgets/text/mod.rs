@@ -10,7 +10,7 @@ use gtk::pango::Layout;
 use interval_task::runner::Runner;
 
 use crate::config::widgets::wrapbox::text::{TextConfig, TextPreset, TextUpdateTask};
-use crate::ui::draws::util::{draw_text, ImageData};
+use crate::ui::draws::util::{draw_text_to_size, ImageData};
 
 use super::wrapbox::display::grid::DisplayWidget;
 use super::wrapbox::expose::{BoxExpose, BoxRedrawFunc};
@@ -20,6 +20,7 @@ use super::wrapbox::expose::{BoxExpose, BoxRedrawFunc};
 pub struct TextDrawer {
     pub fg_color: RGBA,
     pub layout: Layout,
+    pub font_pixel_size: i32,
 }
 impl TextDrawer {
     pub fn new(config: &TextConfig) -> Self {
@@ -42,10 +43,21 @@ impl TextDrawer {
             pangocairo::pango::Layout::new(&pc)
         };
 
-        Self { fg_color, layout }
+        Self {
+            fg_color,
+            layout,
+            font_pixel_size: config.font_size,
+        }
     }
     fn draw_text(&self, text: String) -> ImageData {
-        draw_text(&self.layout, &self.fg_color, text.as_str()).into()
+        draw_text_to_size(
+            &self.layout,
+            &self.fg_color,
+            text.as_str(),
+            self.font_pixel_size,
+        )
+        .try_into()
+        .unwrap()
     }
 }
 impl Drop for TextDrawer {
