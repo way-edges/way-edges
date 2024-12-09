@@ -3,32 +3,31 @@ use std::{
     rc::{Rc, Weak},
 };
 
-use gio::glib::{clone::Downgrade, WeakRef};
 use gtk::{glib, prelude::WidgetExt, DrawingArea};
 
 use crate::ui::{draws::mouse_state::MouseState, WidgetExpose};
 
-pub type BoxExposeRc = Rc<RefCell<BoxExpose>>;
+pub type BoxRedrawFunc = Rc<dyn Fn()>;
 
+#[derive(Clone)]
 pub struct BoxExpose {
-    pub darea: WeakRef<DrawingArea>,
+    pub redraw_func: BoxRedrawFunc,
 }
 
 impl BoxExpose {
-    pub fn new(darea: &DrawingArea) -> BoxExposeRc {
-        Rc::new(RefCell::new(BoxExpose {
-            darea: darea.downgrade(),
-        }))
-    }
-    pub fn update_func(&self) -> impl Fn() + Clone {
-        let darea = self.darea.upgrade().expect("DrawingArea should be alive");
-        glib::clone!(
+    pub fn new(darea: &DrawingArea) -> Self {
+        let redraw_func = Rc::new(glib::clone!(
             #[weak]
             darea,
             move || {
                 darea.queue_draw();
             }
-        )
+        ));
+
+        Self { redraw_func }
+    }
+    pub fn update_func(&self) -> BoxRedrawFunc {
+        self.redraw_func.clone()
     }
 }
 

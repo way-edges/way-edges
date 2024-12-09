@@ -12,7 +12,7 @@ use crate::ui::draws::frame_manager::{FrameManager, FrameManagerBindTransition};
 use crate::ui::draws::transition_state::{self, TransitionStateList, TransitionStateRc};
 use crate::ui::draws::util::Z;
 
-use super::expose::BoxExposeRc;
+use super::expose::BoxExpose;
 use super::BoxCtxRc;
 
 pub struct DrawCore {
@@ -32,13 +32,13 @@ impl DrawCore {
 
         box_conf: &mut BoxConfig,
         box_ctx: BoxCtxRc,
-        expose: &BoxExposeRc,
+        expose: &BoxExpose,
         edge: Edge,
         position: Edge,
         extra_trigger_size: f64,
     ) -> Self {
         let box_frame_manager = {
-            let up = expose.borrow().update_func();
+            let up = expose.update_func();
             FrameManager::new(
                 box_conf.box_conf.frame_rate,
                 glib::clone!(move || {

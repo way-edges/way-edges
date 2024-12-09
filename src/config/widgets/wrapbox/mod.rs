@@ -1,5 +1,6 @@
 pub mod ring;
 pub mod text;
+pub mod tray;
 
 use std::str::FromStr;
 
@@ -9,6 +10,7 @@ use ring::RingConfig;
 use serde::{Deserialize, Deserializer};
 use serde_jsonrc::{Map, Value};
 use text::TextConfig;
+use tray::TrayConfig;
 
 use crate::config::{NumOrRelative, Widget};
 
@@ -67,12 +69,72 @@ pub enum Align {
     BottomRight,
 }
 
+pub type AlignFuncPos = (f64, f64);
+pub type AlignFuncGridBlockSize = (f64, f64);
+pub type AlignFuncContentSize = (f64, f64);
+pub type AlignFunc =
+    Box<fn(AlignFuncPos, AlignFuncGridBlockSize, AlignFuncContentSize) -> AlignFuncPos>;
+
+impl Align {
+    pub fn to_func(&self) -> AlignFunc {
+        macro_rules! align_y {
+            (T, $pos:expr, $size:expr, $content_size:expr) => {
+                $pos.1
+            };
+            (C, $pos:expr, $size:expr, $content_size:expr) => {
+                $pos.1 + ($size.1 - $content_size.1) / 2.
+            };
+            (B, $pos:expr, $size:expr, $content_size:expr) => {
+                $pos.1 + ($size.1 - $content_size.1)
+            };
+        }
+
+        macro_rules! align_x {
+            (L, $pos:expr, $size:expr, $content_size:expr) => {
+                $pos.0
+            };
+            (C, $pos:expr, $size:expr, $content_size:expr) => {
+                $pos.0 + ($size.0 - $content_size.0) / 2.
+            };
+            (R, $pos:expr, $size:expr, $content_size:expr) => {
+                $pos.0 + ($size.0 - $content_size.0)
+            };
+        }
+
+        macro_rules! a {
+            ($x:tt $y:tt) => {
+                |pos, size, content_size| {
+                    (
+                        align_x!($x, pos, size, content_size),
+                        align_y!($y, pos, size, content_size),
+                    )
+                }
+            };
+        }
+
+        Box::new(match self {
+            #[allow(unused)]
+            Align::TopLeft => a!(L T),
+            Align::TopCenter => a!(C T),
+            Align::TopRight => a!(R T),
+            Align::CenterLeft => a!(L C),
+            Align::CenterCenter => a!(C C),
+            Align::CenterRight => a!(R C),
+            Align::BottomLeft => a!(L B),
+            Align::BottomCenter => a!(C B),
+            Align::BottomRight => a!(R B),
+        })
+    }
+}
+
 #[derive(Deserialize, Debug)]
 pub struct BoxSelf {
+    // grid
     #[serde(default = "dt_gap")]
     pub gap: f64,
     #[serde(default)]
     pub align: Align,
+
     #[serde(default = "super::common::dt_extra_trigger_size")]
     pub extra_trigger_size: NumOrRelative,
     #[serde(default = "super::common::dt_transition_duration")]
@@ -160,6 +222,7 @@ pub fn visit_config(d: Value) -> Result<Widget, String> {
 pub enum BoxedWidget {
     Ring(Box<RingConfig>),
     Text(Box<TextConfig>),
+    Tray(Box<TrayConfig>),
 }
 
 impl<'de> Deserialize<'de> for BoxedWidget {
@@ -181,6 +244,7 @@ impl<'de> Deserialize<'de> for BoxedWidget {
         match t {
             ring::NAME => ring::visit_config(raw),
             text::NAME => text::visit_config(raw),
+            tray::NAME => tray::visit_config(raw),
             _ => Err(format!("unknown widget type: {t}")),
         }
         .map_err(serde::de::Error::custom)
