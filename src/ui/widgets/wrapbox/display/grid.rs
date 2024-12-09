@@ -161,7 +161,7 @@ impl<T> GridPositionMap<T> {
         let item_map = unsafe { self.grid_item_map.as_ref() }.unwrap();
         let widget_index = item_map.row_index[which_row as usize] + which_col as usize;
 
-        let start_point = self.widget_start_point_list[widget_index];
+        let start_point = self.widget_start_point_list.get(widget_index)?;
         let new_position = (pos.0 - start_point.0, pos.1 - start_point.1);
         let widget = &item_map.items[widget_index];
 
