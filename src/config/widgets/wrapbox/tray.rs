@@ -10,8 +10,7 @@ use super::{Align, BoxedWidget};
 
 pub const NAME: &str = "tray";
 
-#[derive(Educe, Deserialize, Default, Clone)]
-#[educe(Debug)]
+#[derive(Debug, Deserialize, Default, Clone)]
 #[serde(rename_all = "snake_case")]
 pub enum HeaderMenuStack {
     #[default]
@@ -19,8 +18,7 @@ pub enum HeaderMenuStack {
     MenuTop,
 }
 
-#[derive(Educe, Deserialize, Default, Clone)]
-#[educe(Debug)]
+#[derive(Debug, Deserialize, Default, Clone)]
 #[serde(rename_all = "snake_case")]
 pub enum HeaderMenuAlign {
     #[default]
