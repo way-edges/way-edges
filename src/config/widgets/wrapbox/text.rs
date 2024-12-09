@@ -50,7 +50,7 @@ fn dt_fg_color() -> RGBA {
     RGBA::BLACK
 }
 fn dt_font_size() -> i32 {
-    12
+    24
 }
 
 pub fn visit_config(v: Value) -> Result<BoxedWidget, String> {

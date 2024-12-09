@@ -152,7 +152,7 @@ pub fn visit_config(d: Value) -> Result<BoxedWidget, String> {
     let mut common = from_value::<RingCommon>(d)?;
 
     if common.font_size.is_none() {
-        common.font_size = Some(common.radius * 1.5);
+        common.font_size = Some(common.radius * 2.);
     }
     Ok(BoxedWidget::Ring(Box::new(RingConfig { common, preset })))
 }
