@@ -67,3 +67,9 @@ Options:
   -h, --help         Print help
   -V, --version      Print version
 ```
+
+## 💛 Thanks
+Special thanks for:
+- [JakeStanger/system-tray](https://github.com/JakeStanger/system-tray). I forked one for zbus5.0 version: https://github.com/ogios/system-tray-zbus5.
+- [Rayzeq/tryfol](https://github.com/Rayzeq/tryfol).
+- [elkowar/eww](https://github.com/elkowar/eww)
