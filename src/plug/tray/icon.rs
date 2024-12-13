@@ -26,14 +26,13 @@ fn new_image_surface_from_buf(buf: Pixbuf) -> ImageSurface {
     surf
 }
 fn scale_image_to_size(img: ImageSurface, size: i32) -> ImageSurface {
-    if img.width() == size || img.height() == size {
-        return img;
-    }
+    let scale = size as f64 / img.height() as f64;
+    let width = (img.width() as f64 * scale).ceil() as i32;
+    let height = (img.height() as f64 * scale).ceil() as i32;
 
-    let format = cairo::Format::ARgb32;
-    let surf = ImageSurface::create(format, size, size).unwrap();
+    let surf = ImageSurface::create(cairo::Format::ARgb32, width, height).unwrap();
     let context = cairo::Context::new(&surf).unwrap();
-    let scale = size as f64 / img.width() as f64;
+
     context.scale(scale, scale);
     context.set_source_surface(&img, Z, Z).unwrap();
     context.paint().unwrap();
