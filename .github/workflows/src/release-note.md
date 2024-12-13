@@ -1,7 +1,4 @@
 ## 💻 Way-Edges
 
-Finally, system tray implementation!!
-
-- tray(including schema).
-- grid box code structure changed.
-- **(breaking)** ring & text font-size is no longer based on PANGO_SCALE & DPI, they represents pixel height now.
+- tray icon re-scale is based on height now, so all the tray are the same height.
+- fix multiple same tray existence.
