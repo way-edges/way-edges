@@ -570,6 +570,11 @@ impl TrayModule {
     }
     pub fn add_tray(&mut self, id: String, tray_item: &StatusNotifierItem) {
         let id = Rc::new(id);
+
+        if self.id_tray_map.contains_key(&id) {
+            return;
+        }
+
         let tray = Tray::from_notify_item(self, id.clone(), tray_item, self.config.icon_size);
 
         self.grid.add(id.clone());
