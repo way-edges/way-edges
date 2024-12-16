@@ -1,0 +1,23 @@
+[package]
+name = "config"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+
+gtk4-layer-shell.workspace = true
+gtk.workspace = true
+log.workspace = true
+env_logger.workspace = true
+lazy_static.workspace = true
+
+way-edges-derive.workspace = true
+util.workspace = true
+
+serde_jsonrc.workspace = true
+serde.workspace = true
+
+xdg = "2.5"
+educe = { version = "0.6.0", default-features = false, features = ["Debug"] }
+
+regex = "1.10"
