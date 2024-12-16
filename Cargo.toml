@@ -26,6 +26,8 @@ tokio = { version = "1.39", features = ["net", "macros", "rt", "time", "sync"] }
 
 async-channel = "2.3"
 
+system-tray = { git = "https://github.com/ogios/system-tray-zbus5.git", branch = "zbus5" }
+
 [profile.release]
 opt-level = 3
 lto = true
