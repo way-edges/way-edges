@@ -4,9 +4,9 @@ mod pre_draw;
 
 use std::time::Duration;
 
-use crate::activate::monitor::get_monitor_context;
 use crate::ui::draws::transition_state::TransitionStateList;
 use crate::ui::{WidgetExpose, WidgetExposePtr};
+use backend::monitor::get_monitor_context;
 use config::{widgets::button::BtnConfig, Config, NumOrRelative};
 use gtk::prelude::{GtkWindowExt, WidgetExt};
 use gtk::ApplicationWindow;

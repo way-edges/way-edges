@@ -1,15 +1,10 @@
 use gio::{prelude::*, ListModel};
 use gtk::gdk::Monitor;
 use gtk::prelude::{DisplayExt, MonitorExt};
-use std::cell::Cell;
 use std::collections::HashMap;
-use std::rc::Rc;
 use std::sync::atomic::{AtomicBool, AtomicPtr};
 
 use config::MonitorSpecifier;
-use util::notify_send;
-
-use super::GroupMapCtxRc;
 
 pub struct MonitorCtx {
     pub list_model: ListModel,
@@ -38,7 +33,7 @@ impl MonitorCtx {
         Some((geom.width(), geom.height()))
     }
 
-    fn reload_monitors(&mut self) -> Result<(), String> {
+    pub fn reload_monitors(&mut self) -> Result<(), String> {
         self.monitors = self
             .list_model
             .iter::<Monitor>()
@@ -67,18 +62,18 @@ impl MonitorCtx {
     }
 }
 
-pub static MONITORS: AtomicPtr<MonitorCtx> = AtomicPtr::new(std::ptr::null_mut());
+static MONITORS: AtomicPtr<MonitorCtx> = AtomicPtr::new(std::ptr::null_mut());
 
 pub fn get_monitor_context() -> &'static mut MonitorCtx {
-    return unsafe {
+    unsafe {
         MONITORS
             .load(std::sync::atomic::Ordering::Acquire)
             .as_mut()
             .unwrap()
-    };
+    }
 }
 
-pub fn init_monitor(group_map: GroupMapCtxRc) -> Result<(), String> {
+pub fn init_monitor(cb: impl Fn(&ListModel, u32, u32, u32) + 'static) -> Result<(), String> {
     static IS_MONITOR_WATCHER_INITED: AtomicBool = AtomicBool::new(false);
     if IS_MONITOR_WATCHER_INITED.load(std::sync::atomic::Ordering::Acquire) {
         return Err("Monitor watcher already initialized".to_string());
@@ -96,41 +91,7 @@ pub fn init_monitor(group_map: GroupMapCtxRc) -> Result<(), String> {
         std::sync::atomic::Ordering::Release,
     );
 
-    let debouncer_context: Cell<Option<Rc<Cell<bool>>>> = Cell::new(None);
-
-    list_model.connect_items_changed(move |_, _, _, _| {
-        log::info!("Monitor changed");
-        use gtk::glib;
-
-        if let Some(removed) = debouncer_context.take() {
-            removed.set(true);
-        }
-
-        let removed = Rc::new(Cell::new(false));
-
-        gtk::glib::timeout_add_seconds_local_once(
-            5,
-            glib::clone!(
-                #[weak]
-                group_map,
-                #[weak]
-                removed,
-                move || {
-                    if removed.get() {
-                        return;
-                    }
-
-                    if let Err(e) = get_monitor_context().reload_monitors() {
-                        let msg = format!("Fail to reload monitors: {e}");
-                        log::error!("{msg}");
-                        notify_send("Monitor Watcher", &msg, true);
-                    }
-                    group_map.borrow_mut().reload();
-                }
-            ),
-        );
-        debouncer_context.set(Some(removed.clone()))
-    });
+    list_model.connect_items_changed(cb);
 
     Ok(())
 }

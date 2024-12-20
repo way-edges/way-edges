@@ -15,14 +15,12 @@ use gtk::{
     ApplicationWindow, DrawingArea,
 };
 
-use crate::{
-    activate::monitor::get_monitor_context,
-    ui::{
-        draws::{mouse_state::MouseState, transition_state::TransitionStateList},
-        WidgetExpose, WidgetExposePtr,
-    },
+use crate::ui::{
+    draws::{mouse_state::MouseState, transition_state::TransitionStateList},
+    WidgetExpose, WidgetExposePtr,
 };
 use backend::hypr_workspace::init_hyprland_listener;
+use backend::monitor::get_monitor_context;
 use config::widgets::hypr_workspace::HyprWorkspaceConfig;
 
 use super::common::calculate_rel_extra_trigger_size;

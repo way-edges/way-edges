@@ -13,10 +13,60 @@ use gtk::Application;
 use log::debug;
 
 use crate::{
-    activate::{self, GroupMapCtx, GroupMapCtxRc},
+    activate::{GroupMapCtx, GroupMapCtxRc},
     get_main_runtime_handle,
 };
 use util::notify_send;
+
+fn monitor_change_cb(group_map: &GroupMapCtxRc, app: &gtk::Application) -> bool {
+    let debouncer_context: Cell<Option<Rc<Cell<bool>>>> = Cell::new(None);
+    let cb = gtk::glib::clone!(
+        #[weak]
+        group_map,
+        move |_: &'_ gio::ListModel, _, _, _| {
+            log::info!("Monitor changed");
+            use gtk::glib;
+
+            if let Some(removed) = debouncer_context.take() {
+                removed.set(true);
+            }
+
+            let removed = Rc::new(Cell::new(false));
+
+            gtk::glib::timeout_add_seconds_local_once(
+                5,
+                glib::clone!(
+                    #[weak]
+                    group_map,
+                    #[weak]
+                    removed,
+                    move || {
+                        if removed.get() {
+                            return;
+                        }
+
+                        if let Err(e) = backend::monitor::get_monitor_context().reload_monitors() {
+                            let msg = format!("Fail to reload monitors: {e}");
+                            log::error!("{msg}");
+                            notify_send("Monitor Watcher", &msg, true);
+                        }
+                        group_map.borrow_mut().reload();
+                    }
+                ),
+            );
+            debouncer_context.set(Some(removed.clone()))
+        }
+    );
+
+    if let Err(e) = backend::monitor::init_monitor(cb) {
+        let msg = format!("Failed to init monitor: {e}");
+        notify_send("Way-edges monitor", &msg, true);
+        app.quit();
+        true
+    } else {
+        false
+    }
+}
 
 fn new_app() -> (GroupMapCtxRc, Application) {
     // that flag is for command line arguments
@@ -47,10 +97,8 @@ fn new_app() -> (GroupMapCtxRc, Application) {
                 group_map.borrow_mut().init_with_app(app);
 
                 // monitor
-                if let Err(e) = activate::init_monitor(group_map.clone()) {
-                    let msg = format!("Failed to init monitor: {e}");
-                    notify_send("Way-edges monitor", &msg, true);
-                    app.quit();
+                if monitor_change_cb(&group_map, app) {
+                    return;
                 };
 
                 let mut group_map_mut = group_map.borrow_mut();

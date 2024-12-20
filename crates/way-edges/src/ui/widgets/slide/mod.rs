@@ -7,13 +7,11 @@ use std::{
     rc::{Rc, Weak},
 };
 
-use crate::{
-    activate::monitor::get_monitor_context,
-    ui::{
-        draws::{mouse_state::MouseState, transition_state::TransitionStateRc},
-        WidgetExpose, WidgetExposePtr,
-    },
+use crate::ui::{
+    draws::{mouse_state::MouseState, transition_state::TransitionStateRc},
+    WidgetExpose, WidgetExposePtr,
 };
+use backend::monitor::get_monitor_context;
 use config::{widgets::slide::SlideConfig, Config};
 use gio::glib::WeakRef;
 use gtk::{gdk::RGBA, ApplicationWindow};

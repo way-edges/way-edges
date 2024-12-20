@@ -1,8 +1,8 @@
 use gtk::prelude::{GtkWindowExt, MonitorExt};
 use gtk4_layer_shell::{Edge, LayerShell};
 
-use crate::activate::monitor;
 use crate::ui::{self, WidgetCtx};
+use backend::monitor;
 use config::{Config, GroupConfig};
 
 fn calculate_config_relative(cfg: &mut Config, max_size_raw: (i32, i32)) -> Result<(), String> {
