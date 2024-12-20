@@ -1,0 +1,14 @@
+[package]
+name = "frontend"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+gtk4-layer-shell.workspace = true
+gtk.workspace = true
+gio.workspace = true
+
+config.workspace = true
+backend.workspace = true
+log.workspace = true
+cairo-rs.workspace = true

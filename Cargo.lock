@@ -847,6 +847,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "frontend"
+version = "0.1.0"
+dependencies = [
+ "backend",
+ "cairo-rs",
+ "config",
+ "gio",
+ "gtk4",
+ "gtk4-layer-shell",
+ "log",
+]
+
+[[package]]
 name = "fs4"
 version = "0.6.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
