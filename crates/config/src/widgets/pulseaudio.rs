@@ -3,9 +3,9 @@ use gtk::gdk::RGBA;
 use serde::Deserialize;
 use serde_jsonrc::Value;
 
-use crate::{widgets::common, Widget};
+use crate::widgets::common;
 
-use super::{common::from_value, slide::SlideConfig};
+use super::{common::from_value, slide::SlideConfig, Widget};
 
 pub const NAME_SINK: &str = "speaker";
 pub const NAME_SOUCE: &str = "microphone";

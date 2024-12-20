@@ -1,5 +1,5 @@
 use super::common::{self, from_value, CommonSize};
-use crate::{NumOrRelative, Widget};
+use super::Widget;
 use educe::Educe;
 use gtk::gdk::RGBA;
 use serde::Deserialize;
@@ -24,7 +24,7 @@ pub struct HyprWorkspaceConfig {
     #[serde(default = "dt_active_increase")]
     pub active_increase: f64,
 
-    #[serde(default = "common::dt_transition_duration")]
+    #[serde(default = "dt_workspace_transition_duration")]
     pub workspace_transition_duration: u64,
 
     #[serde(default = "dt_deactive_color")]
@@ -36,27 +36,16 @@ pub struct HyprWorkspaceConfig {
     #[serde(default)]
     #[serde(deserialize_with = "common::option_color_translate")]
     pub hover_color: Option<RGBA>,
-
-    #[serde(default = "common::dt_transition_duration")]
-    pub transition_duration: u64,
-    #[serde(default = "common::dt_frame_rate")]
-    pub frame_rate: u32,
-    #[serde(default = "common::dt_extra_trigger_size")]
-    pub extra_trigger_size: NumOrRelative,
 }
-
-// fn dt_size() -> CommonSize {
-//     CommonSize {
-//         thickness: NumOrRelative::Num(10.0),
-//         length: NumOrRelative::Num(200.0),
-//     }
-// }
 
 fn dt_gap() -> i32 {
     5
 }
 fn dt_active_increase() -> f64 {
     0.5
+}
+fn dt_workspace_transition_duration() -> u64 {
+    100
 }
 
 fn dt_deactive_color() -> RGBA {

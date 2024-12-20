@@ -2,7 +2,7 @@ use educe::Educe;
 use serde::Deserialize;
 use serde_jsonrc::Value;
 
-use crate::Widget;
+use super::Widget;
 
 use super::{common::from_value, slide::SlideConfig};
 

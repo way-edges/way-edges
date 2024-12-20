@@ -6,7 +6,7 @@ use serde::{Deserialize, Deserializer};
 use serde_jsonrc::Value;
 use way_edges_derive::GetSize;
 
-use crate::{NumOrRelative, Widget};
+use super::Widget;
 use util::shell::{shell_cmd, shell_cmd_non_block};
 
 use super::common::{self, from_value, CommonSize, EventMap};
@@ -30,13 +30,6 @@ pub struct SlideConfig {
     // draw related
     #[serde(flatten)]
     pub size: CommonSize,
-
-    #[serde(default = "common::dt_transition_duration")]
-    pub transition_duration: u64,
-    #[serde(default = "common::dt_frame_rate")]
-    pub frame_rate: u32,
-    #[serde(default = "common::dt_extra_trigger_size")]
-    pub extra_trigger_size: NumOrRelative,
 
     #[serde(default = "dt_obtuse_angle")]
     pub obtuse_angle: f64,

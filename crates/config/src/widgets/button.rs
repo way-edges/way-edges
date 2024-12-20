@@ -1,5 +1,5 @@
 use super::common::{self, from_value, CommonSize, EventMap};
-use crate::{NumOrRelative, Widget};
+use super::Widget;
 use educe::Educe;
 use gtk::gdk::RGBA;
 use serde::Deserialize;
@@ -23,12 +23,6 @@ pub struct BtnConfig {
     #[serde(default = "dt_color")]
     #[serde(deserialize_with = "common::color_translate")]
     pub color: RGBA,
-    #[serde(default = "common::dt_transition_duration")]
-    pub transition_duration: u64,
-    #[serde(default = "common::dt_frame_rate")]
-    pub frame_rate: u32,
-    #[serde(default = "common::dt_extra_trigger_size")]
-    pub extra_trigger_size: NumOrRelative,
 }
 
 fn dt_color() -> RGBA {

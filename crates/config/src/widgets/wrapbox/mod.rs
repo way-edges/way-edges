@@ -12,9 +12,8 @@ use serde_jsonrc::{Map, Value};
 use text::TextConfig;
 use tray::TrayConfig;
 
-use crate::{NumOrRelative, Widget};
-
 use super::common::from_value;
+use super::Widget;
 
 pub const NAME: &str = "box";
 
@@ -134,13 +133,6 @@ pub struct BoxSelf {
     pub gap: f64,
     #[serde(default)]
     pub align: Align,
-
-    #[serde(default = "super::common::dt_extra_trigger_size")]
-    pub extra_trigger_size: NumOrRelative,
-    #[serde(default = "super::common::dt_transition_duration")]
-    pub transition_duration: u64,
-    #[serde(default = "super::common::dt_frame_rate")]
-    pub frame_rate: u32,
 }
 
 fn dt_gap() -> f64 {
@@ -241,13 +233,7 @@ impl<'de> Deserialize<'de> for BoxedWidget {
             .as_str()
             .ok_or(serde::de::Error::custom("widget type must be string"))?;
 
-        match t {
-            ring::NAME => ring::visit_config(raw),
-            text::NAME => text::visit_config(raw),
-            tray::NAME => tray::visit_config(raw),
-            _ => Err(format!("unknown widget type: {t}")),
-        }
-        .map_err(serde::de::Error::custom)
+        super::match_widget!(t, raw, ring, text, tray;)
     }
 }
 

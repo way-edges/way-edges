@@ -1,9 +1,64 @@
+use backlight::BLConfig;
+use button::BtnConfig;
+use educe::Educe;
+use hypr_workspace::HyprWorkspaceConfig;
+use pulseaudio::PAConfig;
+use serde::{Deserialize, Deserializer};
+use slide::SlideConfig;
+use wrapbox::BoxConfig;
+
 pub mod backlight;
 pub mod button;
 pub mod hypr_workspace;
 pub mod pulseaudio;
 pub mod slide;
 pub mod wrapbox;
+
+#[derive(Educe)]
+#[educe(Debug)]
+pub enum Widget {
+    Btn(Box<BtnConfig>),
+    Slider(Box<SlideConfig>),
+    PulseAudio(Box<PAConfig>),
+    Backlight(Box<BLConfig>),
+    WrapBox(Box<BoxConfig>),
+    HyprWorkspace(Box<HyprWorkspaceConfig>),
+}
+
+macro_rules! match_widget {
+    ($t:expr, $raw:expr, $($name:ident),*; $($pulseaudio:ident),*) => {
+        match $t {
+            $(
+                $name::NAME => $name::visit_config($raw),
+            )*
+            $(
+                $pulseaudio::NAME_SOUCE | $pulseaudio::NAME_SINK => $pulseaudio::visit_config($raw),
+            )*
+            _ => Err(format!("unknown widget type: {}", $t)),
+        }.map_err(serde::de::Error::custom)
+    };
+}
+pub(crate) use match_widget;
+
+impl<'de> Deserialize<'de> for Widget {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let raw = serde_jsonrc::value::Value::deserialize(deserializer)?;
+
+        if !raw.is_object() {
+            return Err(serde::de::Error::custom("Widget must be object"));
+        }
+        let t = raw
+            .get("type")
+            .ok_or(serde::de::Error::missing_field("type"))?
+            .as_str()
+            .ok_or(serde::de::Error::custom("widget type must be string"))?;
+
+        match_widget!(t, raw, button, slide, backlight, wrapbox, hypr_workspace; pulseaudio)
+    }
+}
 
 pub mod common {
     use std::{collections::HashMap, str::FromStr};
@@ -13,8 +68,7 @@ pub mod common {
     use serde::{self, Deserialize, Deserializer};
     use serde_jsonrc::Value;
 
-    use crate::NumOrRelative;
-    use util::shell::shell_cmd_non_block;
+    use crate::common::NumOrRelative;
 
     #[derive(Debug, Deserialize)]
     pub struct CommonSize {
@@ -22,33 +76,14 @@ pub mod common {
         pub length: NumOrRelative,
     }
     impl CommonSize {
-        pub fn ensure_no_relative(
-            &mut self,
-            max_size_raw: (i32, i32),
-            edge: Edge,
-        ) -> Result<(), String> {
+        pub fn calculate_relative(&mut self, monitor_size: (f64, f64), edge: Edge) {
             let max_size = match edge {
-                Edge::Left | Edge::Right => (max_size_raw.0, max_size_raw.1),
-                Edge::Top | Edge::Bottom => (max_size_raw.1, max_size_raw.0),
+                Edge::Left | Edge::Right => (monitor_size.0, monitor_size.1),
+                Edge::Top | Edge::Bottom => (monitor_size.1, monitor_size.0),
                 _ => unreachable!(),
             };
-            self.thickness.calculate_relative(max_size.0 as f64);
-            self.length.calculate_relative(max_size.1 as f64);
-
-            // NOTE: WHY THIS CODE EXIST AT THE FIRST PLACE ANYWAY?
-            //
-            // remember to check height since we didn't do it in `parse_config`
-            // when passing only `rel_height`
-            // let w = w.get_num()?;
-            // let h = h.get_num()?;
-            // if w * 2. > h {
-            //     Err(format!(
-            //         "relative height detect: width * 2 must be <= height: {w} * 2 <= {h}",
-            //     ))
-            // } else {
-            //     Ok(())
-            // }
-            Ok(())
+            self.thickness.calculate_relative(max_size.0);
+            self.length.calculate_relative(max_size.1);
         }
     }
 
@@ -56,21 +91,10 @@ pub mod common {
     pub type Task = Box<dyn FnMut() + Send + Sync>;
 
     pub fn create_task(value: String) -> Task {
+        use util::shell::shell_cmd_non_block;
         Box::new(move || {
             shell_cmd_non_block(value.clone());
         })
-    }
-
-    pub fn dt_transition_duration() -> u64 {
-        100
-    }
-
-    pub fn dt_frame_rate() -> u32 {
-        60
-    }
-
-    pub fn dt_extra_trigger_size() -> NumOrRelative {
-        NumOrRelative::Num(5.0)
     }
 
     pub fn dt_event_map() -> Option<EventMap> {

@@ -3,7 +3,7 @@ use std::str::FromStr;
 use util::shell::shell_cmd;
 
 use super::{common::Template, BoxedWidget};
-use crate::widgets::common::{color_translate, dt_frame_rate, from_value};
+use crate::widgets::common::{color_translate, from_value};
 use educe::Educe;
 use gtk::gdk::RGBA;
 use serde::{Deserialize, Deserializer};
@@ -47,8 +47,8 @@ pub struct RingCommon {
     #[serde(deserialize_with = "color_translate")]
     pub fg_color: RGBA,
 
-    #[serde(default = "dt_frame_rate")]
-    pub frame_rate: u32,
+    #[serde(default)]
+    pub frame_rate: Option<i32>,
     #[serde(default = "dt_tt")]
     pub text_transition_ms: u64,
 
