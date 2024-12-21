@@ -19,17 +19,17 @@ pub struct _WindowContext {
     pub monitor: MonitorSpecifier,
     pub window: ApplicationWindow,
     pub drawing_area: DrawingArea,
-    pub pop_animation: ToggleAnimationRc,
 
-    pub frame_manager: FrameManagerRc,
+    pub(super) pop_animation: ToggleAnimationRc,
+    pub(super) frame_manager: FrameManagerRc,
 
     // draw
-    pub image_buffer: Buffer,
-    pub max_widget_size_func: MaxSizeFunc,
-    pub base_draw_func: BaseDrawFunc,
+    pub(super) image_buffer: Buffer,
+    pub(super) max_widget_size_func: MaxSizeFunc,
+    pub(super) base_draw_func: BaseDrawFunc,
 
     // mouse event
-    pub start_pos: Rc<Cell<(i32, i32)>>,
+    pub(super) start_pos: Rc<Cell<(i32, i32)>>,
 }
 
 impl _WindowContext {

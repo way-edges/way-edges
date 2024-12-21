@@ -1,4 +1,3 @@
-use educe::Educe;
 use gtk4_layer_shell::{Edge, Layer};
 use serde::Deserialize;
 use std::collections::HashMap;
@@ -22,8 +21,7 @@ impl Default for MonitorSpecifier {
     }
 }
 
-#[derive(Educe, Deserialize)]
-#[educe(Debug)]
+#[derive(Debug, Deserialize)]
 struct ConfigShadow {
     #[serde(default = "dt_edge")]
     #[serde(deserialize_with = "deserialize_edge")]
@@ -84,8 +82,7 @@ impl From<ConfigShadow> for Config {
     }
 }
 
-#[derive(Educe, Deserialize)]
-#[educe(Debug)]
+#[derive(Debug, Deserialize)]
 #[serde(from = "ConfigShadow")]
 pub struct Config {
     pub edge: Edge,

@@ -1,6 +1,5 @@
 use backlight::BLConfig;
 use button::BtnConfig;
-use educe::Educe;
 use hypr_workspace::HyprWorkspaceConfig;
 use pulseaudio::PAConfig;
 use serde::{Deserialize, Deserializer};
@@ -14,8 +13,7 @@ pub mod pulseaudio;
 pub mod slide;
 pub mod wrapbox;
 
-#[derive(Educe)]
-#[educe(Debug)]
+#[derive(Debug)]
 pub enum Widget {
     Btn(Box<BtnConfig>),
     Slider(Box<SlideConfig>),

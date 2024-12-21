@@ -49,11 +49,11 @@ pub static Z: f64 = 0.;
 
 #[macro_export]
 macro_rules! wrap_rc {
-    ($rc:ident, $normal:ident) => {
+    ($pub_rc:vis $rc:ident, $pub_normal:vis $normal:ident) => {
         #[derive(Debug, Clone)]
-        struct $rc(std::rc::Rc<std::cell::RefCell<$normal>>);;
+        $pub_rc struct $rc(std::rc::Rc<std::cell::RefCell<$normal>>);
         impl $rc {
-            fn new(normal: $normal) -> Self {
+            $pub_rc fn new(normal: $normal) -> Self {
                 use std::cell::RefCell;
                 use std::rc::Rc;
                 Self(Rc::new(RefCell::new(normal)))
@@ -66,73 +66,7 @@ macro_rules! wrap_rc {
             }
         }
         impl $normal {
-            fn make_rc(self) -> $rc {
-                $rc::new(self)
-            }
-        }
-    };
-    (pub $rc:ident, $normal:ident) => {
-        #[derive(Debug, Clone)]
-        pub struct $rc(std::rc::Rc<std::cell::RefCell<$normal>>);;
-        impl $rc {
-            pub fn new(normal: $normal) -> Self {
-                use std::cell::RefCell;
-                use std::rc::Rc;
-                Self(Rc::new(RefCell::new(normal)))
-            }
-        }
-        impl std::ops::Deref for $rc {
-            type Target = std::cell::RefCell<$normal>;
-            fn deref(&self) -> &Self::Target {
-                &self.0
-            }
-        }
-        impl $normal {
-            fn make_rc(self) -> $rc {
-                $rc::new(self)
-            }
-        }
-    };
-    ($rc:ident, pub $normal:ident) => {
-        #[derive(Debug, Clone)]
-        struct $rc(std::rc::Rc<std::cell::RefCell<$normal>>);;
-        impl $rc {
-            fn new(normal: $normal) -> Self {
-                use std::cell::RefCell;
-                use std::rc::Rc;
-                Self(Rc::new(RefCell::new(normal)))
-            }
-        }
-        impl std::ops::Deref for $rc {
-            type Target = std::cell::RefCell<$normal>;
-            fn deref(&self) -> &Self::Target {
-                &self.0
-            }
-        }
-        impl $normal {
-            pub fn make_rc(self) -> $rc {
-                $rc::new(self)
-            }
-        }
-    };
-    (pub $rc:ident, pub $normal:ident) => {
-        #[derive(Debug, Clone)]
-        pub struct $rc(std::rc::Rc<std::cell::RefCell<$normal>>);
-        impl $rc {
-            pub fn new(normal: $normal) -> Self {
-                use std::cell::RefCell;
-                use std::rc::Rc;
-                Self(Rc::new(RefCell::new(normal)))
-            }
-        }
-        impl std::ops::Deref for $rc {
-            type Target = std::cell::RefCell<$normal>;
-            fn deref(&self) -> &Self::Target {
-                &self.0
-            }
-        }
-        impl $normal {
-            pub fn make_rc(self) -> $rc {
+            $pub_normal fn make_rc(self) -> $rc {
                 $rc::new(self)
             }
         }

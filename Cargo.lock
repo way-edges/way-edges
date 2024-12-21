@@ -853,6 +853,7 @@ dependencies = [
  "backend",
  "cairo-rs",
  "config",
+ "educe",
  "gio",
  "gtk4",
  "gtk4-layer-shell",
