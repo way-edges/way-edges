@@ -1,6 +1,6 @@
 mod base;
 mod list;
-pub use list::AnimationList;
+pub use list::{AnimationList, AnimationListRc};
 
 use std::{
     cell::RefCell,
@@ -53,11 +53,7 @@ impl ToggleAnimation {
         self.base_animation.refresh();
     }
     pub fn progress(&self) -> f64 {
-        let p = self.base_animation.progress();
-        match self.direction {
-            ToggleDirection::Forward => p,
-            ToggleDirection::Backward => todo!(),
-        }
+        self.base_animation.progress()
     }
     pub fn set_direction(&mut self, to_direction: ToggleDirection) {
         if self.direction == to_direction {

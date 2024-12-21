@@ -7,8 +7,9 @@ edition = "2021"
 gtk4-layer-shell.workspace = true
 gtk.workspace = true
 gio.workspace = true
+cairo-rs.workspace = true
 
 config.workspace = true
 backend.workspace = true
 log.workspace = true
-cairo-rs.workspace = true
+util.workspace = true

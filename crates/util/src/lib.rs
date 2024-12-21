@@ -1,3 +1,5 @@
+pub mod draw;
+
 pub mod shell {
     use std::{process::Command, thread};
 

@@ -1,24 +1,144 @@
-use std::rc::Rc;
+use std::cell::{Cell, UnsafeCell};
+use std::rc::{Rc, Weak};
 
 use cairo::{ImageSurface, RectangleInt, Region};
-use gtk::prelude::{NativeExt, SurfaceExt};
+use gtk::prelude::{DrawingAreaExt, DrawingAreaExtManual, NativeExt, SurfaceExt, WidgetExt};
+use gtk::{glib, DrawingArea};
 use gtk4_layer_shell::Edge;
+use util::draw::new_surface;
+use util::Z;
 
 use crate::animation;
 
 use super::_WindowContext;
 
-impl _WindowContext {
-    fn set_draw_func(&self, cb: impl 'static + FnMut() -> ImageSurface) {
-        self.drawing_area.set_draw_func(cb);
+pub(super) struct BufferWeak(Weak<UnsafeCell<ImageSurface>>);
+impl glib::clone::Upgrade for BufferWeak {
+    type Strong = Buffer;
+    fn upgrade(&self) -> Option<Self::Strong> {
+        self.0.upgrade().map(Buffer)
     }
 }
 
-pub type DrawMotionFunc = Rc<dyn Fn(&cairo::Context, (i32, i32), (i32, i32), f64)>;
-//                                            area-size  content_size progress
-pub fn make_motion_func(edge: Edge, position: Edge) -> DrawMotionFunc {
-    // NOTE: WE NEED BETTER CODE FOR THIS.
+#[derive(Clone)]
+pub(super) struct Buffer(Rc<UnsafeCell<ImageSurface>>);
+impl Default for Buffer {
+    fn default() -> Self {
+        Self(Rc::new(UnsafeCell::new(new_surface((0, 0)))))
+    }
+}
+impl glib::clone::Downgrade for Buffer {
+    type Weak = BufferWeak;
+    fn downgrade(&self) -> Self::Weak {
+        BufferWeak(self.0.downgrade())
+    }
+}
+impl Buffer {
+    fn update_buffer(&self, new: ImageSurface) {
+        unsafe { *self.0.get().as_mut().unwrap() = new }
+    }
+    fn get_buffer(&self) -> &ImageSurface {
+        unsafe { self.0.get().as_ref().unwrap() }
+    }
+}
 
+fn update_buffer_and_area_size(buffer: &Buffer, darea: &DrawingArea, img: ImageSurface) {
+    let new_size = (img.width(), img.height());
+    darea.set_content_width(new_size.0);
+    darea.set_content_height(new_size.1);
+    // darea.set_size_request(new_size.0, new_size.1);
+    buffer.update_buffer(img);
+}
+
+type RedrawNotifyFunc = Rc<dyn Fn(Option<ImageSurface>) + 'static>;
+impl _WindowContext {
+    fn make_redraw_notifier_dyn(&self) -> RedrawNotifyFunc {
+        Rc::new(self.make_redraw_notifier())
+    }
+    fn make_redraw_notifier(&self) -> impl Fn(Option<ImageSurface>) + 'static {
+        let drawing_area = &self.drawing_area;
+        let buffer = &self.image_buffer;
+        glib::clone!(
+            #[weak]
+            drawing_area,
+            #[weak]
+            buffer,
+            move |img| {
+                if let Some(img) = img {
+                    update_buffer_and_area_size(&buffer, &drawing_area, img);
+                }
+                drawing_area.queue_draw();
+            }
+        )
+    }
+}
+
+impl _WindowContext {
+    fn set_draw_func(&self, mut cb: impl 'static + FnMut() -> Option<ImageSurface>) {
+        let buffer = &self.image_buffer;
+        let base_draw_func = &self.base_draw_func;
+        let ani = self.pop_animation.clone();
+        let ani_list = self.animation_list.clone();
+        let window = &self.window;
+        let func = glib::clone!(
+            #[weak]
+            buffer,
+            #[strong]
+            base_draw_func,
+            #[weak]
+            window,
+            move |darea: &DrawingArea, ctx: &cairo::Context, w, h| {
+                // content
+                if let Some(img) = cb() {
+                    update_buffer_and_area_size(&buffer, darea, img);
+                }
+                let content = buffer.get_buffer();
+                let content_size = (content.width(), content.height());
+                let area_size = (w, h);
+
+                // pop animation
+                ani_list.borrow_mut().refresh(); // update all animation time
+                let progress = ani.borrow_mut().progress();
+
+                // input area
+                base_draw_func(&window, ctx, area_size, content_size, progress);
+                ctx.set_source_surface(content, Z, Z).unwrap();
+                ctx.paint().unwrap();
+            }
+        );
+        self.drawing_area.set_draw_func(func);
+    }
+}
+
+fn get_wh_visible_y_func(edge: Edge) -> fn((i32, i32), f64) -> [i32; 3] {
+    macro_rules! edge_wh {
+        ($size:expr, $ts_y:expr; H) => {{
+            let visible_y = ($size.0 as f64 * $ts_y).ceil() as i32;
+            [visible_y, $size.1, visible_y]
+        }};
+        ($size:expr, $ts_y:expr; V) => {{
+            let visible_y = ($size.1 as f64 * $ts_y).ceil() as i32;
+            [$size.0, visible_y, visible_y]
+        }};
+    }
+
+    macro_rules! create_range_fn {
+        ($fn_name:ident, $index:tt) => {
+            fn $fn_name(content_size: (i32, i32), ts_y: f64) -> [i32; 3] {
+                edge_wh!(content_size, ts_y; $index)
+            }
+        };
+    }
+    create_range_fn!(content_width, H);
+    create_range_fn!(content_height, V);
+    match edge {
+        Edge::Left | Edge::Right => content_width,
+        Edge::Top | Edge::Bottom => content_height,
+        _ => unreachable!(),
+    }
+}
+
+fn get_xy_func(edge: Edge, position: Edge) -> fn((i32, i32), (i32, i32), i32) -> [i32; 2] {
     macro_rules! match_x {
         // position left
         ($i:ident, $area_size:expr, $content_size:expr, $visible_y:expr; POSITION_LEFT) => {
@@ -34,12 +154,12 @@ pub fn make_motion_func(edge: Edge, position: Edge) -> DrawMotionFunc {
         };
         // edge left
         ($i:ident, $area_size:expr, $content_size:expr, $visible_y:expr; EDGE_LEFT) => {
-            let $i = (-$content_size.0 + $visible_y as i32);
+            let $i = (-$content_size.0 + $visible_y);
         };
         // edge right
         ($i:ident, $area_size:expr, $content_size:expr, $visible_y:expr; EDGE_RIGHT) => {
             let a = calculate_x_additional($area_size.0, $content_size.0);
-            let $i = ($content_size.0 - $visible_y as i32) + a;
+            let $i = ($content_size.0 - $visible_y) + a;
         };
     }
     macro_rules! match_y {
@@ -57,159 +177,12 @@ pub fn make_motion_func(edge: Edge, position: Edge) -> DrawMotionFunc {
         };
         // edge top
         ($i:ident, $area_size:expr, $content_size:expr, $visible_y:expr; EDGE_TOP) => {
-            let $i = (-$content_size.1 + $visible_y as i32);
+            let $i = (-$content_size.1 + $visible_y);
         };
         // edge bottom
         ($i:ident, $area_size:expr, $content_size:expr, $visible_y:expr; EDGE_BOTTOM) => {
             let a = calculate_y_additional($area_size.1, $content_size.1);
-            let $i = ($content_size.1 - $visible_y as i32) + a;
-        };
-    }
-    macro_rules! create_position_fn {
-        ($fn_name:ident, $x_arg:tt, $y_arg:tt) => {
-            #[allow(unused_variables)]
-            fn $fn_name(
-                ctx: &cairo::Context,
-                area_size: (i32, i32),
-                content_size: (i32, i32),
-                visible_y: f64,
-            ) {
-                match_x!(x, area_size, content_size, visible_y; $x_arg);
-                match_y!(y, area_size, content_size, visible_y; $y_arg);
-                ctx.translate(x as f64, y as f64)
-            }
-        };
-    }
-    create_position_fn!(left_center, EDGE_LEFT, POSITION_CENTER);
-    create_position_fn!(left_top, EDGE_LEFT, POSITION_TOP);
-    create_position_fn!(left_bottom, EDGE_LEFT, POSITION_BOTTOM);
-
-    create_position_fn!(right_center, EDGE_RIGHT, POSITION_CENTER);
-    create_position_fn!(right_top, EDGE_RIGHT, POSITION_TOP);
-    create_position_fn!(right_bottom, EDGE_RIGHT, POSITION_BOTTOM);
-
-    create_position_fn!(top_center, POSITION_CENTER, EDGE_TOP);
-    create_position_fn!(top_left, POSITION_LEFT, EDGE_TOP);
-    create_position_fn!(top_right, POSITION_RIGHT, EDGE_TOP);
-
-    create_position_fn!(bottom_center, POSITION_CENTER, EDGE_BOTTOM);
-    create_position_fn!(bottom_left, POSITION_LEFT, EDGE_BOTTOM);
-    create_position_fn!(bottom_right, POSITION_RIGHT, EDGE_BOTTOM);
-
-    // 12 different cases
-    let draw_motion = match (edge, position) {
-        // left center
-        (Edge::Left, Edge::Left) | (Edge::Left, Edge::Right) => left_center,
-        // left top
-        (Edge::Left, Edge::Top) => left_top,
-        // left bottom
-        (Edge::Left, Edge::Bottom) => left_bottom,
-        // right center
-        (Edge::Right, Edge::Left) | (Edge::Right, Edge::Right) => right_center,
-        // right top
-        (Edge::Right, Edge::Top) => right_top,
-        // right bottom
-        (Edge::Right, Edge::Bottom) => right_bottom,
-        // top center
-        (Edge::Top, Edge::Top) | (Edge::Top, Edge::Bottom) => top_center,
-        // top left
-        (Edge::Top, Edge::Left) => top_left,
-        // top right
-        (Edge::Top, Edge::Right) => top_right,
-        // bottom center
-        (Edge::Bottom, Edge::Top) | (Edge::Bottom, Edge::Bottom) => bottom_center,
-        // bottom left
-        (Edge::Bottom, Edge::Left) => bottom_left,
-        // bottom right
-        (Edge::Bottom, Edge::Right) => bottom_right,
-        _ => unreachable!(),
-    };
-
-    macro_rules! create_range_fn {
-        ($fn_name:ident, $index:tt) => {
-            #[allow(unused_variables)]
-            fn $fn_name(content_size: (i32, i32)) -> i32 {
-                content_size.$index
-            }
-        };
-    }
-    create_range_fn!(content_width, 0);
-    create_range_fn!(content_height, 1);
-    let get_range = match edge {
-        Edge::Left | Edge::Right => content_width,
-        Edge::Top | Edge::Bottom => content_height,
-        _ => unreachable!(),
-    };
-
-    Rc::new(move |ctx, area_size, content_size, y| {
-        let range = get_range(content_size);
-        let visible_y = animation::calculate_transition(y, (0., range as f64));
-        draw_motion(ctx, area_size, content_size, visible_y);
-    })
-}
-
-pub type SetWindowInputRegionFunc =
-    Rc<dyn Fn(&gtk::ApplicationWindow, (i32, i32), (i32, i32), f64) -> RectangleInt>;
-pub fn make_window_input_region_fun(
-    edge: Edge,
-    position: Edge,
-    extra_trigger_size: i32,
-) -> SetWindowInputRegionFunc {
-    // NOTE: WE NEED BETTER CODE FOR THIS.
-    macro_rules! edge_wh {
-        ($w:ident, $h:ident, $size:expr, $ts_y:expr; H) => {
-            let $w = ($size.0 as f64 * $ts_y).ceil() as i32;
-            let $h = $size.1;
-        };
-        ($w:ident, $h:ident, $size:expr, $ts_y:expr; V) => {
-            let $w = $size.0;
-            let $h = ($size.1 as f64 * $ts_y).ceil() as i32;
-        };
-    }
-    macro_rules! match_x {
-        // position left
-        ($i:ident, $area_size:expr, $content_size:expr, $ts_y:expr; POSITION_LEFT) => {
-            let $i = 0;
-        };
-        // position middle
-        ($i:ident, $area_size:expr, $content_size:expr, $ts_y:expr; POSITION_CENTER) => {
-            let $i = (calculate_x_additional($area_size.0, $content_size.0) / 2);
-        };
-        // position right
-        ($i:ident, $area_size:expr, $content_size:expr, $ts_y:expr; POSITION_RIGHT) => {
-            let $i = calculate_x_additional($area_size.0, $content_size.0);
-        };
-        // edge left
-        ($i:ident, $area_size:expr, $content_size:expr, $ts_y:expr; EDGE_LEFT) => {
-            let $i = 0;
-        };
-        // edge right
-        ($i:ident, $area_size:expr, $content_size:expr, $ts_y:expr; EDGE_RIGHT) => {
-            let $i = (($content_size.0 as f64) * (1. - $ts_y)) as i32
-                + calculate_x_additional($area_size.0, $content_size.0);
-        };
-    }
-    macro_rules! match_y {
-        // position top
-        ($i:ident, $area_size:expr, $content_size:expr, $ts_y:expr; POSITION_TOP) => {
-            let $i = 0;
-        };
-        // position middle
-        ($i:ident, $area_size:expr, $content_size:expr, $ts_y:expr; POSITION_CENTER) => {
-            let $i = (calculate_y_additional($area_size.1, $content_size.1) / 2);
-        };
-        // position bottom
-        ($i:ident, $area_size:expr, $content_size:expr, $ts_y:expr; POSITION_BOTTOM) => {
-            let $i = calculate_y_additional($area_size.1, $content_size.1);
-        };
-        // edge top
-        ($i:ident, $area_size:expr, $content_size:expr, $ts_y:expr; EDGE_TOP) => {
-            let $i = 0;
-        };
-        // edge bottom
-        ($i:ident, $area_size:expr, $content_size:expr, $ts_y:expr; EDGE_BOTTOM) => {
-            let $i = (($content_size.1 as f64) * (1. - $ts_y)) as i32
-                + calculate_y_additional($area_size.1, $content_size.1);
+            let $i = ($content_size.1 - $visible_y) + a;
         };
     }
 
@@ -219,13 +192,11 @@ pub fn make_window_input_region_fun(
             fn $fn_name(
                 area_size: (i32, i32),
                 content_size: (i32, i32),
-                ts_y: f64,
-            )->[i32; 4] {
-
-                match_x!(x, area_size, content_size, ts_y; $x_arg);
-                match_y!(y, area_size, content_size, ts_y; $y_arg);
-                edge_wh!(w, h, content_size, ts_y; $wh_arg);
-                [x, y, w, h]
+                visible_y: i32,
+            )->[i32; 2] {
+                match_x!(x, area_size, content_size, visible_y; $x_arg);
+                match_y!(y, area_size, content_size, visible_y; $y_arg);
+                [x, y]
             }
         };
     }
@@ -246,8 +217,7 @@ pub fn make_window_input_region_fun(
     create_position_fn!(bottom_left, POSITION_LEFT, EDGE_BOTTOM, V);
     create_position_fn!(bottom_right, POSITION_RIGHT, EDGE_BOTTOM, V);
 
-    // 12 different cases
-    let get_xywh = match (edge, position) {
+    match (edge, position) {
         // left center
         (Edge::Left, Edge::Left) | (Edge::Left, Edge::Right) => left_center,
         // left top
@@ -273,29 +243,31 @@ pub fn make_window_input_region_fun(
         // bottom right
         (Edge::Bottom, Edge::Right) => bottom_right,
         _ => unreachable!(),
-    };
+    }
+}
 
+fn get_input_region_func(edge: Edge, extra: i32) -> impl Fn([i32; 4]) -> RectangleInt {
     macro_rules! match_inr {
-        ($inr:expr, $extra:expr, TOP) => {
-            $inr.set_height($inr.height() + $extra);
+        ($l:expr, $extra:expr, TOP) => {
+            $l[3] += $extra
         };
-        ($inr:expr, $extra:expr, BOTTOM) => {
-            $inr.set_y($inr.y() - $extra);
-            $inr.set_height($inr.height() + $extra);
+        ($l:expr, $extra:expr, BOTTOM) => {
+            $l[1] -= $extra;
+            $l[3] += $extra
         };
-        ($inr:expr, $extra:expr, LEFT) => {
-            $inr.set_width($inr.width() + $extra);
+        ($l:expr, $extra:expr, LEFT) => {
+            $l[2] += $extra
         };
-        ($inr:expr, $extra:expr, RIGHT) => {
-            $inr.set_x($inr.x() - $extra);
-            $inr.set_width($inr.width() + $extra);
+        ($l:expr, $extra:expr, RIGHT) => {
+            $l[0] -= $extra;
+            $l[2] += $extra
         };
     }
     macro_rules! create_inr_fn {
         ($fn_name:ident, $b:tt) => {
-            #[allow(unused_variables)]
-            fn $fn_name(inr: &mut RectangleInt, extra: i32) {
-                match_inr!(inr, extra, $b);
+            fn $fn_name(mut l: [i32; 4], extra: i32) -> RectangleInt {
+                match_inr!(&mut l, extra, $b);
+                RectangleInt::new(l[0], l[1], l[2], l[3])
             }
         };
     }
@@ -312,22 +284,35 @@ pub fn make_window_input_region_fun(
         _ => unreachable!(),
     };
 
-    Rc::new(move |window, area_size, content_size, ts_y| {
-        let [x, y, w, h] = get_xywh(area_size, content_size, ts_y);
-        // box normal input region
-        let rec_int = RectangleInt::new(x, y, w, h);
+    move |l| get_inr(l, extra)
+}
 
-        {
-            // box input region add extra_trigger
-            let mut inr = rec_int;
-            get_inr(&mut inr, extra_trigger_size);
+pub type BaseDrawFunc =
+    Rc<dyn Fn(&gtk::ApplicationWindow, &cairo::Context, (i32, i32), (i32, i32), f64) -> [i32; 4]>;
+
+pub fn make_base_draw_func(edge: Edge, position: Edge, extra: i32) -> BaseDrawFunc {
+    let wh_visible_y_func = get_wh_visible_y_func(edge);
+    let xy_func = get_xy_func(edge, position);
+    let inr_func = get_input_region_func(edge, extra);
+
+    Rc::new(
+        move |window, ctx, area_size, content_size, animation_progress| {
+            let [w, h, visible_y] = wh_visible_y_func(content_size, animation_progress);
+            let [x, y] = xy_func(area_size, content_size, visible_y);
+            let pose = [x, y, w, h];
+
+            // input region
             if let Some(surf) = window.surface() {
+                let inr = inr_func(pose);
                 surf.set_input_region(&Region::create_rectangle(&inr));
             }
-        }
 
-        rec_int
-    })
+            // pop in progress
+            ctx.translate(x as f64, y as f64);
+
+            pose
+        },
+    )
 }
 
 fn calculate_x_additional(area_width: i32, content_width: i32) -> i32 {

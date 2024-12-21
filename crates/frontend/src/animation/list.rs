@@ -1,7 +1,22 @@
-use std::{collections::HashSet, time::Duration};
+use std::{cell::RefCell, collections::HashSet, ops::Deref, rc::Rc, time::Duration};
 
 use super::{base::Curve, ToggleAnimation, ToggleAnimationRc};
 
+#[derive(Debug, Clone)]
+pub struct AnimationListRc(Rc<RefCell<AnimationList>>);
+impl AnimationListRc {
+    fn new(ani: AnimationList) -> Self {
+        Self(Rc::new(RefCell::new(ani)))
+    }
+}
+impl Deref for AnimationListRc {
+    type Target = RefCell<AnimationList>;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+#[derive(Debug)]
 pub struct AnimationList {
     inner: HashSet<ToggleAnimationRc>,
 }
@@ -10,6 +25,9 @@ impl AnimationList {
         Self {
             inner: HashSet::new(),
         }
+    }
+    pub fn make_rc(self) -> AnimationListRc {
+        AnimationListRc::new(self)
     }
 
     // TODO: HHH

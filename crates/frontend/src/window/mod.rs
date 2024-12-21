@@ -1,20 +1,15 @@
 mod draw;
 
-use backend::monitor::get_monitor_context;
 use config::{Config, MonitorSpecifier};
-use draw::{
-    make_motion_func, make_window_input_region_fun, DrawMotionFunc, SetWindowInputRegionFunc,
-};
+use draw::{make_base_draw_func, BaseDrawFunc, Buffer};
 use gtk::{
     gdk::Monitor,
-    glib,
-    prelude::{DrawingAreaExtManual, GtkWindowExt, MonitorExt, WidgetExt},
+    prelude::{GtkWindowExt, WidgetExt},
     Application, ApplicationWindow, CssProvider, DrawingArea, STYLE_PROVIDER_PRIORITY_APPLICATION,
 };
-use gtk4_layer_shell::{Edge, Layer, LayerShell};
-use std::rc::Rc;
+use gtk4_layer_shell::LayerShell;
 
-use crate::animation::{AnimationList, ToggleAnimationRc};
+use crate::animation::{AnimationList, AnimationListRc, ToggleAnimationRc};
 
 struct _WindowContext {
     name: String,
@@ -22,11 +17,11 @@ struct _WindowContext {
     window: ApplicationWindow,
     drawing_area: DrawingArea,
     pop_animation: ToggleAnimationRc,
-    animation_list: AnimationList,
+    animation_list: AnimationListRc,
 
-    // func
-    motion_func: DrawMotionFunc,
-    input_region_func: SetWindowInputRegionFunc,
+    // draw
+    image_buffer: Buffer,
+    base_draw_func: BaseDrawFunc,
 }
 
 impl _WindowContext {
@@ -78,6 +73,7 @@ impl _WindowContext {
 
         let mut animation_list = AnimationList::new();
         let pop_animation = animation_list.new_transition(conf.transition_duration);
+        let animation_list = animation_list.make_rc();
 
         Ok(Self {
             name: conf.name.clone(),
@@ -87,8 +83,8 @@ impl _WindowContext {
             pop_animation,
             animation_list,
 
-            motion_func: make_motion_func(conf.edge, conf.position),
-            input_region_func: make_window_input_region_fun(
+            image_buffer: Buffer::default(),
+            base_draw_func: make_base_draw_func(
                 conf.edge,
                 conf.position,
                 conf.extra_trigger_size.get_num_into().unwrap().ceil() as i32,
@@ -97,28 +93,5 @@ impl _WindowContext {
     }
     fn show(&self) {
         self.window.present();
-    }
-}
-
-type RedrawNotifyFunc = Rc<dyn Fn(Option<(i32, i32)>) + 'static>;
-impl _WindowContext {
-    fn make_redraw_notifier_dyn(&self) -> RedrawNotifyFunc {
-        Rc::new(self.make_redraw_notifier())
-    }
-    fn make_redraw_notifier(&self) -> impl Fn(Option<(i32, i32)>) + 'static {
-        let drawing_area = &self.drawing_area;
-        let old_size = drawing_area.size_request();
-        glib::clone!(
-            #[weak]
-            drawing_area,
-            move |size| {
-                if let Some(size) = size {
-                    if old_size.0 < size.0 || old_size.1 < size.1 {
-                        drawing_area.set_size_request(size.0, size.1);
-                    }
-                }
-                drawing_area.queue_draw();
-            }
-        )
     }
 }
