@@ -1,7 +1,7 @@
 mod draw;
 
 use config::{Config, MonitorSpecifier};
-use draw::{make_base_draw_func, BaseDrawFunc, Buffer};
+use draw::{make_base_draw_func, make_max_size_func, BaseDrawFunc, Buffer, MaxSizeFunc};
 use gtk::{
     gdk::Monitor,
     prelude::{GtkWindowExt, WidgetExt},
@@ -21,6 +21,7 @@ struct _WindowContext {
 
     // draw
     image_buffer: Buffer,
+    max_widget_size_func: MaxSizeFunc,
     base_draw_func: BaseDrawFunc,
 }
 
@@ -75,6 +76,7 @@ impl _WindowContext {
         let pop_animation = animation_list.new_transition(conf.transition_duration);
         let animation_list = animation_list.make_rc();
 
+        let extra = conf.extra_trigger_size.get_num_into().unwrap().ceil() as i32;
         Ok(Self {
             name: conf.name.clone(),
             monitor: conf.monitor.clone(),
@@ -84,11 +86,8 @@ impl _WindowContext {
             animation_list,
 
             image_buffer: Buffer::default(),
-            base_draw_func: make_base_draw_func(
-                conf.edge,
-                conf.position,
-                conf.extra_trigger_size.get_num_into().unwrap().ceil() as i32,
-            ),
+            max_widget_size_func: make_max_size_func(conf.edge, extra),
+            base_draw_func: make_base_draw_func(conf.edge, conf.position, extra),
         })
     }
     fn show(&self) {

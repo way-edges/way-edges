@@ -42,8 +42,13 @@ impl Buffer {
     }
 }
 
-fn update_buffer_and_area_size(buffer: &Buffer, darea: &DrawingArea, img: ImageSurface) {
-    let new_size = (img.width(), img.height());
+fn update_buffer_and_area_size(
+    buffer: &Buffer,
+    darea: &DrawingArea,
+    img: ImageSurface,
+    max_size_func: &MaxSizeFunc,
+) {
+    let new_size = max_size_func((img.width(), img.height()));
     darea.set_content_width(new_size.0);
     darea.set_content_height(new_size.1);
     // darea.set_size_request(new_size.0, new_size.1);
@@ -58,14 +63,17 @@ impl _WindowContext {
     fn make_redraw_notifier(&self) -> impl Fn(Option<ImageSurface>) + 'static {
         let drawing_area = &self.drawing_area;
         let buffer = &self.image_buffer;
+        let max_size_func = &self.max_widget_size_func;
         glib::clone!(
             #[weak]
             drawing_area,
             #[weak]
             buffer,
+            #[strong]
+            max_size_func,
             move |img| {
                 if let Some(img) = img {
-                    update_buffer_and_area_size(&buffer, &drawing_area, img);
+                    update_buffer_and_area_size(&buffer, &drawing_area, img, &max_size_func);
                 }
                 drawing_area.queue_draw();
             }
@@ -77,20 +85,23 @@ impl _WindowContext {
     fn set_draw_func(&self, mut cb: impl 'static + FnMut() -> Option<ImageSurface>) {
         let buffer = &self.image_buffer;
         let base_draw_func = &self.base_draw_func;
+        let max_size_func = &self.max_widget_size_func;
         let ani = self.pop_animation.clone();
         let ani_list = self.animation_list.clone();
         let window = &self.window;
         let func = glib::clone!(
             #[weak]
             buffer,
-            #[strong]
-            base_draw_func,
             #[weak]
             window,
+            #[strong]
+            base_draw_func,
+            #[strong]
+            max_size_func,
             move |darea: &DrawingArea, ctx: &cairo::Context, w, h| {
                 // content
                 if let Some(img) = cb() {
-                    update_buffer_and_area_size(&buffer, darea, img);
+                    update_buffer_and_area_size(&buffer, darea, img, &max_size_func);
                 }
                 let content = buffer.get_buffer();
                 let content_size = (content.width(), content.height());
@@ -100,6 +111,8 @@ impl _WindowContext {
                 ani_list.borrow_mut().refresh(); // update all animation time
                 let progress = ani.borrow_mut().progress();
 
+                // check unfinished animation and redraw frame
+
                 // input area
                 base_draw_func(&window, ctx, area_size, content_size, progress);
                 ctx.set_source_surface(content, Z, Z).unwrap();
@@ -108,6 +121,36 @@ impl _WindowContext {
         );
         self.drawing_area.set_draw_func(func);
     }
+}
+
+pub type MaxSizeFunc = Rc<dyn Fn((i32, i32)) -> (i32, i32)>;
+pub fn make_max_size_func(edge: Edge, extra: i32) -> MaxSizeFunc {
+    macro_rules! what_extra {
+        ($size:expr, $extra:expr; H) => {
+            $size.0 += $extra
+        };
+        ($size:expr, $extra:expr; V) => {{
+            $size.1 += $extra
+        }};
+    }
+    macro_rules! create_max_size_func {
+        ($fn_name:ident, $index:tt) => {
+            fn $fn_name(content_size: (i32, i32), extra: i32) -> (i32, i32) {
+            let mut new = content_size;
+                what_extra!(&mut new, extra; $index);
+            new
+            }
+        };
+    }
+    create_max_size_func!(horizon, H);
+    create_max_size_func!(vertical, V);
+    let func = match edge {
+        Edge::Left | Edge::Right => horizon,
+        Edge::Top | Edge::Bottom => vertical,
+        _ => unreachable!(),
+    };
+
+    Rc::new(move |size| func(size, extra))
 }
 
 fn get_wh_visible_y_func(edge: Edge) -> fn((i32, i32), f64) -> [i32; 3] {
