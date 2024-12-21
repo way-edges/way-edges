@@ -1,4 +1,4 @@
-use std::cell::{Cell, UnsafeCell};
+use std::cell::UnsafeCell;
 use std::rc::{Rc, Weak};
 
 use cairo::{ImageSurface, RectangleInt, Region};
@@ -8,9 +8,7 @@ use gtk4_layer_shell::Edge;
 use util::draw::new_surface;
 use util::Z;
 
-use crate::animation;
-
-use super::_WindowContext;
+use super::context::_WindowContext;
 
 pub(super) struct BufferWeak(Weak<UnsafeCell<ImageSurface>>);
 impl glib::clone::Upgrade for BufferWeak {
@@ -87,7 +85,7 @@ impl _WindowContext {
         let base_draw_func = &self.base_draw_func;
         let max_size_func = &self.max_widget_size_func;
         let ani = self.pop_animation.clone();
-        let ani_list = self.animation_list.clone();
+        let frame_manager = self.frame_manager.clone();
         let window = &self.window;
         let func = glib::clone!(
             #[weak]
@@ -108,13 +106,13 @@ impl _WindowContext {
                 let area_size = (w, h);
 
                 // pop animation
-                ani_list.borrow_mut().refresh(); // update all animation time
+                frame_manager.borrow_mut().ensure_animations(darea);
                 let progress = ani.borrow_mut().progress();
 
                 // check unfinished animation and redraw frame
 
                 // input area
-                base_draw_func(&window, ctx, area_size, content_size, progress);
+                let pose = base_draw_func(&window, ctx, area_size, content_size, progress);
                 ctx.set_source_surface(content, Z, Z).unwrap();
                 ctx.paint().unwrap();
             }

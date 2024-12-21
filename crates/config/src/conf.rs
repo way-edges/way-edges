@@ -53,7 +53,7 @@ struct ConfigShadow {
     #[serde(default = "dt_transition_duration")]
     pub transition_duration: u64,
     #[serde(default)]
-    pub frame_rate: Option<u32>,
+    pub frame_rate: Option<i32>,
     #[serde(default = "dt_extra_trigger_size")]
     pub extra_trigger_size: NumOrRelative,
 
@@ -96,7 +96,7 @@ pub struct Config {
     pub name: String,
     pub ignore_exclusive: bool,
     pub transition_duration: u64,
-    pub frame_rate: Option<u32>,
+    pub frame_rate: Option<i32>,
     pub extra_trigger_size: NumOrRelative,
     pub widget: Option<Widget>,
 }

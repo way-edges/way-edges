@@ -2,6 +2,8 @@ mod base;
 mod list;
 pub use list::{AnimationList, AnimationListRc};
 
+use util::wrap_rc;
+
 use std::{
     cell::RefCell,
     hash::Hash,
@@ -69,23 +71,13 @@ impl ToggleAnimation {
             ToggleDirection::Backward => 1. - p,
         }
     }
-    pub fn is_in_transition(&self) -> bool {
+    pub fn is_in_progress(&self) -> bool {
         let p = self.progress();
         p > 0. && p < 1.
     }
 }
 
-pub fn calculate_transition(y: f64, range: (f64, f64)) -> f64 {
-    range.0 + (range.1 - range.0) * y
-}
-
-#[derive(Debug, Clone)]
-pub struct ToggleAnimationRc(Rc<RefCell<ToggleAnimation>>);
-impl ToggleAnimationRc {
-    fn new(ani: ToggleAnimation) -> Self {
-        Self(Rc::new(RefCell::new(ani)))
-    }
-}
+wrap_rc!(pub ToggleAnimationRc, pub ToggleAnimation);
 impl Hash for ToggleAnimationRc {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         std::ptr::hash(&*self.0, state)
@@ -97,10 +89,7 @@ impl PartialEq for ToggleAnimationRc {
         Rc::ptr_eq(&self.0, &other.0)
     }
 }
-impl Deref for ToggleAnimationRc {
-    type Target = RefCell<ToggleAnimation>;
 
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
+pub fn calculate_transition(y: f64, range: (f64, f64)) -> f64 {
+    range.0 + (range.1 - range.0) * y
 }

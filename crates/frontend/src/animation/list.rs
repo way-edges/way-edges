@@ -2,19 +2,9 @@ use std::{cell::RefCell, collections::HashSet, ops::Deref, rc::Rc, time::Duratio
 
 use super::{base::Curve, ToggleAnimation, ToggleAnimationRc};
 
-#[derive(Debug, Clone)]
-pub struct AnimationListRc(Rc<RefCell<AnimationList>>);
-impl AnimationListRc {
-    fn new(ani: AnimationList) -> Self {
-        Self(Rc::new(RefCell::new(ani)))
-    }
-}
-impl Deref for AnimationListRc {
-    type Target = RefCell<AnimationList>;
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
+use util::wrap_rc;
+
+wrap_rc!(pub AnimationListRc, pub AnimationList);
 
 #[derive(Debug)]
 pub struct AnimationList {
@@ -26,9 +16,6 @@ impl AnimationList {
             inner: HashSet::new(),
         }
     }
-    pub fn make_rc(self) -> AnimationListRc {
-        AnimationListRc::new(self)
-    }
 
     // TODO: HHH
     // pub fn new_transition(&mut self, time_cost: u64, curve: Curve) -> ToggleAnimationRc {
@@ -39,6 +26,28 @@ impl AnimationList {
         ));
         self.inner.insert(item.clone());
         item
+    }
+
+    pub fn refresh_and_has_in_progress(&mut self) -> bool {
+        let mut has = false;
+        self.inner.iter().for_each(|f| {
+            let mut f = f.borrow_mut();
+            f.refresh();
+            if !has && f.is_in_progress() {
+                has = true
+            }
+        });
+        has
+    }
+
+    pub fn has_in_progress(&self) -> bool {
+        let mut has = false;
+        self.inner.iter().for_each(|f| {
+            if !has && f.borrow().is_in_progress() {
+                has = true
+            };
+        });
+        has
     }
 
     pub fn refresh(&mut self) {
@@ -55,10 +64,3 @@ impl AnimationList {
         self.inner.remove(item);
     }
 }
-
-// impl Deref for TransitionStateList {
-//     type Target = Vec<Option<TransitionStateRc>>;
-//     fn deref(&self) -> &Self::Target {
-//         self.inner.as_ref()
-//     }
-// }

@@ -13,3 +13,5 @@ config.workspace = true
 backend.workspace = true
 log.workspace = true
 util.workspace = true
+
+timerfd = "1.0"
