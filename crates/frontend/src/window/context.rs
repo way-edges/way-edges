@@ -1,3 +1,5 @@
+use std::{cell::Cell, rc::Rc};
+
 use super::{
     draw::{make_base_draw_func, make_max_size_func, BaseDrawFunc, Buffer, MaxSizeFunc},
     frame::{FrameManager, FrameManagerRc},
@@ -25,6 +27,9 @@ pub struct _WindowContext {
     pub image_buffer: Buffer,
     pub max_widget_size_func: MaxSizeFunc,
     pub base_draw_func: BaseDrawFunc,
+
+    // mouse event
+    pub start_pos: Rc<Cell<(i32, i32)>>,
 }
 
 impl _WindowContext {
@@ -96,6 +101,8 @@ impl _WindowContext {
             image_buffer: Buffer::default(),
             max_widget_size_func: make_max_size_func(conf.edge, extra),
             base_draw_func: make_base_draw_func(conf.edge, conf.position, extra),
+
+            start_pos: Rc::new(Cell::new((0, 0))),
         })
     }
     pub fn show(&self) {

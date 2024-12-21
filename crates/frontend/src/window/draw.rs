@@ -87,6 +87,7 @@ impl _WindowContext {
         let ani = self.pop_animation.clone();
         let frame_manager = self.frame_manager.clone();
         let window = &self.window;
+        let start_pos = &self.start_pos;
         let func = glib::clone!(
             #[weak]
             buffer,
@@ -96,6 +97,8 @@ impl _WindowContext {
             base_draw_func,
             #[strong]
             max_size_func,
+            #[weak]
+            start_pos,
             move |darea: &DrawingArea, ctx: &cairo::Context, w, h| {
                 // content
                 if let Some(img) = cb() {
@@ -111,8 +114,10 @@ impl _WindowContext {
 
                 // check unfinished animation and redraw frame
 
-                // input area
+                // input area && pop progress
                 let pose = base_draw_func(&window, ctx, area_size, content_size, progress);
+                start_pos.replace((pose[0], pose[1]));
+
                 ctx.set_source_surface(content, Z, Z).unwrap();
                 ctx.paint().unwrap();
             }
