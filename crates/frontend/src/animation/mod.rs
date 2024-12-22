@@ -1,16 +1,9 @@
 mod base;
 mod list;
 pub use list::{AnimationList, AnimationListRc};
+use way_edges_derive::wrap_rc;
 
-use util::wrap_rc;
-
-use std::{
-    cell::RefCell,
-    hash::Hash,
-    ops::{Deref, Not},
-    rc::Rc,
-    time::Duration,
-};
+use std::{hash::Hash, ops::Not, rc::Rc, time::Duration};
 
 use base::{Animation, Curve};
 
@@ -39,6 +32,7 @@ impl From<bool> for ToggleDirection {
     }
 }
 
+#[wrap_rc(rc = "pub", normal = "pub")]
 #[derive(Debug)]
 pub struct ToggleAnimation {
     pub direction: ToggleDirection,
@@ -77,7 +71,6 @@ impl ToggleAnimation {
     }
 }
 
-wrap_rc!(pub ToggleAnimationRc, pub ToggleAnimation);
 impl Hash for ToggleAnimationRc {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         std::ptr::hash(&*self.0, state)

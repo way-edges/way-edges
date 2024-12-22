@@ -10,6 +10,7 @@ gio.workspace = true
 cairo-rs.workspace = true
 educe.workspace = true
 
+way-edges-derive.workspace = true
 config.workspace = true
 backend.workspace = true
 log.workspace = true

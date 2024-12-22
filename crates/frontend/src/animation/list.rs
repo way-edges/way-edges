@@ -1,11 +1,12 @@
-use std::{cell::RefCell, collections::HashSet, ops::Deref, rc::Rc, time::Duration};
+use std::{collections::HashSet, time::Duration};
 
 use super::{base::Curve, ToggleAnimation, ToggleAnimationRc};
 
-use util::wrap_rc;
+use way_edges_derive::wrap_rc;
 
-wrap_rc!(pub AnimationListRc, pub AnimationList);
+// wrap_rc!(pub AnimationListRc, pub AnimationList);
 
+#[wrap_rc(rc = "pub", normal = "pub")]
 #[derive(Debug)]
 pub struct AnimationList {
     inner: HashSet<ToggleAnimationRc>,

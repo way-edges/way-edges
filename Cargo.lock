@@ -611,6 +611,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "derive-debug"
+version = "0.1.0"
+dependencies = [
+ "way-edges-derive",
+]
+
+[[package]]
 name = "derive_more"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -860,6 +867,7 @@ dependencies = [
  "log",
  "timerfd",
  "util",
+ "way-edges-derive",
 ]
 
 [[package]]
@@ -2730,6 +2738,8 @@ dependencies = [
 name = "way-edges-derive"
 version = "0.1.0"
 dependencies = [
+ "proc-macro-crate",
+ "proc-macro2",
  "quote",
  "syn 2.0.90",
 ]

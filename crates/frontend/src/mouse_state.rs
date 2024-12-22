@@ -1,12 +1,10 @@
 use educe::Educe;
-use gio::glib::clone::Downgrade;
 use gtk::{
-    gdk::BUTTON_MIDDLE,
     glib,
     prelude::{GestureSingleExt, WidgetExt},
     DrawingArea, EventControllerMotion, GestureClick,
 };
-use std::{rc::Rc, time::Duration};
+use way_edges_derive::wrap_rc;
 
 #[derive(Debug, Clone)]
 pub enum MouseEvent {
@@ -15,43 +13,29 @@ pub enum MouseEvent {
     Enter((f64, f64)),
     Leave,
     Motion((f64, f64)),
-
-    Pin,
-    Unpin,
-    Pop,
-    Unpop,
 }
 
-pub type MouseEventFunc = Box<dyn FnMut(&MouseStateData, MouseEvent) + 'static>;
+pub type MouseEventFunc = Box<dyn FnMut(&mut MouseStateData, MouseEvent) + 'static>;
 
 #[derive(Debug)]
 pub struct MouseStateData {
     pub hovering: bool,
     pub pressing: Option<u32>,
-
-    pub pin_state: bool,
-    pub pop_state: Option<Rc<()>>,
 }
 impl MouseStateData {
     pub fn new() -> Self {
         Self {
             hovering: false,
             pressing: None,
-            pin_state: false,
-            pop_state: None,
         }
     }
 }
 
-use util::wrap_rc;
-wrap_rc!(pub MouseStateRc, pub MouseState);
-
+#[wrap_rc(rc = "pub", normal = "pub")]
 #[derive(Educe)]
 #[educe(Debug)]
 pub struct MouseState {
     data: MouseStateData,
-
-    pin_key: u32,
     mouse_debug: bool,
     #[educe(Debug(ignore))]
     cb: Option<MouseEventFunc>,
@@ -64,59 +48,19 @@ impl MouseState {
 
             mouse_debug: false,
             cb: None,
-            pin_key: BUTTON_MIDDLE,
         }
     }
 
     fn call_event(&mut self, e: MouseEvent) {
         if let Some(f) = &mut self.cb {
-            f(&self.data, e)
+            f(&mut self.data, e)
         }
     }
 
-    pub fn set_event_cb(&mut self, cb: MouseEventFunc) {
-        self.cb.replace(cb);
+    // pub fn set_event_cb(&mut self, cb: MouseEventFunc) {
+    pub fn set_event_cb(&mut self, cb: impl FnMut(&mut MouseStateData, MouseEvent) + 'static) {
+        self.cb.replace(Box::new(cb));
     }
-
-    // =========== PIN ==============
-    pub fn set_pin(&mut self, pin: bool) {
-        if self.data.pin_state != pin {
-            self.data.pin_state = pin;
-
-            self.call_event(match pin {
-                true => MouseEvent::Pin,
-                false => MouseEvent::Unpin,
-            });
-        }
-    }
-    pub fn toggle_pin(&mut self) {
-        self.set_pin(!self.data.pin_state)
-    }
-    // =========== PIN ==============
-
-    // =========== POP ==============
-    pub fn pop(&mut self) {
-        let sl = self as *mut Self;
-        let handle = Rc::new(());
-        let handle_weak = handle.downgrade();
-        self.data.pop_state = Some(handle);
-        let cb = move || {
-            if handle_weak.upgrade().is_none() {
-                return;
-            }
-            if let Some(ms) = unsafe { sl.as_mut() } {
-                ms.call_event(MouseEvent::Unpop);
-            }
-        };
-
-        glib::timeout_add_local_once(Duration::from_secs(1), cb);
-
-        self.call_event(MouseEvent::Pop);
-    }
-    fn invalidate_pop(&mut self) {
-        self.data.pop_state.take();
-    }
-    // =========== POP ==============
 
     // triggers
     fn press(&mut self, p: u32, pos: (f64, f64)) {
@@ -138,10 +82,6 @@ impl MouseState {
             util::notify_send("Way-edges mouse button debug message", &msg, false);
         };
 
-        if p == self.pin_key {
-            self.toggle_pin();
-        }
-
         if self.data.pressing.eq(&Some(p)) {
             self.data.pressing = None;
             self.call_event(MouseEvent::Release(pos, p));
@@ -160,7 +100,7 @@ impl MouseState {
     }
 }
 impl MouseState {
-    fn connect(self, darea: &DrawingArea) -> MouseStateRc {
+    pub fn connect(self, darea: &DrawingArea) -> MouseStateRc {
         let ms = self.make_rc();
         {
             let click_control = GestureClick::builder().button(0).exclusive(true).build();

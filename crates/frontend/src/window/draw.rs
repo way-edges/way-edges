@@ -53,12 +53,17 @@ fn update_buffer_and_area_size(
     buffer.update_buffer(img);
 }
 
+#[macro_export]
+macro_rules! type_impl_redraw_notifier {
+    () => (impl Fn(Option<cairo::ImageSurface>) + 'static)
+}
+
 type RedrawNotifyFunc = Rc<dyn Fn(Option<ImageSurface>) + 'static>;
 impl _WindowContext {
-    fn make_redraw_notifier_dyn(&self) -> RedrawNotifyFunc {
+    pub fn make_redraw_notifier_dyn(&self) -> RedrawNotifyFunc {
         Rc::new(self.make_redraw_notifier())
     }
-    fn make_redraw_notifier(&self) -> impl Fn(Option<ImageSurface>) + 'static {
+    pub fn make_redraw_notifier(&self) -> type_impl_redraw_notifier!() {
         let drawing_area = &self.drawing_area;
         let buffer = &self.image_buffer;
         let max_size_func = &self.max_widget_size_func;
@@ -84,7 +89,7 @@ impl _WindowContext {
         let buffer = &self.image_buffer;
         let base_draw_func = &self.base_draw_func;
         let max_size_func = &self.max_widget_size_func;
-        let ani = self.pop_animation.clone();
+        let ani = self.window_pop_state.borrow().get_animation();
         let frame_manager = self.frame_manager.clone();
         let window = &self.window;
         let start_pos = &self.start_pos;

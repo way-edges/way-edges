@@ -46,29 +46,3 @@ pub fn notify_send(summary: &str, body: &str, is_critical: bool) {
 }
 
 pub static Z: f64 = 0.;
-
-#[macro_export]
-macro_rules! wrap_rc {
-    ($pub_rc:vis $rc:ident, $pub_normal:vis $normal:ident) => {
-        #[derive(Debug, Clone)]
-        $pub_rc struct $rc(std::rc::Rc<std::cell::RefCell<$normal>>);
-        impl $rc {
-            $pub_rc fn new(normal: $normal) -> Self {
-                use std::cell::RefCell;
-                use std::rc::Rc;
-                Self(Rc::new(RefCell::new(normal)))
-            }
-        }
-        impl std::ops::Deref for $rc {
-            type Target = std::cell::RefCell<$normal>;
-            fn deref(&self) -> &Self::Target {
-                &self.0
-            }
-        }
-        impl $normal {
-            $pub_normal fn make_rc(self) -> $rc {
-                $rc::new(self)
-            }
-        }
-    };
-}
