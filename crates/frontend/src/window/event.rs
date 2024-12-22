@@ -86,23 +86,41 @@ impl WindowPopState {
 }
 
 impl _WindowContext {
-    fn setup_mouse_event_callback(
+    pub fn setup_mouse_event_callback(
         &mut self,
         mut widget_callback: impl FnMut(&mut MouseStateData, MouseEvent) -> bool + 'static,
     ) {
-        let pop_state = self.window_pop_state.clone();
+        let pop_state = &self.window_pop_state;
+        let start_pose = &self.start_pos;
         let redraw_func = self.make_redraw_notifier();
 
         let cb = glib::clone!(
             #[weak]
             pop_state,
-            move |data: &mut MouseStateData, event: MouseEvent| {
+            #[weak]
+            start_pose,
+            move |data: &mut MouseStateData, mut event: MouseEvent| {
                 let mut trigger_redraw = false;
                 let mut do_redraw = || {
                     if !trigger_redraw {
                         trigger_redraw = true;
                     }
                 };
+
+                fn change_pos(pose: &mut (f64, f64), start_pose: (i32, i32)) {
+                    pose.0 -= start_pose.0 as f64;
+                    pose.1 -= start_pose.1 as f64;
+                }
+
+                match &mut event {
+                    MouseEvent::Release(pos, _) | MouseEvent::Press(pos, _) => {
+                        change_pos(pos, start_pose.get())
+                    }
+                    MouseEvent::Enter(pos) | MouseEvent::Motion(pos) => {
+                        change_pos(pos, start_pose.get())
+                    }
+                    MouseEvent::Leave => {}
+                }
 
                 match event {
                     MouseEvent::Release(_, key) => {

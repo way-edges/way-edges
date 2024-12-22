@@ -14,7 +14,7 @@ use gtk::{
 use gtk4_layer_shell::LayerShell;
 
 use crate::{
-    animation::{AnimationList, ToggleAnimationRc},
+    animation::AnimationList,
     mouse_state::{self, MouseStateRc},
 };
 
