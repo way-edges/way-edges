@@ -8,7 +8,7 @@ use gtk4_layer_shell::Edge;
 use util::draw::new_surface;
 use util::Z;
 
-use super::context::_WindowContext;
+use super::context::WindowContext;
 
 pub(super) struct BufferWeak(Weak<UnsafeCell<ImageSurface>>);
 impl glib::clone::Upgrade for BufferWeak {
@@ -59,7 +59,7 @@ macro_rules! type_impl_redraw_notifier {
 }
 
 type RedrawNotifyFunc = Rc<dyn Fn(Option<ImageSurface>) + 'static>;
-impl _WindowContext {
+impl WindowContext {
     pub fn make_redraw_notifier_dyn(&self) -> RedrawNotifyFunc {
         Rc::new(self.make_redraw_notifier())
     }
@@ -84,8 +84,8 @@ impl _WindowContext {
     }
 }
 
-impl _WindowContext {
-    fn set_draw_func(&self, mut cb: impl 'static + FnMut() -> Option<ImageSurface>) {
+impl WindowContext {
+    pub fn set_draw_func(&self, mut cb: Option<impl 'static + FnMut() -> Option<ImageSurface>>) {
         let buffer = &self.image_buffer;
         let base_draw_func = &self.base_draw_func;
         let max_size_func = &self.max_widget_size_func;
@@ -106,8 +106,10 @@ impl _WindowContext {
             start_pos,
             move |darea: &DrawingArea, ctx: &cairo::Context, w, h| {
                 // content
-                if let Some(img) = cb() {
-                    update_buffer_and_area_size(&buffer, darea, img, &max_size_func);
+                if let Some(cb) = &mut cb {
+                    if let Some(img) = cb() {
+                        update_buffer_and_area_size(&buffer, darea, img, &max_size_func);
+                    }
                 }
                 let content = buffer.get_buffer();
                 let content_size = (content.width(), content.height());
@@ -189,6 +191,7 @@ fn get_wh_visible_y_func(edge: Edge) -> fn((i32, i32), f64) -> [i32; 3] {
     }
 }
 
+#[allow(clippy::type_complexity)]
 fn get_xy_func(edge: Edge, position: Edge) -> fn((i32, i32), (i32, i32), i32) -> [i32; 2] {
     macro_rules! match_x {
         // position left

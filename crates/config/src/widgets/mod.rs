@@ -95,15 +95,15 @@ pub mod common {
         })
     }
 
-    pub fn dt_event_map() -> Option<EventMap> {
-        Some(EventMap::new())
+    pub fn dt_event_map() -> EventMap {
+        EventMap::new()
     }
 
-    pub fn event_map_translate<'de, D>(d: D) -> Result<Option<EventMap>, D::Error>
+    pub fn event_map_translate<'de, D>(d: D) -> Result<EventMap, D::Error>
     where
         D: Deserializer<'de>,
     {
-        fn _event_map_translate(event_map: Vec<(u32, String)>) -> EventMap {
+        fn translate(event_map: Vec<(u32, String)>) -> EventMap {
             let mut map = EventMap::new();
             for (key, value) in event_map {
                 map.insert(key, create_task(value));
@@ -112,7 +112,7 @@ pub mod common {
         }
         struct EventMapVisitor;
         impl<'de> serde::de::Visitor<'de> for EventMapVisitor {
-            type Value = Option<EventMap>;
+            type Value = EventMap;
 
             fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
                 formatter.write_str("vec of tuples: (key: number, command: string)")
@@ -126,7 +126,7 @@ pub mod common {
                 while let Some(v) = seq.next_element::<(u32, String)>()? {
                     event_map.push(v);
                 }
-                Ok(Some(_event_map_translate(event_map)))
+                Ok(translate(event_map))
             }
         }
         d.deserialize_any(EventMapVisitor)

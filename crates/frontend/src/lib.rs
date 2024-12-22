@@ -1,5 +1,5 @@
 mod animation;
 mod frame;
 mod mouse_state;
-mod widgets;
-mod window;
+pub mod widgets;
+pub mod window;

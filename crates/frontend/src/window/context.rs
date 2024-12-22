@@ -8,7 +8,7 @@ use super::{
 use config::{Config, MonitorSpecifier};
 use gtk::{
     gdk::Monitor,
-    prelude::{GtkWindowExt, MonitorExt, WidgetExt},
+    prelude::{GtkWindowExt, WidgetExt},
     Application, ApplicationWindow, CssProvider, DrawingArea, STYLE_PROVIDER_PRIORITY_APPLICATION,
 };
 use gtk4_layer_shell::LayerShell;
@@ -18,7 +18,7 @@ use crate::{
     mouse_state::{self, MouseStateRc},
 };
 
-pub struct _WindowContext {
+pub struct WindowContext {
     pub name: String,
     pub monitor: MonitorSpecifier,
     pub window: ApplicationWindow,
@@ -37,7 +37,7 @@ pub struct _WindowContext {
     pub(super) window_pop_state: WindowPopStateRc,
 }
 
-impl _WindowContext {
+impl WindowContext {
     /// config and monitor should be ready before this
     pub fn new(app: &Application, monitor: &Monitor, conf: &Config) -> Result<Self, String> {
         let window = gtk::ApplicationWindow::new(app);
@@ -87,11 +87,8 @@ impl _WindowContext {
         let mut animation_list = AnimationList::new();
         let pop_animation = animation_list.new_transition(conf.transition_duration);
         let animation_list = animation_list.make_rc();
-        let frame_manager = WindowFrameManager::new(
-            conf.frame_rate.unwrap_or(monitor.refresh_rate()) as u64,
-            animation_list,
-        )
-        .make_rc();
+        let frame_manager =
+            WindowFrameManager::new(conf.frame_rate.unwrap() as u64, animation_list).make_rc();
 
         // draw
         let extra = conf.extra_trigger_size.get_num_into().unwrap().ceil() as i32;

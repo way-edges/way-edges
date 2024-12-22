@@ -17,9 +17,9 @@ impl WindowFrameManager {
             base: FrameManager::new(frame_rate),
         }
     }
-    pub(super) fn refresh_animations(&self) {
-        self.animation_list.borrow_mut().refresh();
-    }
+    // pub(super) fn refresh_animations(&self) {
+    //     self.animation_list.borrow_mut().refresh();
+    // }
     pub(super) fn ensure_animations(&mut self, darea: &DrawingArea) {
         if self
             .animation_list

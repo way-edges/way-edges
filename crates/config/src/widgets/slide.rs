@@ -72,7 +72,7 @@ pub struct SlideConfig {
     #[educe(Debug(ignore))]
     #[serde(default = "common::dt_event_map")]
     #[serde(deserialize_with = "common::event_map_translate")]
-    pub event_map: Option<EventMap>,
+    pub event_map: EventMap,
 }
 
 fn dt_bg_color() -> RGBA {
@@ -102,15 +102,7 @@ fn dt_draggable() -> bool {
 }
 
 pub fn visit_config(d: Value) -> Result<Widget, String> {
-    let mut c = from_value::<SlideConfig>(d)?;
-
-    // remove mouse event for primary and middle button
-    // as for `change progress` and `pin widget`
-    {
-        let em = c.event_map.as_mut().unwrap();
-        em.remove_entry(&1);
-        em.remove_entry(&2);
-    };
+    let c = from_value::<SlideConfig>(d)?;
     Ok(Widget::Slider(Box::new(c)))
 }
 

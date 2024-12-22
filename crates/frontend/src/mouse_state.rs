@@ -30,6 +30,11 @@ impl MouseStateData {
         }
     }
 }
+impl Default for MouseStateData {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 #[wrap_rc(rc = "pub", normal = "pub")]
 #[derive(Educe)]

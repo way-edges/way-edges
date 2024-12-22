@@ -3,4 +3,4 @@ mod draw;
 mod event;
 mod frame;
 
-pub use context::_WindowContext;
+pub use context::WindowContext;

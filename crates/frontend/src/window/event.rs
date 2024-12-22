@@ -8,7 +8,7 @@ use crate::{
     type_impl_redraw_notifier,
 };
 
-use super::_WindowContext;
+use super::WindowContext;
 
 use gtk::gdk::BUTTON_MIDDLE;
 
@@ -85,7 +85,7 @@ impl WindowPopState {
     }
 }
 
-impl _WindowContext {
+impl WindowContext {
     pub fn setup_mouse_event_callback(
         &mut self,
         mut widget_callback: impl FnMut(&mut MouseStateData, MouseEvent) -> bool + 'static,
