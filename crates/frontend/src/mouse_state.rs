@@ -110,21 +110,21 @@ impl MouseState {
         {
             let click_control = GestureClick::builder().button(0).exclusive(true).build();
             click_control.connect_pressed(glib::clone!(
-                #[strong]
+                #[weak]
                 ms,
                 move |g, _, x, y| {
                     ms.borrow_mut().press(g.current_button(), (x, y));
                 }
             ));
             click_control.connect_released(glib::clone!(
-                #[strong]
+                #[weak]
                 ms,
                 move |g, _, x, y| {
                     ms.borrow_mut().unpress(g.current_button(), (x, y));
                 }
             ));
             click_control.connect_unpaired_release(glib::clone!(
-                #[strong]
+                #[weak]
                 ms,
                 move |_, x, y, d, _| {
                     ms.borrow_mut().unpress(d, (x, y));
@@ -135,21 +135,21 @@ impl MouseState {
         {
             let motion = EventControllerMotion::new();
             motion.connect_enter(glib::clone!(
-                #[strong]
+                #[weak]
                 ms,
                 move |_, x, y| {
                     ms.borrow_mut().hover_enter((x, y));
                 }
             ));
             motion.connect_leave(glib::clone!(
-                #[strong]
+                #[weak]
                 ms,
                 move |_| {
                     ms.borrow_mut().hover_leave();
                 }
             ));
             motion.connect_motion(glib::clone!(
-                #[strong]
+                #[weak]
                 ms,
                 move |_, x, y| {
                     ms.borrow_mut().hover_motion((x, y));

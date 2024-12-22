@@ -865,6 +865,7 @@ dependencies = [
  "gtk4",
  "gtk4-layer-shell",
  "log",
+ "paste",
  "timerfd",
  "util",
  "way-edges-derive",
@@ -2622,6 +2623,7 @@ dependencies = [
  "cairo-rs",
  "log",
  "notify-rust",
+ "paste",
 ]
 
 [[package]]

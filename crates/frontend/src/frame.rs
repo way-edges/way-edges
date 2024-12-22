@@ -29,7 +29,7 @@ impl FrameManager {
             tfd.as_raw_fd(),
             glib::IOCondition::IN,
             glib::clone!(
-                #[strong]
+                #[weak]
                 handle,
                 #[weak]
                 drawing_area,

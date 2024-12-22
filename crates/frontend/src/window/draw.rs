@@ -5,8 +5,9 @@ use cairo::{ImageSurface, RectangleInt, Region};
 use gtk::prelude::{DrawingAreaExt, DrawingAreaExtManual, NativeExt, SurfaceExt, WidgetExt};
 use gtk::{glib, DrawingArea};
 use gtk4_layer_shell::Edge;
+use paste::paste;
 use util::draw::new_surface;
-use util::Z;
+use util::{rc_func, Z};
 
 use super::context::WindowContext;
 
@@ -72,7 +73,7 @@ impl WindowContext {
             drawing_area,
             #[weak]
             buffer,
-            #[strong]
+            #[weak]
             max_size_func,
             move |img| {
                 if let Some(img) = img {
@@ -87,23 +88,27 @@ impl WindowContext {
 impl WindowContext {
     pub fn set_draw_func(&self, mut cb: Option<impl 'static + FnMut() -> Option<ImageSurface>>) {
         let buffer = &self.image_buffer;
+        let window = &self.window;
         let base_draw_func = &self.base_draw_func;
         let max_size_func = &self.max_widget_size_func;
+        let start_pos = &self.start_pos;
         let ani = self.window_pop_state.borrow().get_animation();
         let frame_manager = self.frame_manager.clone();
-        let window = &self.window;
-        let start_pos = &self.start_pos;
         let func = glib::clone!(
             #[weak]
             buffer,
             #[weak]
             window,
-            #[strong]
+            #[weak]
             base_draw_func,
-            #[strong]
+            #[weak]
             max_size_func,
             #[weak]
             start_pos,
+            #[weak]
+            ani,
+            #[weak]
+            frame_manager,
             move |darea: &DrawingArea, ctx: &cairo::Context, w, h| {
                 // content
                 if let Some(cb) = &mut cb {
@@ -133,7 +138,7 @@ impl WindowContext {
     }
 }
 
-pub type MaxSizeFunc = Rc<dyn Fn((i32, i32)) -> (i32, i32)>;
+rc_func!(pub MaxSizeFunc, dyn Fn((i32, i32)) -> (i32, i32));
 pub fn make_max_size_func(edge: Edge, extra: i32) -> MaxSizeFunc {
     macro_rules! what_extra {
         ($size:expr, $extra:expr; H) => {
@@ -160,7 +165,36 @@ pub fn make_max_size_func(edge: Edge, extra: i32) -> MaxSizeFunc {
         _ => unreachable!(),
     };
 
-    Rc::new(move |size| func(size, extra))
+    MaxSizeFunc(Rc::new(move |size| func(size, extra)))
+}
+
+rc_func!(
+    pub BaseDrawFunc,
+    dyn Fn(&gtk::ApplicationWindow, &cairo::Context, (i32, i32), (i32, i32), f64) -> [i32; 4]
+);
+pub fn make_base_draw_func(edge: Edge, position: Edge, extra: i32) -> BaseDrawFunc {
+    let wh_visible_y_func = get_wh_visible_y_func(edge);
+    let xy_func = get_xy_func(edge, position);
+    let inr_func = get_input_region_func(edge, extra);
+
+    BaseDrawFunc(Rc::new(
+        move |window, ctx, area_size, content_size, animation_progress| {
+            let [w, h, visible_y] = wh_visible_y_func(content_size, animation_progress);
+            let [x, y] = xy_func(area_size, content_size, visible_y);
+            let pose = [x, y, w, h];
+
+            // input region
+            if let Some(surf) = window.surface() {
+                let inr = inr_func(pose);
+                surf.set_input_region(&Region::create_rectangle(&inr));
+            }
+
+            // pop in progress
+            ctx.translate(x as f64, y as f64);
+
+            pose
+        },
+    ))
 }
 
 fn get_wh_visible_y_func(edge: Edge) -> fn((i32, i32), f64) -> [i32; 3] {
@@ -339,34 +373,6 @@ fn get_input_region_func(edge: Edge, extra: i32) -> impl Fn([i32; 4]) -> Rectang
     };
 
     move |l| get_inr(l, extra)
-}
-
-pub type BaseDrawFunc =
-    Rc<dyn Fn(&gtk::ApplicationWindow, &cairo::Context, (i32, i32), (i32, i32), f64) -> [i32; 4]>;
-
-pub fn make_base_draw_func(edge: Edge, position: Edge, extra: i32) -> BaseDrawFunc {
-    let wh_visible_y_func = get_wh_visible_y_func(edge);
-    let xy_func = get_xy_func(edge, position);
-    let inr_func = get_input_region_func(edge, extra);
-
-    Rc::new(
-        move |window, ctx, area_size, content_size, animation_progress| {
-            let [w, h, visible_y] = wh_visible_y_func(content_size, animation_progress);
-            let [x, y] = xy_func(area_size, content_size, visible_y);
-            let pose = [x, y, w, h];
-
-            // input region
-            if let Some(surf) = window.surface() {
-                let inr = inr_func(pose);
-                surf.set_input_region(&Region::create_rectangle(&inr));
-            }
-
-            // pop in progress
-            ctx.translate(x as f64, y as f64);
-
-            pose
-        },
-    )
 }
 
 fn calculate_x_additional(area_width: i32, content_width: i32) -> i32 {
