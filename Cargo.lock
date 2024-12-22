@@ -2719,6 +2719,7 @@ dependencies = [
  "clap_complete",
  "config",
  "env_logger",
+ "frontend",
  "gio",
  "gtk4",
  "gtk4-layer-shell",

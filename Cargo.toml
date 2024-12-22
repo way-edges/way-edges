@@ -9,6 +9,7 @@ config = { version = "0.1.0", path = "crates/config" }
 util = { version = "0.1.0", path = "crates/util" }
 ipc = { version = "0.1.0", path = "crates/ipc" }
 backend = { version = "0.1.0", path = "crates/backend" }
+frontend = { version = "0.1.0", path = "crates/frontend" }
 
 
 gtk4-layer-shell = "0.4"

@@ -10,6 +10,7 @@ util.workspace = true
 config.workspace = true
 backend.workspace = true
 ipc.workspace = true
+frontend.workspace = true
 
 gtk4-layer-shell.workspace = true
 gtk.workspace = true

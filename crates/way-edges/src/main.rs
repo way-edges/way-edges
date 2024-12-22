@@ -2,7 +2,7 @@ mod activate;
 mod args;
 mod common;
 mod daemon;
-mod ui;
+// mod ui;
 
 use std::sync::atomic::AtomicPtr;
 

@@ -86,6 +86,9 @@ impl WindowPopState {
 }
 
 impl WindowContext {
+    pub fn toggle_pin(&self) {
+        self.window_pop_state.borrow_mut().toggle_pin();
+    }
     pub fn setup_mouse_event_callback(
         &mut self,
         mut widget_callback: impl FnMut(&mut MouseStateData, MouseEvent) -> bool + 'static,

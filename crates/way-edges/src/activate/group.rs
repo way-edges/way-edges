@@ -29,50 +29,42 @@ impl GroupMapCtx {
         self.hold = Some(app.hold());
         self.app = Some(Downgrade::downgrade(app));
     }
+    fn get_app(&self) -> Option<Application> {
+        self.app.as_ref().and_then(|weak| weak.upgrade())
+    }
     pub fn add_group(&mut self, name: &str) {
-        if !self.map.contains_key(name) {
-            if let Some(app) = &self.app {
-                let s = GroupMapCtx::init_group(&app.upgrade().unwrap(), name).ok();
-                self.map.insert(name.to_string(), s);
-            } else {
-                self.map.insert(name.to_string(), None);
-            }
+        if self.map.contains_key(name) {
+            return;
         }
+        let widgets_or_not = self
+            .get_app()
+            .and_then(|app| GroupMapCtx::init_group(&app, name).ok());
+        self.map.insert(name.to_string(), widgets_or_not);
     }
     pub fn rm_group(&mut self, name: &str) {
-        if let Some(Some(mut widget_map)) = self.map.remove(name) {
-            widget_map.close()
-        }
+        drop(self.map.remove(name));
     }
     pub fn reload(&mut self) {
-        if let Some(app) = &self.app {
-            let app = app.upgrade().unwrap();
+        if let Some(app) = self.get_app() {
             self.map.iter_mut().for_each(|(k, widget_map)| {
-                if let Some(mut widget_map) = widget_map.take() {
-                    widget_map.close()
-                }
+                drop(widget_map.take());
                 *widget_map = GroupMapCtx::init_group(&app, k.as_str()).ok();
             });
         }
     }
     pub fn dispose(&mut self) {
-        self.map.iter_mut().for_each(|(_, v)| {
-            if let Some(widget_map) = v.as_mut() {
-                widget_map.close()
-            }
-        });
-        if let Some(app) = &self.app {
-            if let Some(app) = app.upgrade() {
-                app.quit()
-            }
+        self.map.clear();
+        if let Some(app) = self.get_app() {
+            app.quit()
         }
         drop(self.hold.take());
     }
     pub fn toggle_pin(&mut self, gn: &str, wn: &str) {
-        if let Some(Some(v)) = self.map.get_mut(gn) {
-            if let Some(v) = v.get_widget(wn) {
-                v.widget_expose.toggle_pin()
-            }
+        let Some(Some(widgets)) = self.map.get_mut(gn) else {
+            return;
+        };
+        if let Some(w) = widgets.get_widget(wn) {
+            w.toggle_pin()
         }
     }
 

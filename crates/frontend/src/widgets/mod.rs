@@ -62,5 +62,7 @@ pub fn init_widget(
         config::widgets::Widget::HyprWorkspace(hypr_workspace_config) => todo!(),
     };
 
+    window.show();
+
     Ok(window)
 }

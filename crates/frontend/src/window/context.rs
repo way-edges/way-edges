@@ -41,6 +41,7 @@ impl WindowContext {
     /// config and monitor should be ready before this
     pub fn new(app: &Application, monitor: &Monitor, conf: &Config) -> Result<Self, String> {
         let window = gtk::ApplicationWindow::new(app);
+        window.set_namespace("way-edges-widget");
 
         // init layer
         window.init_layer_shell();
@@ -120,5 +121,16 @@ impl WindowContext {
     }
     pub fn show(&self) {
         self.window.present();
+    }
+
+    pub fn close(&mut self) {
+        self.window.close();
+        self.window.destroy();
+    }
+}
+
+impl Drop for WindowContext {
+    fn drop(&mut self) {
+        self.close()
     }
 }
