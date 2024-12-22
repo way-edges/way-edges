@@ -41,7 +41,6 @@ impl WindowContext {
     /// config and monitor should be ready before this
     pub fn new(app: &Application, monitor: &Monitor, conf: &Config) -> Result<Self, String> {
         let window = gtk::ApplicationWindow::new(app);
-        window.set_namespace("way-edges-widget");
 
         // init layer
         window.init_layer_shell();
@@ -70,16 +69,18 @@ impl WindowContext {
             provider
                 // .load_from_string("window.background { background: unset; border: 1px solid white; }");
                 .load_from_string("window.background { background: unset; }");
-            gtk::style_context_add_provider_for_display(
-                &WidgetExt::display(w),
-                &provider,
-                STYLE_PROVIDER_PRIORITY_APPLICATION,
-            );
+            // gtk::style_context_add_provider_for_display(
+            //     &WidgetExt::display(w),
+            //     &provider,
+            //     STYLE_PROVIDER_PRIORITY_APPLICATION,
+            // );
         });
 
         window.connect_destroy(|_| {
             log::info!("destroy window");
         });
+
+        window.set_namespace("way-edges-widget");
 
         let drawing_area = DrawingArea::new();
         drawing_area.set_size_request(1, 1);

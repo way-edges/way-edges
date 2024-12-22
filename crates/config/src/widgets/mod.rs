@@ -74,14 +74,14 @@ pub mod common {
         pub length: NumOrRelative,
     }
     impl CommonSize {
-        pub fn calculate_relative(&mut self, monitor_size: (f64, f64), edge: Edge) {
+        pub fn calculate_relative(&mut self, monitor_size: (i32, i32), edge: Edge) {
             let max_size = match edge {
                 Edge::Left | Edge::Right => (monitor_size.0, monitor_size.1),
                 Edge::Top | Edge::Bottom => (monitor_size.1, monitor_size.0),
                 _ => unreachable!(),
             };
-            self.thickness.calculate_relative(max_size.0);
-            self.length.calculate_relative(max_size.1);
+            self.thickness.calculate_relative(max_size.0 as f64);
+            self.length.calculate_relative(max_size.1 as f64);
         }
     }
 

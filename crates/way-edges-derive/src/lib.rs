@@ -52,8 +52,6 @@ pub fn wrap_rc(attr: TokenStream, item: TokenStream) -> TokenStream {
     let pub_rc = rc;
     let pub_normal = normal;
 
-    eprintln!("{pub_rc:?}");
-
     let rc_name = syn::Ident::new(&format!("{}Rc", normal_name), normal_name.span());
     let rc_weak_name = syn::Ident::new(&format!("{}RcWeak", normal_name), normal_name.span());
 

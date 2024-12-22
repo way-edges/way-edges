@@ -53,7 +53,7 @@ pub fn init_widget(
 
     match conf.widget.take().unwrap() {
         config::widgets::Widget::Btn(btn_config) => {
-            button::init_widget(&mut window, conf, *btn_config)
+            button::init_widget(&mut window, monitor, conf, *btn_config)
         }
         config::widgets::Widget::Slider(slide_config) => todo!(),
         config::widgets::Widget::PulseAudio(paconfig) => todo!(),

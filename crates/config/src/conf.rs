@@ -42,7 +42,7 @@ struct ConfigShadow {
     #[serde(default)]
     pub monitor: MonitorSpecifier,
 
-    #[serde(default)]
+    #[serde(default = "dt_name")]
     pub name: String,
 
     #[serde(default)]
@@ -98,6 +98,9 @@ pub struct Config {
     pub widget: Option<Widget>,
 }
 
+fn dt_name() -> String {
+    gtk::gio::dbus_generate_guid().to_string()
+}
 fn dt_edge() -> Edge {
     Edge::Left
 }
