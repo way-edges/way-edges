@@ -186,7 +186,6 @@ pub fn make_base_draw_func(edge: Edge, position: Edge, extra: i32) -> BaseDrawFu
             // input region
             if let Some(surf) = window.surface() {
                 let inr = inr_func(pose);
-                println!("inr: {inr:?}");
                 surf.set_input_region(&Region::create_rectangle(&inr));
             }
 

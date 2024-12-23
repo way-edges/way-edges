@@ -69,11 +69,11 @@ impl WindowContext {
             provider
                 // .load_from_string("window.background { background: unset; border: 1px solid white; }");
                 .load_from_string("window.background { background: unset; }");
-            // gtk::style_context_add_provider_for_display(
-            //     &WidgetExt::display(w),
-            //     &provider,
-            //     STYLE_PROVIDER_PRIORITY_APPLICATION,
-            // );
+            gtk::style_context_add_provider_for_display(
+                &WidgetExt::display(w),
+                &provider,
+                STYLE_PROVIDER_PRIORITY_APPLICATION,
+            );
         });
 
         window.connect_destroy(|_| {
