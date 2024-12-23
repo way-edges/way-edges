@@ -33,7 +33,7 @@ fn dt_color() -> RGBA {
     RGBA::from_str("#7B98FF").unwrap()
 }
 fn dt_border_width() -> i32 {
-    5
+    3
 }
 fn dt_border_color() -> RGBA {
     RGBA::BLACK
