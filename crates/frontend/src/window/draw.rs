@@ -173,19 +173,20 @@ rc_func!(
     dyn Fn(&gtk::ApplicationWindow, &cairo::Context, (i32, i32), (i32, i32), f64) -> [i32; 4]
 );
 pub fn make_base_draw_func(edge: Edge, position: Edge, extra: i32) -> BaseDrawFunc {
-    let wh_visible_y_func = get_wh_visible_y_func(edge);
+    let visible_y_func = get_visible_y_func(edge);
     let xy_func = get_xy_func(edge, position);
     let inr_func = get_input_region_func(edge, extra);
 
     BaseDrawFunc(Rc::new(
         move |window, ctx, area_size, content_size, animation_progress| {
-            let [w, h, visible_y] = wh_visible_y_func(content_size, animation_progress);
+            let visible_y = visible_y_func(content_size, animation_progress);
             let [x, y] = xy_func(area_size, content_size, visible_y);
-            let pose = [x, y, w, h];
+            let pose = [x, y, content_size.0, content_size.1];
 
             // input region
             if let Some(surf) = window.surface() {
                 let inr = inr_func(pose);
+                println!("inr: {inr:?}");
                 surf.set_input_region(&Region::create_rectangle(&inr));
             }
 
@@ -197,21 +198,19 @@ pub fn make_base_draw_func(edge: Edge, position: Edge, extra: i32) -> BaseDrawFu
     ))
 }
 
-fn get_wh_visible_y_func(edge: Edge) -> fn((i32, i32), f64) -> [i32; 3] {
+fn get_visible_y_func(edge: Edge) -> fn((i32, i32), f64) -> i32 {
     macro_rules! edge_wh {
-        ($size:expr, $ts_y:expr; H) => {{
-            let visible_y = ($size.0 as f64 * $ts_y).ceil() as i32;
-            [visible_y, $size.1, visible_y]
-        }};
-        ($size:expr, $ts_y:expr; V) => {{
-            let visible_y = ($size.1 as f64 * $ts_y).ceil() as i32;
-            [$size.0, visible_y, visible_y]
-        }};
+        ($size:expr, $ts_y:expr; H) => {
+            ($size.0 as f64 * $ts_y).ceil() as i32
+        };
+        ($size:expr, $ts_y:expr; V) => {
+            ($size.1 as f64 * $ts_y).ceil() as i32
+        };
     }
 
     macro_rules! create_range_fn {
         ($fn_name:ident, $index:tt) => {
-            fn $fn_name(content_size: (i32, i32), ts_y: f64) -> [i32; 3] {
+            fn $fn_name(content_size: (i32, i32), ts_y: f64) -> i32 {
                 edge_wh!(content_size, ts_y; $index)
             }
         };
