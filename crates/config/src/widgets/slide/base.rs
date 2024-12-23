@@ -31,6 +31,8 @@ pub struct SlideConfig {
     // draw related
     #[serde(flatten)]
     pub size: CommonSize,
+    #[serde(default = "dt_border_width")]
+    pub border_width: i32,
 
     #[serde(default = "dt_obtuse_angle")]
     pub obtuse_angle: f64,
@@ -51,8 +53,6 @@ pub struct SlideConfig {
     pub text_color: RGBA,
     #[serde(default)]
     pub is_text_position_start: bool,
-    #[serde(default = "dt_preview_size")]
-    pub preview_size: f64,
     #[serde(default)]
     pub progress_direction: Direction,
 
@@ -70,6 +70,9 @@ pub struct SlideConfig {
     pub preset: Option<Preset>,
 }
 
+fn dt_border_width() -> i32 {
+    3
+}
 fn dt_bg_color() -> RGBA {
     RGBA::from_str("#808080").unwrap()
 }

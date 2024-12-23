@@ -1,4 +1,6 @@
 mod base;
+mod draw;
+mod font;
 
 use crate::window::WindowContext;
 use config::{widgets::slide::base::SlideConfig, Config};

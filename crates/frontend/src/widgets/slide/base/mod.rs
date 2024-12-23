@@ -1,5 +1,6 @@
 mod draw;
 mod event;
+mod font;
 mod pre_draw;
 
 use std::{

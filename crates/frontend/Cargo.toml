@@ -18,3 +18,4 @@ log.workspace = true
 util.workspace = true
 
 timerfd = "1.0"
+pangocairo = "0.20"
