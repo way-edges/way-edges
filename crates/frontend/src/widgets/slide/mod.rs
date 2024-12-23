@@ -1,69 +1,18 @@
-mod draw;
-mod event;
-mod pre_draw;
+mod base;
 
-use std::{
-    cell::{Cell, RefCell},
-    rc::{Rc, Weak},
-};
-
-use backend::monitor::get_monitor_context;
-use config::{widgets::slide::SlideConfig, Config};
-use gio::glib::WeakRef;
-use gtk::{gdk::RGBA, ApplicationWindow};
-
-// this is actually for pulseaudio specific, idk how do design this
-pub struct SlideAdditionalConfig {
-    pub fg_color: Rc<Cell<RGBA>>,
-    pub additional_transitions: Vec<TransitionStateRc>,
-    pub on_draw: Option<Box<dyn FnMut()>>,
-}
-impl SlideAdditionalConfig {
-    pub fn default(fg_color: RGBA) -> Self {
-        Self {
-            fg_color: Rc::new(Cell::new(fg_color)),
-            additional_transitions: vec![],
-            on_draw: None,
-        }
-    }
-}
+use crate::window::WindowContext;
+use config::{widgets::slide::base::SlideConfig, Config};
+use gtk::{gdk::Monitor, prelude::MonitorExt};
 
 pub fn init_widget(
-    window: &ApplicationWindow,
+    window: &mut WindowContext,
+    monitor: &Monitor,
     config: Config,
-    slide_cfg: SlideConfig,
-) -> Result<WidgetExposePtr, String> {
-    let add = SlideAdditionalConfig {
-        fg_color: Rc::new(Cell::new(slide_cfg.fg_color)),
-        additional_transitions: vec![],
-        on_draw: None,
-    };
-    let expose = init_widget_as_plug(window, config, slide_cfg, add)?;
-    Ok(Box::new(expose))
-}
+    mut w_conf: SlideConfig,
+) {
+    let geom = monitor.geometry();
+    let size = (geom.width(), geom.height());
+    w_conf.size.calculate_relative(size, config.edge);
 
-pub fn init_widget_as_plug(
-    window: &ApplicationWindow,
-    config: Config,
-    mut slide_cfg: SlideConfig,
-    add: SlideAdditionalConfig,
-) -> Result<SlideExpose, String> {
-    calculate_rel(&config, &mut slide_cfg)?;
-    draw::setup_draw(window, config, slide_cfg, add)
-}
-
-fn calculate_rel(config: &Config, slide_config: &mut SlideConfig) -> Result<(), String> {
-    let monitor_size = get_monitor_context()
-        .get_monitor_size(&config.monitor)
-        .ok_or(format!("Failed to get monitor size: {:?}", config.monitor))?;
-
-    common::calculate_rel_extra_trigger_size(
-        &mut slide_config.extra_trigger_size,
-        monitor_size,
-        config.edge,
-    );
-
-    slide_config
-        .size
-        .ensure_no_relative(monitor_size, config.edge)
+    event::setup_event(window, &config, &mut btn_config);
 }

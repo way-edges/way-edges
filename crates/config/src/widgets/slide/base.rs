@@ -5,15 +5,17 @@ use gtk::gdk::RGBA;
 use serde::{Deserialize, Deserializer};
 use way_edges_derive::GetSize;
 
-use util::shell::{shell_cmd, shell_cmd_non_block};
+use util::template::{
+    arg::TemplateArgFloatProcesser,
+    base::{Template, TemplateProcesser},
+};
 
 use super::{
     common::{self, CommonSize, EventMap},
     preset::Preset,
 };
 
-pub type Task = Box<dyn Send + Sync + FnMut(f64) -> bool>;
-pub type UpdateTask = Box<dyn Send + Sync + FnMut() -> Result<f64, String>>;
+pub type SlideOnChangeFunc = Box<dyn Send + Sync + FnMut(f64) -> bool>;
 
 #[derive(Clone, Copy, Debug, Deserialize, Default)]
 pub enum Direction {
@@ -56,13 +58,8 @@ pub struct SlideConfig {
 
     #[educe(Debug(ignore))]
     #[serde(default)]
-    #[serde(deserialize_with = "on_change_translate")]
-    pub on_change: Option<Task>,
-
-    #[educe(Debug(ignore))]
-    #[serde(default)]
-    #[serde(deserialize_with = "update_task_interval")]
-    pub update_with_interval_ms: Option<(u64, UpdateTask)>,
+    #[serde(deserialize_with = "slide_change_template")]
+    pub on_change: Option<Template>,
 
     #[educe(Debug(ignore))]
     #[serde(default = "common::dt_event_map")]
@@ -95,17 +92,13 @@ fn dt_radius() -> f64 {
     20.
 }
 
-fn dt_draggable() -> bool {
-    true
-}
-
-pub fn on_change_translate<'de, D>(d: D) -> Result<Option<Task>, D::Error>
+pub fn slide_change_template<'de, D>(d: D) -> Result<Option<Template>, D::Error>
 where
     D: Deserializer<'de>,
 {
     struct EventMapVisitor;
     impl serde::de::Visitor<'_> for EventMapVisitor {
-        type Value = Option<Task>;
+        type Value = Option<Template>;
 
         fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
             formatter.write_str("vec of tuples: (key: number, command: string)")
@@ -122,49 +115,14 @@ where
         where
             E: serde::de::Error,
         {
-            Ok(Some(create_task(v)))
+            Ok(Some(
+                Template::create_from_str(
+                    &v,
+                    TemplateProcesser::new().add_processer(TemplateArgFloatProcesser),
+                )
+                .map_err(serde::de::Error::custom)?,
+            ))
         }
     }
     d.deserialize_any(EventMapVisitor)
-}
-
-pub fn create_task(value: String) -> Task {
-    Box::new(move |progress| {
-        let value = value
-            .clone()
-            .replace("{progress}", progress.to_string().as_str());
-        shell_cmd_non_block(value);
-        true
-    })
-}
-
-pub fn update_task_interval<'de, D>(d: D) -> Result<Option<(u64, UpdateTask)>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    struct EventMapVisitor;
-    impl<'de> serde::de::Visitor<'de> for EventMapVisitor {
-        type Value = Option<(u64, UpdateTask)>;
-
-        fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
-        where
-            A: serde::de::SeqAccess<'de>,
-        {
-            let ms = seq.next_element()?.unwrap();
-            let ut = seq.next_element()?.unwrap();
-            Ok(Some((ms, create_update_task(ut))))
-        }
-
-        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-            formatter.write_str("vec of tuples: (key: number, command: string)")
-        }
-    }
-    d.deserialize_any(EventMapVisitor)
-}
-pub fn create_update_task(value: String) -> UpdateTask {
-    Box::new(move || {
-        let value = value.clone();
-        let a = shell_cmd(value)?;
-        f64::from_str(&a).map_err(|e| format!("Fail to convert result({a}) to f64: {e}"))
-    })
 }

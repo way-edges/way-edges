@@ -165,8 +165,7 @@ where
 }
 fn create_update_task(value: String) -> UpdateTask {
     Box::new(move || {
-        let value = value.clone();
-        let a = shell_cmd(value)?;
+        let a = shell_cmd(&value)?;
         let trimed = a.trim();
         trimed
             .parse::<f64>()

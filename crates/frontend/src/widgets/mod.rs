@@ -4,7 +4,7 @@ use gtk::{gdk::Monitor, prelude::MonitorExt};
 use crate::window::WindowContext;
 
 mod button;
-// mod slide;
+mod slide;
 
 fn process_config(conf: &mut config::Config, monitor: &Monitor) {
     let geom = monitor.geometry();

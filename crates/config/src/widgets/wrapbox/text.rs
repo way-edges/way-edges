@@ -86,8 +86,7 @@ where
 }
 fn create_update_task(value: String) -> TextUpdateTask {
     Box::new(move || {
-        let value = value.clone();
-        let a = shell_cmd(value)?;
+        let a = shell_cmd(&value)?;
         Ok(a)
     })
 }

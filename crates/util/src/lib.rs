@@ -1,12 +1,13 @@
 pub mod draw;
+pub mod template;
 
 pub mod shell {
     use std::{process::Command, thread};
 
-    pub fn shell_cmd(value: String) -> Result<String, String> {
+    pub fn shell_cmd(value: &str) -> Result<String, String> {
         let mut cmd = Command::new("/bin/sh");
         log::debug!("running command: {value}");
-        let res = cmd.arg("-c").arg(&value).output();
+        let res = cmd.arg("-c").arg(value).output();
         let msg = match res {
             Ok(o) => {
                 if !o.status.success() {
@@ -27,7 +28,7 @@ pub mod shell {
         msg
     }
     pub fn shell_cmd_non_block(value: String) {
-        thread::spawn(move || shell_cmd(value));
+        thread::spawn(move || shell_cmd(&value));
     }
 }
 
