@@ -1,22 +1,7 @@
-use std::cell::Cell;
-use std::rc::Rc;
-
-use crate::window::WindowContext;
-
 use super::BtnConfig;
 use gtk::cairo::Context;
 use gtk::prelude::*;
 use gtk4_layer_shell::Edge;
-
-pub fn setup_draw(
-    window: &mut WindowContext,
-    btn_conf: &BtnConfig,
-    edge: Edge,
-    pressing_state: Rc<Cell<bool>>,
-) {
-    let darw_func = make_draw_func(btn_conf, edge, pressing_state);
-    window.set_draw_func(Some(move || Some(darw_func())));
-}
 
 use std::f64::consts::PI;
 
@@ -142,11 +127,7 @@ fn draw_left(conf: &DrawConfig, pressing: bool) -> ImageSurface {
     surf
 }
 
-fn make_draw_func(
-    btn_conf: &BtnConfig,
-    edge: Edge,
-    pressing_state: Rc<Cell<bool>>,
-) -> impl Fn() -> ImageSurface {
+pub(super) fn make_draw_func(btn_conf: &BtnConfig, edge: Edge) -> impl Fn(bool) -> ImageSurface {
     let draw_conf = DrawConfig::new(btn_conf);
 
     let func = match edge {
@@ -157,5 +138,5 @@ fn make_draw_func(
         _ => unreachable!(),
     };
 
-    move || func(&draw_conf, pressing_state.get())
+    move |pressing: _| func(&draw_conf, pressing)
 }

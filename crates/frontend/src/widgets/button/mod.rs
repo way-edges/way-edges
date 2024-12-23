@@ -1,9 +1,6 @@
 mod draw;
 mod event;
 
-use std::cell::Cell;
-use std::rc::Rc;
-
 use crate::window::WindowContext;
 use config::{widgets::button::BtnConfig, Config};
 use gtk::{gdk::Monitor, prelude::MonitorExt};
@@ -18,7 +15,5 @@ pub fn init_widget(
     let size = (geom.width(), geom.height());
     btn_config.size.calculate_relative(size, config.edge);
 
-    let pressing_state = Rc::new(Cell::new(false));
-    draw::setup_draw(window, &btn_config, config.edge, pressing_state.clone());
-    event::setup_event(window, pressing_state, &mut btn_config);
+    event::setup_event(window, &config, &mut btn_config);
 }
