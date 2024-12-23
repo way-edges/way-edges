@@ -3,15 +3,14 @@ use std::str::FromStr;
 use educe::Educe;
 use gtk::gdk::RGBA;
 use serde::{Deserialize, Deserializer};
-use serde_jsonrc::Value;
 use way_edges_derive::GetSize;
 
-use super::Widget;
 use util::shell::{shell_cmd, shell_cmd_non_block};
 
-use super::common::{self, from_value, CommonSize, EventMap};
-
-pub const NAME: &str = "slide";
+use super::{
+    common::{self, CommonSize, EventMap},
+    preset::Preset,
+};
 
 pub type Task = Box<dyn Send + Sync + FnMut(f64) -> bool>;
 pub type UpdateTask = Box<dyn Send + Sync + FnMut() -> Result<f64, String>>;
@@ -55,10 +54,6 @@ pub struct SlideConfig {
     #[serde(default)]
     pub progress_direction: Direction,
 
-    // event related
-    #[serde(default = "dt_draggable")]
-    pub draggable: bool,
-
     #[educe(Debug(ignore))]
     #[serde(default)]
     #[serde(deserialize_with = "on_change_translate")]
@@ -73,6 +68,9 @@ pub struct SlideConfig {
     #[serde(default = "common::dt_event_map")]
     #[serde(deserialize_with = "common::event_map_translate")]
     pub event_map: EventMap,
+
+    #[serde(default)]
+    pub preset: Option<Preset>,
 }
 
 fn dt_bg_color() -> RGBA {
@@ -99,11 +97,6 @@ fn dt_radius() -> f64 {
 
 fn dt_draggable() -> bool {
     true
-}
-
-pub fn visit_config(d: Value) -> Result<Widget, String> {
-    let c = from_value::<SlideConfig>(d)?;
-    Ok(Widget::Slider(Box::new(c)))
 }
 
 pub fn on_change_translate<'de, D>(d: D) -> Result<Option<Task>, D::Error>

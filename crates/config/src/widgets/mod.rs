@@ -1,15 +1,11 @@
-use backlight::BLConfig;
 use button::BtnConfig;
 use hypr_workspace::HyprWorkspaceConfig;
-use pulseaudio::PAConfig;
 use serde::{Deserialize, Deserializer};
-use slide::SlideConfig;
+use slide::base::SlideConfig;
 use wrapbox::BoxConfig;
 
-pub mod backlight;
 pub mod button;
 pub mod hypr_workspace;
-pub mod pulseaudio;
 pub mod slide;
 pub mod wrapbox;
 
@@ -17,20 +13,15 @@ pub mod wrapbox;
 pub enum Widget {
     Btn(Box<BtnConfig>),
     Slider(Box<SlideConfig>),
-    PulseAudio(Box<PAConfig>),
-    Backlight(Box<BLConfig>),
     WrapBox(Box<BoxConfig>),
     HyprWorkspace(Box<HyprWorkspaceConfig>),
 }
 
 macro_rules! match_widget {
-    ($t:expr, $raw:expr, $($name:ident),*; $($pulseaudio:ident),*) => {
+    ($t:expr, $raw:expr, $($name:ident),*) => {
         match $t {
             $(
                 $name::NAME => $name::visit_config($raw),
-            )*
-            $(
-                $pulseaudio::NAME_SOUCE | $pulseaudio::NAME_SINK => $pulseaudio::visit_config($raw),
             )*
             _ => Err(format!("unknown widget type: {}", $t)),
         }.map_err(serde::de::Error::custom)
@@ -54,7 +45,7 @@ impl<'de> Deserialize<'de> for Widget {
             .as_str()
             .ok_or(serde::de::Error::custom("widget type must be string"))?;
 
-        match_widget!(t, raw, button, slide, backlight, wrapbox, hypr_workspace; pulseaudio)
+        match_widget!(t, raw, button, slide, wrapbox, hypr_workspace)
     }
 }
 

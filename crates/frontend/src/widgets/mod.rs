@@ -3,7 +3,8 @@ use gtk::{gdk::Monitor, prelude::MonitorExt};
 
 use crate::window::WindowContext;
 
-pub mod button;
+mod button;
+// mod slide;
 
 fn process_config(conf: &mut config::Config, monitor: &Monitor) {
     let geom = monitor.geometry();
@@ -56,8 +57,6 @@ pub fn init_widget(
             button::init_widget(&mut window, monitor, conf, *btn_config)
         }
         config::widgets::Widget::Slider(slide_config) => todo!(),
-        config::widgets::Widget::PulseAudio(paconfig) => todo!(),
-        config::widgets::Widget::Backlight(blconfig) => todo!(),
         config::widgets::Widget::WrapBox(box_config) => todo!(),
         config::widgets::Widget::HyprWorkspace(hypr_workspace_config) => todo!(),
     };

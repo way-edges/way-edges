@@ -55,6 +55,9 @@ struct ConfigShadow {
     #[serde(default = "dt_extra_trigger_size")]
     pub extra_trigger_size: NumOrRelative,
 
+    #[serde(default = "dt_preview_size")]
+    pub preview_size: NumOrRelative,
+
     pub widget: Option<Widget>,
 }
 
@@ -78,6 +81,7 @@ impl From<ConfigShadow> for Config {
             transition_duration: value.transition_duration,
             frame_rate: value.frame_rate,
             extra_trigger_size: value.extra_trigger_size,
+            preview_size: value.preview_size,
         }
     }
 }
@@ -95,6 +99,7 @@ pub struct Config {
     pub transition_duration: u64,
     pub frame_rate: Option<i32>,
     pub extra_trigger_size: NumOrRelative,
+    pub preview_size: NumOrRelative,
     pub widget: Option<Widget>,
 }
 
@@ -111,7 +116,10 @@ fn dt_transition_duration() -> u64 {
     100
 }
 fn dt_extra_trigger_size() -> NumOrRelative {
-    NumOrRelative::Num(5.0)
+    NumOrRelative::Num(1.0)
+}
+fn dt_preview_size() -> NumOrRelative {
+    NumOrRelative::Num(0.0)
 }
 
 impl Drop for Config {

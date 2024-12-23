@@ -2,6 +2,8 @@ use std::cell::UnsafeCell;
 use std::rc::{Rc, Weak};
 
 use cairo::{ImageSurface, RectangleInt, Region};
+use config::common::NumOrRelative;
+use config::Config;
 use gtk::prelude::{DrawingAreaExt, DrawingAreaExtManual, NativeExt, SurfaceExt, WidgetExt};
 use gtk::{glib, DrawingArea};
 use gtk4_layer_shell::Edge;
@@ -172,16 +174,24 @@ rc_func!(
     pub BaseDrawFunc,
     dyn Fn(&gtk::ApplicationWindow, &cairo::Context, (i32, i32), (i32, i32), f64) -> [i32; 4]
 );
-pub fn make_base_draw_func(edge: Edge, position: Edge, extra: i32) -> BaseDrawFunc {
+pub fn make_base_draw_func(conf: &Config) -> BaseDrawFunc {
+    let edge = conf.edge;
+    let position = conf.position;
+    let extra = conf.extra_trigger_size.get_num_into().unwrap().ceil() as i32;
+    let preview = conf.preview_size;
+
     let visible_y_func = get_visible_y_func(edge);
     let xy_func = get_xy_func(edge, position);
+    let preview_func = get_preview_size_func(edge, preview);
     let inr_func = get_input_region_func(edge, extra);
 
     BaseDrawFunc(Rc::new(
         move |window, ctx, area_size, content_size, animation_progress| {
             let visible_y = visible_y_func(content_size, animation_progress);
             let [x, y] = xy_func(area_size, content_size, visible_y);
-            let pose = [x, y, content_size.0, content_size.1];
+            let mut pose = [x, y, content_size.0, content_size.1];
+
+            preview_func(area_size, &mut pose);
 
             // input region
             if let Some(surf) = window.surface() {
@@ -190,11 +200,77 @@ pub fn make_base_draw_func(edge: Edge, position: Edge, extra: i32) -> BaseDrawFu
             }
 
             // pop in progress
-            ctx.translate(x as f64, y as f64);
+            ctx.translate(pose[0] as f64, pose[1] as f64);
 
             pose
         },
     ))
+}
+
+fn get_preview_size_func(edge: Edge, preview: NumOrRelative) -> impl Fn((i32, i32), &mut [i32; 4]) {
+    macro_rules! cal_pre {
+        ($s:expr, $p:expr) => {
+            match $p {
+                NumOrRelative::Num(n) => n.ceil(),
+                NumOrRelative::Relative(r) => ($s as f64 * r).ceil(),
+            } as i32
+        };
+    }
+    macro_rules! edge_wh {
+        ($area_size:expr, $size:expr, $p:expr; L) => {{
+            let min = cal_pre!($size[2], $p);
+            let n = $size[0];
+            let l = $size[2];
+            if n + l < min {
+                $size[0] = -l + min
+            }
+        }};
+        ($area_size:expr, $size:expr, $p:expr; R) => {{
+            let min = cal_pre!($size[2], $p);
+            let n = $size[0];
+            let l = $area_size.0;
+            if l - n < min {
+                $size[0] = l - min
+            }
+        }};
+        ($area_size:expr, $size:expr, $p:expr; T) => {{
+            let min = cal_pre!($size[3], $p);
+            let n = $size[1];
+            let l = $size[3];
+            if n + l < min {
+                $size[1] = -l + min
+            }
+        }};
+        ($area_size:expr, $size:expr, $p:expr; B) => {{
+            let min = cal_pre!($size[3], $p);
+            let n = $size[1];
+            let l = $area_size.1;
+            if l - n < min {
+                $size[1] = l - min
+            }
+        }};
+    }
+    macro_rules! create_preview_fn {
+        ($fn_name:ident, $index:tt) => {
+            #[allow(unused_variables)]
+            fn $fn_name(area_size: (i32, i32), pose: &mut [i32; 4], preview: NumOrRelative) {
+                edge_wh!(area_size, pose, preview; $index)
+            }
+        };
+    }
+    create_preview_fn!(preview_left, L);
+    create_preview_fn!(preview_right, R);
+    create_preview_fn!(preview_top, T);
+    create_preview_fn!(preview_bottom, B);
+    let func = match edge {
+        Edge::Left => preview_left,
+        Edge::Right => preview_right,
+        Edge::Top => preview_top,
+        Edge::Bottom => preview_bottom,
+        _ => unreachable!(),
+    };
+
+    move |area_size, pose| func(area_size, pose, preview)
 }
 
 fn get_visible_y_func(edge: Edge) -> fn((i32, i32), f64) -> i32 {

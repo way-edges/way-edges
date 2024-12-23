@@ -233,7 +233,7 @@ impl<'de> Deserialize<'de> for BoxedWidget {
             .as_str()
             .ok_or(serde::de::Error::custom("widget type must be string"))?;
 
-        super::match_widget!(t, raw, ring, text, tray;)
+        super::match_widget!(t, raw, ring, text, tray)
     }
 }
 

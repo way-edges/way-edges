@@ -96,7 +96,7 @@ impl WindowContext {
         let extra = conf.extra_trigger_size.get_num_into().unwrap().ceil() as i32;
         let image_buffer = Buffer::default();
         let max_widget_size_func = make_max_size_func(conf.edge, extra);
-        let base_draw_func = make_base_draw_func(conf.edge, conf.position, extra);
+        let base_draw_func = make_base_draw_func(conf);
 
         // event
         let start_pos = Rc::new(Cell::new((0, 0)));
