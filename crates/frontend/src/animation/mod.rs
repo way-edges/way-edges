@@ -49,7 +49,11 @@ impl ToggleAnimation {
         self.base_animation.refresh();
     }
     pub fn progress(&self) -> f64 {
-        self.base_animation.progress()
+        let p = self.base_animation.progress();
+        match self.direction {
+            ToggleDirection::Forward => p,
+            ToggleDirection::Backward => 1. - p,
+        }
     }
     pub fn set_direction(&mut self, to_direction: ToggleDirection) {
         if self.direction == to_direction {
@@ -59,11 +63,7 @@ impl ToggleAnimation {
         self.direction = to_direction;
     }
     pub fn progress_abs(&self) -> f64 {
-        let p = self.progress();
-        match self.direction {
-            ToggleDirection::Forward => p,
-            ToggleDirection::Backward => 1. - p,
-        }
+        self.progress()
     }
     pub fn is_in_progress(&self) -> bool {
         let p = self.progress();
