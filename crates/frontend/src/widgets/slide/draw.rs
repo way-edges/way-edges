@@ -8,6 +8,7 @@ use std::cell::RefCell;
 use std::f64::consts::PI;
 use std::ops::Deref;
 use std::rc::Rc;
+use std::time::Instant;
 
 use gtk::cairo::{self, ImageSurface};
 use gtk::gdk::RGBA;
@@ -215,10 +216,11 @@ fn make_draw_data(conf: &DrawConfig, progress: f64, is_forward: bool) -> DrawDat
         fg_surf
     };
     ctx.save().unwrap();
+    ctx.translate(conf.border_width as f64, Z);
     ctx.append_path(&path);
+    ctx.restore().unwrap();
     ctx.set_source_surface(&fg_surf, Z, Z).unwrap();
     ctx.fill().unwrap();
-    ctx.restore().unwrap();
 
     // border
     let border_size = (
@@ -281,6 +283,7 @@ fn make_draw_data(conf: &DrawConfig, progress: f64, is_forward: bool) -> DrawDat
 }
 
 fn draw_top(conf: &DrawConfig, progress: f64) -> ImageSurface {
+    let start = Instant::now();
     let (surf, ctx) = conf.new_horizontal_surf();
     let draw_data = make_draw_data(conf, progress, true);
 
@@ -292,6 +295,8 @@ fn draw_top(conf: &DrawConfig, progress: f64) -> ImageSurface {
     ctx.paint().unwrap();
     ctx.set_source_surface(&draw_data.bg_text, Z, Z).unwrap();
     ctx.paint().unwrap();
+
+    println!("cost: {:?}", start.elapsed());
 
     surf
 }
