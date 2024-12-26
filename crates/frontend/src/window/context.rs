@@ -23,6 +23,8 @@ pub struct WindowContext {
     pub monitor: MonitorSpecifier,
     pub window: ApplicationWindow,
     pub drawing_area: DrawingArea,
+    #[allow(dyn_drop)]
+    pub widget_context: Option<Box<dyn Drop>>,
 
     pub(super) frame_manager: WindowFrameManagerRc,
 
@@ -108,6 +110,7 @@ impl WindowContext {
             monitor: conf.monitor.clone(),
             window,
             drawing_area,
+            widget_context: None,
 
             frame_manager,
 
@@ -127,6 +130,10 @@ impl WindowContext {
     pub fn close(&mut self) {
         self.window.close();
         self.window.destroy();
+    }
+
+    pub fn bind_context(&mut self, w: impl Drop + 'static) {
+        self.widget_context = Some(Box::new(w));
     }
 }
 

@@ -91,7 +91,7 @@ impl WindowContext {
     }
     pub fn setup_mouse_event_callback(
         &mut self,
-        mut widget_callback: impl FnMut(&mut MouseStateData, MouseEvent) -> bool + 'static,
+        mut widget_callback: impl 'static + FnMut(&mut MouseStateData, MouseEvent) -> bool,
     ) {
         let pop_state = &self.window_pop_state;
         let start_pose = &self.start_pos;

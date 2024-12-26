@@ -63,6 +63,17 @@ macro_rules! type_impl_redraw_notifier {
 
 type RedrawNotifyFunc = Rc<dyn Fn(Option<ImageSurface>) + 'static>;
 impl WindowContext {
+    pub fn redraw(&self, img: Option<ImageSurface>) {
+        if let Some(img) = img {
+            update_buffer_and_area_size(
+                &self.image_buffer,
+                &self.drawing_area,
+                img,
+                &self.max_widget_size_func,
+            );
+        }
+        self.drawing_area.queue_draw();
+    }
     pub fn make_redraw_notifier_dyn(&self) -> RedrawNotifyFunc {
         Rc::new(self.make_redraw_notifier())
     }
