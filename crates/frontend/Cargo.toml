@@ -12,6 +12,7 @@ pango.workspace = true
 educe.workspace = true
 paste.workspace = true
 lazy_static.workspace = true
+async-channel.workspace = true
 
 way-edges-derive.workspace = true
 config.workspace = true
@@ -21,3 +22,4 @@ util.workspace = true
 
 timerfd = "1.0"
 pangocairo = "0.20"
+interval-task = "0.3"

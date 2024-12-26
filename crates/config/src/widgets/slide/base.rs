@@ -51,10 +51,6 @@ pub struct SlideConfig {
     #[serde(default = "dt_text_color")]
     #[serde(deserialize_with = "common::color_translate")]
     pub text_color: RGBA,
-    #[serde(default)]
-    pub is_text_position_start: bool,
-    #[serde(default)]
-    pub progress_direction: Direction,
 
     #[educe(Debug(ignore))]
     #[serde(default)]
@@ -67,7 +63,7 @@ pub struct SlideConfig {
     pub event_map: EventMap,
 
     #[serde(default)]
-    pub preset: Option<Preset>,
+    pub preset: Preset,
 }
 
 fn dt_border_width() -> i32 {
@@ -84,9 +80,6 @@ fn dt_border_color() -> RGBA {
 }
 fn dt_text_color() -> RGBA {
     RGBA::from_str("#000000").unwrap()
-}
-fn dt_preview_size() -> f64 {
-    3.
 }
 fn dt_obtuse_angle() -> f64 {
     120.

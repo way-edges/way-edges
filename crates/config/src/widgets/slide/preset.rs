@@ -1,6 +1,7 @@
 use educe::Educe;
 use gtk::gdk::RGBA;
 use serde::{Deserialize, Deserializer};
+use serde_jsonrc::de;
 use util::shell::shell_cmd;
 
 #[derive(Debug, Deserialize)]
@@ -10,6 +11,11 @@ pub enum Preset {
     Microphone(PulseAudioConfig),
     Backlight(BacklightConfig),
     Custom(CustomConfig),
+}
+impl Default for Preset {
+    fn default() -> Self {
+        Self::Custom(CustomConfig::default())
+    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -34,44 +40,11 @@ pub struct BacklightConfig {
     pub redraw_only_on_change: bool,
 }
 
-pub type UpdateTask = Box<dyn Send + Sync + FnMut() -> Result<f64, String>>;
-
-#[derive(Educe, Deserialize)]
+#[derive(Educe, Deserialize, Default)]
 #[educe(Debug)]
 pub struct CustomConfig {
-    #[educe(Debug(ignore))]
     #[serde(default)]
-    #[serde(deserialize_with = "update_task_interval")]
-    pub update_with_interval_ms: Option<(u64, UpdateTask)>,
-}
-
-pub fn update_task_interval<'de, D>(d: D) -> Result<Option<(u64, UpdateTask)>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    struct EventMapVisitor;
-    impl<'de> serde::de::Visitor<'de> for EventMapVisitor {
-        type Value = Option<(u64, UpdateTask)>;
-
-        fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
-        where
-            A: serde::de::SeqAccess<'de>,
-        {
-            let ms = seq.next_element()?.unwrap();
-            let ut = seq.next_element()?.unwrap();
-            Ok(Some((ms, create_update_task(ut))))
-        }
-
-        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-            formatter.write_str("vec of tuples: (key: number, command: string)")
-        }
-    }
-    d.deserialize_any(EventMapVisitor)
-}
-pub fn create_update_task(value: String) -> UpdateTask {
-    Box::new(move || {
-        use std::str::FromStr;
-        let a = shell_cmd(&value)?;
-        f64::from_str(a.trim()).map_err(|e| format!("Fail to convert result({a}) to f64: {e}"))
-    })
+    pub interval: u64,
+    #[serde(default)]
+    pub cmd: String,
 }

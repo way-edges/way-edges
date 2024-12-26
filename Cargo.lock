@@ -856,6 +856,7 @@ dependencies = [
 name = "frontend"
 version = "0.1.0"
 dependencies = [
+ "async-channel",
  "backend",
  "cairo-rs",
  "config",
@@ -863,6 +864,7 @@ dependencies = [
  "gio",
  "gtk4",
  "gtk4-layer-shell",
+ "interval-task",
  "lazy_static",
  "log",
  "pango",
