@@ -16,6 +16,7 @@ gtk4-layer-shell = "0.4"
 gtk = { package = "gtk4", version = "0.9", features = ["v4_12", "v4_14"] }
 gio = "0.20"
 cairo-rs = { version = "0.20", features = ["freetype", "freetype-rs", "png"] }
+pango = { version = "0.20.7", features = ["v1_56"] }
 log = "0.4"
 env_logger = "0.11"
 lazy_static = "1.5.0"

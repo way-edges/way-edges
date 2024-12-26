@@ -8,8 +8,10 @@ gtk4-layer-shell.workspace = true
 gtk.workspace = true
 gio.workspace = true
 cairo-rs.workspace = true
+pango.workspace = true
 educe.workspace = true
 paste.workspace = true
+lazy_static.workspace = true
 
 way-edges-derive.workspace = true
 config.workspace = true

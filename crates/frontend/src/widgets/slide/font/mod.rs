@@ -1,25 +1,29 @@
-use cairo::freetype as ft;
-use cairo::FontFace;
-use std::rc::Rc;
+use std::sync::atomic::AtomicPtr;
+
+use lazy_static::lazy_static;
+use pangocairo::pango;
+use pangocairo::pango::prelude::FontMapExt;
 
 mod raw;
 
-static mut FONTFACE: Option<Result<FontFace, String>> = None;
-
-pub fn get_font_face() -> Result<FontFace, String> {
-    unsafe {
-        if FONTFACE.as_ref().is_none() {
-            let fc = ft::Library::init()
-                .map_err(|e| format!("Init freetype error: {e}"))
-                .and_then(|lib| {
-                    let fontface = lib
-                        .new_memory_face(Rc::new(raw::RAW_FONT.to_vec()), 0)
-                        .map_err(|e| format!("Init ft fontface error: {e}"))?;
-                    FontFace::create_from_ft(&fontface)
-                        .map_err(|e| format!("Init cairo fontface error: {e}"))
-                });
-            FONTFACE = Some(fc);
+pub fn get_pango_context() -> pango::Context {
+    lazy_static! {
+        static ref FONT_MAP: AtomicPtr<pango::FontMap> = {
+            let mut map = pangocairo::FontMap::default();
+            {
+                let p = "/tmp/way-edges/slide-font.otf";
+                std::fs::write(p, raw::RAW_FONT).unwrap();
+                map.add_font_file(p).unwrap();
+            }
+            AtomicPtr::new(&mut map)
         };
-        FONTFACE.as_ref().unwrap().clone()
     }
+
+    let ctx = unsafe { FONT_MAP.load(std::sync::atomic::Ordering::Relaxed).as_ref() }
+        .unwrap()
+        .create_context();
+    let mut desc = ctx.font_description().unwrap();
+    desc.set_family("WayEdges-Slide");
+    ctx.set_font_description(Some(&desc));
+    ctx
 }
