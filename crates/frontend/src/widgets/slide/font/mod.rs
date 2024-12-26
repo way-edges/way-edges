@@ -9,13 +9,11 @@ mod raw;
 pub fn get_pango_context() -> pango::Context {
     lazy_static! {
         static ref FONT_MAP: AtomicPtr<pango::FontMap> = {
-            let mut map = pangocairo::FontMap::default();
-            {
-                let p = "/tmp/way-edges/slide-font.otf";
-                std::fs::write(p, raw::RAW_FONT).unwrap();
-                map.add_font_file(p).unwrap();
-            }
-            AtomicPtr::new(&mut map)
+            let map = pangocairo::FontMap::default();
+            let p = "/tmp/way-edges/slide-font.otf";
+            std::fs::write(p, raw::RAW_FONT).unwrap();
+            map.add_font_file(p).unwrap();
+            AtomicPtr::new(Box::into_raw(Box::new(map)))
         };
     }
 

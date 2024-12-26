@@ -238,21 +238,25 @@ fn make_draw_data(conf: &DrawConfig, progress: f64, is_forward: bool) -> DrawDat
     let normal_text_surf = draw_text(progress, fg_size.1 as i32);
     let text_start_pos = (
         ((surf.width() - normal_text_surf.width()) as f64 / 2.).floor(),
-        ((surf.height() - normal_text_surf.height()) as f64 / 2.).floor(),
+        ((bg_size.1 - normal_text_surf.height() as f64) / 2.).floor(),
     );
     let bg_text_surf = {
         let bg_text_surf = new_surface((surf.width(), surf.height()));
         let ctx = cairo::Context::new(&bg_text_surf).unwrap();
-        ctx.set_source_color(&conf.bg_color);
         ctx.mask_surface(&normal_text_surf, text_start_pos.0, text_start_pos.1)
             .unwrap();
 
         let mask_surf = new_surface((fg_surf.width(), fg_surf.height()));
         let ctx = cairo::Context::new(&mask_surf).unwrap();
-        ctx.set_source_surface(&fg_surf, Z, Z).unwrap();
+        ctx.set_source_color(&conf.bg_color);
+        ctx.mask_surface(&fg_surf, Z, Z).unwrap();
+
+        let final_surf = new_surface((surf.width(), surf.height()));
+        let ctx = cairo::Context::new(&final_surf).unwrap();
+        ctx.set_source_surface(mask_surf, Z, Z).unwrap();
         ctx.mask_surface(&bg_text_surf, Z, Z).unwrap();
 
-        mask_surf
+        final_surf
     };
     let fg_text_surf = {
         let fg_text_surf = new_surface((surf.width(), surf.height()));

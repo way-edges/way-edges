@@ -24,8 +24,6 @@ pub fn init_widget(
     config: Config,
     mut w_conf: SlideConfig,
 ) {
-    println!("here");
-
     let geom = monitor.geometry();
     let size = (geom.width(), geom.height());
     w_conf.size.calculate_relative(size, config.edge);
