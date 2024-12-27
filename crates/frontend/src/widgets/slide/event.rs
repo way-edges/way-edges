@@ -11,18 +11,22 @@ use gtk4_layer_shell::Edge;
 
 fn make_translate_func(w_conf: &SlideConfig, edge: Edge) -> impl 'static + Fn((f64, f64)) -> f64 {
     macro_rules! hhh {
-        ($size:expr, $pos:expr, VERTICAL) => {
-            ($pos.1 / $size.1 as f64).min(1.).max(0.)
+        ($len:expr, $border_width:expr, $pos:expr, VERTICAL) => {
+            (($len as f64 - ($pos.1 - $border_width as f64)) / $len as f64)
+                .min(1.)
+                .max(0.)
         };
-        ($size:expr, $pos:expr, HORIZONTAL) => {
-            ($pos.0 / $size.0 as f64).min(1.).max(0.)
+        ($len:expr, $border_width:expr,  $pos:expr, HORIZONTAL) => {
+            (($pos.0 - $border_width as f64) / $len as f64)
+                .min(1.)
+                .max(0.)
         };
     }
 
     macro_rules! create_func {
         ($name:ident, $i:tt) => {
-            fn $name(size: (i32, i32), pos: (f64, f64)) -> f64 {
-                hhh!(size, pos, $i)
+            fn $name(length: i32, border_width: i32, pos: (f64, f64)) -> f64 {
+                hhh!(length, border_width, pos, $i)
             }
         };
     }
@@ -36,14 +40,10 @@ fn make_translate_func(w_conf: &SlideConfig, edge: Edge) -> impl 'static + Fn((f
         _ => unreachable!(),
     };
 
-    let size = w_conf.size().unwrap();
-    let size = match edge {
-        Edge::Left | Edge::Right => (size.0 as i32, size.1 as i32),
-        Edge::Top | Edge::Bottom => (size.1 as i32, size.0 as i32),
-        _ => unreachable!(),
-    };
+    let length = w_conf.size().unwrap().1 as i32 - 2 * w_conf.border_width;
+    let border_width = w_conf.border_width;
 
-    move |pos| func(size, pos)
+    move |pos| func(length, border_width, pos)
 }
 
 pub(super) fn setup_event(
