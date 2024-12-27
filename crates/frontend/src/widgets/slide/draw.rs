@@ -8,7 +8,6 @@ use std::cell::RefCell;
 use std::f64::consts::PI;
 use std::ops::Deref;
 use std::rc::Rc;
-use std::time::Instant;
 
 use gtk::cairo::{self, ImageSurface};
 use gtk::gdk::RGBA;
@@ -18,7 +17,8 @@ use util::Z;
 use super::font::get_pango_context;
 
 pub(super) struct DrawConfig {
-    size: (i32, i32),
+    length: i32,
+    thickness: i32,
     border_width: i32,
 
     obtuse_angle: f64,
@@ -31,9 +31,9 @@ pub(super) struct DrawConfig {
 impl DrawConfig {
     fn new(slide_conf: &SlideConfig) -> Self {
         let content_size = slide_conf.size().unwrap();
-        let size = (content_size.1.ceil() as i32, content_size.0.ceil() as i32);
         Self {
-            size,
+            length: content_size.1.ceil() as i32,
+            thickness: content_size.0.ceil() as i32,
             border_width: slide_conf.border_width,
             obtuse_angle: slide_conf.obtuse_angle,
             radius: slide_conf.radius,
@@ -43,12 +43,12 @@ impl DrawConfig {
         }
     }
     fn new_horizontal_surf(&self) -> (ImageSurface, Context) {
-        let surf = new_surface(self.size);
+        let surf = new_surface((self.length, self.thickness));
         let ctx = cairo::Context::new(&surf).unwrap();
         (surf, ctx)
     }
     fn new_vertical_surf(&self) -> (ImageSurface, Context) {
-        let surf = new_surface((self.size.1, self.size.0));
+        let surf = new_surface((self.thickness, self.length));
         let ctx = cairo::Context::new(&surf).unwrap();
         (surf, ctx)
     }
@@ -176,11 +176,64 @@ fn draw_slide_path(
 
 struct DrawData {
     bar: ImageSurface,
-    fg_path: cairo::Path,
-    fg_size: (f64, f64),
+    bg_path: cairo::Path,
+    fg_surf: ImageSurface,
     bg_size: (f64, f64),
-    bg_text: ImageSurface,
-    fg_text: ImageSurface,
+    text_translate_x: f64,
+    normal_text_surf: ImageSurface,
+}
+impl DrawData {
+    fn new_surface_bar(&self) -> (cairo::ImageSurface, cairo::Context) {
+        let surf = new_surface((self.bar.width(), self.bar.height()));
+        let ctx = cairo::Context::new(&surf).unwrap();
+        (surf, ctx)
+    }
+    fn make_text(&self, conf: &DrawConfig) -> (ImageSurface, ImageSurface) {
+        let normal_text_surf = &self.normal_text_surf;
+        let text_start_pos = (
+            ((self.bar.width() - normal_text_surf.width()) as f64 / 2.).floor(),
+            ((self.bg_size.1 - normal_text_surf.height() as f64) / 2.).floor(),
+        );
+
+        let bg_text_surf = {
+            let (bg_text_surf, ctx) = self.new_surface_bar();
+            ctx.mask_surface(normal_text_surf, text_start_pos.0, text_start_pos.1)
+                .unwrap();
+
+            let (mask_surf, ctx) = self.new_surface_bar();
+            ctx.set_source_color(&conf.bg_color);
+            ctx.mask_surface(&self.fg_surf, Z, Z).unwrap();
+
+            let (final_surf, ctx) = self.new_surface_bar();
+            ctx.set_source_surface(mask_surf, Z, Z).unwrap();
+            ctx.mask_surface(&bg_text_surf, Z, Z).unwrap();
+
+            final_surf
+        };
+
+        let fg_text_surf = {
+            let (fg_text_surf, ctx) = self.new_surface_bar();
+            ctx.set_source_color(&conf.fg_color);
+            ctx.mask_surface(normal_text_surf, text_start_pos.0, text_start_pos.1)
+                .unwrap();
+
+            // ctx.translate(conf.border_width as f64 + self.text_translate_x, Z);
+            // ctx.append_path(&self.bg_path);
+            // ctx.set_operator(cairo::Operator::Clear);
+            // ctx.fill().unwrap();
+
+            fg_text_surf
+        };
+
+        (bg_text_surf, fg_text_surf)
+    }
+    fn draw_text_on_ctx(&self, ctx: &cairo::Context, conf: &DrawConfig) {
+        let (bg_text, fg_text) = self.make_text(conf);
+        ctx.set_source_surface(&fg_text, Z, Z).unwrap();
+        ctx.paint().unwrap();
+        ctx.set_source_surface(&bg_text, Z, Z).unwrap();
+        ctx.paint().unwrap();
+    }
 }
 
 fn make_draw_data(conf: &DrawConfig, progress: f64, is_forward: bool) -> DrawData {
@@ -188,44 +241,41 @@ fn make_draw_data(conf: &DrawConfig, progress: f64, is_forward: bool) -> DrawDat
 
     // bg
     let bg_size = (
-        (conf.size.0 - conf.border_width * 2) as f64,
-        (conf.size.1 - conf.border_width) as f64,
+        (conf.length - conf.border_width * 2) as f64,
+        (conf.thickness - conf.border_width) as f64,
     );
     let radius = conf.radius;
-    let path = draw_slide_path(conf.obtuse_angle, radius, bg_size, true).unwrap();
+    let bg_path = draw_slide_path(conf.obtuse_angle, radius, bg_size, true).unwrap();
     ctx.save().unwrap();
     ctx.translate(conf.border_width as f64, Z);
-    ctx.append_path(&path);
+    ctx.append_path(&bg_path);
     ctx.set_source_color(&conf.bg_color);
     ctx.fill().unwrap();
     ctx.restore().unwrap();
 
     // fg
     let fg_size = ((bg_size.0 * progress).ceil(), bg_size.1);
-    let fg_surf = {
-        let translate_x = match is_forward {
-            true => -(bg_size.0 - fg_size.0),
-            false => bg_size.0 - fg_size.0,
-        };
-        let fg_surf = new_surface((surf.width(), surf.height()));
-        let fg_ctx = Context::new(&fg_surf).unwrap();
-        fg_ctx.translate(conf.border_width as f64 + translate_x, Z);
-        fg_ctx.append_path(&path);
-        fg_ctx.set_source_color(&conf.fg_color);
-        fg_ctx.fill().unwrap();
-        fg_surf
+    let translate_x = match is_forward {
+        true => -(bg_size.0 - fg_size.0),
+        false => bg_size.0 - fg_size.0,
     };
+    let fg_surf = new_surface((surf.width(), surf.height()));
+    let fg_ctx = Context::new(&fg_surf).unwrap();
+    fg_ctx.translate(conf.border_width as f64 + translate_x, Z);
+    fg_ctx.append_path(&bg_path);
+    fg_ctx.set_source_color(&conf.fg_color);
+    fg_ctx.fill().unwrap();
     ctx.save().unwrap();
     ctx.translate(conf.border_width as f64, Z);
-    ctx.append_path(&path);
+    ctx.append_path(&bg_path);
     ctx.restore().unwrap();
     ctx.set_source_surface(&fg_surf, Z, Z).unwrap();
     ctx.fill().unwrap();
 
     // border
     let border_size = (
-        (conf.size.0 - conf.border_width) as f64,
-        (conf.size.1 as f64 - conf.border_width as f64 / 2.),
+        (conf.length - conf.border_width) as f64,
+        (conf.thickness as f64 - conf.border_width as f64 / 2.),
     );
     let radius = conf.radius + conf.border_width as f64 / 2.;
     let path = draw_slide_path(conf.obtuse_angle, radius, border_size, false).unwrap();
@@ -237,66 +287,27 @@ fn make_draw_data(conf: &DrawConfig, progress: f64, is_forward: bool) -> DrawDat
     ctx.stroke().unwrap();
     ctx.restore().unwrap();
 
+    // text
     let normal_text_surf = draw_text(progress, fg_size.1 as i32);
-    let text_start_pos = (
-        ((surf.width() - normal_text_surf.width()) as f64 / 2.).floor(),
-        ((bg_size.1 - normal_text_surf.height() as f64) / 2.).floor(),
-    );
-    let bg_text_surf = {
-        let bg_text_surf = new_surface((surf.width(), surf.height()));
-        let ctx = cairo::Context::new(&bg_text_surf).unwrap();
-        ctx.mask_surface(&normal_text_surf, text_start_pos.0, text_start_pos.1)
-            .unwrap();
-
-        let mask_surf = new_surface((fg_surf.width(), fg_surf.height()));
-        let ctx = cairo::Context::new(&mask_surf).unwrap();
-        ctx.set_source_color(&conf.bg_color);
-        ctx.mask_surface(&fg_surf, Z, Z).unwrap();
-
-        let final_surf = new_surface((surf.width(), surf.height()));
-        let ctx = cairo::Context::new(&final_surf).unwrap();
-        ctx.set_source_surface(mask_surf, Z, Z).unwrap();
-        ctx.mask_surface(&bg_text_surf, Z, Z).unwrap();
-
-        final_surf
-    };
-    let fg_text_surf = {
-        let fg_text_surf = new_surface((surf.width(), surf.height()));
-        let ctx = cairo::Context::new(&fg_text_surf).unwrap();
-        ctx.set_source_color(&conf.fg_color);
-        ctx.mask_surface(&normal_text_surf, text_start_pos.0, text_start_pos.1)
-            .unwrap();
-        ctx.clip();
-        ctx.set_source_surface(&fg_surf, Z, Z).unwrap();
-        ctx.fill().unwrap();
-        fg_text_surf
-    };
 
     DrawData {
         bar: surf,
-        fg_path: path,
-        fg_size,
+        bg_path,
+        text_translate_x: translate_x,
+        fg_surf,
         bg_size,
-        bg_text: bg_text_surf,
-        fg_text: fg_text_surf,
+        normal_text_surf,
     }
 }
 
 fn draw_top(conf: &DrawConfig, progress: f64) -> ImageSurface {
-    let start = Instant::now();
     let (surf, ctx) = conf.new_horizontal_surf();
     let draw_data = make_draw_data(conf, progress, true);
 
-    ctx.set_source_surface(draw_data.bar, Z, Z).unwrap();
+    ctx.set_source_surface(&draw_data.bar, Z, Z).unwrap();
     ctx.paint().unwrap();
 
-    // text
-    ctx.set_source_surface(&draw_data.fg_text, Z, Z).unwrap();
-    ctx.paint().unwrap();
-    ctx.set_source_surface(&draw_data.bg_text, Z, Z).unwrap();
-    ctx.paint().unwrap();
-
-    println!("cost: {:?}", start.elapsed());
+    draw_data.draw_text_on_ctx(&ctx, conf);
 
     surf
 }
@@ -306,7 +317,7 @@ fn draw_left(conf: &DrawConfig, progress: f64) -> ImageSurface {
     let (surf, ctx) = conf.new_vertical_surf();
 
     ctx.rotate(-90.0_f64.to_radians());
-    ctx.translate(-surf.width() as f64, Z);
+    ctx.translate(-surf.height() as f64, Z);
 
     ctx.set_source_surface(top, Z, Z).unwrap();
     ctx.paint().unwrap();
@@ -315,37 +326,44 @@ fn draw_left(conf: &DrawConfig, progress: f64) -> ImageSurface {
 }
 
 fn draw_right(conf: &DrawConfig, progress: f64) -> ImageSurface {
-    let (surf, ctx) = conf.new_horizontal_surf();
+    let (surf, ctx) = conf.new_vertical_surf();
     let draw_data = make_draw_data(conf, progress, false);
 
     ctx.rotate(90.0_f64.to_radians());
+    ctx.translate(Z, -conf.thickness as f64);
 
-    ctx.set_source_surface(draw_data.bar, Z, Z).unwrap();
+    ctx.set_source_surface(&draw_data.bar, Z, Z).unwrap();
     ctx.paint().unwrap();
-
-    // text
-    ctx.set_source_surface(&draw_data.fg_text, Z, Z).unwrap();
-    ctx.paint().unwrap();
-    ctx.set_source_surface(&draw_data.bg_text, Z, Z).unwrap();
-    ctx.paint().unwrap();
+    draw_data.draw_text_on_ctx(&ctx, conf);
 
     surf
 }
 
 fn draw_bottom(conf: &DrawConfig, progress: f64) -> ImageSurface {
     let (surf, ctx) = conf.new_horizontal_surf();
-    let draw_data = make_draw_data(conf, progress, true);
+    let mut draw_data = make_draw_data(conf, progress, false);
 
-    ctx.rotate(-90.0_f64.to_radians());
-    ctx.translate(-surf.width() as f64, Z);
-    ctx.set_source_surface(draw_data.bar, Z, Z).unwrap();
+    ctx.save().unwrap();
+    ctx.rotate(180.0_f64.to_radians());
+    ctx.translate(-surf.width() as f64, -surf.height() as f64);
+    ctx.set_source_surface(&draw_data.bar, Z, Z).unwrap();
     ctx.paint().unwrap();
+    ctx.restore().unwrap();
 
-    // text
-    ctx.set_source_surface(&draw_data.fg_text, Z, Z).unwrap();
-    ctx.paint().unwrap();
-    ctx.set_source_surface(&draw_data.bg_text, Z, Z).unwrap();
-    ctx.paint().unwrap();
+    {
+        let (surf, ctx) = draw_data.new_surface_bar();
+        ctx.rotate(180.0_f64.to_radians());
+        ctx.translate(-surf.width() as f64, -surf.height() as f64);
+        ctx.translate(Z, conf.border_width as f64);
+        // let translate_y =
+        //     ((draw_data.bg_size.1 - draw_data.normal_text_surf.height() as f64) / 2.).floor();
+        ctx.set_source_surface(&draw_data.fg_surf, Z, Z).unwrap();
+        ctx.paint().unwrap();
+        draw_data.fg_surf = surf;
+    };
+
+    ctx.translate(Z, conf.border_width as f64);
+    draw_data.draw_text_on_ctx(&ctx, conf);
 
     surf
 }
