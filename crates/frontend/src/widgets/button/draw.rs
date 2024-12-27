@@ -12,7 +12,8 @@ use util::Z;
 
 // for top only
 struct DrawConfig {
-    size: (i32, i32),
+    length: i32,
+    thickness: i32,
     color: RGBA,
     border_width: i32,
     border_color: RGBA,
@@ -21,21 +22,21 @@ impl DrawConfig {
     fn new(btn_conf: &BtnConfig) -> Self {
         let content_size = btn_conf.size().unwrap();
         let border_width = btn_conf.border_width;
-        let size = (content_size.1.ceil() as i32, content_size.0.ceil() as i32);
         Self {
-            size,
+            length: content_size.1.ceil() as i32,
+            thickness: content_size.0.ceil() as i32,
             border_width,
             color: btn_conf.color,
             border_color: btn_conf.border_color,
         }
     }
     fn new_horizontal_surf(&self) -> (ImageSurface, Context) {
-        let surf = new_surface(self.size);
+        let surf = new_surface((self.length, self.thickness));
         let ctx = cairo::Context::new(&surf).unwrap();
         (surf, ctx)
     }
     fn new_vertical_surf(&self) -> (ImageSurface, Context) {
-        let surf = new_surface((self.size.1, self.size.0));
+        let surf = new_surface((self.thickness, self.length));
         let ctx = cairo::Context::new(&surf).unwrap();
         (surf, ctx)
     }
@@ -44,7 +45,7 @@ impl DrawConfig {
 fn draw_top(conf: &DrawConfig, pressing: bool) -> ImageSurface {
     let (surf, ctx) = conf.new_horizontal_surf();
 
-    let size = (conf.size.0 as f64, conf.size.1 as f64);
+    let size = (conf.length as f64, conf.thickness as f64);
     let border_width = conf.border_width as f64;
 
     // path
@@ -97,6 +98,7 @@ fn draw_right(conf: &DrawConfig, pressing: bool) -> ImageSurface {
     let base = draw_top(conf, pressing);
 
     ctx.rotate(90.0_f64.to_radians());
+    ctx.translate(Z, -conf.thickness as f64);
     ctx.set_source_surface(&base, 0., 0.).unwrap();
     ctx.paint().unwrap();
 
@@ -108,7 +110,7 @@ fn draw_bottom(conf: &DrawConfig, pressing: bool) -> ImageSurface {
     let base = draw_top(conf, pressing);
 
     ctx.rotate(180.0_f64.to_radians());
-    ctx.translate(-conf.size.0 as f64, -conf.size.1 as f64);
+    ctx.translate(-conf.length as f64, -conf.thickness as f64);
     ctx.set_source_surface(&base, 0., 0.).unwrap();
     ctx.paint().unwrap();
 
@@ -120,7 +122,7 @@ fn draw_left(conf: &DrawConfig, pressing: bool) -> ImageSurface {
     let base = draw_top(conf, pressing);
 
     ctx.rotate(-90.0_f64.to_radians());
-    ctx.translate(-conf.size.0 as f64, Z);
+    ctx.translate(-conf.length as f64, Z);
     ctx.set_source_surface(&base, 0., 0.).unwrap();
     ctx.paint().unwrap();
 
