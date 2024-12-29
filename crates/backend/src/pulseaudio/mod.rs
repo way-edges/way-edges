@@ -9,13 +9,13 @@ use std::{
 pub use pa::PulseAudioDevice;
 use pa::VInfo;
 
-pub type PaCallback = dyn FnMut(&VInfo);
+pub type PaCallback = Box<dyn FnMut(&VInfo)>;
 
 type CallbackID = i32;
 
 struct PA {
     count: i32,
-    cbs: HashMap<CallbackID, Box<PaCallback>>,
+    cbs: HashMap<CallbackID, PaCallback>,
     device_map: HashMap<PulseAudioDevice, HashSet<CallbackID>>,
 }
 
@@ -36,7 +36,7 @@ impl PA {
             });
         }
     }
-    fn add_cb(&mut self, mut cb: Box<PaCallback>, device: PulseAudioDevice) -> i32 {
+    fn add_cb(&mut self, mut cb: PaCallback, device: PulseAudioDevice) -> i32 {
         let key = self.count;
         self.count += 1;
 
@@ -75,9 +75,12 @@ pub fn try_init_pulseaudio() -> Result<(), String> {
     Ok(())
 }
 
-pub fn register_callback(cb: Box<PaCallback>, device: PulseAudioDevice) -> Result<i32, String> {
+pub fn register_callback(
+    cb: impl FnMut(&VInfo) + 'static,
+    device: PulseAudioDevice,
+) -> Result<i32, String> {
     try_init_pulseaudio()?;
-    Ok(get_pa().add_cb(cb, device))
+    Ok(get_pa().add_cb(Box::new(cb), device))
 }
 
 pub fn unregister_callback(key: i32) {

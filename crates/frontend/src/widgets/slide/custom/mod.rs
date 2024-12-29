@@ -64,7 +64,7 @@ pub fn custom_preset(
         &mut w_conf,
         key_callback,
         set_progress_callback,
-        draw_func,
+        Some(draw_func),
     );
 }
 

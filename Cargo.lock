@@ -2626,6 +2626,7 @@ version = "0.1.0"
 dependencies = [
  "cairo-rs",
  "downcast-rs",
+ "gtk4",
  "log",
  "notify-rust",
  "paste",

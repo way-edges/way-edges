@@ -68,6 +68,7 @@ impl Animation {
         } else {
             self.start_time = Instant::now();
         }
+        self.reset();
     }
     pub(super) fn progress(&self) -> f64 {
         self.cache_y

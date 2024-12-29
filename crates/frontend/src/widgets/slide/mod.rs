@@ -19,9 +19,13 @@ pub fn init_widget(
     use config::widgets::slide::preset::Preset;
 
     match std::mem::take(&mut w_conf.preset) {
-        Preset::Speaker(pulse_audio_config) => todo!(),
-        Preset::Microphone(pulse_audio_config) => todo!(),
         Preset::Backlight(backlight_config) => todo!(),
+        Preset::Speaker(pulse_audio_config) => {
+            pulseaudio::speaker(window, &config, w_conf, pulse_audio_config)
+        }
+        Preset::Microphone(pulse_audio_config) => {
+            pulseaudio::microphone(window, &config, w_conf, pulse_audio_config)
+        }
         Preset::Custom(custom_config) => {
             custom::custom_preset(window, &config, w_conf, custom_config)
         }

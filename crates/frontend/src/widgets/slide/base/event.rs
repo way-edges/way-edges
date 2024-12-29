@@ -51,7 +51,7 @@ pub fn setup_event(
     w_conf: &mut SlideConfig,
     mut key_callback: impl FnMut(u32) + 'static,
     mut set_progress_callback: impl FnMut(f64) + 'static,
-    draw_func: Rc<impl 'static + Fn(f64) -> ImageSurface>,
+    draw_func: Option<Rc<impl 'static + Fn(f64) -> ImageSurface>>,
 ) {
     let progress_func = make_translate_func(w_conf, conf.edge);
     let trigger_redraw = window.make_redraw_notifier();
@@ -60,7 +60,9 @@ pub fn setup_event(
         let progress = progress_func(pos);
         set_progress_callback(progress);
         if !not_do_redraw {
-            trigger_redraw(Some(draw_func(progress)));
+            if let Some(draw_func) = draw_func.as_ref() {
+                trigger_redraw(Some(draw_func(progress)));
+            }
         }
     };
 
