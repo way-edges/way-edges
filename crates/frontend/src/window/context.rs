@@ -14,7 +14,7 @@ use gtk::{
 use gtk4_layer_shell::LayerShell;
 
 use crate::{
-    animation::AnimationList,
+    animation::{AnimationList, ToggleAnimationRc},
     mouse_state::{self, MouseStateRc},
 };
 
@@ -134,6 +134,14 @@ impl WindowContext {
 
     pub fn bind_context(&mut self, w: impl Drop + 'static) {
         self.widget_context = Some(Box::new(w));
+    }
+
+    pub fn new_animation(&self, time_cost: u64) -> ToggleAnimationRc {
+        self.frame_manager
+            .borrow_mut()
+            .animation_list
+            .borrow_mut()
+            .new_transition(time_cost)
     }
 }
 

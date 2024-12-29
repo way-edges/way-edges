@@ -26,6 +26,9 @@ pub fn speaker(
             PulseAudioDevice::NamedSink(name)
         });
 
+    // TODO: MAKE TIME COST INTO CONFIG?
+    let mut_animation = window.new_animation(200);
+
     // NOTE: THIS TYPE ANNOTATION IS WEIRD
     window.set_draw_func(None::<fn() -> Option<ImageSurface>>);
 

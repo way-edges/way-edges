@@ -1,6 +1,6 @@
 mod base;
 mod custom;
-// mod pulseaudio;
+mod pulseaudio;
 
 use crate::window::WindowContext;
 use config::{widgets::slide::base::SlideConfig, Config};

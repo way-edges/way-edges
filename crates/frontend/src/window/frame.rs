@@ -7,8 +7,8 @@ use crate::frame::FrameManager;
 #[wrap_rc(rc = "pub(super)", normal = "pub(super)")]
 #[derive(Debug)]
 pub(super) struct WindowFrameManager {
-    animation_list: AnimationListRc,
-    base: FrameManager,
+    pub(super) animation_list: AnimationListRc,
+    pub(super) base: FrameManager,
 }
 impl WindowFrameManager {
     pub(super) fn new(frame_rate: u64, animation_list: AnimationListRc) -> Self {
