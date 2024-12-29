@@ -23,7 +23,7 @@ pub fn init_widget(
     let draw_func = draw::make_draw_func(&w_conf, conf.edge, workspace_transition.clone());
 
     let hypr_data = Rc::new(Cell::new(HyprGlobalData::default()));
-    let hover_data = HoverData::new(conf.edge).make_rc();
+    let hover_data = HoverData::new(conf.edge, w_conf.invert_direction).make_rc();
     window.set_draw_func(Some(glib::clone!(
         #[weak]
         hypr_data,

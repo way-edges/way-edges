@@ -74,12 +74,12 @@ fn draw_common_horizontal(
     let border_width = conf.thickness as f64 / 10.;
 
     // let a: Vec<(f64, RGBA)> = (1..=data.max_workspace).map(|id| {
-    let sorted = if conf.invert_direction {
-        1..=data.max_workspace
+    let sorting: Box<dyn std::iter::Iterator<Item = _>> = if conf.invert_direction {
+        Box::new((1..=data.max_workspace).rev())
     } else {
-        data.max_workspace..=1
+        Box::new(1..=data.max_workspace)
     };
-    sorted.for_each(|id| {
+    sorting.enumerate().for_each(|(index, id)| {
         // size and color
         let (length, mut color) = if id == data.current_workspace {
             (
@@ -120,7 +120,7 @@ fn draw_common_horizontal(
             );
             ctx.fill().unwrap();
         }
-        if id != data.max_workspace {
+        if (index + 1) as i32 != data.max_workspace {
             ctx.translate(length + conf.gap as f64, Z);
         };
 

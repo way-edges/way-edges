@@ -31,15 +31,17 @@ pub struct HoverData {
     //    2       5
     item_location: Vec<[f64; 2]>,
     match_item_func: MatchItemFunc,
+    invert_direction: bool,
     pub hover_id: isize,
 }
 
 impl HoverData {
-    pub fn new(edge: Edge) -> Self {
+    pub fn new(edge: Edge, invert_direction: bool) -> Self {
         Self {
             item_location: vec![],
             match_item_func: make_hover_match_func(edge),
             hover_id: -1,
+            invert_direction,
         }
     }
 
@@ -53,7 +55,11 @@ impl HoverData {
             id
         } else {
             // to match workspace id
-            id + 1
+            if self.invert_direction {
+                self.item_location.len() as isize - id
+            } else {
+                id + 1
+            }
         }
     }
 
