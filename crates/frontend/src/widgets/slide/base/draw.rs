@@ -16,7 +16,7 @@ use util::Z;
 
 use super::font::get_pango_context;
 
-pub(super) struct DrawConfig {
+pub struct DrawConfig {
     length: i32,
     thickness: i32,
     border_width: i32,
@@ -25,7 +25,7 @@ pub(super) struct DrawConfig {
     radius: f64,
 
     bg_color: RGBA,
-    fg_color: RGBA,
+    pub fg_color: RGBA,
     border_color: RGBA,
 }
 impl DrawConfig {
@@ -368,7 +368,7 @@ fn draw_bottom(conf: &DrawConfig, progress: f64) -> ImageSurface {
     surf
 }
 
-pub(super) fn make_draw_func(
+pub fn make_draw_func(
     slide_config: &SlideConfig,
     edge: Edge,
 ) -> (Rc<RefCell<DrawConfig>>, impl Fn(f64) -> ImageSurface) {

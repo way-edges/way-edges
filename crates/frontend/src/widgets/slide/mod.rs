@@ -1,4 +1,6 @@
 mod base;
+mod custom;
+// mod pulseaudio;
 
 use crate::window::WindowContext;
 use config::{widgets::slide::base::SlideConfig, Config};
@@ -21,7 +23,7 @@ pub fn init_widget(
         Preset::Microphone(pulse_audio_config) => todo!(),
         Preset::Backlight(backlight_config) => todo!(),
         Preset::Custom(custom_config) => {
-            base::custom::preset(window, &config, w_conf, custom_config)
+            custom::custom_preset(window, &config, w_conf, custom_config)
         }
     }
 }

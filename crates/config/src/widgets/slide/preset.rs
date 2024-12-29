@@ -1,8 +1,15 @@
+use std::collections::HashMap;
+
 use educe::Educe;
 use gtk::gdk::RGBA;
 use serde::{Deserialize, Deserializer};
-use serde_jsonrc::de;
-use util::shell::shell_cmd;
+use util::{
+    shell::shell_cmd_non_block,
+    template::{
+        arg::TemplateArgFloatProcesser,
+        base::{Template, TemplateProcesser},
+    },
+};
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "snake_case", tag = "type")]
@@ -20,8 +27,6 @@ impl Default for Preset {
 
 #[derive(Debug, Deserialize)]
 pub struct PulseAudioConfig {
-    #[serde(default)]
-    pub redraw_only_on_pa_change: bool,
     #[serde(default = "default_mute_color")]
     #[serde(deserialize_with = "super::common::color_translate")]
     pub mute_color: RGBA,
@@ -35,16 +40,67 @@ fn default_mute_color() -> RGBA {
 #[derive(Debug, Deserialize)]
 pub struct BacklightConfig {
     #[serde(default)]
-    pub device_name: Option<String>,
-    #[serde(default)]
-    pub redraw_only_on_change: bool,
+    pub device: Option<String>,
 }
 
 #[derive(Educe, Deserialize, Default)]
 #[educe(Debug)]
 pub struct CustomConfig {
     #[serde(default)]
-    pub interval: u64,
+    pub interval_update: (u64, String),
+
+    #[educe(Debug(ignore))]
     #[serde(default)]
-    pub cmd: String,
+    #[serde(deserialize_with = "slide_change_template")]
+    pub on_change: Option<Template>,
+
+    #[educe(Debug(ignore))]
+    #[serde(default)]
+    pub event_map: KeyEventMap,
+}
+
+#[derive(Debug, Deserialize, Default)]
+pub struct KeyEventMap(HashMap<u32, String>);
+impl KeyEventMap {
+    pub fn call(&self, k: u32) {
+        if let Some(cmd) = self.0.get(&k) {
+            // PERF: SHOULE THIS BE USE OF CLONING???
+            shell_cmd_non_block(cmd.clone());
+        }
+    }
+}
+
+pub fn slide_change_template<'de, D>(d: D) -> Result<Option<Template>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    struct EventMapVisitor;
+    impl serde::de::Visitor<'_> for EventMapVisitor {
+        type Value = Option<Template>;
+
+        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            formatter.write_str("vec of tuples: (key: number, command: string)")
+        }
+
+        fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            self.visit_string(v.to_string())
+        }
+
+        fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(Some(
+                Template::create_from_str(
+                    &v,
+                    TemplateProcesser::new().add_processer(TemplateArgFloatProcesser),
+                )
+                .map_err(serde::de::Error::custom)?,
+            ))
+        }
+    }
+    d.deserialize_any(EventMapVisitor)
 }

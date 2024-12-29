@@ -1,3 +1,4 @@
+use std::cell::Cell;
 use std::rc::Rc;
 
 use crate::mouse_state::MouseEvent;
@@ -45,43 +46,41 @@ fn make_translate_func(w_conf: &SlideConfig, edge: Edge) -> impl 'static + Fn((f
     move |pos| func(length, border_width, pos)
 }
 
-pub fn setup_event(
+pub(super) fn setup_event(
     window: &mut WindowContext,
     conf: &Config,
     w_conf: &mut SlideConfig,
-    mut key_callback: impl FnMut(u32) + 'static,
-    mut set_progress_callback: impl FnMut(f64) + 'static,
     draw_func: Rc<impl 'static + Fn(f64) -> ImageSurface>,
+    progress_cache: Rc<Cell<f64>>,
 ) {
-    let progress_func = make_translate_func(w_conf, conf.edge);
+    let mut event_map = std::mem::take(&mut w_conf.event_map);
     let trigger_redraw = window.make_redraw_notifier();
-    let not_do_redraw = w_conf.redraw_only_on_internal_update;
-    let mut do_progress_func = move |pos| {
-        let progress = progress_func(pos);
-        set_progress_callback(progress);
-        if !not_do_redraw {
-            trigger_redraw(Some(draw_func(progress)));
-        }
-    };
-
     let mut left_pressing = false;
+    let progress_func = make_translate_func(w_conf, conf.edge);
+
     window.setup_mouse_event_callback(move |_, event| {
         match event {
             MouseEvent::Press(pos, key) => {
                 if key == BUTTON_PRIMARY {
                     left_pressing = true;
-                    do_progress_func(pos);
+                    let progress = progress_func(pos);
+                    progress_cache.set(progress);
+                    trigger_redraw(Some(draw_func(progress)));
                 }
             }
             MouseEvent::Release(_, key) => {
                 if key == BUTTON_PRIMARY {
                     left_pressing = false;
                 }
-                key_callback(key);
+                if let Some(cb) = event_map.get_mut(&key) {
+                    cb();
+                };
             }
             MouseEvent::Motion(pos) => {
                 if left_pressing {
-                    do_progress_func(pos);
+                    let progress = progress_func(pos);
+                    progress_cache.set(progress);
+                    trigger_redraw(Some(draw_func(progress)));
                 }
             }
             _ => {}
