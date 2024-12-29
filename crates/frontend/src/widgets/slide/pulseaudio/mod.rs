@@ -1,6 +1,6 @@
 use cairo::ImageSurface;
 use gtk::{gdk::BUTTON_SECONDARY, glib};
-use std::{cell::Cell, rc::Rc};
+use std::{cell::Cell, rc::Rc, time::Duration};
 
 use super::base::{draw, event};
 use crate::window::WindowContext;
@@ -40,13 +40,16 @@ fn common(
             draw_conf.borrow_mut().fg_color = fg_color;
 
             let p = progress.get();
-            Some(draw_func(p))
+            let img = draw_func(p);
+
+            Some(img)
         }
     )));
 
     let redraw_signal = window.make_redraw_notifier();
 
     let mute = Rc::new(Cell::new(false));
+    let mut backend_mute_cache = 0.;
     let backend_id = backend::pulseaudio::register_callback(
         glib::clone!(
             #[weak]
@@ -59,6 +62,10 @@ fn common(
                 let mut do_redraw = false;
                 if vinfo.vol != progress.get() {
                     progress.set(vinfo.vol);
+                    do_redraw = true
+                }
+                if vinfo.vol != backend_mute_cache {
+                    backend_mute_cache = vinfo.vol;
                     do_redraw = true
                 }
                 if vinfo.is_muted != mute.get() {
@@ -84,9 +91,30 @@ fn common(
             set_mute(device_clone.clone(), !mute.get());
         }
     };
+    let mut last = None::<Rc<()>>;
     let set_progress_callback = move |p: f64| {
-        progress.set(p);
-        set_vol(device.clone(), p);
+        if let Some(last) = last.take() {
+            drop(last)
+        }
+        let ctx = Rc::new(());
+        let device = device.clone();
+
+        // try debouncing
+        glib::timeout_add_local_once(
+            Duration::from_millis(1),
+            glib::clone!(
+                #[weak]
+                ctx,
+                #[weak]
+                progress,
+                move || {
+                    let _ = ctx;
+                    progress.set(p);
+                    set_vol(device, p);
+                }
+            ),
+        );
+        last = Some(ctx)
     };
     event::setup_event(
         window,
