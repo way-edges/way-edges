@@ -84,8 +84,9 @@ impl HyprListenerCtx {
             data: HyprGlobalData::new(),
         }
     }
-    fn add_cb(&mut self, cb: HyprCallback) -> HyprCallbackId {
+    fn add_cb(&mut self, mut cb: HyprCallback) -> HyprCallbackId {
         let id = self.id_cache;
+        cb(&self.data);
         self.cb.insert(id, cb);
         self.id_cache += 1;
         id
@@ -149,11 +150,10 @@ impl WorkspaceIDToInt for WorkspaceType {
     }
 }
 
-pub fn register_hypr_event_callback(
-    cb: impl FnMut(&HyprGlobalData) + 'static,
-) -> (HyprCallbackId, HyprGlobalData) {
+pub fn register_hypr_event_callback(cb: impl FnMut(&HyprGlobalData) + 'static) -> HyprCallbackId {
+    init_hyprland_listener();
     let hypr = get_hypr_listener();
-    (hypr.add_cb(Box::new(cb)), hypr.data)
+    hypr.add_cb(Box::new(cb))
 }
 
 pub fn unregister_hypr_event_callback(id: HyprCallbackId) {

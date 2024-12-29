@@ -1,6 +1,5 @@
 use super::common::{self, from_value, CommonSize};
 use super::Widget;
-use educe::Educe;
 use gtk::gdk::RGBA;
 use serde::Deserialize;
 use serde_jsonrc::Value;
@@ -9,8 +8,7 @@ use way_edges_derive::GetSize;
 
 pub const NAME: &str = "hyprland-workspace";
 
-#[derive(Educe, Deserialize, GetSize)]
-#[educe(Debug)]
+#[derive(Debug, Deserialize, GetSize)]
 pub struct HyprWorkspaceConfig {
     #[serde(flatten)]
     // flatten does not support `default` yet.
@@ -36,6 +34,9 @@ pub struct HyprWorkspaceConfig {
     #[serde(default)]
     #[serde(deserialize_with = "common::option_color_translate")]
     pub hover_color: Option<RGBA>,
+
+    #[serde(default)]
+    pub invert_direction: bool,
 }
 
 fn dt_gap() -> i32 {

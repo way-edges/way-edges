@@ -62,6 +62,9 @@ impl ToggleAnimation {
         self.base_animation.flip();
         self.direction = to_direction;
     }
+    pub fn flip(&mut self) {
+        self.set_direction(self.direction.not());
+    }
     pub fn progress_abs(&self) -> f64 {
         self.progress()
     }

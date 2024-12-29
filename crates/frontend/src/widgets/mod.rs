@@ -4,6 +4,7 @@ use gtk::{gdk::Monitor, prelude::MonitorExt};
 use crate::window::WindowContext;
 
 mod button;
+mod hypr_workspace;
 mod slide;
 
 fn process_config(conf: &mut config::Config, monitor: &Monitor) {
@@ -59,8 +60,10 @@ pub fn init_widget(
         config::widgets::Widget::Slider(slide_config) => {
             slide::init_widget(&mut window, monitor, conf, *slide_config)
         }
+        config::widgets::Widget::HyprWorkspace(hypr_workspace_config) => {
+            hypr_workspace::init_widget(&mut window, monitor, conf, *hypr_workspace_config)
+        }
         config::widgets::Widget::WrapBox(box_config) => todo!(),
-        config::widgets::Widget::HyprWorkspace(hypr_workspace_config) => todo!(),
     };
 
     window.show();
