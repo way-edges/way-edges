@@ -1,15 +1,11 @@
-use std::collections::HashMap;
-
-use educe::Educe;
 use gtk::gdk::RGBA;
 use serde::{Deserialize, Deserializer};
-use util::{
-    shell::shell_cmd_non_block,
-    template::{
-        arg::TemplateArgFloatProcesser,
-        base::{Template, TemplateProcesser},
-    },
+use util::template::{
+    arg::TemplateArgFloatProcesser,
+    base::{Template, TemplateProcesser},
 };
+
+use crate::widgets::common::KeyEventMap;
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "snake_case", tag = "type")]
@@ -43,31 +39,17 @@ pub struct BacklightConfig {
     pub device: Option<String>,
 }
 
-#[derive(Educe, Deserialize, Default)]
-#[educe(Debug)]
+#[derive(Debug, Deserialize, Default)]
 pub struct CustomConfig {
     #[serde(default)]
     pub interval_update: (u64, String),
 
-    #[educe(Debug(ignore))]
     #[serde(default)]
     #[serde(deserialize_with = "slide_change_template")]
     pub on_change: Option<Template>,
 
-    #[educe(Debug(ignore))]
     #[serde(default)]
     pub event_map: KeyEventMap,
-}
-
-#[derive(Debug, Deserialize, Default)]
-pub struct KeyEventMap(HashMap<u32, String>);
-impl KeyEventMap {
-    pub fn call(&self, k: u32) {
-        if let Some(cmd) = self.0.get(&k) {
-            // PERF: SHOULE THIS BE USE OF CLONING???
-            shell_cmd_non_block(cmd.clone());
-        }
-    }
 }
 
 pub fn slide_change_template<'de, D>(d: D) -> Result<Option<Template>, D::Error>

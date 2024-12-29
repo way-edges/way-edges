@@ -78,7 +78,7 @@ fn interval_update(
     if preset_conf.interval_update.0 > 0 && !preset_conf.interval_update.1.is_empty() {
         let (s, r) = async_channel::bounded(1);
         let cmd = preset_conf.interval_update.1.clone();
-        let runner = interval_task::runner::new_runner(
+        let mut runner = interval_task::runner::new_runner(
             Duration::from_millis(preset_conf.interval_update.0),
             || (),
             move |_| {
@@ -95,10 +95,11 @@ fn interval_update(
                 false
             },
         );
+        runner.start().unwrap();
 
         let redraw_func = window.make_redraw_notifier();
-        let draw_func_weak = Rc::downgrade(&draw_func);
-        let progress_cache_weak = Rc::downgrade(&progress_cache);
+        let draw_func_weak = Rc::downgrade(draw_func);
+        let progress_cache_weak = Rc::downgrade(progress_cache);
         gtk::glib::spawn_future_local(async move {
             while let Ok(progress) = r.recv().await {
                 if let Some(progress_cache) = progress_cache_weak.upgrade() {

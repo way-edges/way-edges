@@ -1,4 +1,4 @@
-use super::common::{self, from_value, CommonSize, EventMap};
+use super::common::{self, from_value, CommonSize, KeyEventMap};
 use super::Widget;
 use educe::Educe;
 use gtk::gdk::RGBA;
@@ -23,10 +23,8 @@ pub struct BtnConfig {
     #[serde(deserialize_with = "common::color_translate")]
     pub border_color: RGBA,
 
-    #[educe(Debug(ignore))]
-    #[serde(default = "common::dt_event_map")]
-    #[serde(deserialize_with = "common::event_map_translate")]
-    pub event_map: EventMap,
+    #[serde(default)]
+    pub event_map: KeyEventMap,
 }
 
 fn dt_color() -> RGBA {

@@ -7,7 +7,7 @@ use config::Config;
 use super::draw::make_draw_func;
 
 pub(super) fn setup_event(window: &mut WindowContext, conf: &Config, btn_conf: &mut BtnConfig) {
-    let mut event_map = std::mem::take(&mut btn_conf.event_map);
+    let event_map = std::mem::take(&mut btn_conf.event_map);
 
     // NOTE: THIS TYPE ANNOTATION IS WEIRD
     window.set_draw_func(None::<fn() -> Option<ImageSurface>>);
@@ -27,9 +27,7 @@ pub(super) fn setup_event(window: &mut WindowContext, conf: &Config, btn_conf: &
         }
 
         if let MouseEvent::Release(_, k) = event {
-            if let Some(cb) = event_map.get_mut(&k) {
-                cb();
-            };
+            event_map.call(k);
         }
         false
     });

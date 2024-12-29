@@ -19,11 +19,9 @@ impl Default for TemplateArgFloatParser {
 }
 impl TemplateArgFloatParser {
     pub fn parse(&self, mut progress: f64) -> String {
-        println!("{progress}");
         if let Some(multiply) = self.multiply {
             progress *= multiply
         }
-        println!("{progress}");
         format!("{:.precision$}", progress, precision = self.precision)
     }
 }

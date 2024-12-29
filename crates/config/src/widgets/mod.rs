@@ -50,12 +50,13 @@ impl<'de> Deserialize<'de> for Widget {
 }
 
 pub mod common {
-    use std::{collections::HashMap, str::FromStr};
+    use std::{collections::HashMap, fmt::Display, str::FromStr};
 
     use gtk::gdk::RGBA;
     use gtk4_layer_shell::Edge;
-    use serde::{self, Deserialize, Deserializer};
+    use serde::{self, de, Deserialize, Deserializer};
     use serde_jsonrc::Value;
+    use util::shell::shell_cmd_non_block;
 
     use crate::common::NumOrRelative;
 
@@ -76,51 +77,39 @@ pub mod common {
         }
     }
 
-    pub type EventMap = HashMap<u32, Task>;
-    pub type Task = Box<dyn FnMut() + Send + Sync>;
-
-    pub fn create_task(value: String) -> Task {
-        use util::shell::shell_cmd_non_block;
-        Box::new(move || {
-            shell_cmd_non_block(value.clone());
-        })
+    #[derive(Debug, Default)]
+    pub struct KeyEventMap(HashMap<u32, String>);
+    impl KeyEventMap {
+        pub fn call(&self, k: u32) {
+            if let Some(cmd) = self.0.get(&k) {
+                // PERF: SHOULE THIS BE USE OF CLONING???
+                shell_cmd_non_block(cmd.clone());
+            }
+        }
     }
-
-    pub fn dt_event_map() -> EventMap {
-        EventMap::new()
+    impl<'de> Deserialize<'de> for KeyEventMap {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            let map: HashMap<u32, String> = de_int_key(deserializer)?;
+            Ok(KeyEventMap(map))
+        }
     }
-
-    pub fn event_map_translate<'de, D>(d: D) -> Result<EventMap, D::Error>
+    fn de_int_key<'de, D, K, V>(deserializer: D) -> Result<HashMap<K, V>, D::Error>
     where
         D: Deserializer<'de>,
+        K: Eq + std::hash::Hash + FromStr,
+        K::Err: Display,
+        V: Deserialize<'de>,
     {
-        fn translate(event_map: Vec<(u32, String)>) -> EventMap {
-            let mut map = EventMap::new();
-            for (key, value) in event_map {
-                map.insert(key, create_task(value));
-            }
-            map
+        let string_map = <HashMap<String, V>>::deserialize(deserializer)?;
+        let mut map = HashMap::with_capacity(string_map.len());
+        for (s, v) in string_map {
+            let k = K::from_str(&s).map_err(de::Error::custom)?;
+            map.insert(k, v);
         }
-        struct EventMapVisitor;
-        impl<'de> serde::de::Visitor<'de> for EventMapVisitor {
-            type Value = EventMap;
-
-            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-                formatter.write_str("vec of tuples: (key: number, command: string)")
-            }
-
-            fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
-            where
-                A: serde::de::SeqAccess<'de>,
-            {
-                let mut event_map = Vec::new();
-                while let Some(v) = seq.next_element::<(u32, String)>()? {
-                    event_map.push(v);
-                }
-                Ok(translate(event_map))
-            }
-        }
-        d.deserialize_any(EventMapVisitor)
+        Ok(map)
     }
 
     pub fn option_color_translate<'de, D>(d: D) -> Result<Option<RGBA>, D::Error>
