@@ -37,9 +37,11 @@ pub fn init_widget(
         }
     )));
 
+    let redraw_signal = window.make_redraw_notifier();
     let backend_id = backend::hypr_workspace::register_hypr_event_callback(move |data| {
         hypr_data.set(*data);
         workspace_transition.borrow_mut().flip();
+        redraw_signal(None)
     });
 
     struct HyprWorkspaceCtx(u32);
