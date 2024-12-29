@@ -52,5 +52,5 @@ pub fn init_widget(
     }
     window.bind_context(HyprWorkspaceCtx(backend_id));
 
-    event::setup_event(window, &conf, &mut w_conf, hover_data);
+    event::setup_event(window, hover_data);
 }

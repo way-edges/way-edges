@@ -1,5 +1,4 @@
 use backend::hypr_workspace::change_to_workspace;
-use config::widgets::hypr_workspace::HyprWorkspaceConfig;
 use gtk::gdk::BUTTON_PRIMARY;
 use gtk4_layer_shell::Edge;
 use util::binary_search_within_range;
@@ -70,14 +69,8 @@ impl HoverData {
 
 use crate::mouse_state::MouseEvent;
 use crate::window::WindowContext;
-use config::Config;
 
-pub(super) fn setup_event(
-    window: &mut WindowContext,
-    conf: &Config,
-    w_conf: &mut HyprWorkspaceConfig,
-    hover_data: HoverDataRc,
-) {
+pub(super) fn setup_event(window: &mut WindowContext, hover_data: HoverDataRc) {
     window.setup_mouse_event_callback(move |_, event| {
         let mut should_redraw = false;
         macro_rules! hhh {

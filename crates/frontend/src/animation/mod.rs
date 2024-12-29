@@ -66,7 +66,7 @@ impl ToggleAnimation {
         self.set_direction(self.direction.not());
     }
     pub fn progress_abs(&self) -> f64 {
-        self.progress()
+        self.base_animation.progress()
     }
     pub fn is_in_progress(&self) -> bool {
         let p = self.progress();
