@@ -4,6 +4,7 @@ use std::{
     thread,
 };
 
+use backend::get_main_runtime_handle;
 use gio::{
     glib::{self},
     prelude::{ApplicationExt, ApplicationExtManual},
@@ -12,10 +13,7 @@ use gio::{
 use gtk::Application;
 use log::debug;
 
-use crate::{
-    activate::{GroupMapCtx, GroupMapCtxRc},
-    get_main_runtime_handle,
-};
+use crate::activate::{GroupMapCtx, GroupMapCtxRc};
 use util::notify_send;
 
 fn monitor_change_cb(group_map: &GroupMapCtxRc, app: &gtk::Application) -> bool {

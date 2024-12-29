@@ -2,10 +2,9 @@ use cairo::ImageSurface;
 use gtk::glib;
 use std::{cell::Cell, rc::Rc};
 
-use super::base::event;
+use super::base::{draw, event};
 use crate::window::WindowContext;
 
-use backend::backlight::set_backlight;
 use config::{
     widgets::slide::{base::SlideConfig, preset::BacklightConfig},
     Config,
@@ -17,16 +16,25 @@ pub fn preset(
     mut w_conf: SlideConfig,
     mut preset_conf: BacklightConfig,
 ) {
+    // NOTE: THIS TYPE ANNOTATION IS WEIRD
+    window.set_draw_func(None::<fn() -> Option<ImageSurface>>);
+
     let device = preset_conf.device.take();
 
     let progress = Rc::new(Cell::new(0.));
     let redraw_signal = window.make_redraw_notifier();
+
+    let (_, draw_func) = draw::make_draw_func(&w_conf, config.edge);
+
+    let draw_func = Rc::new(draw_func);
 
     let mut backend_cache = 0.;
     let backend_id = backend::backlight::register_callback(
         glib::clone!(
             #[weak]
             progress,
+            #[weak]
+            draw_func,
             move |p| {
                 let mut do_redraw = false;
                 if p != progress.get() {
@@ -38,7 +46,7 @@ pub fn preset(
                     do_redraw = true
                 }
                 if do_redraw {
-                    redraw_signal(None)
+                    redraw_signal(Some(draw_func(p)))
                 }
             }
         ),
@@ -49,7 +57,7 @@ pub fn preset(
     // event
     let set_progress_callback = move |p: f64| {
         let device = device.clone();
-        set_backlight(device, p).unwrap();
+        backend::backlight::dbus::set_backlight(device, p);
     };
     event::setup_event(
         window,
@@ -57,7 +65,7 @@ pub fn preset(
         &mut w_conf,
         None::<fn(u32)>,
         set_progress_callback,
-        None::<Rc<fn(f64) -> ImageSurface>>,
+        Some(draw_func),
     );
 
     // drop
