@@ -36,13 +36,10 @@ fn common(
         progress,
         move || {
             let mute_y = mute_animation.borrow_mut().progress();
-            println!("draw: {:?}", mute_y);
-
             let fg_color = color_transition(non_mute_color, mute_color, mute_y as f32);
             draw_conf.borrow_mut().fg_color = fg_color;
 
             let p = progress.get();
-
             Some(draw_func(p))
         }
     )));
@@ -65,7 +62,6 @@ fn common(
                     do_redraw = true
                 }
                 if vinfo.is_muted != mute.get() {
-                    println!("shit");
                     mute.set(vinfo.is_muted);
                     mute_animation
                         .borrow_mut()
