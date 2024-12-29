@@ -84,10 +84,10 @@ pub(super) fn init_watcher() -> Receiver<Arc<String>> {
     r
 }
 
-pub fn watch(p: &Path, name: Arc<String>) {
+pub(super) fn watch(p: &Path, name: Arc<String>) {
     get_watcher().watch(p, name.clone());
 }
 
-pub fn unwatch(p: &Path) {
+pub(super) fn unwatch(p: &Path) {
     get_watcher().unwatch(p);
 }

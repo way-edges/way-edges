@@ -56,6 +56,7 @@ pub fn preset(
 
     // event
     let set_progress_callback = move |p: f64| {
+        progress.set(p);
         let device = device.clone();
         backend::backlight::dbus::set_backlight(device, p);
     };
