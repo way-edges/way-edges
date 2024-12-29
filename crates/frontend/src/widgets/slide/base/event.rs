@@ -49,7 +49,7 @@ pub fn setup_event(
     window: &mut WindowContext,
     conf: &Config,
     w_conf: &mut SlideConfig,
-    mut key_callback: impl FnMut(u32) + 'static,
+    mut key_callback: Option<impl FnMut(u32) + 'static>,
     mut set_progress_callback: impl FnMut(f64) + 'static,
     draw_func: Option<Rc<impl 'static + Fn(f64) -> ImageSurface>>,
 ) {
@@ -79,7 +79,9 @@ pub fn setup_event(
                 if key == BUTTON_PRIMARY {
                     left_pressing = false;
                 }
-                key_callback(key);
+                if let Some(key_callback) = &mut key_callback {
+                    key_callback(key);
+                }
             }
             MouseEvent::Motion(pos) => {
                 if left_pressing {

@@ -1,3 +1,4 @@
+mod backlight;
 mod base;
 mod custom;
 mod pulseaudio;
@@ -19,7 +20,9 @@ pub fn init_widget(
     use config::widgets::slide::preset::Preset;
 
     match std::mem::take(&mut w_conf.preset) {
-        Preset::Backlight(backlight_config) => todo!(),
+        Preset::Backlight(backlight_config) => {
+            backlight::preset(window, &config, w_conf, backlight_config)
+        }
         Preset::Speaker(pulse_audio_config) => {
             pulseaudio::speaker(window, &config, w_conf, pulse_audio_config)
         }

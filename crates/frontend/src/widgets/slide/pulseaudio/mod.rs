@@ -120,7 +120,7 @@ fn common(
         window,
         config,
         &mut w_conf,
-        key_callback,
+        Some(key_callback),
         set_progress_callback,
         None::<Rc<fn(f64) -> ImageSurface>>,
     );
