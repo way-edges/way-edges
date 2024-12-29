@@ -74,7 +74,12 @@ fn draw_common_horizontal(
     let border_width = conf.thickness as f64 / 10.;
 
     // let a: Vec<(f64, RGBA)> = (1..=data.max_workspace).map(|id| {
-    (1..=data.max_workspace).for_each(|id| {
+    let sorted = if conf.invert_direction {
+        1..=data.max_workspace
+    } else {
+        data.max_workspace..=1
+    };
+    sorted.for_each(|id| {
         // size and color
         let (length, mut color) = if id == data.current_workspace {
             (
@@ -131,32 +136,15 @@ fn draw_common_horizontal(
 }
 
 fn draw_horizontal(conf: &DrawCore, data: HyprGlobalData, hover_data: HoverDataRc) -> ImageSurface {
-    let common = draw_common_horizontal(conf, data, hover_data);
-    if conf.invert_direction {
-        let surf = new_surface((common.width(), common.height()));
-        let ctx = Context::new(&surf).unwrap();
-        ctx.rotate(180.0_f64.to_radians());
-        ctx.translate(-common.width() as f64, -common.height() as f64);
-        ctx.set_source_surface(&common, Z, Z).unwrap();
-        ctx.paint().unwrap();
-
-        surf
-    } else {
-        common
-    }
+    draw_common_horizontal(conf, data, hover_data)
 }
 
 fn draw_vertical(conf: &DrawCore, data: HyprGlobalData, hover_data: HoverDataRc) -> ImageSurface {
     let common = draw_common_horizontal(conf, data, hover_data);
-    let surf = new_surface((common.width(), common.height()));
+    let surf = new_surface((common.height(), common.width()));
     let ctx = Context::new(&surf).unwrap();
-    if conf.invert_direction {
-        ctx.rotate(-90.0_f64.to_radians());
-        ctx.translate(-conf.length as f64, Z);
-    } else {
-        ctx.rotate(90.0_f64.to_radians());
-        ctx.translate(0., -conf.length as f64);
-    }
+    ctx.rotate(90.0_f64.to_radians());
+    ctx.translate(0., -conf.thickness as f64);
     ctx.set_source_surface(&common, Z, Z).unwrap();
     ctx.paint().unwrap();
     surf
