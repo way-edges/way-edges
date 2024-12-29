@@ -9,12 +9,16 @@ use crate::frame::FrameManager;
 pub(super) struct WindowFrameManager {
     pub(super) animation_list: AnimationListRc,
     pub(super) base: FrameManager,
+
+    animation_finished: bool,
 }
 impl WindowFrameManager {
     pub(super) fn new(frame_rate: u64, animation_list: AnimationListRc) -> Self {
         Self {
             animation_list,
             base: FrameManager::new(frame_rate),
+
+            animation_finished: true,
         }
     }
     // pub(super) fn refresh_animations(&self) {
@@ -26,6 +30,12 @@ impl WindowFrameManager {
             .borrow_mut()
             .refresh_and_has_in_progress()
         {
+            self.base.start(darea);
+            if self.animation_finished {
+                self.animation_finished = false
+            }
+        } else if !self.animation_finished {
+            self.animation_finished = true;
             self.base.start(darea);
         } else {
             self.base.stop();
