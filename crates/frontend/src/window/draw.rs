@@ -1,5 +1,4 @@
-use std::cell::UnsafeCell;
-use std::rc::{Rc, Weak};
+use std::rc::Rc;
 
 use cairo::{ImageSurface, RectangleInt, Region};
 use config::common::NumOrRelative;
@@ -8,40 +7,11 @@ use gtk::prelude::{DrawingAreaExt, DrawingAreaExtManual, NativeExt, SurfaceExt, 
 use gtk::{glib, DrawingArea};
 use gtk4_layer_shell::Edge;
 use paste::paste;
-use util::draw::new_surface;
 use util::{rc_func, Z};
 
+use crate::buffer::Buffer;
+
 use super::context::WindowContext;
-
-pub(super) struct BufferWeak(Weak<UnsafeCell<ImageSurface>>);
-impl glib::clone::Upgrade for BufferWeak {
-    type Strong = Buffer;
-    fn upgrade(&self) -> Option<Self::Strong> {
-        self.0.upgrade().map(Buffer)
-    }
-}
-
-#[derive(Clone)]
-pub(super) struct Buffer(Rc<UnsafeCell<ImageSurface>>);
-impl Default for Buffer {
-    fn default() -> Self {
-        Self(Rc::new(UnsafeCell::new(new_surface((0, 0)))))
-    }
-}
-impl glib::clone::Downgrade for Buffer {
-    type Weak = BufferWeak;
-    fn downgrade(&self) -> Self::Weak {
-        BufferWeak(self.0.downgrade())
-    }
-}
-impl Buffer {
-    fn update_buffer(&self, new: ImageSurface) {
-        unsafe { *self.0.get().as_mut().unwrap() = new }
-    }
-    fn get_buffer(&self) -> &ImageSurface {
-        unsafe { self.0.get().as_ref().unwrap() }
-    }
-}
 
 fn update_buffer_and_area_size(
     buffer: &Buffer,

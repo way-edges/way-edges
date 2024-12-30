@@ -24,7 +24,7 @@ impl Default for Preset {
 #[derive(Debug, Deserialize)]
 pub struct PulseAudioConfig {
     #[serde(default = "default_mute_color")]
-    #[serde(deserialize_with = "super::common::color_translate")]
+    #[serde(deserialize_with = "super::super::common::color_translate")]
     pub mute_color: RGBA,
     pub device: Option<String>,
 }

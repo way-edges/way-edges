@@ -4,19 +4,15 @@ pub mod tray;
 
 use std::str::FromStr;
 
-use educe::Educe;
 use gtk::gdk::RGBA;
 use ring::RingConfig;
-use serde::{Deserialize, Deserializer};
-use serde_jsonrc::{Map, Value};
+use serde::Deserialize;
 use text::TextConfig;
 use tray::TrayConfig;
 
-use super::common::from_value;
-use super::Widget;
-
 pub const NAME: &str = "box";
 
+// =================================== OUTLOOK
 #[derive(Debug, Deserialize)]
 pub struct OutlookWindowConfig {
     #[serde(default = "dt_margins")]
@@ -28,6 +24,16 @@ pub struct OutlookWindowConfig {
     pub border_radius: f64,
     #[serde(default = "dt_border_width")]
     pub border_width: i32,
+}
+impl Default for OutlookWindowConfig {
+    fn default() -> Self {
+        Self {
+            margins: dt_margins(),
+            color: dt_color(),
+            border_radius: dt_radius(),
+            border_width: dt_border_width(),
+        }
+    }
 }
 fn dt_margins() -> Option<[i32; 4]> {
     Some([5, 5, 5, 5])
@@ -43,16 +49,17 @@ fn dt_border_width() -> i32 {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "snake_case", tag = "type")]
 pub enum Outlook {
     Window(OutlookWindowConfig),
 }
-
-#[derive(Debug)]
-pub struct BoxedWidgetConfig {
-    pub index: [isize; 2],
-    pub widget: BoxedWidget,
+impl Default for Outlook {
+    fn default() -> Self {
+        Self::Window(OutlookWindowConfig::default())
+    }
 }
 
+// =================================== GRID
 #[derive(Deserialize, Debug, Default, Clone, Copy)]
 #[serde(rename_all = "snake_case")]
 pub enum Align {
@@ -126,115 +133,36 @@ impl Align {
     }
 }
 
-#[derive(Deserialize, Debug)]
-pub struct BoxSelf {
-    // grid
-    #[serde(default = "dt_gap")]
-    pub gap: f64,
-    #[serde(default)]
-    pub align: Align,
-}
-
-fn dt_gap() -> f64 {
-    10.
-}
-
-#[derive(Debug)]
-pub struct BoxConfig {
-    pub widgets: Vec<BoxedWidgetConfig>,
-    pub box_conf: BoxSelf,
-    pub outlook: Option<Outlook>,
-}
-
-pub fn visit_config(d: Value) -> Result<Widget, String> {
-    if !d.is_object() {
-        return Err("Box must be object".to_string());
-    }
-
-    let widgets = {
-        let ws = d
-            .get("widgets")
-            .unwrap_or(&Value::Array(vec![]))
-            .as_array()
-            .ok_or("Widgets must be array")?
-            .clone();
-        ws.into_iter()
-            .map(|v| {
-                if !v.is_object() {
-                    return Err("Widget must be object".to_string());
-                }
-                let index = {
-                    let v = v.get("index").ok_or("index must be specified")?.clone();
-                    from_value::<[isize; 2]>(v)?
-                };
-                let widget = {
-                    let wv = v.get("widget").ok_or("widget must be specified")?.clone();
-                    serde_jsonrc::from_value(wv).map_err(|e| format!("widget parse error {e}"))?
-                };
-                Ok(BoxedWidgetConfig { index, widget })
-            })
-            .collect::<Result<Vec<BoxedWidgetConfig>, String>>()?
-    };
-
-    let outlook = {
-        const OUTLOOK_WINDOW: &str = "window";
-        let obj = d
-            .get("outlook")
-            .unwrap_or(&Value::Object(Map::new()))
-            .clone();
-        let ol = {
-            obj.as_object()
-                .ok_or("Outlook Must be object")?
-                .get("type")
-                .cloned()
-                .unwrap_or(Value::String(OUTLOOK_WINDOW.to_string()))
-                .as_str()
-                .ok_or("Outlook type must be string")?
-                .to_string()
-        };
-        match ol.as_str() {
-            OUTLOOK_WINDOW => Outlook::Window(from_value::<OutlookWindowConfig>(obj)?),
-            _ => {
-                return Err(format!("Invalid outlook {}", ol));
-            }
-        }
-    };
-
-    let box_conf = from_value::<BoxSelf>(d)?;
-
-    Ok(Widget::WrapBox(Box::new(BoxConfig {
-        widgets,
-        box_conf,
-        outlook: Some(outlook),
-    })))
-}
-
-#[derive(Educe)]
-#[educe(Debug)]
+// =================================== WIDGETS
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "snake_case", tag = "type")]
 pub enum BoxedWidget {
     Ring(Box<RingConfig>),
     Text(Box<TextConfig>),
     Tray(Box<TrayConfig>),
 }
 
-impl<'de> Deserialize<'de> for BoxedWidget {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let raw = serde_jsonrc::value::Value::deserialize(deserializer)?;
+#[derive(Debug, Deserialize)]
+pub struct BoxedWidgetConfig {
+    pub index: [isize; 2],
+    pub widget: BoxedWidget,
+}
 
-        if !raw.is_object() {
-            return Err(serde::de::Error::custom("Widget must be object"));
-        }
-        let t = raw
-            .get("type")
-            .ok_or(serde::de::Error::missing_field("type"))?
-            .as_str()
-            .ok_or(serde::de::Error::custom("widget type must be string"))?;
+// =================================== FINAL
+#[derive(Debug, Deserialize)]
+pub struct BoxConfig {
+    #[serde(default)]
+    pub outlook: Outlook,
+    #[serde(default)]
+    pub widgets: Vec<BoxedWidgetConfig>,
 
-        super::match_widget!(t, raw, ring, text, tray)
-    }
+    #[serde(default = "dt_gap")]
+    pub gap: f64,
+    #[serde(default)]
+    pub align: Align,
+}
+fn dt_gap() -> f64 {
+    10.
 }
 
 pub mod common {

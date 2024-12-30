@@ -1,12 +1,8 @@
-use super::common::{self, from_value, CommonSize};
-use super::Widget;
+use super::common::{self, CommonSize};
 use gtk::gdk::RGBA;
 use serde::Deserialize;
-use serde_jsonrc::Value;
 use std::str::FromStr;
 use way_edges_derive::GetSize;
-
-pub const NAME: &str = "hyprland-workspace";
 
 #[derive(Debug, Deserialize, GetSize)]
 pub struct HyprWorkspaceConfig {
@@ -54,9 +50,4 @@ fn dt_deactive_color() -> RGBA {
 }
 fn dt_active_color() -> RGBA {
     RGBA::from_str("#669bbc").unwrap()
-}
-
-pub fn visit_config(d: Value) -> Result<Widget, String> {
-    let c = from_value::<HyprWorkspaceConfig>(d)?;
-    Ok(Widget::HyprWorkspace(Box::new(c)))
 }

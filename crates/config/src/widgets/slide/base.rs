@@ -6,7 +6,7 @@ use serde::Deserialize;
 use way_edges_derive::GetSize;
 
 use super::{
-    common::{self, CommonSize},
+    super::common::{self, CommonSize},
     preset::Preset,
 };
 

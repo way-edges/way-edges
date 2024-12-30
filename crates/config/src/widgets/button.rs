@@ -1,13 +1,9 @@
-use super::common::{self, from_value, CommonSize, KeyEventMap};
-use super::Widget;
+use super::common::{self, CommonSize, KeyEventMap};
 use educe::Educe;
 use gtk::gdk::RGBA;
 use serde::Deserialize;
-use serde_jsonrc::Value;
 use std::str::FromStr;
 use way_edges_derive::GetSize;
-
-pub const NAME: &str = "btn";
 
 #[derive(Educe, Deserialize, GetSize)]
 #[educe(Debug)]
@@ -35,8 +31,4 @@ fn dt_border_width() -> i32 {
 }
 fn dt_border_color() -> RGBA {
     RGBA::BLACK
-}
-pub fn visit_config(d: Value) -> Result<Widget, String> {
-    let c = from_value::<BtnConfig>(d)?;
-    Ok(Widget::Btn(Box::new(c)))
 }

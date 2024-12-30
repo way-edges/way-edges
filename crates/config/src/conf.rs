@@ -58,7 +58,7 @@ struct ConfigShadow {
     #[serde(default = "dt_preview_size")]
     pub preview_size: NumOrRelative,
 
-    pub widget: Option<Widget>,
+    pub widget: Widget,
 }
 
 impl From<ConfigShadow> for Config {
@@ -76,7 +76,7 @@ impl From<ConfigShadow> for Config {
             margins: value.margins,
             monitor: value.monitor,
             name: value.name,
-            widget: value.widget,
+            widget: Some(value.widget),
             ignore_exclusive: value.ignore_exclusive,
             transition_duration: value.transition_duration,
             frame_rate: value.frame_rate,

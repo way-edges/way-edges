@@ -1,41 +1,22 @@
 use std::str::FromStr;
 
-use util::shell::shell_cmd;
-
-use super::{common::Template, BoxedWidget};
-use crate::widgets::common::{color_translate, from_value};
-use educe::Educe;
+use super::common::Template;
+use crate::widgets::common::color_translate;
 use gtk::gdk::RGBA;
-use serde::{Deserialize, Deserializer};
-use serde_jsonrc::Value;
+use serde::Deserialize;
 
-pub const NAME: &str = "ring";
-
-#[derive(Debug)]
+#[derive(Debug, Deserialize)]
 pub enum RingPreset {
     Ram,
     Swap,
     Cpu,
     Battery,
-    Disk(String),
-    Custom(RingCustom),
+    Disk { partition: String },
+    Custom { interval_update: (u64, String) },
 }
 
-// pub type UpdateTask = Box<dyn Send + FnMut() -> Result<(f64, Option<String>), String>>;
-pub type UpdateTask = Box<dyn Send + FnMut() -> Result<f64, String>>;
-
-#[derive(Deserialize, Educe)]
-#[educe(Debug)]
-pub struct RingCustom {
-    #[educe(Debug(ignore))]
-    #[serde(default)]
-    #[serde(deserialize_with = "update_task_interval")]
-    pub update_with_interval_ms: Option<(u64, UpdateTask)>,
-}
-
-#[derive(Deserialize, Educe)]
-#[educe(Debug)]
-pub struct RingCommon {
+#[derive(Deserialize, Debug)]
+pub struct RingConfigShadow {
     #[serde(default = "dt_r")]
     pub radius: f64,
     #[serde(default = "dt_rw")]
@@ -64,7 +45,9 @@ pub struct RingCommon {
     #[serde(default)]
     pub font_family: Option<String>,
     #[serde(default)]
-    pub font_size: Option<f64>,
+    pub font_size: Option<i32>,
+
+    pub preset: RingPreset,
 }
 
 fn dt_r() -> f64 {
@@ -83,92 +66,45 @@ fn dt_tt() -> u64 {
     100
 }
 
-#[derive(Debug)]
+impl From<RingConfigShadow> for RingConfig {
+    fn from(value: RingConfigShadow) -> Self {
+        let font_size = value.font_size.unwrap_or((value.radius * 2.) as i32);
+        Self {
+            radius: value.radius,
+            ring_width: value.ring_width,
+            bg_color: value.bg_color,
+            fg_color: value.fg_color,
+            frame_rate: value.frame_rate,
+            text_transition_ms: value.text_transition_ms,
+            prefix: value.prefix,
+            prefix_hide: value.prefix_hide,
+            suffix: value.suffix,
+            suffix_hide: value.suffix_hide,
+            font_family: value.font_family,
+            font_size,
+            preset: value.preset,
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(from = "RingConfigShadow")]
 pub struct RingConfig {
-    pub common: RingCommon,
+    pub radius: f64,
+    pub ring_width: f64,
+    pub bg_color: RGBA,
+    pub fg_color: RGBA,
+
+    pub frame_rate: Option<i32>,
+    pub text_transition_ms: u64,
+
+    pub prefix: Option<Template>,
+    pub prefix_hide: bool,
+    pub suffix: Option<Template>,
+    pub suffix_hide: bool,
+
+    pub font_family: Option<String>,
+    pub font_size: i32,
+
     pub preset: RingPreset,
-}
-unsafe impl Send for RingConfig {}
-unsafe impl Sync for RingConfig {}
-impl Drop for RingConfig {
-    fn drop(&mut self) {
-        log::info!("Dropping RingConfig");
-    }
-}
-
-pub fn visit_config(d: Value) -> Result<BoxedWidget, String> {
-    let preset = {
-        let preset = d.get("preset").ok_or("Ring preset not provided")?;
-        let preset_type = {
-            if let Some(s) = preset.as_str() {
-                s
-            } else {
-                preset
-                    .as_object()
-                    .ok_or("Preset must be a string or object")?
-                    .get("type")
-                    .ok_or("Preset type not provided")?
-                    .as_str()
-                    .ok_or("Preset type must be a string")?
-            }
-        };
-        match preset_type {
-            "ram" => RingPreset::Ram,
-            "swap" => RingPreset::Swap,
-            "cpu" => RingPreset::Cpu,
-            "battery" => RingPreset::Battery,
-            "disk" => {
-                let partition = preset
-                    .get("partition")
-                    .unwrap_or(&Value::String("/".to_string()))
-                    .as_str()
-                    .ok_or("partition must be string")?
-                    .to_string();
-                RingPreset::Disk(partition)
-            }
-            "custom" => RingPreset::Custom(from_value::<RingCustom>(preset.clone())?),
-            _ => {
-                return Err(format!("Unknown preset type: {preset_type}"));
-            }
-        }
-    };
-    let mut common = from_value::<RingCommon>(d)?;
-
-    if common.font_size.is_none() {
-        common.font_size = Some(common.radius * 2.);
-    }
-    Ok(BoxedWidget::Ring(Box::new(RingConfig { common, preset })))
-}
-
-fn update_task_interval<'de, D>(d: D) -> Result<Option<(u64, UpdateTask)>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    struct EventMapVisitor;
-    impl<'de> serde::de::Visitor<'de> for EventMapVisitor {
-        type Value = Option<(u64, UpdateTask)>;
-
-        fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
-        where
-            A: serde::de::SeqAccess<'de>,
-        {
-            let ms = seq.next_element()?.unwrap();
-            let ut = seq.next_element()?.unwrap();
-            Ok(Some((ms, create_update_task(ut))))
-        }
-
-        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-            formatter.write_str("vec of tuples: (key: number, command: string)")
-        }
-    }
-    d.deserialize_any(EventMapVisitor)
-}
-fn create_update_task(value: String) -> UpdateTask {
-    Box::new(move || {
-        let a = shell_cmd(&value)?;
-        let trimed = a.trim();
-        trimed
-            .parse::<f64>()
-            .map_err(|e| format!("Fail to parse result({a}) to f64: {e}"))
-    })
 }

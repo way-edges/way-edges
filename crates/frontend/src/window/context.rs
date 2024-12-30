@@ -1,7 +1,7 @@
 use std::{cell::Cell, rc::Rc};
 
 use super::{
-    draw::{make_base_draw_func, make_max_size_func, BaseDrawFunc, Buffer, MaxSizeFunc},
+    draw::{make_base_draw_func, make_max_size_func, BaseDrawFunc, MaxSizeFunc},
     event::{WindowPopState, WindowPopStateRc},
     frame::{WindowFrameManager, WindowFrameManagerRc},
 };
@@ -15,6 +15,7 @@ use gtk4_layer_shell::LayerShell;
 
 use crate::{
     animation::{AnimationList, ToggleAnimationRc},
+    buffer::Buffer,
     mouse_state::{self, MouseStateRc},
 };
 

@@ -6,6 +6,7 @@ use crate::window::WindowContext;
 mod button;
 mod hypr_workspace;
 mod slide;
+mod wrapbox;
 
 fn process_config(conf: &mut config::Config, monitor: &Monitor) {
     let geom = monitor.geometry();
@@ -55,13 +56,13 @@ pub fn init_widget(
 
     match conf.widget.take().unwrap() {
         config::widgets::Widget::Btn(btn_config) => {
-            button::init_widget(&mut window, monitor, conf, *btn_config)
+            button::init_widget(&mut window, monitor, conf, btn_config)
         }
         config::widgets::Widget::Slider(slide_config) => {
-            slide::init_widget(&mut window, monitor, conf, *slide_config)
+            slide::init_widget(&mut window, monitor, conf, slide_config)
         }
         config::widgets::Widget::HyprWorkspace(hypr_workspace_config) => {
-            hypr_workspace::init_widget(&mut window, monitor, conf, *hypr_workspace_config)
+            hypr_workspace::init_widget(&mut window, monitor, conf, hypr_workspace_config)
         }
         config::widgets::Widget::WrapBox(box_config) => todo!(),
     };
