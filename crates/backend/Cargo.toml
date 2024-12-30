@@ -17,12 +17,10 @@ system-tray.workspace = true
 
 
 get_sys_info = "0.1"
-hyprland = { version = "0.4.0-beta.1", default-features = false, features = [
+hyprland = { version = "0.4.0-beta.2", default-features = false, features = [
   "data",
   "tokio",
   "listener",
-  "unsafe-impl",
-  "async-lite",
 ] }
 
 libpulse-binding = "2.28"
