@@ -1,7 +1,7 @@
 use config::widgets::wrapbox::{Align, AlignFunc};
 
 use super::{
-    item::{GridItem, GridItemMap},
+    item::{GridItemContent, GridItemMap},
     GridBox,
 };
 
@@ -9,7 +9,7 @@ pub struct GrideBoxBuilder<T> {
     ws: Vec<Vec<Option<T>>>,
     row_col_num: (usize, usize),
 }
-impl<T: Clone> GrideBoxBuilder<T> {
+impl<T: Clone + GridItemContent> GrideBoxBuilder<T> {
     pub fn new() -> Self {
         Self {
             ws: vec![],
@@ -74,7 +74,7 @@ impl<T: Clone> GrideBoxBuilder<T> {
             let mut col_index = 0;
             for widget in row.into_iter().flatten() {
                 col_index += 1;
-                items.push(GridItem::new(widget));
+                items.push(widget);
             }
 
             if col_index > 0 {

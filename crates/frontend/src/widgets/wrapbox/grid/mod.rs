@@ -1,9 +1,9 @@
 pub mod builder;
-mod item;
+pub mod item;
 
 use config::widgets::wrapbox::{Align, AlignFunc};
 use gtk::gdk::cairo::{self, Format, ImageSurface};
-use item::GridItemMap;
+use item::{GridItemContent, GridItemMap};
 use util::binary_search_within_range;
 
 #[derive(Debug)]
@@ -14,7 +14,7 @@ struct GridPositionMap {
     widget_start_point_list: Vec<(f64, f64)>,
 }
 impl GridPositionMap {
-    fn match_item<'a, T>(
+    fn match_item<'a, T: GridItemContent>(
         &self,
         pos: (f64, f64),
         item_map: &'a item::GridItemMap<T>,
@@ -40,19 +40,19 @@ impl GridPositionMap {
         let new_position = (pos.0 - start_point.0, pos.1 - start_point.1);
         let widget = &item_map.items[widget_index];
 
-        Some((widget.get_item(), new_position))
+        Some((widget, new_position))
     }
 }
 
 #[derive(Debug)]
-pub struct GridBox<T> {
+pub struct GridBox<T: GridItemContent> {
     position_map: Option<GridPositionMap>,
     item_map: GridItemMap<T>,
     row_col_num: (usize, usize),
     gap: f64,
     align_func: AlignFunc,
 }
-impl<T> GridBox<T> {
+impl<T: GridItemContent> GridBox<T> {
     pub fn new(gap: f64, align: Align) -> Self {
         Self {
             item_map: GridItemMap::default(),
@@ -67,7 +67,7 @@ impl<T> GridBox<T> {
             .as_ref()
             .and_then(|position_map| position_map.match_item(pos, &self.item_map))
     }
-    pub fn draw(&mut self, get_content_func: impl Fn(&T) -> Option<ImageSurface>) -> ImageSurface {
+    pub fn draw(&mut self) -> ImageSurface {
         if self.item_map.row_index.is_empty() {
             return ImageSurface::create(Format::ARgb32, 0, 0).unwrap();
         }
@@ -105,10 +105,7 @@ impl<T> GridBox<T> {
                     let which_col = widget_index - current_row_start_index;
 
                     // get content
-                    if let Some(img) = get_content_func(widget.get_item()) {
-                        widget.update_buffer(img)
-                    }
-                    let content = widget.get_buffer();
+                    let content = widget.draw();
 
                     // calculate size
                     let widget_content_size = (content.width() as f64, content.height() as f64);

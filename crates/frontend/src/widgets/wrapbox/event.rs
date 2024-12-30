@@ -1,19 +1,16 @@
 use std::{cell::RefCell, rc::Rc};
 
-use gtk::DrawingArea;
-
 use crate::{mouse_state::MouseEvent, window::WindowContext};
 
 use super::{
-    box_traits::{BoxedWidgetGrid, BoxedWidgetRc},
-    grid::GridBox,
+    box_traits::{BoxedWidgetCtxRc, BoxedWidgetGrid},
     outlook::OutlookMousePositionTranslateion,
 };
 
 /// last hover widget, for trigger mouse leave option for that widget.
 struct LastWidget {
     press_lock: bool,
-    current_widget: Option<BoxedWidgetRc>,
+    current_widget: Option<BoxedWidgetCtxRc>,
 }
 impl LastWidget {
     fn new() -> Self {
@@ -23,13 +20,13 @@ impl LastWidget {
         }
     }
 
-    fn set_current(&mut self, w: BoxedWidgetRc, pos: (f64, f64)) {
+    fn set_current(&mut self, w: BoxedWidgetCtxRc, pos: (f64, f64)) {
         if self.press_lock {
             return;
         }
 
         if let Some(last) = self.current_widget.take() {
-            if Rc::ptr_eq(&last, &w) {
+            if last == w {
                 // if same widget
                 w.borrow_mut().on_mouse_event(MouseEvent::Motion(pos));
             } else {
@@ -126,7 +123,6 @@ pub fn event_handle(
                         last_widget.dispose_current();
                     }
                 }
-                _ => {}
             };
 
             false
@@ -138,7 +134,7 @@ fn match_item(
     grid_box: &Rc<RefCell<BoxedWidgetGrid>>,
     outlook_mouse_pos: &impl OutlookMousePositionTranslateion,
     pos: (f64, f64),
-) -> Option<(BoxedWidgetRc, (f64, f64))> {
+) -> Option<(BoxedWidgetCtxRc, (f64, f64))> {
     let box_ctx = grid_box.borrow();
 
     let pos = outlook_mouse_pos.translate_mouse_position(pos);
