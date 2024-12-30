@@ -45,7 +45,7 @@ pub struct OutlookWindowConfig {
     #[serde(deserialize_with = "super::common::color_translate")]
     pub color: RGBA,
     #[serde(default = "dt_radius")]
-    pub border_radius: f64,
+    pub border_radius: i32,
     #[serde(default = "dt_border_width")]
     pub border_width: i32,
 }
@@ -62,8 +62,8 @@ impl Default for OutlookWindowConfig {
 fn dt_color() -> RGBA {
     RGBA::from_str("#4d8080").unwrap()
 }
-fn dt_radius() -> f64 {
-    5.
+fn dt_radius() -> i32 {
+    5
 }
 fn dt_border_width() -> i32 {
     15

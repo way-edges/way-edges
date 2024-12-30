@@ -6,6 +6,7 @@ use gtk::gdk::cairo::{self, Format, ImageSurface};
 use item::GridItemMap;
 use util::binary_search_within_range;
 
+#[derive(Debug)]
 struct GridPositionMap {
     // use i32 to save memory
     total_size: (i32, i32),
@@ -43,12 +44,13 @@ impl GridPositionMap {
     }
 }
 
+#[derive(Debug)]
 pub struct GridBox<T> {
     position_map: Option<GridPositionMap>,
     item_map: GridItemMap<T>,
-    pub row_col_num: (usize, usize),
-    pub gap: f64,
-    pub align_func: AlignFunc,
+    row_col_num: (usize, usize),
+    gap: f64,
+    align_func: AlignFunc,
 }
 impl<T> GridBox<T> {
     pub fn new(gap: f64, align: Align) -> Self {
