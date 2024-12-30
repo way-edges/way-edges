@@ -13,10 +13,34 @@ use tray::TrayConfig;
 pub const NAME: &str = "box";
 
 // =================================== OUTLOOK
+#[derive(Debug, Deserialize, Clone)]
+pub struct OutlookMargins {
+    #[serde(default = "dt_margin")]
+    pub left: i32,
+    #[serde(default = "dt_margin")]
+    pub top: i32,
+    #[serde(default = "dt_margin")]
+    pub right: i32,
+    #[serde(default = "dt_margin")]
+    pub bottom: i32,
+}
+fn dt_margin() -> i32 {
+    5
+}
+impl Default for OutlookMargins {
+    fn default() -> Self {
+        Self {
+            left: dt_margin(),
+            top: dt_margin(),
+            right: dt_margin(),
+            bottom: dt_margin(),
+        }
+    }
+}
 #[derive(Debug, Deserialize)]
 pub struct OutlookWindowConfig {
-    #[serde(default = "dt_margins")]
-    pub margins: Option<[i32; 4]>,
+    #[serde(default)]
+    pub margins: OutlookMargins,
     #[serde(default = "dt_color")]
     #[serde(deserialize_with = "super::common::color_translate")]
     pub color: RGBA,
@@ -28,15 +52,12 @@ pub struct OutlookWindowConfig {
 impl Default for OutlookWindowConfig {
     fn default() -> Self {
         Self {
-            margins: dt_margins(),
+            margins: Default::default(),
             color: dt_color(),
             border_radius: dt_radius(),
             border_width: dt_border_width(),
         }
     }
-}
-fn dt_margins() -> Option<[i32; 4]> {
-    Some([5, 5, 5, 5])
 }
 fn dt_color() -> RGBA {
     RGBA::from_str("#4d8080").unwrap()
