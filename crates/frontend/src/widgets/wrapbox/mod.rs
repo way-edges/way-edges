@@ -16,12 +16,7 @@ use gtk::{gdk::Monitor, glib};
 use outlook::init_outlook;
 
 pub fn init_widget(window: &mut WindowContext, _: &Monitor, conf: Config, mut w_conf: BoxConfig) {
-    let widget_builder = BoxWidgetBuilder::new(window);
-    let has_update = widget_builder.has_update.clone();
-    let grid_box = Rc::new(RefCell::new(init_boxed_widgets(
-        &mut w_conf,
-        widget_builder,
-    )));
+    let grid_box = Rc::new(RefCell::new(init_boxed_widgets(window, &mut w_conf)));
 
     let (outlook_mouse_pos, draw_outlook) = init_outlook(w_conf.outlook, &conf);
 
@@ -29,11 +24,7 @@ pub fn init_widget(window: &mut WindowContext, _: &Monitor, conf: Config, mut w_
         #[strong]
         grid_box,
         move || {
-            if !has_update.get() {
-                return None;
-            }
-
-            let content = grid_box.borrow_mut().draw();
+            let content = grid_box.borrow_mut().redraw_if_has_update()?;
             let img = draw_outlook(content);
             Some(img)
         }
@@ -42,33 +33,7 @@ pub fn init_widget(window: &mut WindowContext, _: &Monitor, conf: Config, mut w_
     event::event_handle(window, &grid_box, outlook_mouse_pos);
 }
 
-struct BoxWidgetBuilder<'a> {
-    window: &'a mut WindowContext,
-    has_update: Rc<Cell<bool>>,
-}
-impl<'a> BoxWidgetBuilder<'a> {
-    fn new(window: &'a mut WindowContext) -> Self {
-        Self {
-            window,
-            has_update: Rc::new(Cell::new(false)),
-        }
-    }
-    fn make_redraw_notifier(&self) -> impl Fn() {
-        let window_redraw = self.window.make_redraw_notifier();
-        use gtk::glib;
-        let is_updated = &self.has_update;
-        glib::clone!(
-            #[weak]
-            is_updated,
-            move || {
-                is_updated.set(true);
-                window_redraw(None)
-            }
-        )
-    }
-}
-
-fn init_boxed_widgets(box_conf: &mut BoxConfig, builder: BoxWidgetBuilder) -> BoxedWidgetGrid {
+fn init_boxed_widgets(window: &mut WindowContext, box_conf: &mut BoxConfig) -> BoxedWidgetGrid {
     let mut builder = GrideBoxBuilder::<BoxedWidgetCtxRc>::new();
     let ws = std::mem::take(&mut box_conf.widgets);
 

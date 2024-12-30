@@ -46,6 +46,10 @@ impl BoxedWidgetCtx {
 }
 
 impl GridItemContent for BoxedWidgetCtxRc {
+    fn has_update(&mut self) -> bool {
+        let mut ctx = self.borrow_mut();
+        ctx.animation_list.has_in_progress() || !ctx.did_last_frame || ctx.ctx.has_update()
+    }
     fn draw(&mut self) -> ImageSurface {
         let mut ctx = self.borrow_mut();
 
