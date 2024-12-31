@@ -9,7 +9,7 @@ pub struct GrideBoxBuilder<T> {
     ws: Vec<Vec<Option<T>>>,
     row_col_num: (usize, usize),
 }
-impl<T: Clone + GridItemContent> GrideBoxBuilder<T> {
+impl<T: GridItemContent> GrideBoxBuilder<T> {
     pub fn new() -> Self {
         Self {
             ws: vec![],

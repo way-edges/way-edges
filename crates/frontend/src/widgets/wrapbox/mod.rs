@@ -13,7 +13,7 @@ use crate::{
     animation::{AnimationList, ToggleAnimationRc},
     window::WindowContext,
 };
-use box_traits::{BoxedWidgetCtx, BoxedWidgetCtxRc, BoxedWidgetGrid};
+use box_traits::{BoxedWidgetCtx, BoxedWidgetGrid};
 use config::{widgets::wrapbox::BoxConfig, Config};
 use grid::builder::GrideBoxBuilder;
 use gtk::{gdk::Monitor, glib};
@@ -42,7 +42,7 @@ pub fn init_widget(window: &mut WindowContext, _: &Monitor, conf: Config, mut w_
 }
 
 fn init_boxed_widgets(window: &mut WindowContext, box_conf: &mut BoxConfig) -> BoxedWidgetGrid {
-    let mut builder = GrideBoxBuilder::<BoxedWidgetCtxRc>::new();
+    let mut builder = GrideBoxBuilder::<BoxedWidgetCtx>::new();
     let ws = std::mem::take(&mut box_conf.widgets);
 
     use config::widgets::wrapbox::BoxedWidget;
@@ -57,7 +57,7 @@ fn init_boxed_widgets(window: &mut WindowContext, box_conf: &mut BoxConfig) -> B
             BoxedWidget::Tray(tray_config) => todo!(),
         };
 
-        let boxed_widget_context = box_temporary_ctx.to_boxed_widget_ctx(widget).make_rc();
+        let boxed_widget_context = box_temporary_ctx.to_boxed_widget_ctx(widget);
         builder.add(boxed_widget_context, (w.index[0], w.index[1]));
     });
 

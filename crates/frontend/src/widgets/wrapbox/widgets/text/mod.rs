@@ -49,7 +49,6 @@ fn custom_preset(s: Sender<String>, update_with_interval_ms: (u64, String)) -> R
         Duration::from_millis(time),
         || (),
         move |_| {
-            // ignore fail
             s.force_send(f()).unwrap();
             false
         },
