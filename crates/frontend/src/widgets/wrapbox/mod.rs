@@ -2,14 +2,18 @@ mod box_traits;
 mod event;
 mod grid;
 mod outlook;
+mod widgets;
 
 use std::{
     cell::{Cell, RefCell},
     rc::Rc,
 };
 
-use crate::window::WindowContext;
-use box_traits::{BoxedWidgetCtxRc, BoxedWidgetGrid};
+use crate::{
+    animation::{AnimationList, ToggleAnimationRc},
+    window::WindowContext,
+};
+use box_traits::{BoxedWidgetCtx, BoxedWidgetCtxRc, BoxedWidgetGrid};
 use config::{widgets::wrapbox::BoxConfig, Config};
 use grid::builder::GrideBoxBuilder;
 use gtk::{gdk::Monitor, glib};
@@ -39,14 +43,52 @@ fn init_boxed_widgets(window: &mut WindowContext, box_conf: &mut BoxConfig) -> B
 
     use config::widgets::wrapbox::BoxedWidget;
     ws.into_iter().for_each(|w| {
+        let box_temporary_ctx = BoxTemporaryCtx::new(window);
+
         let widget = match w.widget {
-            BoxedWidget::Ring(ring_config) => todo!(),
             BoxedWidget::Text(text_config) => todo!(),
+            BoxedWidget::Ring(ring_config) => todo!(),
             BoxedWidget::Tray(tray_config) => todo!(),
         };
 
-        builder.add(Rc::new(RefCell::new(widget)), (w.index[0], w.index[1]));
+        let boxed_widget_context = box_temporary_ctx.to_boxed_widget_ctx(widget).make_rc();
+        builder.add(boxed_widget_context, (w.index[0], w.index[1]));
     });
 
     builder.build(box_conf.gap, box_conf.align)
+}
+
+struct BoxTemporaryCtx<'a> {
+    window: &'a mut WindowContext,
+    animation_list: AnimationList,
+    has_update: Rc<Cell<bool>>,
+}
+impl<'a> BoxTemporaryCtx<'a> {
+    fn new(window: &'a mut WindowContext) -> Self {
+        Self {
+            window,
+            animation_list: AnimationList::new(),
+            has_update: Rc::new(Cell::new(false)),
+        }
+    }
+    fn new_animation(&mut self, time_cost: u64) -> ToggleAnimationRc {
+        self.animation_list.new_transition(time_cost)
+    }
+    fn new_redraw_signal(&mut self) -> impl Fn() {
+        let func = self.window.make_redraw_notifier();
+        let has_update = &self.has_update;
+        glib::clone!(
+            #[weak]
+            has_update,
+            move || {
+                has_update.set(true);
+                func(None)
+            }
+        )
+    }
+
+    fn to_boxed_widget_ctx(self, ctx: impl box_traits::BoxedWidget + 'static) -> BoxedWidgetCtx {
+        self.window.extend_animation_list(&self.animation_list);
+        BoxedWidgetCtx::new(ctx, self.animation_list, self.has_update)
+    }
 }

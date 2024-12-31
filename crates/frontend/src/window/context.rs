@@ -144,6 +144,14 @@ impl WindowContext {
             .borrow_mut()
             .new_transition(time_cost)
     }
+
+    pub fn extend_animation_list(&self, list: &AnimationList) {
+        self.frame_manager
+            .borrow_mut()
+            .animation_list
+            .borrow_mut()
+            .extend_list(list);
+    }
 }
 
 impl Drop for WindowContext {

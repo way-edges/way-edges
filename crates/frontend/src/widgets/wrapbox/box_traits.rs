@@ -1,4 +1,4 @@
-use std::{fmt::Debug, rc::Rc};
+use std::{cell::Cell, fmt::Debug, rc::Rc};
 
 use cairo::ImageSurface;
 use way_edges_derive::wrap_rc;
@@ -10,9 +10,6 @@ use super::grid::{item::GridItemContent, GridBox};
 pub type BoxedWidgetGrid = GridBox<BoxedWidgetCtxRc>;
 
 pub trait BoxedWidget: Debug {
-    fn has_update(&mut self) -> bool {
-        false
-    }
     fn content(&mut self) -> ImageSurface;
     fn on_mouse_event(&mut self, _: MouseEvent) {}
 }
@@ -24,14 +21,20 @@ pub struct BoxedWidgetCtx {
     animation_list: AnimationList,
     did_last_frame: bool,
     buffer: Buffer,
+    has_update: Rc<Cell<bool>>,
 }
 impl BoxedWidgetCtx {
-    pub fn new(ctx: impl BoxedWidget + 'static, animation_list: AnimationList) -> Self {
+    pub fn new(
+        ctx: impl BoxedWidget + 'static,
+        animation_list: AnimationList,
+        has_update: Rc<Cell<bool>>,
+    ) -> Self {
         Self {
             ctx: Box::new(ctx),
             animation_list,
             did_last_frame: true,
             buffer: Buffer::default(),
+            has_update,
         }
     }
     fn update_buffer(&mut self, img: ImageSurface) {
@@ -47,8 +50,8 @@ impl BoxedWidgetCtx {
 
 impl GridItemContent for BoxedWidgetCtxRc {
     fn has_update(&mut self) -> bool {
-        let mut ctx = self.borrow_mut();
-        ctx.animation_list.has_in_progress() || !ctx.did_last_frame || ctx.ctx.has_update()
+        let ctx = self.borrow();
+        ctx.animation_list.has_in_progress() || !ctx.did_last_frame || ctx.has_update.get()
     }
     fn draw(&mut self) -> ImageSurface {
         let mut ctx = self.borrow_mut();
@@ -62,7 +65,8 @@ impl GridItemContent for BoxedWidgetCtxRc {
         } else if !ctx.did_last_frame {
             ctx.did_last_frame = true;
             call_redraw = true
-        } else if ctx.ctx.has_update() {
+        } else if ctx.has_update.get() {
+            ctx.has_update.set(false);
             call_redraw = true
         }
 

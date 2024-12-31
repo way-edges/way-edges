@@ -848,6 +848,8 @@ dependencies = [
  "async-channel",
  "backend",
  "cairo-rs",
+ "chrono",
+ "chrono-tz",
  "config",
  "educe",
  "gio",

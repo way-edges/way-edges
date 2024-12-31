@@ -10,8 +10,6 @@ use serde::Deserialize;
 use text::TextConfig;
 use tray::TrayConfig;
 
-pub const NAME: &str = "box";
-
 // =================================== OUTLOOK
 #[derive(Debug, Deserialize, Clone)]
 pub struct OutlookMargins {
