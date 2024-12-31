@@ -1,7 +1,7 @@
 use std::f64::consts::PI;
 
 use cairo::{Format, ImageSurface, Path};
-use gtk::gdk::RGBA;
+use gtk::{gdk::RGBA, pango::Layout, prelude::GdkCairoContextExt};
 
 use crate::Z;
 
@@ -89,4 +89,18 @@ pub fn draw_rect_path(radius: f64, size: (f64, f64), corners: [bool; 4]) -> Resu
         ctx.close_path();
         Ok(ctx.copy_path().unwrap())
     }
+}
+
+pub fn draw_text_to_size(pl: &Layout, color: &RGBA, text: &str, height: i32) -> ImageSurface {
+    pl.set_text(text);
+    let (_, logic) = pl.pixel_extents();
+    let scale = height as f64 / logic.height() as f64;
+
+    let size = ((logic.width() as f64 * scale).ceil() as i32, height);
+    let surf = new_surface(size);
+    let ctx = cairo::Context::new(&surf).unwrap();
+    ctx.set_source_color(color);
+    ctx.scale(scale, scale);
+    pangocairo::functions::show_layout(&ctx, pl);
+    surf
 }

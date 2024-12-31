@@ -64,7 +64,9 @@ pub fn init_widget(
         config::widgets::Widget::HyprWorkspace(hypr_workspace_config) => {
             hypr_workspace::init_widget(&mut window, monitor, conf, hypr_workspace_config)
         }
-        config::widgets::Widget::WrapBox(box_config) => todo!(),
+        config::widgets::Widget::WrapBox(box_config) => {
+            wrapbox::init_widget(&mut window, monitor, conf, box_config)
+        }
     };
 
     window.show();

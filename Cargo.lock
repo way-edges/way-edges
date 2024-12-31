@@ -2619,6 +2619,7 @@ dependencies = [
  "gtk4",
  "log",
  "notify-rust",
+ "pangocairo",
  "paste",
 ]
 

@@ -1,6 +1,6 @@
 use button::BtnConfig;
 use hypr_workspace::HyprWorkspaceConfig;
-use serde::{Deserialize, Deserializer};
+use serde::Deserialize;
 use slide::base::SlideConfig;
 use wrapbox::BoxConfig;
 

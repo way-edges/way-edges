@@ -43,10 +43,12 @@ fn init_boxed_widgets(window: &mut WindowContext, box_conf: &mut BoxConfig) -> B
 
     use config::widgets::wrapbox::BoxedWidget;
     ws.into_iter().for_each(|w| {
-        let box_temporary_ctx = BoxTemporaryCtx::new(window);
+        let mut box_temporary_ctx = BoxTemporaryCtx::new(window);
 
         let widget = match w.widget {
-            BoxedWidget::Text(text_config) => todo!(),
+            BoxedWidget::Text(text_config) => {
+                widgets::text::init_text(&mut box_temporary_ctx, text_config)
+            }
             BoxedWidget::Ring(ring_config) => todo!(),
             BoxedWidget::Tray(tray_config) => todo!(),
         };
@@ -74,7 +76,7 @@ impl<'a> BoxTemporaryCtx<'a> {
     fn new_animation(&mut self, time_cost: u64) -> ToggleAnimationRc {
         self.animation_list.new_transition(time_cost)
     }
-    fn new_redraw_signal(&mut self) -> impl Fn() {
+    fn make_redraw_signal(&mut self) -> impl Fn() {
         let func = self.window.make_redraw_notifier();
         let has_update = &self.has_update;
         glib::clone!(
@@ -87,6 +89,7 @@ impl<'a> BoxTemporaryCtx<'a> {
         )
     }
 
+    #[allow(clippy::wrong_self_convention)]
     fn to_boxed_widget_ctx(self, ctx: impl box_traits::BoxedWidget + 'static) -> BoxedWidgetCtx {
         self.window.extend_animation_list(&self.animation_list);
         BoxedWidgetCtx::new(ctx, self.animation_list, self.has_update)

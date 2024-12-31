@@ -8,6 +8,7 @@ log.workspace = true
 cairo-rs.workspace = true
 paste.workspace = true
 gtk.workspace = true
+pangocairo.workspace = true
 
 notify-rust = "4.11"
 downcast-rs = "1.2.1"

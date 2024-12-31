@@ -1,13 +1,9 @@
 use educe::Educe;
 use gtk::gdk::RGBA;
 use serde::Deserialize;
-use serde_jsonrc::Value;
 
-use crate::widgets::common::{self, from_value};
-
-use super::{Align, BoxedWidget};
-
-pub const NAME: &str = "tray";
+use super::super::common;
+use super::Align;
 
 #[derive(Debug, Deserialize, Default, Clone)]
 #[serde(rename_all = "snake_case")]
@@ -101,9 +97,4 @@ fn dt_icon_size() -> i32 {
 }
 fn dt_tray_gap() -> i32 {
     2
-}
-
-pub fn visit_config(v: Value) -> Result<BoxedWidget, String> {
-    let conf: TrayConfig = from_value(v)?;
-    Ok(BoxedWidget::Tray(Box::new(conf)))
 }

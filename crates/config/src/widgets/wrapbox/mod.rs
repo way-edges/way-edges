@@ -156,9 +156,9 @@ impl Align {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "snake_case", tag = "type")]
 pub enum BoxedWidget {
-    Ring(Box<RingConfig>),
-    Text(Box<TextConfig>),
-    Tray(Box<TrayConfig>),
+    Ring(RingConfig),
+    Text(TextConfig),
+    Tray(TrayConfig),
 }
 
 #[derive(Debug, Deserialize)]
