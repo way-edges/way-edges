@@ -14,6 +14,13 @@ pub enum RingPreset {
     Disk { partition: String },
     Custom { interval_update: (u64, String) },
 }
+impl Default for RingPreset {
+    fn default() -> Self {
+        Self::Custom {
+            interval_update: (Default::default(), Default::default()),
+        }
+    }
+}
 
 #[derive(Deserialize, Debug)]
 pub struct RingConfigShadow {
@@ -28,8 +35,6 @@ pub struct RingConfigShadow {
     #[serde(deserialize_with = "color_translate")]
     pub fg_color: RGBA,
 
-    #[serde(default)]
-    pub frame_rate: Option<i32>,
     #[serde(default = "dt_tt")]
     pub text_transition_ms: u64,
 
@@ -74,7 +79,6 @@ impl From<RingConfigShadow> for RingConfig {
             ring_width: value.ring_width,
             bg_color: value.bg_color,
             fg_color: value.fg_color,
-            frame_rate: value.frame_rate,
             text_transition_ms: value.text_transition_ms,
             prefix: value.prefix,
             prefix_hide: value.prefix_hide,
@@ -95,7 +99,6 @@ pub struct RingConfig {
     pub bg_color: RGBA,
     pub fg_color: RGBA,
 
-    pub frame_rate: Option<i32>,
     pub text_transition_ms: u64,
 
     pub prefix: Option<Template>,

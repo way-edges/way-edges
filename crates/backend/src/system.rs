@@ -211,11 +211,11 @@ fn filesys_2_percent(f: Filesystem) -> (u64, u64) {
     let t = f.total.0 / 1000;
     (t - a, t)
 }
-pub fn register_disk_partition(s: String) {
+pub fn register_disk_partition(s: &str) {
     if let Some(info) = get_sys_info() {
         let sys = get_sys_info::System::new();
-        if let Ok(f) = sys.mount_at(s.as_str()) {
-            info.disk_map.insert(s, filesys_2_percent(f));
+        if let Ok(f) = sys.mount_at(s) {
+            info.disk_map.insert(s.to_string(), filesys_2_percent(f));
         }
     };
 }
