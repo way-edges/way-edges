@@ -10,38 +10,40 @@ fn from_kb(total: u64, avaibale: u64) -> (f64, f64, &'static str) {
     let mut c = 0;
     let mut total = total as f64;
     let mut avaibale = avaibale as f64;
-    while total > 1000. && c < 3 {
+    while total > 1000. && c < 4 {
         total /= 1000.;
         avaibale /= 1000.;
         c += 1;
     }
     let surfix = match c {
-        0 => "KB",
-        1 => "MB",
-        2 => "GB",
-        3 => "TB",
+        0 => "bytes",
+        1 => "KB",
+        2 => "MB",
+        3 => "GB",
+        4 => "TB",
         _ => unreachable!(),
     };
     (total, avaibale, surfix)
 }
-// fn from_kib(total: u64, avaibale: u64) -> (f64, f64, &'static str) {
-//     let mut c = 0;
-//     let mut total = total as f64;
-//     let mut avaibale = avaibale as f64;
-//     while total > 1024. && c < 3 {
-//         total /= 1024.;
-//         avaibale /= 1024.;
-//         c += 1;
-//     }
-//     let surfix = match c {
-//         0 => "KiB",
-//         1 => "MiB",
-//         2 => "GiB",
-//         3 => "TiB",
-//         _ => unreachable!(),
-//     };
-//     (total, avaibale, surfix)
-// }
+fn from_kib(total: u64, avaibale: u64) -> (f64, f64, &'static str) {
+    let mut c = 0;
+    let mut total = total as f64;
+    let mut avaibale = avaibale as f64;
+    while total > 1024. && c < 4 {
+        total /= 1024.;
+        avaibale /= 1024.;
+        c += 1;
+    }
+    let surfix = match c {
+        0 => "bytes",
+        1 => "KiB",
+        2 => "MiB",
+        3 => "GiB",
+        4 => "TiB",
+        _ => unreachable!(),
+    };
+    (total, avaibale, surfix)
+}
 
 macro_rules! new_runner {
     ($time:expr, $s:expr, $f:expr) => {
@@ -60,11 +62,11 @@ fn ram(s: Sender<RunnerResult>, update_interval: u64) -> Runner<()> {
     let f = || {
         let info = get_ram_info();
 
-        let (total, avaibale, surfix) = from_kb(info.total, info.free);
-        let progress = avaibale / total;
+        let (total, used, surfix) = from_kib(info.total, info.used);
+        let progress = used / total;
         let preset_text = format!(
             "{:.2}{surfix} / {:.2}{surfix} [{:.2}%]",
-            avaibale,
+            used,
             total,
             progress * 100.
         );
@@ -82,11 +84,11 @@ fn swap(s: Sender<RunnerResult>, update_interval: u64) -> Runner<()> {
     let f = || {
         let info = get_swap_info();
 
-        let (total, avaibale, surfix) = from_kb(info.total, info.free);
-        let progress = avaibale / total;
+        let (total, used, surfix) = from_kib(info.total, info.used);
+        let progress = used / total;
         let preset_text = format!(
             "{:.2}{surfix} / {:.2}{surfix} [{:.2}%]",
-            avaibale,
+            used,
             total,
             progress * 100.
         );
@@ -130,12 +132,12 @@ fn disk(s: Sender<RunnerResult>, update_interval: u64, partition: String) -> Run
     let f = move || {
         let info = get_disk_info(&partition);
 
-        let (total, avaibale, surfix) = from_kb(info.total, info.free);
-        let progress = avaibale / total;
+        let (total, used, surfix) = from_kib(info.total, info.used);
+        let progress = used / total;
         let preset_text = format!(
             "[Partition: {}] {:.2}{surfix} / {:.2}{surfix} [{:.2}%]",
             partition,
-            avaibale,
+            used,
             total,
             progress * 100.
         );

@@ -10,7 +10,7 @@ fn get_system() -> MutexGuard<'static, System> {
 }
 
 pub struct MemoryInfo {
-    pub free: u64,
+    pub used: u64,
     pub total: u64,
 }
 
@@ -18,7 +18,7 @@ pub fn get_ram_info() -> MemoryInfo {
     let mut sys = get_system();
     sys.refresh_memory_specifics(MemoryRefreshKind::nothing().with_ram());
     MemoryInfo {
-        free: sys.free_memory(),
+        used: sys.used_memory(),
         total: sys.total_memory(),
     }
 }
@@ -26,10 +26,9 @@ pub fn get_ram_info() -> MemoryInfo {
 pub fn get_swap_info() -> MemoryInfo {
     let mut sys = get_system();
     sys.refresh_memory_specifics(MemoryRefreshKind::nothing().with_swap());
-    MemoryInfo {
-        free: sys.free_swap(),
-        total: sys.total_swap(),
-    }
+    let total = sys.total_swap();
+    let used = total - sys.free_swap();
+    MemoryInfo { used, total }
 }
 
 pub fn get_cpu_info(core: Option<usize>) -> f64 {
@@ -38,7 +37,7 @@ pub fn get_cpu_info(core: Option<usize>) -> f64 {
     if let Some(core_id) = core {
         sys.cpus().get(core_id).unwrap().cpu_usage() as f64
     } else {
-        sys.global_cpu_usage() as f64
+        sys.global_cpu_usage() as f64 / sys.cpus().len() as f64
     }
 }
 
@@ -65,7 +64,7 @@ fn get_disk() -> MutexGuard<'static, Disks> {
     Mutex::lock(&DISK).unwrap()
 }
 pub struct DiskInfo {
-    pub free: u64,
+    pub used: u64,
     pub total: u64,
 }
 pub fn get_disk_info(partition: &str) -> DiskInfo {
@@ -76,8 +75,9 @@ pub fn get_disk_info(partition: &str) -> DiskInfo {
         .iter()
         .find(|d| d.mount_point().to_str().unwrap() == partition)
         .unwrap();
-    DiskInfo {
-        free: partition.available_space(),
-        total: partition.total_space(),
-    }
+
+    let total = partition.total_space();
+    let used = total - partition.available_space();
+
+    DiskInfo { used, total }
 }
