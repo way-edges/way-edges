@@ -12,9 +12,7 @@ use interval_task::runner::Runner;
 
 use config::widgets::wrapbox::ring::RingConfig;
 use preset::RunnerResult;
-use util::template::base::Template;
 
-use crate::animation::ToggleAnimationRc;
 use crate::mouse_state::MouseEvent;
 use crate::widgets::wrapbox::box_traits::BoxedWidget;
 use crate::widgets::wrapbox::BoxTemporaryCtx;
@@ -62,7 +60,7 @@ impl Drop for RingCtx {
     }
 }
 
-pub fn init_ring(box_temp_ctx: &mut BoxTemporaryCtx, mut conf: RingConfig) -> impl BoxedWidget {
+pub fn init_widget(box_temp_ctx: &mut BoxTemporaryCtx, mut conf: RingConfig) -> impl BoxedWidget {
     let drawer = RingDrawer::new(box_temp_ctx, &mut conf);
 
     // runner
@@ -72,7 +70,9 @@ pub fn init_ring(box_temp_ctx: &mut BoxTemporaryCtx, mut conf: RingConfig) -> im
     let redraw_signal = box_temp_ctx.make_redraw_signal();
     glib::spawn_future_local(async move {
         while let Ok(res) = r.recv().await {
-            let current = current_weak.upgrade().unwrap();
+            let Some(current) = current_weak.upgrade() else {
+                break;
+            };
             unsafe { *current.get().as_mut().unwrap() = res };
             redraw_signal();
         }

@@ -49,15 +49,29 @@ fn init_boxed_widgets(window: &mut WindowContext, box_conf: &mut BoxConfig) -> B
     ws.into_iter().for_each(|w| {
         let mut box_temporary_ctx = BoxTemporaryCtx::new(window);
 
-        let widget = match w.widget {
+        macro_rules! boxed {
+            ($ctx:expr, $w:expr) => {{
+                let w = $w;
+                $ctx.to_boxed_widget_ctx(w)
+            }};
+        }
+
+        let boxed_widget_context = match w.widget {
             BoxedWidget::Text(text_config) => {
-                widgets::text::init_text(&mut box_temporary_ctx, text_config)
+                boxed!(
+                    box_temporary_ctx,
+                    widgets::text::init_text(&mut box_temporary_ctx, text_config)
+                )
             }
-            BoxedWidget::Ring(ring_config) => todo!(),
+            BoxedWidget::Ring(ring_config) => {
+                boxed!(
+                    box_temporary_ctx,
+                    widgets::ring::init_widget(&mut box_temporary_ctx, ring_config)
+                )
+            }
             BoxedWidget::Tray(tray_config) => todo!(),
         };
 
-        let boxed_widget_context = box_temporary_ctx.to_boxed_widget_ctx(widget);
         builder.add(boxed_widget_context, (w.index[0], w.index[1]));
     });
 

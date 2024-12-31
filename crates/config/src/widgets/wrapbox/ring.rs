@@ -9,13 +9,19 @@ use util::template::{
 };
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "lowercase", tag = "type")]
 pub enum RingPreset {
     Ram,
     Swap,
     Cpu,
     Battery,
-    Disk { partition: String },
-    Custom { interval_update: (u64, String) },
+    Disk {
+        #[serde(default = "dt_partition")]
+        partition: String,
+    },
+    Custom {
+        interval_update: (u64, String),
+    },
 }
 impl Default for RingPreset {
     fn default() -> Self {
@@ -23,6 +29,9 @@ impl Default for RingPreset {
             interval_update: (Default::default(), Default::default()),
         }
     }
+}
+fn dt_partition() -> String {
+    "/".to_string()
 }
 
 #[derive(Deserialize, Debug)]

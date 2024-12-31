@@ -92,7 +92,9 @@ pub fn init_text(box_temp_ctx: &mut BoxTemporaryCtx, conf: TextConfig) -> impl B
     let redraw_signal = box_temp_ctx.make_redraw_signal();
     glib::spawn_future_local(async move {
         while let Ok(res) = r.recv().await {
-            let text = text_weak.upgrade().unwrap();
+            let Some(text) = text_weak.upgrade() else {
+                break;
+            };
             unsafe { *text.get().as_mut().unwrap() = res };
             redraw_signal();
         }

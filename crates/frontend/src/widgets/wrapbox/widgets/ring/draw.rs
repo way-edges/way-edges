@@ -70,9 +70,8 @@ impl RingDrawer {
             desc.set_family(font_family.as_str());
         }
         pc.set_font_description(Some(&desc));
-        let layout = pangocairo::pango::Layout::new(&pc);
 
-        layout
+        pangocairo::pango::Layout::new(&pc)
     }
     fn draw_text(
         &self,
@@ -97,8 +96,8 @@ impl RingDrawer {
             draw_text_to_size(&layout, &self.fg_color, &text, self.font_size)
         };
 
-        let prefix = self.prefix.as_ref().map(template_func.clone());
-        let suffix = self.prefix.as_ref().map(template_func.clone());
+        let prefix = self.prefix.as_ref().map(template_func);
+        let suffix = self.suffix.as_ref().map(template_func);
 
         (prefix, suffix)
     }
