@@ -1,9 +1,12 @@
 use std::str::FromStr;
 
-use super::common::Template;
 use crate::widgets::common::color_translate;
 use gtk::gdk::RGBA;
-use serde::Deserialize;
+use serde::{Deserialize, Deserializer};
+use util::template::{
+    arg::{TemplateArgFloatProcesser, TemplateArgRingPresetProcesser},
+    base::{Template, TemplateProcesser},
+};
 
 #[derive(Debug, Deserialize)]
 pub enum RingPreset {
@@ -25,9 +28,9 @@ impl Default for RingPreset {
 #[derive(Deserialize, Debug)]
 pub struct RingConfigShadow {
     #[serde(default = "dt_r")]
-    pub radius: f64,
+    pub radius: i32,
     #[serde(default = "dt_rw")]
-    pub ring_width: f64,
+    pub ring_width: i32,
     #[serde(default = "dt_bg")]
     #[serde(deserialize_with = "color_translate")]
     pub bg_color: RGBA,
@@ -39,10 +42,12 @@ pub struct RingConfigShadow {
     pub text_transition_ms: u64,
 
     #[serde(default)]
+    #[serde(deserialize_with = "ring_text_template")]
     pub prefix: Option<Template>,
     #[serde(default)]
     pub prefix_hide: bool,
     #[serde(default)]
+    #[serde(deserialize_with = "ring_text_template")]
     pub suffix: Option<Template>,
     #[serde(default)]
     pub suffix_hide: bool,
@@ -55,11 +60,11 @@ pub struct RingConfigShadow {
     pub preset: RingPreset,
 }
 
-fn dt_r() -> f64 {
-    13.0
+fn dt_r() -> i32 {
+    13
 }
-fn dt_rw() -> f64 {
-    5.0
+fn dt_rw() -> i32 {
+    5
 }
 fn dt_bg() -> RGBA {
     RGBA::from_str("#9F9F9F").unwrap()
@@ -73,7 +78,7 @@ fn dt_tt() -> u64 {
 
 impl From<RingConfigShadow> for RingConfig {
     fn from(value: RingConfigShadow) -> Self {
-        let font_size = value.font_size.unwrap_or((value.radius * 2.) as i32);
+        let font_size = value.font_size.unwrap_or(value.radius * 2);
         Self {
             radius: value.radius,
             ring_width: value.ring_width,
@@ -94,8 +99,8 @@ impl From<RingConfigShadow> for RingConfig {
 #[derive(Debug, Deserialize)]
 #[serde(from = "RingConfigShadow")]
 pub struct RingConfig {
-    pub radius: f64,
-    pub ring_width: f64,
+    pub radius: i32,
+    pub ring_width: i32,
     pub bg_color: RGBA,
     pub fg_color: RGBA,
 
@@ -110,4 +115,41 @@ pub struct RingConfig {
     pub font_size: i32,
 
     pub preset: RingPreset,
+}
+
+pub fn ring_text_template<'de, D>(d: D) -> Result<Option<Template>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    struct EventMapVisitor;
+    impl serde::de::Visitor<'_> for EventMapVisitor {
+        type Value = Option<Template>;
+
+        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            formatter.write_str("vec of tuples: (key: number, command: string)")
+        }
+
+        fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            self.visit_string(v.to_string())
+        }
+
+        fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(Some(
+                Template::create_from_str(
+                    &v,
+                    TemplateProcesser::new()
+                        .add_processer(TemplateArgFloatProcesser)
+                        .add_processer(TemplateArgRingPresetProcesser),
+                )
+                .map_err(serde::de::Error::custom)?,
+            ))
+        }
+    }
+    d.deserialize_any(EventMapVisitor)
 }

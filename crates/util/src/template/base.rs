@@ -92,12 +92,12 @@ impl Template {
         Ok(Self { contents })
     }
 
-    pub fn parse(&mut self, mut cb: impl FnMut(&mut dyn TemplateArgParser) -> String) -> String {
+    pub fn parse(&self, mut cb: impl FnMut(&dyn TemplateArgParser) -> String) -> String {
         self.contents
-            .iter_mut()
+            .iter()
             .map(|content| match content {
                 TemplateContent::String(s) => Cow::Borrowed(s.as_str()),
-                TemplateContent::Template(parser) => Cow::Owned(cb(parser.as_mut())),
+                TemplateContent::Template(parser) => Cow::Owned(cb(parser.as_ref())),
             })
             .collect::<Vec<Cow<str>>>()
             .join("")

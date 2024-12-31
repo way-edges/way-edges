@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use super::base::{TemplateArgParser, TemplateArgProcesser};
+use crate::template::base::{TemplateArgParser, TemplateArgProcesser};
 
 pub const TEMPLATE_ARG_FLOAT: &str = "float";
 

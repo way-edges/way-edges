@@ -2,62 +2,150 @@ use cairo::{Format, ImageSurface};
 use gtk::pango::Layout;
 use gtk::{gdk::RGBA, prelude::GdkCairoContextExt};
 
-use crate::ui::draws::util::ImageData;
-use crate::ui::draws::{shape::draw_fan, util::Z};
-use crate::ui::draws::{transition_state, util};
-use config::widgets::wrapbox::common::{Template, TemplateArg};
 use config::widgets::wrapbox::ring::RingConfig;
+use util::draw::{draw_fan, draw_text_to_size, new_surface};
+use util::template::arg::{TemplateArgFloatParser, TEMPLATE_ARG_FLOAT};
+use util::template::base::Template;
+use util::Z;
 
-pub struct RingCache {
-    pub ring: ImageData,
-    pub prefix: Option<ImageData>,
-    pub suffix: Option<ImageData>,
+use crate::animation::{calculate_transition, ToggleAnimationRc};
+use crate::widgets::wrapbox::BoxTemporaryCtx;
+
+use super::preset::RunnerResult;
+
+#[derive(Debug)]
+pub struct RingDrawer {
+    radius: i32,
+    ring_width: i32,
+    bg_color: RGBA,
+    fg_color: RGBA,
+
+    prefix: Option<Template>,
+    prefix_hide: bool,
+    suffix: Option<Template>,
+    suffix_hide: bool,
+
+    font_family: Option<String>,
+    font_size: i32,
+
+    pub animation: ToggleAnimationRc,
 }
-unsafe impl Send for RingCache {}
 
-impl RingCache {
-    pub fn merge(&self, prefix_hide: bool, suffix_hide: bool, transition_y: f64) -> ImageSurface {
-        let mut size = (self.ring.width, self.ring.height);
+impl RingDrawer {
+    fn draw_ring(&self, progress: f64) -> ImageSurface {
+        let big_radius = self.radius as f64;
+        let small_radius = big_radius - self.ring_width as f64;
+        let size = self.radius * 2;
+
+        let surf = ImageSurface::create(Format::ARgb32, size, size).unwrap();
+        let ctx = cairo::Context::new(&surf).unwrap();
+        ctx.set_source_color(&self.bg_color);
+        draw_fan(&ctx, (big_radius, big_radius), big_radius, 0., 2.);
+        ctx.fill().unwrap();
+
+        ctx.set_source_color(&self.fg_color);
+        draw_fan(
+            &ctx,
+            (big_radius, big_radius),
+            big_radius,
+            -0.5,
+            progress * 2. - 0.5,
+        );
+        ctx.fill().unwrap();
+
+        ctx.set_operator(cairo::Operator::Clear);
+        draw_fan(&ctx, (big_radius, big_radius), small_radius, 0., 2.);
+        ctx.fill().unwrap();
+
+        surf
+    }
+    fn make_layout(&self) -> Layout {
+        // layout
+        let pc = pangocairo::pango::Context::new();
+        let fm = pangocairo::FontMap::default();
+        pc.set_font_map(Some(&fm));
+        let mut desc = pc.font_description().unwrap();
+        desc.set_absolute_size((self.font_size << 10) as f64);
+        if let Some(font_family) = &self.font_family {
+            desc.set_family(font_family.as_str());
+        }
+        pc.set_font_description(Some(&desc));
+        let layout = pangocairo::pango::Layout::new(&pc);
+
+        layout
+    }
+    fn draw_text(
+        &self,
+        progress: f64,
+        preset_text: &str,
+    ) -> (Option<ImageSurface>, Option<ImageSurface>) {
+        let layout = self.make_layout();
+
+        let template_func = |template: &Template| {
+            let text = template.parse(|parser| {
+                let text = match parser.name() {
+                    TEMPLATE_ARG_FLOAT => {
+                        let parser = parser.downcast_ref::<TemplateArgFloatParser>().unwrap();
+                        parser.parse(progress)
+                    }
+                    util::template::arg::TEMPLATE_ARG_RING_PRESET => preset_text.to_string(),
+                    _ => unreachable!(),
+                };
+                text
+            });
+
+            draw_text_to_size(&layout, &self.fg_color, &text, self.font_size)
+        };
+
+        let prefix = self.prefix.as_ref().map(template_func.clone());
+        let suffix = self.prefix.as_ref().map(template_func.clone());
+
+        (prefix, suffix)
+    }
+
+    pub fn merge(
+        &self,
+        ring: ImageSurface,
+        prefix: Option<ImageSurface>,
+        suffix: Option<ImageSurface>,
+    ) -> ImageSurface {
+        let y = self.animation.borrow_mut().progress();
+
+        let mut size = (self.radius * 2, self.radius * 2);
 
         let mut v = [None, None];
 
-        if let Some(img_data) = &self.prefix {
-            let img: ImageSurface = unsafe { img_data.temp_surface() };
-            if prefix_hide {
-                let visible_text_width = transition_state::calculate_transition(
-                    transition_y,
-                    (0., img_data.width as f64),
-                )
-                .ceil() as i32;
-                v[0] = Some((img, visible_text_width, img_data.height));
+        if let Some(img) = prefix {
+            let img_size = (img.width(), img.height());
+            if self.prefix_hide {
+                let visible_text_width =
+                    calculate_transition(y, (0., img_size.0 as f64)).ceil() as i32;
+                v[0] = Some((img, visible_text_width, img_size.1));
                 size.0 += visible_text_width;
-                size.1 = size.1.max(img_data.height);
+                size.1 = size.1.max(img_size.1);
             } else {
-                v[0] = Some((img, img_data.width, img_data.height));
-                size.0 += img_data.width;
-                size.1 = size.1.max(img_data.height);
+                v[0] = Some((img, img_size.0, img_size.1));
+                size.0 += img_size.0;
+                size.1 = size.1.max(img_size.1);
             }
         }
 
-        if let Some(img_data) = &self.suffix {
-            let img: ImageSurface = unsafe { img_data.temp_surface() };
-            if suffix_hide {
-                let visible_text_width = transition_state::calculate_transition(
-                    transition_y,
-                    (0., img_data.width as f64),
-                )
-                .ceil() as i32;
-                v[1] = Some((img, visible_text_width, img_data.height));
+        if let Some(img) = suffix {
+            let img_size = (img.width(), img.height());
+            if self.suffix_hide {
+                let visible_text_width =
+                    calculate_transition(y, (0., img_size.0 as f64)).ceil() as i32;
+                v[1] = Some((img, visible_text_width, img_size.1));
                 size.0 += visible_text_width;
-                size.1 = size.1.max(img_data.height);
+                size.1 = size.1.max(img_size.1);
             } else {
-                v[1] = Some((img, img_data.width, img_data.height));
-                size.0 += img_data.width;
-                size.1 = size.1.max(img_data.height);
+                v[1] = Some((img, img_size.0, img_size.1));
+                size.0 += img_size.1;
+                size.1 = size.1.max(img_size.1);
             }
         }
 
-        let surf = util::new_surface(size);
+        let surf = new_surface(size);
         let ctx = cairo::Context::new(&surf).unwrap();
 
         if let Some((img, width, height)) = &v[0] {
@@ -69,12 +157,11 @@ impl RingCache {
             ctx.translate(*width as f64, Z);
         }
 
-        let h = (size.1 as f64 - self.ring.height as f64) / 2.;
-        ctx.set_source_surface(unsafe { self.ring.temp_surface() }, Z, h)
-            .unwrap();
+        let h = (size.1 - self.radius * 2) as f64 / 2.;
+        ctx.set_source_surface(ring, Z, h).unwrap();
         ctx.paint().unwrap();
 
-        ctx.translate(self.ring.width as f64, Z);
+        ctx.translate((self.radius * 2) as f64, Z);
 
         if let Some((img, _, height)) = &v[1] {
             let h = (size.1 as f64 - *height as f64) / 2.;
@@ -84,145 +171,41 @@ impl RingCache {
 
         surf
     }
-}
 
-#[derive(Debug)]
-pub struct Ring {
-    // config
-    pub radius: f64,
-    pub fg_color: RGBA,
+    pub fn draw(&self, data: &RunnerResult) -> ImageSurface {
+        let ring = self.draw_ring(data.progress);
+        let (prefix, suffix) = self.draw_text(data.progress, &data.preset_text);
+        self.merge(ring, prefix, suffix)
+    }
 
-    // from base
-    pub bg_arc: ImageSurface,
-    pub inner_radius: f64,
-    pub layout: Layout,
+    pub fn new(box_temp_ctx: &mut BoxTemporaryCtx, config: &mut RingConfig) -> Self {
+        let radius = config.radius;
+        let ring_width = config.ring_width;
+        let bg_color = config.bg_color;
+        let fg_color = config.fg_color;
+        let font_family = config.font_family.clone();
+        let font_size = config.font_size;
 
-    pub font_pixel_size: i32,
+        let prefix = config.prefix.take();
+        let suffix = config.suffix.take();
 
-    pub prefix: Option<Template>,
-    pub suffix: Option<Template>,
-}
-impl Ring {
-    pub fn new(config: &mut RingConfig) -> Self {
-        let radius = config.common.radius;
-        let ring_width = config.common.ring_width;
-        let bg_color = config.common.bg_color;
-        let fg_color = config.common.fg_color;
-        let font_family = config.common.font_family.clone();
-        let font_size = config.common.font_size.unwrap();
-        let (layout, bg_arc, inner_radius) =
-            Self::initialize(radius, ring_width, &bg_color, font_family, font_size);
+        let prefix_hide = config.prefix_hide;
+        let suffix_hide = config.suffix_hide;
 
-        let prefix = config.common.prefix.take();
-        let suffix = config.common.suffix.take();
+        let animation = box_temp_ctx.new_animation(config.text_transition_ms);
 
         Self {
             radius,
             fg_color,
-            bg_arc,
-            inner_radius,
-            layout,
-            font_pixel_size: font_size as i32,
+            font_size,
             prefix,
             suffix,
+            ring_width,
+            bg_color,
+            prefix_hide,
+            suffix_hide,
+            font_family,
+            animation,
         }
-    }
-    fn initialize(
-        radius: f64,
-        ring_width: f64,
-        bg_color: &RGBA,
-        font_family: Option<String>,
-        font_size: f64,
-    ) -> (Layout, ImageSurface, f64) {
-        let big_radius = radius;
-        let small_radius = big_radius - ring_width;
-        let b_wh = (big_radius * 2.).ceil() as i32;
-
-        let bg_surf = {
-            let surf = ImageSurface::create(Format::ARgb32, b_wh, b_wh).unwrap();
-            let ctx = cairo::Context::new(&surf).unwrap();
-
-            ctx.set_source_color(bg_color);
-            draw_fan(&ctx, (big_radius, big_radius), big_radius, 0., 2.);
-            ctx.fill().unwrap();
-            surf
-        };
-
-        // layout
-        let pc = pangocairo::pango::Context::new();
-        let fm = pangocairo::FontMap::default();
-        pc.set_font_map(Some(&fm));
-        let mut desc = pc.font_description().unwrap();
-        desc.set_absolute_size(font_size * 1024.);
-        if let Some(font_family) = font_family {
-            desc.set_family(font_family.as_str());
-        }
-        pc.set_font_description(Some(&desc));
-        let layout = pangocairo::pango::Layout::new(&pc);
-
-        (layout, bg_surf, small_radius)
-    }
-
-    pub fn draw_ring(&self, progress: f64, preset: Option<String>) -> RingCache {
-        let ring = {
-            let radius = self.radius;
-            let surf = util::new_surface((self.bg_arc.width(), self.bg_arc.height()));
-            let ctx = cairo::Context::new(&surf).unwrap();
-
-            ctx.set_source_surface(&self.bg_arc, Z, Z).unwrap();
-            ctx.paint().unwrap();
-
-            ctx.set_source_color(&self.fg_color);
-            draw_fan(&ctx, (radius, radius), radius, -0.5, progress * 2. - 0.5);
-            ctx.fill().unwrap();
-
-            ctx.set_operator(cairo::Operator::Clear);
-            draw_fan(&ctx, (radius, radius), self.inner_radius, 0., 2.);
-            ctx.fill().unwrap();
-
-            surf
-        };
-
-        let a = TemplateArg {
-            float: Some(progress),
-            preset: preset.as_deref(),
-        };
-
-        let prefix: Option<ImageData> = self.prefix.as_ref().and_then(|t| {
-            let text = t.parse(a.clone());
-            util::draw_text_to_size(
-                &self.layout,
-                &self.fg_color,
-                text.as_str(),
-                self.font_pixel_size,
-            )
-            .try_into()
-            .ok()
-        });
-
-        let suffix = self.suffix.as_ref().and_then(|t| {
-            let text = t.parse(a);
-            util::draw_text_to_size(
-                &self.layout,
-                &self.fg_color,
-                text.as_str(),
-                self.font_pixel_size,
-            )
-            .try_into()
-            .ok()
-        });
-
-        let ring: ImageData = ring.try_into().unwrap();
-
-        RingCache {
-            ring,
-            prefix,
-            suffix,
-        }
-    }
-}
-impl Drop for Ring {
-    fn drop(&mut self) {
-        log::debug!("drop ring");
     }
 }

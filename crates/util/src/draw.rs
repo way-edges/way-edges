@@ -104,3 +104,9 @@ pub fn draw_text_to_size(pl: &Layout, color: &RGBA, text: &str, height: i32) -> 
     pangocairo::functions::show_layout(&ctx, pl);
     surf
 }
+
+pub fn draw_fan(ctx: &cairo::Context, point: (f64, f64), radius: f64, start: f64, end: f64) {
+    ctx.arc(point.0, point.1, radius, start * PI, end * PI);
+    ctx.line_to(point.0, point.1);
+    ctx.close_path();
+}

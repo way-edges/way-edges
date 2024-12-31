@@ -5,12 +5,14 @@ use std::cell::UnsafeCell;
 use std::rc::Rc;
 
 use cairo::ImageSurface;
+use draw::RingDrawer;
 use educe::Educe;
 use gtk::glib;
 use interval_task::runner::Runner;
 
 use config::widgets::wrapbox::ring::RingConfig;
 use preset::RunnerResult;
+use util::template::base::Template;
 
 use crate::animation::ToggleAnimationRc;
 use crate::mouse_state::MouseEvent;
@@ -23,25 +25,29 @@ pub struct RingCtx {
     #[educe(Debug(ignore))]
     runner: Runner<()>,
     current: Rc<UnsafeCell<RunnerResult>>,
-    animation: ToggleAnimationRc,
     #[educe(Debug(ignore))]
     redraw_signal: Box<dyn Fn()>,
+
+    drawer: RingDrawer,
 }
 
 impl BoxedWidget for RingCtx {
     fn content(&mut self) -> ImageSurface {
-        // unsafe { self.cache_content.as_ptr().as_ref().unwrap().clone() }
+        let current = unsafe { self.current.get().as_ref().unwrap() };
+        self.drawer.draw(current)
     }
     fn on_mouse_event(&mut self, event: MouseEvent) {
         match event {
             MouseEvent::Enter(_) => {
-                self.animation
+                self.drawer
+                    .animation
                     .borrow_mut()
                     .set_direction(crate::animation::ToggleDirection::Forward);
                 (self.redraw_signal)();
             }
             MouseEvent::Leave => {
-                self.animation
+                self.drawer
+                    .animation
                     .borrow_mut()
                     .set_direction(crate::animation::ToggleDirection::Backward);
                 (self.redraw_signal)();
@@ -56,8 +62,8 @@ impl Drop for RingCtx {
     }
 }
 
-pub fn init_ring(box_temp_ctx: &mut BoxTemporaryCtx, conf: RingConfig) -> impl BoxedWidget {
-    // let drawer = TextDrawer::new(&conf);
+pub fn init_ring(box_temp_ctx: &mut BoxTemporaryCtx, mut conf: RingConfig) -> impl BoxedWidget {
+    let drawer = RingDrawer::new(box_temp_ctx, &mut conf);
 
     // runner
     let (mut runner, r) = preset::parse_preset(conf.preset);
@@ -73,13 +79,12 @@ pub fn init_ring(box_temp_ctx: &mut BoxTemporaryCtx, conf: RingConfig) -> impl B
     });
     runner.start().unwrap();
 
-    let animation = box_temp_ctx.new_animation(conf.text_transition_ms);
     let redraw_signal = Box::new(box_temp_ctx.make_redraw_signal());
 
     RingCtx {
         runner,
         current,
-        animation,
         redraw_signal,
+        drawer,
     }
 }
