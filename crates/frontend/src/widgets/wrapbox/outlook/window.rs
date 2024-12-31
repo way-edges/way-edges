@@ -13,9 +13,9 @@ use way_edges_derive::wrap_rc;
 
 use super::OutlookMousePositionTranslateion;
 
-#[wrap_rc(rc = "pub(super)")]
+#[wrap_rc(rc = "pub")]
 #[derive(Debug)]
-pub(super) struct DrawConf {
+pub struct DrawConf {
     margins: OutlookMargins,
     color: RGBA,
     border_radius: i32,
@@ -168,11 +168,11 @@ fn draw_base(conf: &DrawConf, content_size: (i32, i32)) -> DrawBase {
         let ctx = cairo::Context::new(&surf).unwrap();
         ctx.save().unwrap();
         ctx.translate(conf.border_width as f64, conf.border_width as f64);
-        ctx.set_source_surface(shadow_surf, Z, Z);
+        ctx.set_source_surface(shadow_surf, Z, Z).unwrap();
         ctx.paint().unwrap();
         ctx.restore().unwrap();
 
-        ctx.set_source_surface(border_surf, Z, Z);
+        ctx.set_source_surface(border_surf, Z, Z).unwrap();
         ctx.paint().unwrap();
 
         surf
@@ -185,10 +185,9 @@ fn draw_base(conf: &DrawConf, content_size: (i32, i32)) -> DrawBase {
 }
 
 fn draw_combine(conf: &DrawConf, content: ImageSurface) -> ImageSurface {
-    let size = (content.width(), content.height());
-    let base = draw_base(conf, size);
+    let base = draw_base(conf, (content.width(), content.height()));
 
-    let surf = new_surface(size);
+    let surf = new_surface((base.bg.width(), base.bg.height()));
     let ctx = cairo::Context::new(&surf).unwrap();
 
     ctx.set_source_surface(base.bg, Z, Z).unwrap();

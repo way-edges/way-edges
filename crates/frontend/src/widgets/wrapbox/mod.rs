@@ -28,8 +28,12 @@ pub fn init_widget(window: &mut WindowContext, _: &Monitor, conf: Config, mut w_
         #[strong]
         grid_box,
         move || {
+            let start = std::time::Instant::now();
+
             let content = grid_box.borrow_mut().redraw_if_has_update()?;
             let img = draw_outlook(content);
+
+            println!("cost: {}ms", start.elapsed().as_secs_f64() * 1000.);
             Some(img)
         }
     )));

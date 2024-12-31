@@ -154,7 +154,7 @@ impl Align {
 
 // =================================== WIDGETS
 #[derive(Debug, Deserialize)]
-#[serde(rename_all = "snake_case", tag = "type")]
+#[serde(rename_all = "lowercase", tag = "type")]
 pub enum BoxedWidget {
     Ring(RingConfig),
     Text(TextConfig),

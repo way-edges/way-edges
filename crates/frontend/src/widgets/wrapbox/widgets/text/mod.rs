@@ -42,12 +42,14 @@ fn time_preset(s: Sender<String>, format: String, time_zone: Option<String>) -> 
 fn custom_preset(s: Sender<String>, update_with_interval_ms: (u64, String)) -> Runner<()> {
     let (time, cmd) = update_with_interval_ms;
 
-    let f = move || shell_cmd(&cmd).unwrap();
+    // ignore fail
+    let f = move || shell_cmd(&cmd).unwrap_or_default();
 
     interval_task::runner::new_runner(
         Duration::from_millis(time),
         || (),
         move |_| {
+            // ignore fail
             s.force_send(f()).unwrap();
             false
         },
@@ -85,7 +87,7 @@ impl Drop for TextCtx {
 pub fn init_text(box_temp_ctx: &mut BoxTemporaryCtx, conf: TextConfig) -> impl BoxedWidget {
     let drawer = TextDrawer::new(&conf);
 
-    let (runner, r) = match_preset(conf.preset);
+    let (mut runner, r) = match_preset(conf.preset);
     let text = Rc::new(UnsafeCell::new(String::default()));
     let text_weak = Rc::downgrade(&text);
     let redraw_signal = box_temp_ctx.make_redraw_signal();
@@ -96,6 +98,7 @@ pub fn init_text(box_temp_ctx: &mut BoxTemporaryCtx, conf: TextConfig) -> impl B
             redraw_signal();
         }
     });
+    runner.start().unwrap();
 
     TextCtx {
         runner,

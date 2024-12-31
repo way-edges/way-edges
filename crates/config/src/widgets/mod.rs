@@ -10,6 +10,7 @@ pub mod slide;
 pub mod wrapbox;
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "kebab-case", tag = "type")]
 pub enum Widget {
     Btn(BtnConfig),
     Slider(SlideConfig),
