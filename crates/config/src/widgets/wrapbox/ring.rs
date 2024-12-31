@@ -11,27 +11,46 @@ use util::template::{
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "lowercase", tag = "type")]
 pub enum RingPreset {
-    Ram,
-    Swap,
-    Cpu,
-    Battery,
+    Ram {
+        #[serde(default = "dt_update_interval")]
+        update_interval: u64,
+    },
+    Swap {
+        #[serde(default = "dt_update_interval")]
+        update_interval: u64,
+    },
+    Cpu {
+        #[serde(default = "dt_update_interval")]
+        update_interval: u64,
+    },
+    Battery {
+        #[serde(default = "dt_update_interval")]
+        update_interval: u64,
+    },
     Disk {
+        #[serde(default = "dt_update_interval")]
+        update_interval: u64,
         #[serde(default = "dt_partition")]
         partition: String,
     },
     Custom {
-        interval_update: (u64, String),
+        update_interval: u64,
+        cmd: String,
     },
 }
 impl Default for RingPreset {
     fn default() -> Self {
         Self::Custom {
-            interval_update: (Default::default(), Default::default()),
+            update_interval: dt_update_interval(),
+            cmd: String::default(),
         }
     }
 }
 fn dt_partition() -> String {
     "/".to_string()
+}
+fn dt_update_interval() -> u64 {
+    1000
 }
 
 #[derive(Deserialize, Debug)]

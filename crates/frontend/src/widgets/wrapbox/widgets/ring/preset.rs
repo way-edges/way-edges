@@ -59,7 +59,7 @@ macro_rules! new_runner {
     };
 }
 
-fn ram(s: Sender<RunnerResult>) -> Runner<()> {
+fn ram(s: Sender<RunnerResult>, update_interval: u64) -> Runner<()> {
     init_mem_info();
     let f = || {
         let Some([ava, total]) = get_ram_info() else {
@@ -81,10 +81,10 @@ fn ram(s: Sender<RunnerResult>) -> Runner<()> {
         }
     };
 
-    new_runner!(1000, s, f)
+    new_runner!(update_interval, s, f)
 }
 
-fn swap(s: Sender<RunnerResult>) -> Runner<()> {
+fn swap(s: Sender<RunnerResult>, update_interval: u64) -> Runner<()> {
     init_mem_info();
     let f = || {
         let Some([ava, total]) = get_swap_info() else {
@@ -106,10 +106,10 @@ fn swap(s: Sender<RunnerResult>) -> Runner<()> {
         }
     };
 
-    new_runner!(1000, s, f)
+    new_runner!(update_interval, s, f)
 }
 
-fn cpu(s: Sender<RunnerResult>) -> Runner<()> {
+fn cpu(s: Sender<RunnerResult>, update_interval: u64) -> Runner<()> {
     init_system_info();
     let f = || {
         let Some((progress, temp)) = get_cpu_info() else {
@@ -122,10 +122,10 @@ fn cpu(s: Sender<RunnerResult>) -> Runner<()> {
             preset_text: text,
         }
     };
-    new_runner!(1000, s, f)
+    new_runner!(update_interval, s, f)
 }
 
-fn battery(s: Sender<RunnerResult>) -> Runner<()> {
+fn battery(s: Sender<RunnerResult>, update_interval: u64) -> Runner<()> {
     init_system_info();
     let f = || {
         let Some(progress) = get_battery_info() else {
@@ -138,10 +138,10 @@ fn battery(s: Sender<RunnerResult>) -> Runner<()> {
             preset_text,
         }
     };
-    new_runner!(1000, s, f)
+    new_runner!(update_interval, s, f)
 }
 
-fn disk(s: Sender<RunnerResult>, partition: String) -> Runner<()> {
+fn disk(s: Sender<RunnerResult>, update_interval: u64, partition: String) -> Runner<()> {
     init_system_info();
     // TODO: unregister
     register_disk_partition(&partition);
@@ -166,12 +166,12 @@ fn disk(s: Sender<RunnerResult>, partition: String) -> Runner<()> {
         }
     };
 
-    new_runner!(1000, s, f)
+    new_runner!(update_interval, s, f)
 }
 
-fn custom(s: Sender<RunnerResult>, interval_update: (u64, String)) -> Runner<()> {
+fn custom(s: Sender<RunnerResult>, update_interval: u64, cmd: String) -> Runner<()> {
     init_system_info();
-    let (time, cmd) = interval_update;
+
     let f = move || {
         let Ok(progress) = shell_cmd(&cmd) else {
             return RunnerResult::default();
@@ -191,7 +191,7 @@ fn custom(s: Sender<RunnerResult>, interval_update: (u64, String)) -> Runner<()>
             preset_text: String::default(),
         }
     };
-    new_runner!(time, s, f)
+    new_runner!(update_interval, s, f)
 }
 
 #[derive(Default, Debug)]
@@ -203,12 +203,18 @@ pub struct RunnerResult {
 pub fn parse_preset(preset: RingPreset) -> (Runner<()>, Receiver<RunnerResult>) {
     let (s, r) = async_channel::bounded(1);
     let runner = match preset {
-        RingPreset::Ram => ram(s),
-        RingPreset::Swap => swap(s),
-        RingPreset::Cpu => cpu(s),
-        RingPreset::Battery => battery(s),
-        RingPreset::Disk { partition } => disk(s, partition),
-        RingPreset::Custom { interval_update } => custom(s, interval_update),
+        RingPreset::Ram { update_interval } => ram(s, update_interval),
+        RingPreset::Swap { update_interval } => swap(s, update_interval),
+        RingPreset::Cpu { update_interval } => cpu(s, update_interval),
+        RingPreset::Battery { update_interval } => battery(s, update_interval),
+        RingPreset::Disk {
+            update_interval,
+            partition,
+        } => disk(s, update_interval, partition),
+        RingPreset::Custom {
+            update_interval,
+            cmd,
+        } => custom(s, update_interval, cmd),
     };
 
     (runner, r)
