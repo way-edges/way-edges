@@ -22,6 +22,8 @@ pub enum RingPreset {
     Cpu {
         #[serde(default = "dt_update_interval")]
         update_interval: u64,
+        #[serde(default)]
+        core: Option<usize>,
     },
     Battery {
         #[serde(default = "dt_update_interval")]

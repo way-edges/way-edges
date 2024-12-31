@@ -2,10 +2,7 @@ use async_channel::{Receiver, Sender};
 use interval_task::runner::Runner;
 use std::time::Duration;
 
-use backend::system::{
-    get_battery_info, get_cpu_info, get_disk_info, get_ram_info, get_swap_info, init_mem_info,
-    init_system_info, register_disk_partition,
-};
+use backend::system::{get_battery_info, get_cpu_info, get_disk_info, get_ram_info, get_swap_info};
 use config::widgets::wrapbox::ring::RingPreset;
 use util::shell::shell_cmd;
 
@@ -27,24 +24,24 @@ fn from_kb(total: u64, avaibale: u64) -> (f64, f64, &'static str) {
     };
     (total, avaibale, surfix)
 }
-fn from_kib(total: u64, avaibale: u64) -> (f64, f64, &'static str) {
-    let mut c = 0;
-    let mut total = total as f64;
-    let mut avaibale = avaibale as f64;
-    while total > 1024. && c < 3 {
-        total /= 1024.;
-        avaibale /= 1024.;
-        c += 1;
-    }
-    let surfix = match c {
-        0 => "KiB",
-        1 => "MiB",
-        2 => "GiB",
-        3 => "TiB",
-        _ => unreachable!(),
-    };
-    (total, avaibale, surfix)
-}
+// fn from_kib(total: u64, avaibale: u64) -> (f64, f64, &'static str) {
+//     let mut c = 0;
+//     let mut total = total as f64;
+//     let mut avaibale = avaibale as f64;
+//     while total > 1024. && c < 3 {
+//         total /= 1024.;
+//         avaibale /= 1024.;
+//         c += 1;
+//     }
+//     let surfix = match c {
+//         0 => "KiB",
+//         1 => "MiB",
+//         2 => "GiB",
+//         3 => "TiB",
+//         _ => unreachable!(),
+//     };
+//     (total, avaibale, surfix)
+// }
 
 macro_rules! new_runner {
     ($time:expr, $s:expr, $f:expr) => {
@@ -60,13 +57,10 @@ macro_rules! new_runner {
 }
 
 fn ram(s: Sender<RunnerResult>, update_interval: u64) -> Runner<()> {
-    init_mem_info();
     let f = || {
-        let Some([ava, total]) = get_ram_info() else {
-            return RunnerResult::default();
-        };
+        let info = get_ram_info();
 
-        let (total, avaibale, surfix) = from_kib(total, ava);
+        let (total, avaibale, surfix) = from_kb(info.total, info.free);
         let progress = avaibale / total;
         let preset_text = format!(
             "{:.2}{surfix} / {:.2}{surfix} [{:.2}%]",
@@ -85,13 +79,10 @@ fn ram(s: Sender<RunnerResult>, update_interval: u64) -> Runner<()> {
 }
 
 fn swap(s: Sender<RunnerResult>, update_interval: u64) -> Runner<()> {
-    init_mem_info();
     let f = || {
-        let Some([ava, total]) = get_swap_info() else {
-            return RunnerResult::default();
-        };
+        let info = get_swap_info();
 
-        let (total, avaibale, surfix) = from_kib(total, ava);
+        let (total, avaibale, surfix) = from_kb(info.total, info.free);
         let progress = avaibale / total;
         let preset_text = format!(
             "{:.2}{surfix} / {:.2}{surfix} [{:.2}%]",
@@ -109,14 +100,11 @@ fn swap(s: Sender<RunnerResult>, update_interval: u64) -> Runner<()> {
     new_runner!(update_interval, s, f)
 }
 
-fn cpu(s: Sender<RunnerResult>, update_interval: u64) -> Runner<()> {
-    init_system_info();
-    let f = || {
-        let Some((progress, temp)) = get_cpu_info() else {
-            return RunnerResult::default();
-        };
+fn cpu(s: Sender<RunnerResult>, update_interval: u64, core: Option<usize>) -> Runner<()> {
+    let f = move || {
+        let progress = get_cpu_info(core);
 
-        let text = format!("{:.2}% {temp:.2}°C", progress * 100.);
+        let text = format!("{:.2}%", progress * 100.);
         RunnerResult {
             progress,
             preset_text: text,
@@ -126,11 +114,8 @@ fn cpu(s: Sender<RunnerResult>, update_interval: u64) -> Runner<()> {
 }
 
 fn battery(s: Sender<RunnerResult>, update_interval: u64) -> Runner<()> {
-    init_system_info();
     let f = || {
-        let Some(progress) = get_battery_info() else {
-            return RunnerResult::default();
-        };
+        let progress = get_battery_info();
 
         let preset_text = format!("{:.2}%", progress * 100.);
         RunnerResult {
@@ -142,16 +127,10 @@ fn battery(s: Sender<RunnerResult>, update_interval: u64) -> Runner<()> {
 }
 
 fn disk(s: Sender<RunnerResult>, update_interval: u64, partition: String) -> Runner<()> {
-    init_system_info();
-    // TODO: unregister
-    register_disk_partition(&partition);
-
     let f = move || {
-        let Some((ava, total)) = get_disk_info(&partition) else {
-            return RunnerResult::default();
-        };
+        let info = get_disk_info(&partition);
 
-        let (total, avaibale, surfix) = from_kb(total, ava);
+        let (total, avaibale, surfix) = from_kb(info.total, info.free);
         let progress = avaibale / total;
         let preset_text = format!(
             "[Partition: {}] {:.2}{surfix} / {:.2}{surfix} [{:.2}%]",
@@ -170,21 +149,12 @@ fn disk(s: Sender<RunnerResult>, update_interval: u64, partition: String) -> Run
 }
 
 fn custom(s: Sender<RunnerResult>, update_interval: u64, cmd: String) -> Runner<()> {
-    init_system_info();
-
     let f = move || {
         let Ok(progress) = shell_cmd(&cmd) else {
             return RunnerResult::default();
         };
 
         let progress = progress.trim().parse().unwrap_or(0.);
-
-        // let text = template.parse(|parser| {
-        //     if parser.name() == TEMPLATE_ARG_FLOAT {
-        //         let parser = parser.downcast_mut::<TemplateArgFloatParser>().unwrap();
-        //         parser.parse(progress)
-        //     }
-        // });
 
         RunnerResult {
             progress,
@@ -205,7 +175,10 @@ pub fn parse_preset(preset: RingPreset) -> (Runner<()>, Receiver<RunnerResult>) 
     let runner = match preset {
         RingPreset::Ram { update_interval } => ram(s, update_interval),
         RingPreset::Swap { update_interval } => swap(s, update_interval),
-        RingPreset::Cpu { update_interval } => cpu(s, update_interval),
+        RingPreset::Cpu {
+            update_interval,
+            core,
+        } => cpu(s, update_interval, core),
         RingPreset::Battery { update_interval } => battery(s, update_interval),
         RingPreset::Disk {
             update_interval,
