@@ -10,10 +10,9 @@
           "layer": "overlay",
           "monitor": "HDMI-A-1",
           "widget": {
-            "type": "hyprland-workspace",
+            "type": "hypr-workspace",
             "thickness": 25,
             "length": "25%",
-            "frame_rate": 144,
             "hover_color": "#ffffff22",
             "active_increase": 0.2,
             "active_color": "#6B8EF0",
@@ -22,6 +21,7 @@
         },
       ],
     },
+
     {
       "name": "common",
       "widgets": [
@@ -31,66 +31,80 @@
           "monitor": "HDMI-A-1",
           "layer": "overlay",
           "widget": {
-            "type": "box",
-            "frame_rate": 120,
+            "type": "wrap-box",
             "widgets": [
               {
                 "index": [-1, -1],
                 "widget": {
-                  "frame_rate": 120,
                   "font_family": "JetBrainsMono Nerd Font",
                   "fg_color": "#82B2E3",
-                  "bg_color": "#474747",
+                  "bg_color": "#00000044",
                   "type": "ring",
                   "prefix": " ",
-                  "preset": "disk",
+                  "suffix": " {preset}",
+                  "suffix_hide": true,
+                  "preset": {
+                    "type": "disk",
+                  },
                 },
               },
               {
                 "index": [-1, -1],
                 "widget": {
-                  "frame_rate": 120,
                   "font_family": "JetBrainsMono Nerd Font",
                   "fg_color": "#FFB77B",
-                  "bg_color": "#474747",
+                  "bg_color": "#00000044",
                   "type": "ring",
                   "prefix": " ",
-                  "preset": "battery",
+                  "suffix": " {preset}",
+                  "suffix_hide": true,
+                  "preset": {
+                    "type": "battery",
+                  },
                 },
               },
               {
                 "index": [-1, -1],
                 "widget": {
-                  "frame_rate": 120,
                   "font_family": "JetBrainsMono Nerd Font",
                   "fg_color": "#FB8893",
-                  "bg_color": "#474747",
+                  "bg_color": "#00000044",
                   "type": "ring",
                   "prefix": " ",
-                  "preset": "cpu",
+                  "suffix": " {preset}",
+                  "suffix_hide": true,
+                  "preset": {
+                    "type": "cpu",
+                  },
                 },
               },
               {
                 "index": [-1, -1],
                 "widget": {
-                  "frame_rate": 120,
                   "font_family": "JetBrainsMono Nerd Font",
                   "fg_color": "#BEAFD9",
-                  "bg_color": "#474747",
+                  "bg_color": "#00000044",
                   "type": "ring",
                   "prefix": "󰾶 ",
-                  "preset": "swap",
+                  "suffix": " {preset}",
+                  "suffix_hide": true,
+                  "preset": {
+                    "type": "swap",
+                  },
                 },
               },
               {
                 "index": [-1, -1],
                 "widget": {
-                  "frame_rate": 120,
                   "font_family": "JetBrainsMono Nerd Font",
-                  "bg_color": "#474747",
+                  "bg_color": "#00000044",
                   "type": "ring",
                   "prefix": " ",
-                  "preset": "ram",
+                  "suffix": " {preset}",
+                  "suffix_hide": true,
+                  "preset": {
+                    "type": "ram",
+                  },
                 },
               },
             ],
@@ -102,15 +116,14 @@
           "monitor": "HDMI-A-1",
           "layer": "overlay",
           "widget": {
-            "type": "box",
-            "frame_rate": 144,
+            "type": "wrap-box",
             "widgets": [
               {
                 "index": [-1, -1],
                 "widget": {
                   "type": "text",
                   "fg_color": "#FFFFFF",
-                  "font_size": 16,
+                  "font_size": 60,
                   "font_family": "JetBrainsMono Nerd Font",
                   "preset": {
                     "type": "time",
@@ -121,16 +134,21 @@
             ],
           },
         },
+
         {
           "edge": "top",
           "monitor": "HDMI-A-1",
           "layer": "overlay",
           "position": "left",
           "widget": {
-            "type": "speaker",
-            "width": 20,
-            "height": "12.5%",
-            "frame_rate": 144,
+            "type": "slider",
+            "thickness": 40,
+            "border_width": 6,
+            "length": "12.5%",
+            "redraw_only_on_internal_update": true,
+            "preset": {
+              "type": "speaker",
+            },
           },
         },
         {
@@ -142,13 +160,18 @@
             "left": "12.5%",
           },
           "widget": {
-            "type": "microphone",
-            "width": 20,
-            "height": "12.5%",
-            "frame_rate": 144,
+            "type": "slider",
+            "thickness": 40,
+            "border_width": 6,
+            "length": "12.5%",
             "fg_color": "#BD93F9",
+            "redraw_only_on_internal_update": true,
+            "preset": {
+              "type": "microphone",
+            },
           },
         },
+
         {
           "edge": "top",
           "position": "left",
@@ -158,14 +181,13 @@
             "left": "25%",
           },
           "widget": {
-            "width": 15,
-            "height": "25%",
+            "thickness": 20,
+            "length": "25%",
             "type": "btn",
-            "frame_rate": 144,
-            "event_map": [
-              [1, "hyprctl dispatch movefocus l"],
-              [3, "hyprctl dispatch 'workspace -1'"],
-            ],
+            "event_map": {
+              "1": "hyprctl dispatch movefocus l",
+              "3": "hyprctl dispatch 'workspace -1'",
+            },
           },
         },
         {
@@ -177,13 +199,42 @@
             "right": "25%",
           },
           "widget": {
-            "width": 15,
-            "height": "25%",
+            "thickness": 20,
+            "length": "25%",
             "type": "btn",
             "frame_rate": 144,
-            "event_map": [
-              [1, "hyprctl dispatch movefocus r"],
-              [3, "hyprctl dispatch 'workspace +1'"],
+            "event_map": {
+              "1": "hyprctl dispatch movefocus r",
+              "3": "hyprctl dispatch 'workspace +1'",
+            },
+          },
+        },
+      ],
+    },
+
+    {
+      "name": "tray",
+      "widgets": [
+        {
+          "name": "tray",
+          "edge": "bottom",
+          "position": "left",
+          "monitor": "HDMI-A-1",
+          "layer": "overlay",
+          "widget": {
+            "type": "wrap-box",
+            "align": "bottom_left",
+            "widgets": [
+              {
+                "index": [-1, -1],
+                "widget": {
+                  "type": "tray",
+                  "icon_size": 30,
+                  "header_menu_stack": "menu_top",
+                  "header_menu_align": "left",
+                  "grid_align": "bottom_left",
+                },
+              },
             ],
           },
         },
