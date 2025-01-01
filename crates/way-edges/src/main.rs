@@ -2,7 +2,6 @@ mod activate;
 mod args;
 mod common;
 mod daemon;
-// mod ui;
 
 // NOTE: thread 0
 #[tokio::main(flavor = "current_thread")]

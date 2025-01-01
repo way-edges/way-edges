@@ -18,7 +18,6 @@ use config::{widgets::wrapbox::BoxConfig, Config};
 use grid::builder::GrideBoxBuilder;
 use gtk::{gdk::Monitor, glib};
 use outlook::init_outlook;
-use widgets::tray;
 
 pub fn init_widget(window: &mut WindowContext, _: &Monitor, conf: Config, mut w_conf: BoxConfig) {
     let grid_box = Rc::new(RefCell::new(init_boxed_widgets(window, &mut w_conf)));
@@ -29,12 +28,9 @@ pub fn init_widget(window: &mut WindowContext, _: &Monitor, conf: Config, mut w_
         #[strong]
         grid_box,
         move || {
-            let start = std::time::Instant::now();
-
             let content = grid_box.borrow_mut().redraw_if_has_update()?;
             let img = draw_outlook(content);
 
-            println!("cost: {}ms", start.elapsed().as_secs_f64() * 1000.);
             Some(img)
         }
     )));

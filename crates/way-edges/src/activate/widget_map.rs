@@ -2,9 +2,7 @@ use config::GroupConfig;
 use frontend::window::WindowContext;
 use std::collections::HashMap;
 
-type WidgetHashMap = HashMap<String, WindowContext>;
-
-pub struct WidgetMap(WidgetHashMap);
+pub struct WidgetMap(HashMap<String, WindowContext>);
 
 impl WidgetMap {
     pub fn init_window(app: &gtk::Application, cfgs: GroupConfig) -> Result<Self, String> {
@@ -15,7 +13,7 @@ impl WidgetMap {
                 let window_ctx = frontend::widgets::init_widget(app, cfg)?;
                 Ok((widget_name, window_ctx))
             })
-            .collect::<Result<WidgetHashMap, String>>()?;
+            .collect::<Result<HashMap<String, WindowContext>, String>>()?;
 
         Ok(Self(widget_map))
     }

@@ -74,7 +74,7 @@ impl GroupMapCtx {
             let Some(vc) = vc else {
                 return Err(format!("Not found config by group: {name}"));
             };
-            debug!("Parsed Config: {vc:?}");
+            debug!("config:\n{vc:?}");
             WidgetMap::init_window(app, vc.widgets)
         });
         res.inspect_err(|e| {

@@ -56,16 +56,24 @@ pub fn init_widget(
 
     match conf.widget.take().unwrap() {
         config::widgets::Widget::Btn(btn_config) => {
-            button::init_widget(&mut window, monitor, conf, btn_config)
+            log::debug!("initializing button");
+            button::init_widget(&mut window, monitor, conf, btn_config);
+            log::info!("initialized button");
         }
         config::widgets::Widget::Slider(slide_config) => {
-            slide::init_widget(&mut window, monitor, conf, slide_config)
+            log::debug!("initializing slider");
+            slide::init_widget(&mut window, monitor, conf, slide_config);
+            log::info!("initialized slider");
         }
         config::widgets::Widget::HyprWorkspace(hypr_workspace_config) => {
-            hypr_workspace::init_widget(&mut window, monitor, conf, hypr_workspace_config)
+            log::debug!("initializing hypr-workspace");
+            hypr_workspace::init_widget(&mut window, monitor, conf, hypr_workspace_config);
+            log::info!("initialized hypr-workspace");
         }
         config::widgets::Widget::WrapBox(box_config) => {
-            wrapbox::init_widget(&mut window, monitor, conf, box_config)
+            log::debug!("initializing box");
+            wrapbox::init_widget(&mut window, monitor, conf, box_config);
+            log::info!("initialized box");
         }
     };
 

@@ -121,9 +121,3 @@ fn dt_extra_trigger_size() -> NumOrRelative {
 fn dt_preview_size() -> NumOrRelative {
     NumOrRelative::Num(0.0)
 }
-
-impl Drop for Config {
-    fn drop(&mut self) {
-        log::debug!("dropping config: {self:?}")
-    }
-}
