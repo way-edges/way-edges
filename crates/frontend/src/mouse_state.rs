@@ -160,8 +160,3 @@ impl MouseState {
         ms
     }
 }
-impl Drop for MouseState {
-    fn drop(&mut self) {
-        log::debug!("drop mouse state");
-    }
-}
