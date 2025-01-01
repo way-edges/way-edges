@@ -878,6 +878,7 @@ dependencies = [
  "pango",
  "pangocairo",
  "paste",
+ "system-tray",
  "timerfd",
  "util",
  "way-edges-derive",

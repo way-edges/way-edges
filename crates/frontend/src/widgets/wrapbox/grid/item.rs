@@ -8,10 +8,10 @@ pub trait GridItemContent {
 }
 
 #[derive(Debug)]
-pub(super) struct GridItemMap<T: GridItemContent> {
-    pub(super) items: Vec<T>,
+pub struct GridItemMap<T: GridItemContent> {
+    pub items: Vec<T>,
     // record each row start index in `items`
-    pub(super) row_index: Vec<usize>,
+    pub row_index: Vec<usize>,
 }
 impl<T: GridItemContent> Default for GridItemMap<T> {
     fn default() -> Self {

@@ -18,6 +18,7 @@ use config::{widgets::wrapbox::BoxConfig, Config};
 use grid::builder::GrideBoxBuilder;
 use gtk::{gdk::Monitor, glib};
 use outlook::init_outlook;
+use widgets::tray;
 
 pub fn init_widget(window: &mut WindowContext, _: &Monitor, conf: Config, mut w_conf: BoxConfig) {
     let grid_box = Rc::new(RefCell::new(init_boxed_widgets(window, &mut w_conf)));
@@ -69,7 +70,12 @@ fn init_boxed_widgets(window: &mut WindowContext, box_conf: &mut BoxConfig) -> B
                     widgets::ring::init_widget(&mut box_temporary_ctx, ring_config)
                 )
             }
-            BoxedWidget::Tray(tray_config) => todo!(),
+            BoxedWidget::Tray(tray_config) => {
+                boxed!(
+                    box_temporary_ctx,
+                    widgets::tray::init_widget(&mut box_temporary_ctx, tray_config)
+                )
+            }
         };
 
         builder.add(boxed_widget_context, (w.index[0], w.index[1]));

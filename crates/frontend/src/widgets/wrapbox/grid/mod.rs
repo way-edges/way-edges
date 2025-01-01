@@ -7,14 +7,14 @@ use item::{GridItemContent, GridItemMap};
 use util::binary_search_within_range;
 
 #[derive(Debug)]
-struct GridPositionMap {
+pub struct GridPositionMap {
     // use i32 to save memory
     total_size: (i32, i32),
     grid_cell_position_map: [Vec<[i32; 2]>; 2],
     widget_start_point_list: Vec<(f64, f64)>,
 }
 impl GridPositionMap {
-    fn match_item<'a, T: GridItemContent>(
+    pub fn match_item<'a, T: GridItemContent>(
         &self,
         pos: (f64, f64),
         item_map: &'a item::GridItemMap<T>,
@@ -46,11 +46,11 @@ impl GridPositionMap {
 
 #[derive(Debug)]
 pub struct GridBox<T: GridItemContent> {
-    position_map: Option<GridPositionMap>,
-    item_map: GridItemMap<T>,
-    row_col_num: (usize, usize),
-    gap: f64,
-    align_func: AlignFunc,
+    pub position_map: Option<GridPositionMap>,
+    pub item_map: GridItemMap<T>,
+    pub row_col_num: (usize, usize),
+    pub gap: f64,
+    pub align_func: AlignFunc,
 }
 impl<T: GridItemContent> GridBox<T> {
     pub fn new(gap: f64, align: Align) -> Self {
