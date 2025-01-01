@@ -38,11 +38,17 @@ pub fn init_widget(
     )));
 
     let redraw_signal = window.make_redraw_notifier();
-    let backend_id = backend::hypr_workspace::register_hypr_event_callback(move |data| {
-        hypr_data.set(*data);
-        workspace_transition.borrow_mut().flip();
-        redraw_signal(None)
-    });
+    let window_pop_state = &window.window_pop_state;
+    let backend_id = backend::hypr_workspace::register_hypr_event_callback(glib::clone!(
+        #[weak]
+        window_pop_state,
+        move |data| {
+            hypr_data.set(*data);
+            workspace_transition.borrow_mut().flip();
+            window_pop_state.pop();
+            redraw_signal(None)
+        }
+    ));
 
     struct HyprWorkspaceCtx(u32);
     impl Drop for HyprWorkspaceCtx {

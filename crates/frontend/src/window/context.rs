@@ -37,7 +37,7 @@ pub struct WindowContext {
     // mouse event
     pub(super) start_pos: Rc<Cell<(i32, i32)>>,
     pub(super) mouse_event: MouseStateRc,
-    pub(super) window_pop_state: WindowPopStateRc,
+    pub window_pop_state: WindowPopStateRc,
 }
 
 impl WindowContext {
@@ -104,7 +104,17 @@ impl WindowContext {
         // event
         let start_pos = Rc::new(Cell::new((0, 0)));
         let mouse_event = mouse_state::MouseState::new().connect(&drawing_area);
-        let window_pop_state = WindowPopState::new(pop_animation).make_rc();
+        let window_pop_state = WindowPopState::new(
+            pop_animation,
+            Rc::new(glib::clone!(
+                #[weak]
+                drawing_area,
+                move || {
+                    drawing_area.queue_draw();
+                }
+            )),
+        )
+        .make_rc();
 
         Ok(Self {
             name: conf.name.clone(),

@@ -75,7 +75,7 @@ impl WindowContext {
         let base_draw_func = &self.base_draw_func;
         let max_size_func = &self.max_widget_size_func;
         let start_pos = &self.start_pos;
-        let ani = self.window_pop_state.borrow().get_animation();
+        let pop_window_state = &self.window_pop_state;
         let frame_manager = self.frame_manager.clone();
         let func = glib::clone!(
             #[weak]
@@ -89,7 +89,7 @@ impl WindowContext {
             #[weak]
             start_pos,
             #[weak]
-            ani,
+            pop_window_state,
             #[weak]
             frame_manager,
             #[upgrade_or_panic]
@@ -106,7 +106,7 @@ impl WindowContext {
 
                 // pop animation
                 frame_manager.borrow_mut().ensure_animations(darea);
-                let progress = ani.borrow_mut().progress();
+                let progress = pop_window_state.borrow_mut().progress();
 
                 // check unfinished animation and redraw frame
 
