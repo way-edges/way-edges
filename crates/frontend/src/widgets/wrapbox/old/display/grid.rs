@@ -340,7 +340,7 @@ impl<T> GridBox<T> {
             total_size,
             grid_cell_position_map,
             widget_start_point_list,
-            grid_item_map: &raw const self.map,
+            grid_item_map: &self.map,
         });
         surf
     }
