@@ -92,11 +92,20 @@ pub fn draw_rect_path(radius: f64, size: (f64, f64), corners: [bool; 4]) -> Resu
 }
 
 pub fn draw_text_to_size(pl: &Layout, color: &RGBA, text: &str, height: i32) -> ImageSurface {
+    if text.is_empty() {
+        return new_surface((0, 0));
+    }
+
     pl.set_text(text);
     let (_, logic) = pl.pixel_extents();
-    let scale = height as f64 / logic.height() as f64;
+    let line_num = text.lines().count();
+    let one_line_height = logic.height() / line_num as i32;
+    let scale = height as f64 / one_line_height as f64;
 
-    let size = ((logic.width() as f64 * scale).ceil() as i32, height);
+    let size = (
+        (logic.width() as f64 * scale).ceil() as i32,
+        height * line_num as i32,
+    );
     let surf = new_surface(size);
     let ctx = cairo::Context::new(&surf).unwrap();
     ctx.set_source_color(color);
