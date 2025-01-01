@@ -92,6 +92,7 @@ impl WindowContext {
             ani,
             #[weak]
             frame_manager,
+            #[upgrade_or_panic]
             move |darea: &DrawingArea, ctx: &cairo::Context, w, h| {
                 // content
                 if let Some(cb) = &mut cb {
