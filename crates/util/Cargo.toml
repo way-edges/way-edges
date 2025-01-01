@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 log.workspace = true
-cairo-rs.workspace = true
+cairo.workspace = true
 paste.workspace = true
 gtk.workspace = true
 pangocairo.workspace = true

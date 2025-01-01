@@ -6,8 +6,9 @@ edition = "2021"
 [dependencies]
 gtk4-layer-shell.workspace = true
 gtk.workspace = true
+glib.workspace = true
 gio.workspace = true
-cairo-rs.workspace = true
+cairo.workspace = true
 pango.workspace = true
 educe.workspace = true
 paste.workspace = true

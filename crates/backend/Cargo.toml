@@ -11,7 +11,7 @@ gtk.workspace = true
 log.workspace = true
 async-channel.workspace = true
 tokio.workspace = true
-cairo-rs.workspace = true
+cairo.workspace = true
 lazy_static.workspace = true
 system-tray.workspace = true
 

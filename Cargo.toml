@@ -12,12 +12,29 @@ backend = { version = "0.1.0", path = "crates/backend" }
 frontend = { version = "0.1.0", path = "crates/frontend" }
 
 
-gtk4-layer-shell = "0.4"
-gtk = { package = "gtk4", version = "0.9", features = ["v4_12", "v4_14"] }
-gio = "0.20"
-cairo-rs = { version = "0.20", features = ["freetype", "freetype-rs", "png"] }
-pangocairo = "0.20"
-pango = { version = "0.20.7", features = ["v1_56"] }
+# gtk4-layer-shell = "0.4"
+gtk4-layer-shell = { git = "https://github.com/ogios/gtk4-layer-shell-gir.git" }
+
+gtk4-sys = { git = "https://github.com/ogios/gtk4-rs.git", version = "0.9", branch = "0.9", package = "gtk4-sys" }
+gtk = { git = "https://github.com/ogios/gtk4-rs.git", version = "0.9", branch = "0.9", package = "gtk4", features = [
+  "v4_12",
+  "v4_14",
+] }
+glib = { git = "https://github.com/ogios/gtk-rs-core.git", version = "0.20", branch = "0.20", package = "glib" }
+gio = { git = "https://github.com/ogios/gtk-rs-core.git", version = "0.20", branch = "0.20", package = "gio" }
+cairo = { git = "https://github.com/ogios/gtk-rs-core.git", version = "0.20", branch = "0.20", package = "cairo-rs", features = [
+  "freetype",
+  "freetype-rs",
+  "png",
+] }
+pango = { git = "https://github.com/ogios/gtk-rs-core.git", version = "0.20", branch = "0.20", package = "pango", features = [
+  "v1_56",
+] }
+pangocairo = { git = "https://github.com/ogios/gtk-rs-core.git", version = "0.20", branch = "0.20", package = "pangocairo" }
+# gio = "0.20"
+# cairo-rs = { version = "0.20", features = ["freetype", "freetype-rs", "png"] }
+# pangocairo = "0.20"
+# pango = { version = "0.20.7", features = ["v1_56"] }
 log = "0.4"
 env_logger = "0.11"
 lazy_static = "1.5.0"

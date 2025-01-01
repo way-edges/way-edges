@@ -1,7 +1,7 @@
 use std::os::unix::io::AsRawFd;
 use std::{cell::Cell, rc::Rc, time::Duration};
 
-use gtk::glib;
+use glib::Priority;
 use gtk::prelude::WidgetExt;
 use gtk::DrawingArea;
 use timerfd::TimerFd;
@@ -25,8 +25,11 @@ impl FrameManager {
 
         let tfd = self.new_timerfd();
         let handle = Rc::new(Cell::new(false));
-        glib::unix_fd_add_local(
+        use gtk::glib;
+
+        glib::unix_fd_add_full_local(
             tfd.as_raw_fd(),
+            Priority::LOW,
             glib::IOCondition::IN,
             glib::clone!(
                 #[weak]
