@@ -1,4 +1,4 @@
-use std::{cell::Cell, rc::Rc};
+use std::{any::Any, cell::Cell, rc::Rc};
 
 use super::{
     draw::{make_base_draw_func, make_max_size_func, BaseDrawFunc, MaxSizeFunc},
@@ -25,7 +25,7 @@ pub struct WindowContext {
     pub window: ApplicationWindow,
     pub drawing_area: DrawingArea,
     #[allow(dyn_drop)]
-    pub widget_context: Option<Box<dyn Drop>>,
+    pub widget_context: Option<Box<dyn Any>>,
 
     pub(super) frame_manager: WindowFrameManagerRc,
 
@@ -133,7 +133,7 @@ impl WindowContext {
         self.window.destroy();
     }
 
-    pub fn bind_context(&mut self, w: impl Drop + 'static) {
+    pub fn bind_context(&mut self, w: impl Any + 'static) {
         self.widget_context = Some(Box::new(w));
     }
 

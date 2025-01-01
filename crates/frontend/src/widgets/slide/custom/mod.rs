@@ -114,11 +114,6 @@ fn interval_update(
         // bind runner to window
         // ensure runner is closed when window destroyed
         struct SlideContext(interval_task::runner::Runner<()>);
-        impl Drop for SlideContext {
-            fn drop(&mut self) {
-                std::mem::take(&mut self.0).close().unwrap();
-            }
-        }
         window.bind_context(SlideContext(runner));
 
         // initial progress

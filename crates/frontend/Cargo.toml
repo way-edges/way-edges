@@ -23,7 +23,7 @@ log.workspace = true
 util.workspace = true
 
 timerfd = "1.0"
-interval-task = "0.3"
+interval-task = "0.3.4"
 
 chrono = "0.4.38"
 chrono-tz = "0.10.0"

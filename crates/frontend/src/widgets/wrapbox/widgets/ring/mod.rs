@@ -20,7 +20,7 @@ use crate::widgets::wrapbox::BoxTemporaryCtx;
 #[derive(Educe)]
 #[educe(Debug)]
 pub struct RingCtx {
-    #[educe(Debug(ignore))]
+    #[allow(dead_code)]
     runner: Runner<()>,
     current: Rc<UnsafeCell<RunnerResult>>,
     #[educe(Debug(ignore))]
@@ -52,11 +52,6 @@ impl BoxedWidget for RingCtx {
             }
             _ => {}
         }
-    }
-}
-impl Drop for RingCtx {
-    fn drop(&mut self) {
-        std::mem::take(&mut self.runner).close().unwrap();
     }
 }
 

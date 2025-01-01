@@ -6,7 +6,6 @@ use std::{rc::Rc, time::Duration};
 use async_channel::{Receiver, Sender};
 use chrono::{Local, Utc};
 use draw::TextDrawer;
-use educe::Educe;
 use gtk::glib;
 use interval_task::runner::Runner;
 
@@ -68,19 +67,12 @@ fn match_preset(preset: TextPreset) -> (Runner<()>, Receiver<String>) {
     )
 }
 
-#[derive(Educe)]
-#[educe(Debug)]
+#[derive(Debug)]
 pub struct TextCtx {
-    #[educe(Debug(ignore))]
+    #[allow(dead_code)]
     runner: Runner<()>,
     text: Rc<UnsafeCell<String>>,
     drawer: TextDrawer,
-}
-
-impl Drop for TextCtx {
-    fn drop(&mut self) {
-        std::mem::take(&mut self.runner).close().unwrap();
-    }
 }
 
 pub fn init_text(box_temp_ctx: &mut BoxTemporaryCtx, conf: TextConfig) -> impl BoxedWidget {
