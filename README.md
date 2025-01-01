@@ -9,6 +9,10 @@
 https://github.com/user-attachments/assets/46730461-267e-4930-8439-7dda360d7149
 
 
+> [!NOTE]
+> the project is under dramatic structual change  
+> for more info: https://github.com/way-edges/way-edges/pull/60  
+> my code is a mess...
 
 
 ## Doc
