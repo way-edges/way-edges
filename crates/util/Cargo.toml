@@ -5,5 +5,10 @@ edition = "2021"
 
 [dependencies]
 log.workspace = true
+cairo.workspace = true
+paste.workspace = true
+gtk.workspace = true
+pangocairo.workspace = true
 
 notify-rust = "4.11"
+downcast-rs = "1.2.1"

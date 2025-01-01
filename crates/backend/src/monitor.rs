@@ -52,8 +52,8 @@ impl MonitorCtx {
             })
             .collect::<Result<HashMap<String, usize>, String>>()?;
 
-        log::debug!(
-            "Reloaded monitors: {:?}\n{:#?}",
+        log::info!(
+            "Reloaded monitors:\n{:?}\n{:?}",
             self.monitors,
             self.name_index_map
         );

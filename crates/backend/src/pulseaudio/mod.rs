@@ -6,17 +6,16 @@ use std::{
     sync::atomic::{AtomicBool, AtomicPtr, Ordering},
 };
 
-use gtk::glib;
 pub use pa::PulseAudioDevice;
 use pa::VInfo;
 
-pub type PaCallback = dyn FnMut(&VInfo);
+pub type PaCallback = Box<dyn FnMut(&VInfo)>;
 
 type CallbackID = i32;
 
 struct PA {
     count: i32,
-    cbs: HashMap<CallbackID, Box<PaCallback>>,
+    cbs: HashMap<CallbackID, PaCallback>,
     device_map: HashMap<PulseAudioDevice, HashSet<CallbackID>>,
 }
 
@@ -37,7 +36,7 @@ impl PA {
             });
         }
     }
-    fn add_cb(&mut self, mut cb: Box<PaCallback>, device: PulseAudioDevice) -> i32 {
+    fn add_cb(&mut self, mut cb: PaCallback, device: PulseAudioDevice) -> i32 {
         let key = self.count;
         self.count += 1;
 
@@ -64,73 +63,28 @@ fn init_pa() {
 fn is_pa_inited() -> bool {
     IS_PA_INITIALIZED.load(Ordering::Acquire)
 }
-fn is_pa_empty() -> bool {
-    GLOBAL_PA.load(Ordering::Acquire).is_null()
-}
-fn call_pa(device: PulseAudioDevice) {
-    unsafe {
-        GLOBAL_PA
-            .load(Ordering::Acquire)
-            .as_mut()
-            .unwrap()
-            .call(device);
-    }
-}
-fn add_cb(cb: Box<PaCallback>, device: PulseAudioDevice) -> i32 {
-    unsafe {
-        GLOBAL_PA
-            .load(Ordering::Acquire)
-            .as_mut()
-            .unwrap()
-            .add_cb(cb, device)
-    }
-}
-fn rm_cb(key: i32) {
-    unsafe {
-        GLOBAL_PA
-            .load(Ordering::Acquire)
-            .as_mut()
-            .unwrap()
-            .remove_cb(key);
-    }
+fn get_pa() -> &'static mut PA {
+    unsafe { GLOBAL_PA.load(Ordering::Acquire).as_mut().unwrap() }
 }
 
 pub fn try_init_pulseaudio() -> Result<(), String> {
     if !is_pa_inited() {
-        log::info!("start init pulseaudio related stuff");
-        pa::init_pulseaudio_subscriber();
         init_pa();
-        glib::spawn_future_local(async move {
-            log::info!("start pulseaudio signal receiver on glib main thread");
-            let sr = &pa::PaSignalChannel.1;
-            loop {
-                if let Ok(r) = sr.recv().await {
-                    log::debug!("recv pulseaudio signal: {r:#?}");
-                    call_pa(r);
-                } else {
-                    log::error!("pulseaudio mainloops seems closed(communication channel closed)");
-                    break;
-                }
-            }
-            log::info!("stop pulseaudio signal receiver on glib main thread");
-        });
-    } else if is_pa_empty() {
-        return Err(
-            "pulseaudio mainloops seems inited before closed due to some error".to_string(),
-        );
+        pa::init_pulseaudio_subscriber();
     }
     Ok(())
 }
 
-pub fn register_callback(cb: Box<PaCallback>, device: PulseAudioDevice) -> Result<i32, String> {
+pub fn register_callback(
+    cb: impl FnMut(&VInfo) + 'static,
+    device: PulseAudioDevice,
+) -> Result<i32, String> {
     try_init_pulseaudio()?;
-    log::info!("register pulseaudio callback for device: {device:?}");
-    Ok(add_cb(cb, device))
+    Ok(get_pa().add_cb(Box::new(cb), device))
 }
 
 pub fn unregister_callback(key: i32) {
-    log::info!("unregister pulseaudio callback for key: {key:?}");
-    if !is_pa_empty() {
-        rm_cb(key);
+    if is_pa_inited() {
+        get_pa().remove_cb(key);
     }
 }

@@ -7,6 +7,8 @@ use std::{
 use gtk::{gdk::Display, IconTheme};
 use system_tray::client::Client;
 
+use crate::get_main_runtime_handle;
+
 use super::event::{match_event, TrayEvent};
 
 type TrayCallback = Box<dyn FnMut(&TrayEvent)>;
@@ -72,14 +74,14 @@ pub(super) fn get_tray_context() -> &'static mut TrayContext {
             .unwrap()
     }
 }
-pub fn init_tray_client(tokio_runtime: &tokio::runtime::Handle) {
+pub fn init_tray_client() {
     static CONTEXT_INITED: AtomicBool = AtomicBool::new(false);
 
     if CONTEXT_INITED.load(std::sync::atomic::Ordering::Acquire) {
         return;
     }
 
-    let client = tokio_runtime.block_on(async { Client::new().await.unwrap() });
+    let client = get_main_runtime_handle().block_on(async { Client::new().await.unwrap() });
     let mut tray_rx = client.subscribe();
 
     TRAY_CONTEXT.store(
@@ -103,8 +105,8 @@ pub fn init_tray_client(tokio_runtime: &tokio::runtime::Handle) {
     // get_main_runtime_handle().spawn();
 }
 
-pub fn register_tray(cb: TrayCallback) -> i32 {
-    get_tray_context().add_cb(cb)
+pub fn register_tray(cb: impl FnMut(&TrayEvent) + 'static) -> i32 {
+    get_tray_context().add_cb(Box::new(cb))
 }
 
 pub fn unregister_tray(id: i32) {

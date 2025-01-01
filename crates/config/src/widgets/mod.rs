@@ -1,20 +1,65 @@
-pub mod backlight;
+use button::BtnConfig;
+use hypr_workspace::HyprWorkspaceConfig;
+use serde::Deserialize;
+use slide::base::SlideConfig;
+use wrapbox::BoxConfig;
+
 pub mod button;
 pub mod hypr_workspace;
-pub mod pulseaudio;
 pub mod slide;
 pub mod wrapbox;
 
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "kebab-case", tag = "type")]
+pub enum Widget {
+    Btn(BtnConfig),
+    Slider(SlideConfig),
+    WrapBox(BoxConfig),
+    HyprWorkspace(HyprWorkspaceConfig),
+}
+
+// macro_rules! match_widget {
+//     ($t:expr, $raw:expr, $($name:ident),*) => {
+//         match $t {
+//             $(
+//                 $name::NAME => $name::visit_config($raw),
+//             )*
+//             _ => Err(format!("unknown widget type: {}", $t)),
+//         }.map_err(serde::de::Error::custom)
+//     };
+// }
+// pub(crate) use match_widget;
+//
+// impl<'de> Deserialize<'de> for Widget {
+//     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+//     where
+//         D: Deserializer<'de>,
+//     {
+//         let raw = serde_jsonrc::value::Value::deserialize(deserializer)?;
+//
+//         if !raw.is_object() {
+//             return Err(serde::de::Error::custom("Widget must be object"));
+//         }
+//         let t = raw
+//             .get("type")
+//             .ok_or(serde::de::Error::missing_field("type"))?
+//             .as_str()
+//             .ok_or(serde::de::Error::custom("widget type must be string"))?;
+//
+//         match_widget!(t, raw, button, slide, wrapbox, hypr_workspace)
+//     }
+// }
+
 pub mod common {
-    use std::{collections::HashMap, str::FromStr};
+    use std::{collections::HashMap, fmt::Display, str::FromStr};
 
     use gtk::gdk::RGBA;
     use gtk4_layer_shell::Edge;
-    use serde::{self, Deserialize, Deserializer};
+    use serde::{self, de, Deserialize, Deserializer};
     use serde_jsonrc::Value;
-
-    use crate::NumOrRelative;
     use util::shell::shell_cmd_non_block;
+
+    use crate::common::NumOrRelative;
 
     #[derive(Debug, Deserialize)]
     pub struct CommonSize {
@@ -22,92 +67,50 @@ pub mod common {
         pub length: NumOrRelative,
     }
     impl CommonSize {
-        pub fn ensure_no_relative(
-            &mut self,
-            max_size_raw: (i32, i32),
-            edge: Edge,
-        ) -> Result<(), String> {
+        pub fn calculate_relative(&mut self, monitor_size: (i32, i32), edge: Edge) {
             let max_size = match edge {
-                Edge::Left | Edge::Right => (max_size_raw.0, max_size_raw.1),
-                Edge::Top | Edge::Bottom => (max_size_raw.1, max_size_raw.0),
+                Edge::Left | Edge::Right => (monitor_size.0, monitor_size.1),
+                Edge::Top | Edge::Bottom => (monitor_size.1, monitor_size.0),
                 _ => unreachable!(),
             };
             self.thickness.calculate_relative(max_size.0 as f64);
             self.length.calculate_relative(max_size.1 as f64);
-
-            // NOTE: WHY THIS CODE EXIST AT THE FIRST PLACE ANYWAY?
-            //
-            // remember to check height since we didn't do it in `parse_config`
-            // when passing only `rel_height`
-            // let w = w.get_num()?;
-            // let h = h.get_num()?;
-            // if w * 2. > h {
-            //     Err(format!(
-            //         "relative height detect: width * 2 must be <= height: {w} * 2 <= {h}",
-            //     ))
-            // } else {
-            //     Ok(())
-            // }
-            Ok(())
         }
     }
 
-    pub type EventMap = HashMap<u32, Task>;
-    pub type Task = Box<dyn FnMut() + Send + Sync>;
-
-    pub fn create_task(value: String) -> Task {
-        Box::new(move || {
-            shell_cmd_non_block(value.clone());
-        })
+    #[derive(Debug, Default)]
+    pub struct KeyEventMap(HashMap<u32, String>);
+    impl KeyEventMap {
+        pub fn call(&self, k: u32) {
+            if let Some(cmd) = self.0.get(&k) {
+                // PERF: SHOULE THIS BE USE OF CLONING???
+                shell_cmd_non_block(cmd.clone());
+            }
+        }
     }
-
-    pub fn dt_transition_duration() -> u64 {
-        100
+    impl<'de> Deserialize<'de> for KeyEventMap {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            let map: HashMap<u32, String> = de_int_key(deserializer)?;
+            Ok(KeyEventMap(map))
+        }
     }
-
-    pub fn dt_frame_rate() -> u32 {
-        60
-    }
-
-    pub fn dt_extra_trigger_size() -> NumOrRelative {
-        NumOrRelative::Num(5.0)
-    }
-
-    pub fn dt_event_map() -> Option<EventMap> {
-        Some(EventMap::new())
-    }
-
-    pub fn event_map_translate<'de, D>(d: D) -> Result<Option<EventMap>, D::Error>
+    fn de_int_key<'de, D, K, V>(deserializer: D) -> Result<HashMap<K, V>, D::Error>
     where
         D: Deserializer<'de>,
+        K: Eq + std::hash::Hash + FromStr,
+        K::Err: Display,
+        V: Deserialize<'de>,
     {
-        fn _event_map_translate(event_map: Vec<(u32, String)>) -> EventMap {
-            let mut map = EventMap::new();
-            for (key, value) in event_map {
-                map.insert(key, create_task(value));
-            }
-            map
+        let string_map = <HashMap<String, V>>::deserialize(deserializer)?;
+        let mut map = HashMap::with_capacity(string_map.len());
+        for (s, v) in string_map {
+            let k = K::from_str(&s).map_err(de::Error::custom)?;
+            map.insert(k, v);
         }
-        struct EventMapVisitor;
-        impl<'de> serde::de::Visitor<'de> for EventMapVisitor {
-            type Value = Option<EventMap>;
-
-            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-                formatter.write_str("vec of tuples: (key: number, command: string)")
-            }
-
-            fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
-            where
-                A: serde::de::SeqAccess<'de>,
-            {
-                let mut event_map = Vec::new();
-                while let Some(v) = seq.next_element::<(u32, String)>()? {
-                    event_map.push(v);
-                }
-                Ok(Some(_event_map_translate(event_map)))
-            }
-        }
-        d.deserialize_any(EventMapVisitor)
+        Ok(map)
     }
 
     pub fn option_color_translate<'de, D>(d: D) -> Result<Option<RGBA>, D::Error>

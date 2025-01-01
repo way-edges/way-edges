@@ -4,18 +4,15 @@ use std::{
     thread,
 };
 
+use backend::get_main_runtime_handle;
 use gio::{
     glib::{self},
     prelude::{ApplicationExt, ApplicationExtManual},
     ApplicationFlags,
 };
 use gtk::Application;
-use log::debug;
 
-use crate::{
-    activate::{GroupMapCtx, GroupMapCtxRc},
-    get_main_runtime_handle,
-};
+use crate::activate::{GroupMapCtx, GroupMapCtxRc};
 use util::notify_send;
 
 fn monitor_change_cb(group_map: &GroupMapCtxRc, app: &gtk::Application) -> bool {
@@ -91,7 +88,7 @@ fn new_app() -> (GroupMapCtxRc, Application) {
             } else {
                 is_already_active.set(true);
 
-                debug!("connect open or activate");
+                log::info!("connect open or activate");
 
                 // group map
                 group_map.borrow_mut().init_with_app(app);
@@ -140,18 +137,18 @@ pub async fn daemon() {
             async move {
                 while (file_change_signal_receiver.recv().await).is_ok() {
                     group_ctx.borrow_mut().reload();
-                    log::debug!("Reload!!!");
+                    log::info!("App reload");
                     notify_send("Way-edges", "App Reload", false);
                 }
                 log::error!("File Watcher exit");
-                notify_send("Way-edges file watcher", "watcher exited", true);
+                notify_send("Way-edges file watcher", "File Watcher exit", true);
             }
         ));
 
         // ipc
         let (ipc_join_handle, processer) =
             get_main_runtime_handle().block_on(ipc::listen_ipc(move |command| {
-                log::debug!("recv ipc command: {command:?}");
+                log::info!("recv ipc command: {command:?}");
                 match command {
                     ipc::IPCCommand::AddGroup(s) => {
                         group_ctx.borrow_mut().add_group(&s);
@@ -160,7 +157,6 @@ pub async fn daemon() {
                         group_ctx.borrow_mut().rm_group(&s);
                     }
                     ipc::IPCCommand::Exit => {
-                        log::info!("dispose");
                         group_ctx.borrow_mut().dispose();
                     }
                     ipc::IPCCommand::TogglePin(gn, wn) => {

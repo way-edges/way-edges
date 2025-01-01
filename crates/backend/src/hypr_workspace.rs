@@ -1,11 +1,19 @@
-use std::{collections::HashMap, num::ParseIntError, process, str::FromStr, thread};
+use std::{
+    collections::HashMap,
+    num::ParseIntError,
+    process,
+    str::FromStr,
+    sync::atomic::{AtomicBool, AtomicPtr},
+};
 
 use hyprland::{
-    event_listener,
+    event_listener::{self},
     shared::{HyprData, HyprDataActive, WorkspaceType},
 };
 
 use util::notify_send;
+
+use crate::get_main_runtime_handle;
 
 fn notify_hyprland_log(msg: &str, is_critical: bool) {
     notify_send("Way-Edges Hyprland error", msg, is_critical);
@@ -84,8 +92,9 @@ impl HyprListenerCtx {
             data: HyprGlobalData::new(),
         }
     }
-    fn add_cb(&mut self, cb: HyprCallback) -> HyprCallbackId {
+    fn add_cb(&mut self, mut cb: HyprCallback) -> HyprCallbackId {
         let id = self.id_cache;
+        cb(&self.data);
         self.cb.insert(id, cb);
         self.id_cache += 1;
         id
@@ -126,14 +135,17 @@ impl HyprListenerCtx {
 unsafe impl Send for HyprListenerCtx {}
 unsafe impl Sync for HyprListenerCtx {}
 
-static mut GLOBAL_HYPR_LISTENER_CTX: Option<HyprListenerCtx> = None;
-
+static CTX_INITED: AtomicBool = AtomicBool::new(false);
+static GLOBAL_HYPR_LISTENER_CTX: AtomicPtr<HyprListenerCtx> = AtomicPtr::new(std::ptr::null_mut());
+fn is_ctx_inited() -> bool {
+    CTX_INITED.load(std::sync::atomic::Ordering::Relaxed)
+}
 fn get_hypr_listener() -> &'static mut HyprListenerCtx {
     unsafe {
-        if GLOBAL_HYPR_LISTENER_CTX.is_none() {
-            GLOBAL_HYPR_LISTENER_CTX = Some(HyprListenerCtx::new());
-        }
-        GLOBAL_HYPR_LISTENER_CTX.as_mut().unwrap()
+        GLOBAL_HYPR_LISTENER_CTX
+            .load(std::sync::atomic::Ordering::Relaxed)
+            .as_mut()
+            .unwrap()
     }
 }
 
@@ -149,11 +161,10 @@ impl WorkspaceIDToInt for WorkspaceType {
     }
 }
 
-pub fn register_hypr_event_callback(
-    cb: impl FnMut(&HyprGlobalData) + 'static,
-) -> (HyprCallbackId, HyprGlobalData) {
+pub fn register_hypr_event_callback(cb: impl FnMut(&HyprGlobalData) + 'static) -> HyprCallbackId {
+    init_hyprland_listener();
     let hypr = get_hypr_listener();
-    (hypr.add_cb(Box::new(cb)), hypr.data)
+    hypr.add_cb(Box::new(cb))
 }
 
 pub fn unregister_hypr_event_callback(id: HyprCallbackId) {
@@ -167,65 +178,31 @@ enum Signal {
 }
 
 pub fn init_hyprland_listener() {
-    if unsafe { GLOBAL_HYPR_LISTENER_CTX.is_some() } {
+    if is_ctx_inited() {
         return;
     }
 
-    log::debug!("start init hyprland listener");
+    GLOBAL_HYPR_LISTENER_CTX.store(
+        Box::into_raw(Box::new(HyprListenerCtx::new())),
+        std::sync::atomic::Ordering::Relaxed,
+    );
+    CTX_INITED.store(true, std::sync::atomic::Ordering::Relaxed);
 
     let (s, r) = async_channel::bounded::<Signal>(1);
+    let mut listener = event_listener::AsyncEventListener::new();
 
-    let mut listener = event_listener::EventListener::new();
     {
         let s = s.clone();
         listener.add_workspace_changed_handler(move |data| {
-            let workspace_type = data.name;
-            log::debug!("received workspace change: {workspace_type}");
-            if let Some(id) = workspace_type.regular_to_i32() {
-                match id {
-                    Ok(int) => {
-                        // ignore result
-                        let _ = s.send_blocking(Signal::Change(int));
-                    }
-                    Err(e) => notify_hyprland_log(
-                        format!("Fail to parse workspace id: {e}").as_str(),
-                        false,
-                    ),
-                }
-            }
-        });
-    }
-    {
-        let s = s.clone();
-        listener.add_workspace_added_handler(move |data| {
-            let workspace_type = data.name;
-            log::debug!("received workspace add: {workspace_type}");
-            if let WorkspaceType::Regular(sid) = workspace_type {
-                if let Ok(id) = i32::from_str(&sid) {
-                    // ignore result
-                    let _ = s.send_blocking(Signal::Add(id));
-                }
-            }
-        });
-    }
-    {
-        let s = s.clone();
-        listener.add_workspace_deleted_handler(move |e| {
-            log::debug!("received workspace destroy: {e:?}");
-            // ignore result
-            let _ = s.send_blocking(Signal::Destroy(e.id));
-        });
-    }
-    {
-        let s = s.clone();
-        listener.add_active_monitor_changed_handler(move |e| {
-            log::debug!("received monitor change: {e:?}");
-            if let Some(workspace_name) = e.workspace_name {
-                if let Some(id) = workspace_name.regular_to_i32() {
+            let s = s.clone();
+            Box::pin(async move {
+                let workspace_type = data.name;
+                log::debug!("received workspace change: {workspace_type}");
+                if let Some(id) = workspace_type.regular_to_i32() {
                     match id {
                         Ok(int) => {
                             // ignore result
-                            let _ = s.send_blocking(Signal::Change(int));
+                            let _ = s.send(Signal::Change(int)).await;
                         }
                         Err(e) => notify_hyprland_log(
                             format!("Fail to parse workspace id: {e}").as_str(),
@@ -233,9 +210,70 @@ pub fn init_hyprland_listener() {
                         ),
                     }
                 }
-            }
+            })
         });
     }
+    {
+        let s = s.clone();
+        listener.add_workspace_added_handler(move |data| {
+            let s = s.clone();
+            Box::pin(async move {
+                let workspace_type = data.name;
+                log::debug!("received workspace add: {workspace_type}");
+                if let WorkspaceType::Regular(sid) = workspace_type {
+                    if let Ok(id) = i32::from_str(&sid) {
+                        // ignore result
+                        let _ = s.send(Signal::Add(id)).await;
+                    }
+                }
+            })
+        });
+    }
+    {
+        let s = s.clone();
+        listener.add_workspace_deleted_handler(move |e| {
+            let s = s.clone();
+            Box::pin(async move {
+                log::debug!("received workspace destroy: {e:?}");
+                // ignore result
+                let _ = s.send(Signal::Destroy(e.id)).await;
+            })
+        });
+    }
+    {
+        let s = s.clone();
+        listener.add_active_monitor_changed_handler(move |e| {
+            let s = s.clone();
+            Box::pin(async move {
+                log::debug!("received monitor change: {e:?}");
+                if let Some(workspace_name) = e.workspace_name {
+                    if let Some(id) = workspace_name.regular_to_i32() {
+                        match id {
+                            Ok(int) => {
+                                // ignore result
+                                let _ = s.send(Signal::Change(int)).await;
+                            }
+                            Err(e) => notify_hyprland_log(
+                                format!("Fail to parse workspace id: {e}").as_str(),
+                                false,
+                            ),
+                        }
+                    }
+                }
+            })
+        });
+    }
+
+    get_main_runtime_handle().spawn(async move {
+        log::info!("hyprland workspace listener is running");
+
+        if let Err(e) = listener.start_listener_async().await {
+            notify_hyprland_log(e.to_string().as_str(), true);
+            process::exit(-1)
+        }
+
+        log::info!("hyprland workspace listener stopped");
+    });
 
     gtk::glib::spawn_future_local(async move {
         log::info!("start hyprland workspace signal listener");
@@ -243,17 +281,6 @@ pub fn init_hyprland_listener() {
             get_hypr_listener().on_signal(s)
         }
         log::info!("stop hyprland workspace signal listener");
-    });
-
-    thread::spawn(move || {
-        log::info!("hyprland workspace listener is running");
-
-        if let Err(e) = listener.start_listener() {
-            notify_hyprland_log(e.to_string().as_str(), true);
-            process::exit(-1)
-        }
-
-        log::info!("hyprland workspace listener stopped");
     });
 }
 

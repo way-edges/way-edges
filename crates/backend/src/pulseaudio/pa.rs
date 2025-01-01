@@ -106,8 +106,6 @@ pub fn with_context<T>(f: impl FnOnce(&mut Context) -> T) -> T {
     f(a)
 }
 
-pub type Signal = PulseAudioDevice;
-
 pub fn process_list_result<'a, T: 'a>(ls: ListResult<&'a T>) -> Option<&'a T> {
     match ls {
         pulse::callbacks::ListResult::Item(res) => {
@@ -121,24 +119,14 @@ pub fn process_list_result<'a, T: 'a>(ls: ListResult<&'a T>) -> Option<&'a T> {
     None
 }
 
-use lazy_static::lazy_static;
-
 use util::notify_send;
 
-lazy_static! {
-    pub static ref PaSignalChannel: (
-        async_channel::Sender<Signal>,
-        async_channel::Receiver<Signal>
-    ) = async_channel::bounded::<Signal>(1);
-}
+use super::get_pa;
 
-fn signal_callback_group(msg: Signal) {
-    glib::spawn_future_local(async move {
-        let bak = msg.clone();
-        if PaSignalChannel.0.send(msg).await.is_err() {
-            log::error!("Error sending pulseaudio callback group signal: {bak:?}");
-        }
-    });
+fn signal_callback_group(msg: PulseAudioDevice) {
+    // NOTE: WE USE LIBPULSE WITH GLIB BINDING
+    // SO NO NEED TO WORRY ABOUT SEND OR SYNC
+    get_pa().call(msg);
 }
 
 pub fn sink_cb(list_result: ListResult<&SinkInfo>) {

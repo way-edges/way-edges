@@ -11,18 +11,15 @@ gtk.workspace = true
 log.workspace = true
 async-channel.workspace = true
 tokio.workspace = true
-cairo-rs.workspace = true
+cairo.workspace = true
 lazy_static.workspace = true
 system-tray.workspace = true
 
 
-get_sys_info = "0.1"
-hyprland = { version = "0.4.0-beta.1", default-features = false, features = [
+hyprland = { version = "0.4.0-beta.2", default-features = false, features = [
   "data",
   "tokio",
   "listener",
-  "unsafe-impl",
-  "async-lite",
 ] }
 
 libpulse-binding = "2.28"
@@ -33,3 +30,8 @@ blight = "0.7"
 
 notify = { version = "7.0.0", default-features = false }
 notify-debouncer-full = "0.4.0"
+sysinfo = { version = "0.33.1", default-features = false, features = [
+  "disk",
+  "system",
+] }
+starship-battery = "0.10.0"

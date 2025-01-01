@@ -1,0 +1,30 @@
+[package]
+name = "frontend"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+gtk4-layer-shell.workspace = true
+gtk.workspace = true
+glib.workspace = true
+gio.workspace = true
+cairo.workspace = true
+pango.workspace = true
+educe.workspace = true
+paste.workspace = true
+lazy_static.workspace = true
+async-channel.workspace = true
+pangocairo.workspace = true
+system-tray.workspace = true
+
+way-edges-derive.workspace = true
+config.workspace = true
+backend.workspace = true
+log.workspace = true
+util.workspace = true
+
+timerfd = "1.0"
+interval-task = "0.3.4"
+
+chrono = "0.4.38"
+chrono-tz = "0.10.0"

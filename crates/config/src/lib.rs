@@ -1,7 +1,10 @@
+pub mod common;
 pub mod conf;
+pub mod root;
 pub mod widgets;
 
 pub use conf::*;
+pub use root::*;
 
 use std::{
     fs::OpenOptions,
@@ -49,7 +52,7 @@ pub fn get_config_file_content() -> Result<String, String> {
 
 pub fn get_config_root() -> Result<Root, String> {
     let s = get_config_file_content()?;
-    conf::parse_config(&s)
+    root::parse_config(&s)
 }
 
 pub fn get_config_by_group(group_name: Option<&str>) -> Result<Option<Group>, String> {

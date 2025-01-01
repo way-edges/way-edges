@@ -1,4 +1,4 @@
-use std::{process, sync::OnceLock, time::Duration};
+use std::{sync::OnceLock, time::Duration};
 
 use async_channel::{Receiver, Sender};
 use config::get_config_path;
@@ -10,7 +10,6 @@ use notify_debouncer_full::{new_debouncer, DebounceEventResult, Debouncer, NoCac
 fn file_monitor_error(msg: String) {
     notify_send("Way-edges file monitor", &msg, true);
     log::error!("{msg}");
-    process::exit(1)
 }
 
 static mut FILE_MONITOR: OnceLock<Debouncer<INotifyWatcher, NoCache>> = OnceLock::new();
@@ -42,13 +41,7 @@ fn file_monitor(s: Sender<()>) -> Debouncer<INotifyWatcher, NoCache> {
                     }
                 });
                 if config_changed {
-                    if let Err(e) = s.try_send(()) {
-                        if let async_channel::TrySendError::Closed(_) = e {
-                            file_monitor_error(format!(
-                                "Failed to send file watcher event: Error: {e}"
-                            ));
-                        }
-                    }
+                    s.try_send(()).unwrap()
                 };
             }
             Err(e) => file_monitor_error(format!("watch error: {:?}", e)),
@@ -64,8 +57,5 @@ fn file_monitor(s: Sender<()>) -> Debouncer<INotifyWatcher, NoCache> {
         Ok(debouncer)
     });
 
-    match res {
-        Ok(w) => w,
-        Err(e) => panic!("Failed to create file watcher: Error: {e}"),
-    }
+    res.unwrap()
 }
