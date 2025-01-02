@@ -45,6 +45,11 @@ pub struct MouseState {
     #[educe(Debug(ignore))]
     cb: Option<MouseEventFunc>,
 }
+impl MouseState {
+    pub fn is_hovering(&self) -> bool {
+        self.data.hovering
+    }
+}
 
 impl MouseState {
     pub fn new() -> Self {

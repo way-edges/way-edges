@@ -5,7 +5,7 @@ use std::{rc::Rc, time::Duration};
 use way_edges_derive::wrap_rc;
 
 use crate::{
-    animation::ToggleAnimationRc,
+    animation::{ToggleAnimationRc, ToggleDirection},
     mouse_state::{MouseEvent, MouseStateData},
 };
 
@@ -40,30 +40,35 @@ impl WindowPopState {
     fn invalidate_pop(&mut self) {
         drop(self.pop_state.take());
     }
-    fn toggle_pin(&mut self) {
+    fn toggle_pin(&mut self, is_hovering: bool) {
         self.invalidate_pop();
         let state = !self.pin_state;
         self.pin_state = state;
+        if is_hovering {
+            return;
+        }
         self.pop_animation.borrow_mut().set_direction(state.into());
     }
     fn enter(&mut self) {
         self.invalidate_pop();
+        if self.pin_state {
+            return;
+        }
         self.pop_animation
             .borrow_mut()
-            .set_direction(crate::animation::ToggleDirection::Forward);
+            .set_direction(ToggleDirection::Forward);
     }
     fn leave(&mut self) {
         self.invalidate_pop();
+        if self.pin_state {
+            return;
+        }
         self.pop_animation
             .borrow_mut()
-            .set_direction(crate::animation::ToggleDirection::Backward);
+            .set_direction(ToggleDirection::Backward);
     }
     pub(super) fn progress(&self) -> f64 {
-        if self.pin_state {
-            1.
-        } else {
-            self.pop_animation.borrow().progress()
-        }
+        self.pop_animation.borrow().progress()
     }
 }
 impl WindowPopStateRc {
@@ -104,7 +109,10 @@ impl WindowPopStateRc {
 
 impl WindowContext {
     pub fn toggle_pin(&self) {
-        self.window_pop_state.borrow_mut().toggle_pin();
+        self.window_pop_state
+            .borrow_mut()
+            .toggle_pin(self.mouse_event.borrow().is_hovering());
+        self.redraw(None);
     }
     pub fn setup_mouse_event_callback(
         &mut self,
@@ -146,7 +154,7 @@ impl WindowContext {
                     MouseEvent::Release(_, key) => {
                         let mut pop_state = pop_state.borrow_mut();
                         if key == pop_state.pin_key {
-                            pop_state.toggle_pin();
+                            pop_state.toggle_pin(data.hovering);
                             do_redraw()
                         };
                     }
