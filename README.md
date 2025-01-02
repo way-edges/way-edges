@@ -32,9 +32,16 @@ Example config: https://github.com/ogios/dots/tree/master/way-edges
 
 Doc: https://way-edges.github.io/basic_config
 
-### Schema
+### Schema*
 
-Please refer to [config.jsonc](./config/config.jsonc) and [schema](./config/config.schema.json)
+**this can improve your experience of config writing dramatically.**
+
+```jsonc
+{
+  // add this
+  "$schema": "https://raw.githubusercontent.com/way-edges/way-edges/master/config/config.schema.json",
+}
+```
 
 ## Launch
 
