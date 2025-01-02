@@ -1,18 +1,7 @@
-<!-- https://github.com/user-attachments/assets/37d267cb-1cb4-44b4-81a8-8ac02bb741cb -->
+
+https://github.com/user-attachments/assets/b41205be-5740-46bd-ab53-c9713f40e042
 
 
-
-<!-- https://github.com/user-attachments/assets/e4b00c74-f4b1-4e45-9ff1-79f1b8bc6e13 -->
-
-
-
-https://github.com/user-attachments/assets/46730461-267e-4930-8439-7dda360d7149
-
-
-> [!NOTE]
-> the project is under dramatic structual change  
-> for more info: https://github.com/way-edges/way-edges/pull/60  
-> my code is a mess...
 
 
 ## Doc
