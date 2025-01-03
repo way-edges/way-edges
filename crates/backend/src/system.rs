@@ -34,11 +34,15 @@ pub fn get_swap_info() -> MemoryInfo {
 pub fn get_cpu_info(core: Option<usize>) -> f64 {
     let mut sys = get_system();
     sys.refresh_cpu_usage();
-    if let Some(core_id) = core {
-        sys.cpus().get(core_id).unwrap().cpu_usage() as f64
+    let usage = if let Some(core_id) = core {
+        let Some(cpu) = sys.cpus().get(core_id) else {
+            return 0.;
+        };
+        cpu.cpu_usage()
     } else {
-        sys.global_cpu_usage() as f64 / sys.cpus().len() as f64
-    }
+        sys.global_cpu_usage()
+    } as f64;
+    usage / 100.
 }
 
 static BATTERY: LazyLock<Arc<Mutex<Battery>>> = LazyLock::new(|| {
