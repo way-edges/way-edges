@@ -11,25 +11,41 @@ use util::draw::new_surface;
 use util::Z;
 
 // for top only
-struct DrawConfig {
+pub struct DrawConfig {
     length: i32,
     thickness: i32,
     color: RGBA,
     border_width: i32,
     border_color: RGBA,
+
+    func: fn(&DrawConfig, bool) -> ImageSurface,
 }
 impl DrawConfig {
-    fn new(btn_conf: &BtnConfig) -> Self {
+    pub fn new(btn_conf: &BtnConfig, edge: Edge) -> Self {
         let content_size = btn_conf.size().unwrap();
         let border_width = btn_conf.border_width;
+
+        let func = match edge {
+            Edge::Left => draw_left,
+            Edge::Right => draw_right,
+            Edge::Top => draw_top,
+            Edge::Bottom => draw_bottom,
+            _ => unreachable!(),
+        };
+
         Self {
             length: content_size.1.ceil() as i32,
             thickness: content_size.0.ceil() as i32,
             border_width,
             color: btn_conf.color,
             border_color: btn_conf.border_color,
+            func,
         }
     }
+    pub fn draw(&self, pressing: bool) -> ImageSurface {
+        (self.func)(self, pressing)
+    }
+
     fn new_horizontal_surf(&self) -> (ImageSurface, Context) {
         let surf = new_surface((self.length, self.thickness));
         let ctx = cairo::Context::new(&surf).unwrap();
@@ -127,18 +143,4 @@ fn draw_left(conf: &DrawConfig, pressing: bool) -> ImageSurface {
     ctx.paint().unwrap();
 
     surf
-}
-
-pub(super) fn make_draw_func(btn_conf: &BtnConfig, edge: Edge) -> impl Fn(bool) -> ImageSurface {
-    let draw_conf = DrawConfig::new(btn_conf);
-
-    let func = match edge {
-        Edge::Left => draw_left,
-        Edge::Right => draw_right,
-        Edge::Top => draw_top,
-        Edge::Bottom => draw_bottom,
-        _ => unreachable!(),
-    };
-
-    move |pressing: _| func(&draw_conf, pressing)
 }
