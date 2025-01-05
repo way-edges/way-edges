@@ -1,4 +1,4 @@
-use std::{cell::Cell, rc::Rc};
+use std::{cell::Cell, rc::Rc, time::Duration};
 
 use cairo::ImageSurface;
 use config::{Config, MonitorSpecifier};
@@ -31,8 +31,10 @@ pub struct WindowContextBuilder {
     drawing_area: DrawingArea,
     animation_list: AnimationList,
 
+    redraw_rc: Rc<dyn Fn()>,
     pop_animation: ToggleAnimationRc,
     pop_state: Rc<Cell<Option<PopStateGuard>>>,
+    pop_duration: Duration,
 }
 impl WindowContextBuilder {
     pub fn new_animation(&mut self, time_cost: u64) -> ToggleAnimationRc {
@@ -40,6 +42,44 @@ impl WindowContextBuilder {
     }
     pub fn extend_animation_list(&mut self, list: &AnimationList) {
         self.animation_list.extend_list(list);
+    }
+    pub fn make_pop_func(&mut self) -> impl Fn() {
+        let signal_redraw = Rc::downgrade(&self.redraw_rc);
+        let pop_animation = &self.pop_animation;
+        let pop_state = &self.pop_state;
+        let pop_duration = self.pop_duration;
+
+        use gtk::glib;
+        glib::clone!(
+            #[weak]
+            pop_animation,
+            #[weak]
+            pop_state,
+            move || {
+                let Some(signal_redraw) = signal_redraw.upgrade() else {
+                    return;
+                };
+
+                let guard = Rc::new(());
+                let guard_weak = Rc::downgrade(&guard);
+                pop_state.set(Some(guard));
+
+                pop_animation
+                    .borrow_mut()
+                    .set_direction(crate::animation::ToggleDirection::Forward);
+                signal_redraw();
+
+                glib::timeout_add_local_once(pop_duration, move || {
+                    if guard_weak.upgrade().is_none() {
+                        return;
+                    }
+                    pop_animation
+                        .borrow_mut()
+                        .set_direction(crate::animation::ToggleDirection::Backward);
+                    signal_redraw()
+                });
+            }
+        )
     }
     pub fn make_redraw_notifier(&self) -> impl Fn() {
         let drawing_area = &self.drawing_area;
@@ -99,8 +139,16 @@ impl WindowContextBuilder {
 
         let mut animation_list = AnimationList::new();
         let pop_animation = animation_list.new_transition(conf.transition_duration);
-
         let pop_state = Rc::new(Cell::new(None));
+        let pop_duration = Duration::from_millis(conf.transition_duration);
+
+        let redraw_rc = Rc::new(glib::clone!(
+            #[weak]
+            drawing_area,
+            move || {
+                drawing_area.queue_draw();
+            }
+        ));
 
         Ok(Self {
             name: conf.name.clone(),
@@ -110,6 +158,8 @@ impl WindowContextBuilder {
             animation_list,
             pop_animation,
             pop_state,
+            redraw_rc,
+            pop_duration,
         })
     }
     pub fn build(self, widget: impl WidgetContext) -> WindowContext {}
