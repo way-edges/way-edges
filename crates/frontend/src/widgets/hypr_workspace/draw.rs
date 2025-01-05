@@ -11,9 +11,9 @@ use util::{
 
 use crate::animation::ToggleAnimationRc;
 
-use super::event::HoverDataRc;
+use super::event::HoverData;
 
-pub struct DrawCore {
+pub struct DrawConf {
     thickness: i32,
     length: i32,
     gap: i32,
@@ -26,10 +26,23 @@ pub struct DrawCore {
     workspace_transition: ToggleAnimationRc,
 
     invert_direction: bool,
+
+    func: fn(&DrawConf, &HyprGlobalData, &mut HoverData) -> ImageSurface,
 }
-impl DrawCore {
-    fn new(w_conf: &HyprWorkspaceConfig, workspace_transition: ToggleAnimationRc) -> Self {
+impl DrawConf {
+    pub fn new(
+        w_conf: &HyprWorkspaceConfig,
+        workspace_transition: ToggleAnimationRc,
+        edge: Edge,
+    ) -> Self {
         let (thickness, length) = w_conf.size().unwrap();
+
+        let func = match edge {
+            Edge::Left | Edge::Right => draw_vertical,
+            Edge::Top | Edge::Bottom => draw_horizontal,
+            _ => unreachable!(),
+        };
+
         Self {
             thickness: thickness.ceil() as i32,
             length: length.ceil() as i32,
@@ -40,14 +53,18 @@ impl DrawCore {
             hover_color: w_conf.hover_color,
             invert_direction: w_conf.invert_direction,
             workspace_transition,
+            func,
         }
+    }
+    pub fn draw(&self, global_data: &HyprGlobalData, hover_data: &mut HoverData) -> ImageSurface {
+        (self.func)(self, global_data, hover_data)
     }
 }
 
 fn draw_common_horizontal(
-    conf: &DrawCore,
-    data: HyprGlobalData,
-    hover_data: HoverDataRc,
+    conf: &DrawConf,
+    data: &HyprGlobalData,
+    hover_data: &mut HoverData,
 ) -> ImageSurface {
     let item_base_length = {
         let up = (conf.length - conf.gap * (data.max_workspace - 1)) as f64;
@@ -68,7 +85,6 @@ fn draw_common_horizontal(
     let mut item_location = vec![];
     let mut draw_start_pos = 0.;
 
-    let mut hover_data = hover_data.borrow_mut();
     let hover_id = hover_data.hover_id;
 
     let border_width = conf.thickness as f64 / 10.;
@@ -135,11 +151,19 @@ fn draw_common_horizontal(
     surf
 }
 
-fn draw_horizontal(conf: &DrawCore, data: HyprGlobalData, hover_data: HoverDataRc) -> ImageSurface {
+fn draw_horizontal(
+    conf: &DrawConf,
+    data: &HyprGlobalData,
+    hover_data: &mut HoverData,
+) -> ImageSurface {
     draw_common_horizontal(conf, data, hover_data)
 }
 
-fn draw_vertical(conf: &DrawCore, data: HyprGlobalData, hover_data: HoverDataRc) -> ImageSurface {
+fn draw_vertical(
+    conf: &DrawConf,
+    data: &HyprGlobalData,
+    hover_data: &mut HoverData,
+) -> ImageSurface {
     let common = draw_common_horizontal(conf, data, hover_data);
     let surf = new_surface((common.height(), common.width()));
     let ctx = Context::new(&surf).unwrap();
@@ -148,19 +172,4 @@ fn draw_vertical(conf: &DrawCore, data: HyprGlobalData, hover_data: HoverDataRc)
     ctx.set_source_surface(&common, Z, Z).unwrap();
     ctx.paint().unwrap();
     surf
-}
-
-pub fn make_draw_func(
-    w_conf: &HyprWorkspaceConfig,
-    edge: Edge,
-    workspace_transition: ToggleAnimationRc,
-) -> impl Fn(HyprGlobalData, HoverDataRc) -> ImageSurface {
-    let draw_conf = DrawCore::new(w_conf, workspace_transition);
-    let draw_func = match edge {
-        Edge::Left | Edge::Right => draw_vertical,
-        Edge::Top | Edge::Bottom => draw_horizontal,
-        _ => unreachable!(),
-    };
-
-    move |data, hover_data| draw_func(&draw_conf, data, hover_data)
 }
