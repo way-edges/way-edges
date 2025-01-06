@@ -62,9 +62,11 @@ pub struct HyprWorkspaceCtx {
     hover_data: HoverData,
 }
 impl WidgetContext for HyprWorkspaceCtx {
-    fn redraw(&mut self) -> cairo::ImageSurface {
-        self.draw_conf
-            .draw(&self.hypr_data.get(), &mut self.hover_data)
+    fn redraw(&mut self) -> Option<cairo::ImageSurface> {
+        Some(
+            self.draw_conf
+                .draw(&self.hypr_data.get(), &mut self.hover_data),
+        )
     }
 
     fn on_mouse_event(&mut self, _: &MouseStateData, event: MouseEvent) -> bool {
