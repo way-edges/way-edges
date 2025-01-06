@@ -44,7 +44,7 @@ impl PulseAudioDevice {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct VInfo {
     pub vol: f64,
     pub is_muted: bool,
