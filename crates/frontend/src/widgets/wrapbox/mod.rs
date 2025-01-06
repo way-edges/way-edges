@@ -8,7 +8,7 @@ use std::{cell::Cell, rc::Rc};
 
 use crate::{
     animation::{AnimationList, ToggleAnimationRc},
-    window::{WidgetContext, WindowContext},
+    window::{WidgetContext, WindowContextBuilder},
 };
 use box_traits::{BoxedWidgetCtx, BoxedWidgetGrid};
 use config::{widgets::wrapbox::BoxConfig, Config};
@@ -41,7 +41,7 @@ impl WidgetContext for BoxContext {
 }
 
 pub fn init_widget(
-    window: &mut WindowContext,
+    window: &mut WindowContextBuilder,
     _: &Monitor,
     conf: Config,
     mut w_conf: BoxConfig,
@@ -60,7 +60,10 @@ pub fn init_widget(
     }
 }
 
-fn init_boxed_widgets(window: &mut WindowContext, box_conf: &mut BoxConfig) -> BoxedWidgetGrid {
+fn init_boxed_widgets(
+    window: &mut WindowContextBuilder,
+    box_conf: &mut BoxConfig,
+) -> BoxedWidgetGrid {
     let mut builder = GrideBoxBuilder::<BoxedWidgetCtx>::new();
     let ws = std::mem::take(&mut box_conf.widgets);
 
@@ -103,12 +106,12 @@ fn init_boxed_widgets(window: &mut WindowContext, box_conf: &mut BoxConfig) -> B
 }
 
 struct BoxTemporaryCtx<'a> {
-    window: &'a mut WindowContext,
+    window: &'a mut WindowContextBuilder,
     animation_list: AnimationList,
     has_update: Rc<Cell<bool>>,
 }
 impl<'a> BoxTemporaryCtx<'a> {
-    fn new(window: &'a mut WindowContext) -> Self {
+    fn new(window: &'a mut WindowContextBuilder) -> Self {
         Self {
             window,
             animation_list: AnimationList::new(),
@@ -126,7 +129,7 @@ impl<'a> BoxTemporaryCtx<'a> {
             has_update,
             move || {
                 has_update.set(true);
-                func(None)
+                func()
             }
         )
     }
