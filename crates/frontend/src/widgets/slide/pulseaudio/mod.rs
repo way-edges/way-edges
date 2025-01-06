@@ -151,7 +151,7 @@ pub fn speaker(
     config: &Config,
     w_conf: SlideConfig,
     mut preset_conf: PulseAudioConfig,
-) {
+) -> impl WidgetContext {
     let device = preset_conf
         .device
         .take()
@@ -159,7 +159,7 @@ pub fn speaker(
             PulseAudioDevice::NamedSink(name)
         });
 
-    common(window, config, w_conf, preset_conf, device);
+    common(window, config, w_conf, preset_conf, device)
 }
 
 pub fn microphone(
@@ -167,7 +167,7 @@ pub fn microphone(
     config: &Config,
     w_conf: SlideConfig,
     mut preset_conf: PulseAudioConfig,
-) {
+) -> impl WidgetContext {
     let device = preset_conf
         .device
         .take()
@@ -175,5 +175,5 @@ pub fn microphone(
             PulseAudioDevice::NamedSource(name)
         });
 
-    common(window, config, w_conf, preset_conf, device);
+    common(window, config, w_conf, preset_conf, device)
 }

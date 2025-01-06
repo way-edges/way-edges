@@ -1,80 +1,111 @@
 use cairo::ImageSurface;
-use std::{
-    cell::Cell,
-    rc::{Rc, Weak},
-    time::Duration,
-};
+use interval_task::runner::Runner;
+use std::{cell::Cell, rc::Rc, time::Duration};
 
 use config::{
-    widgets::slide::{base::SlideConfig, preset::CustomConfig},
+    widgets::{
+        common::KeyEventMap,
+        slide::{base::SlideConfig, preset::CustomConfig},
+    },
     Config,
 };
-use util::shell::{shell_cmd, shell_cmd_non_block};
+use util::{
+    shell::{shell_cmd, shell_cmd_non_block},
+    template::base::Template,
+};
 
-use super::base::{draw, event};
-use crate::window::WindowContext;
+use super::base::{
+    draw::{self, DrawConfig},
+    event::{setup_event, ProgressState},
+};
+use crate::{
+    mouse_state::{MouseEvent, MouseStateData},
+    window::{WidgetContext, WindowContextBuilder},
+};
+
+pub struct CustomContext {
+    runner: Option<Runner<()>>,
+    progress: Rc<Cell<f64>>,
+    event_map: KeyEventMap,
+    on_change: Option<Template>,
+
+    draw_conf: DrawConfig,
+
+    progress_state: ProgressState,
+    only_redraw_on_internal_update: bool,
+}
+impl WidgetContext for CustomContext {
+    fn redraw(&mut self) -> Option<ImageSurface> {
+        let p = self.progress.get();
+        Some(self.draw_conf.draw(p))
+    }
+
+    fn on_mouse_event(&mut self, _: &MouseStateData, event: MouseEvent) -> bool {
+        if let Some(p) = self.progress_state.if_change_progress(event.clone()) {
+            self.progress.set(p);
+
+            if let Some(template) = self.on_change.as_mut() {
+                use util::template::arg;
+                let cmd = template.parse(|parser| {
+                    let res = match parser.name() {
+                        arg::TEMPLATE_ARG_FLOAT => {
+                            let float_parser = parser
+                                .downcast_ref::<util::template::arg::TemplateArgFloatParser>()
+                                .unwrap();
+                            float_parser.parse(p).clone()
+                        }
+                        _ => unreachable!(),
+                    };
+                    res
+                });
+                shell_cmd_non_block(cmd);
+            }
+        }
+
+        match event {
+            MouseEvent::Release(_, key) => {
+                self.event_map.call(key);
+            }
+            _ => {}
+        }
+
+        !self.only_redraw_on_internal_update
+    }
+}
 
 pub fn custom_preset(
-    window: &mut WindowContext,
-    config: &Config,
+    window: &mut WindowContextBuilder,
+    conf: &Config,
     mut w_conf: SlideConfig,
     mut preset_conf: CustomConfig,
-) {
-    // NOTE: THIS TYPE ANNOTATION IS WEIRD
-    window.set_draw_func(None::<fn() -> Option<ImageSurface>>);
-
-    let (_, draw_func) = draw::make_draw_func(&w_conf, config.edge);
-    let draw_func = Rc::new(draw_func);
-    let progress_cache = Rc::new(Cell::new(0.));
+) -> impl WidgetContext {
+    let progress = Rc::new(Cell::new(0.));
 
     // interval
-    interval_update(window, &preset_conf, &progress_cache, &draw_func);
+    let runner = interval_update(window, &preset_conf, &progress);
 
     // key event map
-    let key_map = std::mem::take(&mut preset_conf.event_map);
-    let key_callback = move |k: u32| {
-        key_map.call(k);
-    };
+    let event_map = std::mem::take(&mut preset_conf.event_map);
 
     // on change
-    let mut on_change = preset_conf.on_change.take();
-    let set_progress_callback = move |p: f64| {
-        progress_cache.set(p);
-        if let Some(template) = on_change.as_mut() {
-            use util::template::arg;
-            let cmd = template.parse(|parser| {
-                let res = match parser.name() {
-                    arg::TEMPLATE_ARG_FLOAT => {
-                        let float_parser = parser
-                            .downcast_ref::<util::template::arg::TemplateArgFloatParser>()
-                            .unwrap();
-                        float_parser.parse(p).clone()
-                    }
-                    _ => unreachable!(),
-                };
-                res
-            });
-            shell_cmd_non_block(cmd);
-        }
-    };
+    let on_change = preset_conf.on_change.take();
 
-    event::setup_event(
-        window,
-        config,
-        &mut w_conf,
-        Some(key_callback),
-        set_progress_callback,
-        Some(draw_func),
-    );
+    CustomContext {
+        runner,
+        progress,
+        event_map,
+        on_change,
+        draw_conf: draw::DrawConfig::new(&w_conf, conf.edge),
+        progress_state: setup_event(conf, &mut w_conf),
+        only_redraw_on_internal_update: w_conf.redraw_only_on_internal_update,
+    }
 }
 
 fn interval_update(
-    window: &mut WindowContext,
+    window: &mut WindowContextBuilder,
     preset_conf: &CustomConfig,
-
     progress_cache: &Rc<Cell<f64>>,
-    draw_func: &Rc<impl 'static + Fn(f64) -> ImageSurface>,
-) {
+) -> Option<Runner<()>> {
     if preset_conf.interval_update.0 > 0 && !preset_conf.interval_update.1.is_empty() {
         let (s, r) = async_channel::bounded(1);
         let cmd = preset_conf.interval_update.1.clone();
@@ -97,39 +128,18 @@ fn interval_update(
         );
         runner.start().unwrap();
 
-        let redraw_func = window.make_redraw_notifier();
-        let draw_func_weak = Rc::downgrade(draw_func);
+        let redraw_signal = window.make_redraw_notifier();
         let progress_cache_weak = Rc::downgrade(progress_cache);
         gtk::glib::spawn_future_local(async move {
             while let Ok(progress) = r.recv().await {
                 if let Some(progress_cache) = progress_cache_weak.upgrade() {
                     progress_cache.set(progress)
                 }
-                if let Some(draw_func) = Weak::upgrade(&draw_func_weak) {
-                    redraw_func(Some(draw_func(progress)))
-                }
+                redraw_signal()
             }
         });
-
-        // bind runner to window
-        // ensure runner is closed when window destroyed
-        struct SlideContext(interval_task::runner::Runner<()>);
-        window.bind_context(SlideContext(runner));
-
-        // initial progress
-        let progress = match shell_cmd(&preset_conf.interval_update.1).and_then(|res| {
-            use std::str::FromStr;
-            f64::from_str(res.trim()).map_err(|_| "Invalid number".to_string())
-        }) {
-            Ok(p) => p,
-            Err(err) => {
-                log::error!("slide custom updata error: {err}");
-                0.
-            }
-        };
-        progress_cache.set(progress);
-        window.redraw(Some(draw_func(progress)));
+        Some(runner)
     } else {
-        window.redraw(Some(draw_func(0.)));
+        None
     }
 }

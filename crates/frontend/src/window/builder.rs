@@ -1,4 +1,8 @@
-use std::{cell::Cell, rc::Rc, time::Duration};
+use std::{
+    cell::{Cell, RefCell},
+    rc::Rc,
+    time::Duration,
+};
 
 use cairo::ImageSurface;
 use config::{Config, MonitorSpecifier};
@@ -19,6 +23,7 @@ use super::WindowContext;
 pub trait WidgetContext {
     fn redraw(&mut self) -> Option<ImageSurface>;
     fn on_mouse_event(&mut self, data: &MouseStateData, event: MouseEvent) -> bool;
+    fn make_rc(self) -> Rc<RefCell<dyn WidgetContext>>;
 }
 
 type PopStateGuard = Rc<()>;
@@ -167,5 +172,5 @@ impl WindowContextBuilder {
             pop_duration,
         })
     }
-    pub fn build(self, widget: impl WidgetContext) -> WindowContext {}
+    pub fn build(self, widget: Rc<RefCell<dyn WidgetContext>>) -> WindowContext {}
 }

@@ -1,7 +1,7 @@
 use backend::monitor::get_monitor_context;
 use gtk::{gdk::Monitor, prelude::MonitorExt};
 
-use crate::window::WindowContext;
+use crate::window::{WidgetContext, WindowContext, WindowContextBuilder};
 
 mod button;
 mod hypr_workspace;
@@ -52,30 +52,36 @@ pub fn init_widget(
 
     process_config(&mut conf, monitor);
 
-    let mut window = WindowContext::new(app, monitor, &conf)?;
+    let mut builder = WindowContextBuilder::new(app, monitor, &conf)?;
 
-    match conf.widget.take().unwrap() {
+    let widget_ctx = match conf.widget.take().unwrap() {
         config::widgets::Widget::Btn(btn_config) => {
             log::debug!("initializing button");
-            button::init_widget(&mut window, monitor, conf, btn_config);
+            let w = button::init_widget(&mut builder, monitor, conf, btn_config);
             log::info!("initialized button");
+            w.make_rc()
         }
         config::widgets::Widget::Slider(slide_config) => {
             log::debug!("initializing slider");
-            slide::init_widget(&mut window, monitor, conf, slide_config);
+            let w = slide::init_widget(&mut builder, monitor, conf, slide_config);
             log::info!("initialized slider");
+            w
         }
         config::widgets::Widget::HyprWorkspace(hypr_workspace_config) => {
             log::debug!("initializing hypr-workspace");
-            hypr_workspace::init_widget(&mut window, monitor, conf, hypr_workspace_config);
+            let w = hypr_workspace::init_widget(&mut builder, monitor, conf, hypr_workspace_config);
             log::info!("initialized hypr-workspace");
+            w.make_rc()
         }
         config::widgets::Widget::WrapBox(box_config) => {
             log::debug!("initializing box");
-            wrapbox::init_widget(&mut window, monitor, conf, box_config);
+            let w = wrapbox::init_widget(&mut builder, monitor, conf, box_config);
             log::info!("initialized box");
+            w.make_rc()
         }
     };
+
+    let window = builder.build(widget_ctx);
 
     window.show();
 
