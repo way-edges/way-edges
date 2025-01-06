@@ -102,6 +102,7 @@ fn common(
     let redraw_signal = window.make_redraw_notifier();
 
     let vinfo_weak = Rc::downgrade(&vinfo);
+    let progress_cache = 0.;
     let backend_id = backend::pulseaudio::register_callback(
         glib::clone!(
             #[weak]
@@ -112,8 +113,12 @@ fn common(
                 };
                 let vinfo_old = unsafe { vinfo_old.get().as_mut().unwrap() };
                 if vinfo_old == vinfo {
+                    if vinfo.vol != progress_cache {
+                        redraw_signal();
+                    }
                     return;
                 }
+
                 if vinfo_old.is_muted != vinfo.is_muted {
                     mute_animation
                         .borrow_mut()
