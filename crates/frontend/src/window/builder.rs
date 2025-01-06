@@ -10,14 +10,14 @@ use gtk::{
 use gtk4_layer_shell::LayerShell;
 
 use crate::{
-    animation::{AnimationList, ToggleAnimationRc},
+    animation::{AnimationList, ToggleAnimation, ToggleAnimationRc},
     mouse_state::{MouseEvent, MouseStateData},
 };
 
 use super::WindowContext;
 
 pub trait WidgetContext {
-    fn redraw(&mut self) -> ImageSurface;
+    fn redraw(&mut self) -> Option<ImageSurface>;
     fn on_mouse_event(&mut self, data: &MouseStateData, event: MouseEvent) -> bool;
 }
 
@@ -29,10 +29,10 @@ pub struct WindowContextBuilder {
     monitor: MonitorSpecifier,
     window: ApplicationWindow,
     drawing_area: DrawingArea,
-    animation_list: AnimationList,
 
-    redraw_rc: Rc<dyn Fn()>,
     pop_animation: ToggleAnimationRc,
+    animation_list: AnimationList,
+    redraw_rc: Rc<dyn Fn()>,
     pop_state: Rc<Cell<Option<PopStateGuard>>>,
     pop_duration: Duration,
 }
@@ -137,10 +137,15 @@ impl WindowContextBuilder {
         drawing_area.set_size_request(1, 1);
         window.set_child(Some(&drawing_area));
 
-        let mut animation_list = AnimationList::new();
-        let pop_animation = animation_list.new_transition(conf.transition_duration);
+        let pop_animation = ToggleAnimation::new(
+            Duration::from_millis(conf.transition_duration),
+            crate::animation::Curve::Linear,
+        )
+        .make_rc();
         let pop_state = Rc::new(Cell::new(None));
         let pop_duration = Duration::from_millis(conf.transition_duration);
+
+        let animation_list = AnimationList::new();
 
         let redraw_rc = Rc::new(glib::clone!(
             #[weak]
