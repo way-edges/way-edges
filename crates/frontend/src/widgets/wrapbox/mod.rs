@@ -4,38 +4,60 @@ mod grid;
 mod outlook;
 mod widgets;
 
-use std::{
-    cell::{Cell, RefCell},
-    rc::Rc,
-};
+use std::{cell::Cell, rc::Rc};
 
 use crate::{
     animation::{AnimationList, ToggleAnimationRc},
-    window::WindowContext,
+    window::{WidgetContext, WindowContext},
 };
 use box_traits::{BoxedWidgetCtx, BoxedWidgetGrid};
 use config::{widgets::wrapbox::BoxConfig, Config};
-use grid::builder::GrideBoxBuilder;
+use event::LastWidget;
+use grid::{builder::GrideBoxBuilder, GridBox};
 use gtk::{gdk::Monitor, glib};
-use outlook::init_outlook;
+use outlook::{init_outlook, OutlookDrawConf};
 
-pub fn init_widget(window: &mut WindowContext, _: &Monitor, conf: Config, mut w_conf: BoxConfig) {
-    let grid_box = Rc::new(RefCell::new(init_boxed_widgets(window, &mut w_conf)));
+pub struct BoxContext {
+    grid_box: GridBox<BoxedWidgetCtx>,
+    outlook_draw_conf: OutlookDrawConf,
 
-    let (outlook_mouse_pos, draw_outlook) = init_outlook(w_conf.outlook, &conf);
+    last_widget: LastWidget,
+    leave_box_state: bool,
+}
+impl WidgetContext for BoxContext {
+    fn redraw(&mut self) -> Option<cairo::ImageSurface> {
+        self.grid_box
+            .redraw_if_has_update()
+            .map(|content| self.outlook_draw_conf.draw(content))
+    }
 
-    window.set_draw_func(Some(glib::clone!(
-        #[strong]
+    fn on_mouse_event(
+        &mut self,
+        _: &crate::mouse_state::MouseStateData,
+        event: crate::mouse_state::MouseEvent,
+    ) -> bool {
+        event::on_mouse_event(event, self)
+    }
+}
+
+pub fn init_widget(
+    window: &mut WindowContext,
+    _: &Monitor,
+    conf: Config,
+    mut w_conf: BoxConfig,
+) -> impl WidgetContext {
+    let grid_box = init_boxed_widgets(window, &mut w_conf);
+    let outlook_draw_conf = init_outlook(w_conf.outlook, &conf);
+
+    BoxContext {
         grid_box,
-        move || {
-            let content = grid_box.borrow_mut().redraw_if_has_update()?;
-            let img = draw_outlook(content);
-
-            Some(img)
-        }
-    )));
-
-    event::event_handle(window, &grid_box, outlook_mouse_pos);
+        outlook_draw_conf,
+        // last hover widget, for trigger mouse leave option for that widget.
+        last_widget: LastWidget::new(),
+        // because mouse leave event is before release,
+        // we need to check if unpress is right behind leave
+        leave_box_state: false,
+    }
 }
 
 fn init_boxed_widgets(window: &mut WindowContext, box_conf: &mut BoxConfig) -> BoxedWidgetGrid {
