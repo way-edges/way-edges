@@ -98,8 +98,8 @@ fn init_watcher() {
     });
 }
 
-fn match_device(device_name: Option<String>) -> Result<Device, String> {
-    match device_name.clone() {
+fn match_device(device_name: Option<&String>) -> Result<Device, String> {
+    match device_name {
         Some(s) => Device::new(Some(Cow::from(s))),
         None => Device::new(None),
     }
@@ -112,7 +112,7 @@ pub fn register_callback(
 ) -> Result<i32, String> {
     try_init_backlight();
 
-    let device = match_device(device_name)?;
+    let device = match_device(device_name.as_ref())?;
     get_ctx().add_cb(Box::new(cb), device)
 }
 
