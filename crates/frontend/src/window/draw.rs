@@ -50,8 +50,12 @@ pub fn set_draw_func(
         pop_animation,
         #[upgrade_or_panic]
         move |darea: &DrawingArea, ctx: &cairo::Context, w, h| {
+            // check unfinished animation and redraw frame
+            let widget_has_animation_update = frame_manager.ensure_animations(darea);
+
             // content
-            if has_update.get() {
+            if has_update.get() || widget_has_animation_update {
+                has_update.set(false);
                 if let Some(w) = widget.upgrade() {
                     let img = w.borrow_mut().redraw();
                     let size = max_size_func((img.width(), img.height()));
@@ -62,9 +66,6 @@ pub fn set_draw_func(
             let content = buffer.get_buffer();
             let content_size = (content.width(), content.height());
             let area_size = (w, h);
-
-            // check unfinished animation and redraw frame
-            frame_manager.ensure_animations(darea);
 
             // pop animation
             let progress = pop_animation.borrow_mut().progress();

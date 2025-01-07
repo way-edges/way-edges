@@ -27,8 +27,9 @@ impl WindowFrameManager {
             animation_finished: true,
         }
     }
-    pub(super) fn ensure_animations(&mut self, darea: &DrawingArea) {
-        if self.animation_list.refresh_and_has_in_progress() || {
+    pub(super) fn ensure_animations(&mut self, darea: &DrawingArea) -> bool {
+        let widget_has_animation_update = self.animation_list.refresh_and_has_in_progress();
+        if widget_has_animation_update || {
             let mut pop_animation = self.pop_animation.borrow_mut();
             pop_animation.refresh();
             pop_animation.is_in_progress()
@@ -43,5 +44,7 @@ impl WindowFrameManager {
         } else {
             self.base.stop();
         }
+
+        widget_has_animation_update
     }
 }
