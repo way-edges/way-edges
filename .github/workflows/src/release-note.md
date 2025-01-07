@@ -1,3 +1,5 @@
 # 💻 Way-Edges
 
-Small fix: toggle_pin animation state
+- Structural improvements
+- make timerfd source priority the same as draw
+- add `pop_duration` for hypr-workspace
