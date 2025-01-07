@@ -1,3 +1,5 @@
+use std::env;
+
 mod activate;
 mod args;
 mod daemon;
@@ -9,6 +11,10 @@ async fn main() {
 
     // completion script output, and exit
     args::if_print_completion_and_exit();
+
+    if env::var("RUST_LOG").is_err() {
+        env::set_var("RUST_LOG", "info")
+    }
 
     env_logger::init();
 
