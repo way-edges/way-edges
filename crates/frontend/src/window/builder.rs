@@ -119,12 +119,12 @@ impl WindowContextBuilder {
     /// config and monitor should be ready before this
     pub fn new(app: &Application, monitor: &Monitor, conf: &Config) -> Result<Self, String> {
         let window = gtk::ApplicationWindow::new(app);
-        window.set_namespace("way-edges-widget");
 
         // init layer
         window.init_layer_shell();
         window.set_monitor(monitor);
         window.set_layer(conf.layer);
+        window.set_namespace("way-edges-widget");
 
         // edge and position
         window.set_anchor(conf.edge, true);
@@ -187,7 +187,7 @@ impl WindowContextBuilder {
             pop_state,
             redraw_rc,
             pop_duration,
-            has_update: Rc::new(Cell::new(false)),
+            has_update: Rc::new(Cell::new(true)),
         })
     }
     pub fn build(self, conf: Config, widget: Rc<RefCell<dyn WidgetContext>>) -> WindowContext {
@@ -257,6 +257,7 @@ impl WindowContextBuilder {
             start_pos,
             mouse_state,
             window_pop_state,
+            widget,
         }
     }
 }

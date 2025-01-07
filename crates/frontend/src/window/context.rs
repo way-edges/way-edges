@@ -1,6 +1,9 @@
-use std::{cell::Cell, rc::Rc};
+use std::{
+    cell::{Cell, RefCell},
+    rc::Rc,
+};
 
-use super::event::WindowPopStateRc;
+use super::{event::WindowPopStateRc, WidgetContext};
 use config::MonitorSpecifier;
 use gtk::{
     prelude::{GtkWindowExt, WidgetExt},
@@ -18,6 +21,7 @@ pub struct WindowContext {
     pub start_pos: Rc<Cell<(i32, i32)>>,
     pub mouse_state: MouseStateRc,
     pub window_pop_state: WindowPopStateRc,
+    pub widget: Rc<RefCell<dyn WidgetContext>>,
 }
 
 impl WindowContext {
