@@ -72,7 +72,6 @@ impl WidgetContext for PulseAudioContext {
                 ),
             );
             self.debounce_ctx = Some(ctx);
-            // set_vol(&self.device, p);
         }
 
         match event {
