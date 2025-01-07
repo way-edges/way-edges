@@ -1,5 +1,3 @@
-use std::ops::DerefMut;
-
 use cairo::ImageSurface;
 use gtk::{gdk::RGBA, prelude::GdkCairoContextExt};
 use gtk4_layer_shell::Edge;
@@ -10,8 +8,6 @@ use util::{
     Z,
 };
 use way_edges_derive::wrap_rc;
-
-use super::OutlookMousePositionTranslateion;
 
 #[wrap_rc(rc = "pub")]
 #[derive(Debug)]
@@ -24,7 +20,7 @@ pub struct DrawConf {
     corners: [bool; 4],
 }
 impl DrawConf {
-    fn new(outlook: OutlookWindowConfig, edge: Edge) -> Self {
+    pub fn new(outlook: OutlookWindowConfig, edge: Edge) -> Self {
         let corners = match edge {
             Edge::Left => [false, true, true, false],
             Edge::Right => [true, false, false, true],
@@ -41,15 +37,14 @@ impl DrawConf {
             corners,
         }
     }
-}
-
-impl OutlookMousePositionTranslateion for DrawConfRc {
-    fn translate_mouse_position(&self, pos: (f64, f64)) -> (f64, f64) {
-        let s = self.borrow();
+    pub fn draw(&mut self, content: ImageSurface) -> ImageSurface {
+        draw_combine(self, content)
+    }
+    pub fn translate_mouse_position(&self, pos: (f64, f64)) -> (f64, f64) {
         // pos - border - margin
         (
-            pos.0 - s.border_width as f64 - s.margins.left as f64,
-            pos.1 - s.border_width as f64 - s.margins.top as f64,
+            pos.0 - self.border_width as f64 - self.margins.left as f64,
+            pos.1 - self.border_width as f64 - self.margins.top as f64,
         )
     }
 }
@@ -207,15 +202,4 @@ fn draw_combine(conf: &DrawConf, content: ImageSurface) -> ImageSurface {
     ctx.paint().unwrap();
 
     surf
-}
-
-pub fn make_draw_func(
-    conf: OutlookWindowConfig,
-    edge: Edge,
-) -> (DrawConfRc, impl Fn(ImageSurface) -> ImageSurface) {
-    let draw_conf = DrawConf::new(conf, edge).make_rc();
-
-    (draw_conf.clone(), move |img| {
-        draw_combine(draw_conf.borrow_mut().deref_mut(), img)
-    })
 }

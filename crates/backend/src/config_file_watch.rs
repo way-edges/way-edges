@@ -12,13 +12,11 @@ fn file_monitor_error(msg: String) {
     log::error!("{msg}");
 }
 
-static mut FILE_MONITOR: OnceLock<Debouncer<INotifyWatcher, NoCache>> = OnceLock::new();
 pub fn init_config_file_monitor() -> Receiver<()> {
-    unsafe {
-        let (s, r) = async_channel::bounded(1);
-        FILE_MONITOR.set(file_monitor(s)).unwrap();
-        r
-    }
+    static FILE_MONITOR: OnceLock<Debouncer<INotifyWatcher, NoCache>> = OnceLock::new();
+    let (s, r) = async_channel::bounded(1);
+    FILE_MONITOR.set(file_monitor(s)).unwrap();
+    r
 }
 
 fn file_monitor(s: Sender<()>) -> Debouncer<INotifyWatcher, NoCache> {

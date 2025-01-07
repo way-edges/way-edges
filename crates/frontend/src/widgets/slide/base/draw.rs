@@ -4,10 +4,7 @@ use gtk::cairo::Context;
 use gtk::prelude::*;
 use gtk4_layer_shell::Edge;
 
-use std::cell::RefCell;
 use std::f64::consts::PI;
-use std::ops::Deref;
-use std::rc::Rc;
 
 use gtk::cairo::{self, ImageSurface};
 use gtk::gdk::RGBA;
@@ -27,10 +24,21 @@ pub struct DrawConfig {
     bg_color: RGBA,
     pub fg_color: RGBA,
     border_color: RGBA,
+
+    func: fn(&DrawConfig, f64) -> ImageSurface,
 }
 impl DrawConfig {
-    fn new(slide_conf: &SlideConfig) -> Self {
+    pub fn new(slide_conf: &SlideConfig, edge: Edge) -> Self {
         let content_size = slide_conf.size().unwrap();
+
+        let func = match edge {
+            Edge::Left => draw_left,
+            Edge::Right => draw_right,
+            Edge::Top => draw_top,
+            Edge::Bottom => draw_bottom,
+            _ => unreachable!(),
+        };
+
         Self {
             length: content_size.1.ceil() as i32,
             thickness: content_size.0.ceil() as i32,
@@ -40,6 +48,7 @@ impl DrawConfig {
             bg_color: slide_conf.bg_color,
             fg_color: slide_conf.fg_color,
             border_color: slide_conf.border_color,
+            func,
         }
     }
     fn new_horizontal_surf(&self) -> (ImageSurface, Context) {
@@ -51,6 +60,9 @@ impl DrawConfig {
         let surf = new_surface((self.thickness, self.length));
         let ctx = cairo::Context::new(&surf).unwrap();
         (surf, ctx)
+    }
+    pub fn draw(&self, p: f64) -> ImageSurface {
+        (self.func)(self, p)
     }
 }
 
@@ -86,6 +98,7 @@ fn draw_slide_path(
     let ctx =
         cairo::Context::new(new_surface((size.0.ceil() as i32, size.1.ceil() as i32))).unwrap();
 
+    #[allow(dead_code)]
     struct BigTrangle {
         height: f64,
         width: f64,
@@ -93,6 +106,7 @@ fn draw_slide_path(
         top_angle: f64,
     }
 
+    #[allow(dead_code)]
     struct TrangleForRotation {
         rotate_angle: f64,
         height: f64,
@@ -176,10 +190,8 @@ fn draw_slide_path(
 
 struct DrawData {
     bar: ImageSurface,
-    bg_path: cairo::Path,
     fg_surf: ImageSurface,
     bg_size: (f64, f64),
-    text_translate_x: f64,
     normal_text_surf: ImageSurface,
 }
 impl DrawData {
@@ -292,8 +304,6 @@ fn make_draw_data(conf: &DrawConfig, progress: f64, is_forward: bool) -> DrawDat
 
     DrawData {
         bar: surf,
-        bg_path,
-        text_translate_x: translate_x,
         fg_surf,
         bg_size,
         normal_text_surf,
@@ -366,23 +376,4 @@ fn draw_bottom(conf: &DrawConfig, progress: f64) -> ImageSurface {
     draw_data.draw_text_on_ctx(&ctx, conf);
 
     surf
-}
-
-pub fn make_draw_func(
-    slide_config: &SlideConfig,
-    edge: Edge,
-) -> (Rc<RefCell<DrawConfig>>, impl Fn(f64) -> ImageSurface) {
-    let draw_conf = Rc::new(RefCell::new(DrawConfig::new(slide_config)));
-
-    let func = match edge {
-        Edge::Left => draw_left,
-        Edge::Right => draw_right,
-        Edge::Top => draw_top,
-        Edge::Bottom => draw_bottom,
-        _ => unreachable!(),
-    };
-
-    (draw_conf.clone(), move |progress| {
-        func(draw_conf.borrow().deref(), progress)
-    })
 }

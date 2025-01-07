@@ -27,7 +27,7 @@ pub async fn set_brightness(device_name: &str, v: u32) -> zbus::Result<()> {
     Ok(())
 }
 
-pub fn set_backlight(device_name: Option<String>, p: f64) {
+pub fn set_backlight(device_name: Option<&String>, p: f64) {
     let device = match_device(device_name).unwrap();
     let device_name = device.name().to_string();
     let v = (device.max() as f64) * p;

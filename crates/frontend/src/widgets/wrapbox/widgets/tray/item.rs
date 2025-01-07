@@ -126,6 +126,7 @@ impl MenuState {
 
 #[derive(Debug)]
 pub struct RootMenu {
+    #[allow(dead_code)]
     pub id: i32,
     pub submenus: Vec<MenuItem>,
 }
@@ -337,10 +338,6 @@ impl GridItemContent for TrayRc {
         let mut s = self.borrow_mut();
         s.redraw_if_updated();
         s.buffer.get_buffer()
-    }
-
-    fn has_update(&mut self) -> bool {
-        self.borrow().updated
     }
 }
 impl Tray {

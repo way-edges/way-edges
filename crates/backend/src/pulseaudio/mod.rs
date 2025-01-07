@@ -7,7 +7,7 @@ use std::{
 };
 
 pub use pa::PulseAudioDevice;
-use pa::VInfo;
+pub use pa::VInfo;
 
 pub type PaCallback = Box<dyn FnMut(&VInfo)>;
 

@@ -2,11 +2,9 @@ use std::{collections::HashSet, time::Duration};
 
 use super::{base::Curve, ToggleAnimation, ToggleAnimationRc};
 
-use way_edges_derive::wrap_rc;
+// use way_edges_derive::wrap_rc;
 
-// wrap_rc!(pub AnimationListRc, pub AnimationList);
-
-#[wrap_rc(rc = "pub", normal = "pub")]
+// #[wrap_rc(rc = "pub", normal = "pub")]
 #[derive(Debug)]
 pub struct AnimationList {
     inner: HashSet<ToggleAnimationRc>,
@@ -63,5 +61,11 @@ impl AnimationList {
 
     pub fn remove_item(&mut self, item: &ToggleAnimationRc) {
         self.inner.remove(item);
+    }
+}
+
+impl Default for AnimationList {
+    fn default() -> Self {
+        Self::new()
     }
 }

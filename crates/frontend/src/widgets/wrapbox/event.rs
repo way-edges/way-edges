@@ -1,19 +1,19 @@
-use std::{cell::RefCell, rc::Rc};
-
-use crate::{mouse_state::MouseEvent, window::WindowContext};
+use std::rc::Rc;
 
 use super::{
     box_traits::{BoxedWidgetGrid, BoxedWidgetRc},
-    outlook::OutlookMousePositionTranslateion,
+    outlook::OutlookDrawConf,
+    BoxContext,
 };
+use crate::mouse_state::MouseEvent;
 
 /// last hover widget, for trigger mouse leave option for that widget.
-struct LastWidget {
+pub struct LastWidget {
     press_lock: bool,
     current_widget: Option<BoxedWidgetRc>,
 }
 impl LastWidget {
-    fn new() -> Self {
+    pub fn new() -> Self {
         Self {
             press_lock: false,
             current_widget: None,
@@ -59,87 +59,67 @@ impl LastWidget {
     fn release_press(&mut self) {
         self.press_lock = false
     }
-}
-
-pub fn event_handle(
-    window: &mut WindowContext,
-    grid_box: &Rc<RefCell<BoxedWidgetGrid>>,
-    outlook_mouse_pos: impl OutlookMousePositionTranslateion + 'static,
-) {
-    // last hover widget, for trigger mouse leave option for that widget.
-    let mut last_widget = LastWidget::new();
-
-    // because mouse leave event is before release,
-    // we need to check if unpress is right behind leave
-    let mut leave_box_state = false;
-
-    use gtk::glib;
-    window.setup_mouse_event_callback(glib::clone!(
-        #[weak]
-        grid_box,
-        #[upgrade_or]
-        false,
-        move |_, e| {
-            match e {
-                MouseEvent::Enter(pos) | MouseEvent::Motion(pos) => {
-                    let matched = match_item(&grid_box, &outlook_mouse_pos, pos);
-
-                    if let Some((widget, pos)) = matched {
-                        last_widget.set_current(widget, pos);
-                    } else {
-                        last_widget.dispose_current();
-                    }
-
-                    leave_box_state = false;
-                }
-                MouseEvent::Leave => {
-                    last_widget.dispose_current();
-                    leave_box_state = true;
-                }
-                MouseEvent::Press(pos, k) => {
-                    let matched = match_item(&grid_box, &outlook_mouse_pos, pos);
-                    if let Some((widget, pos)) = matched {
-                        last_widget.lock_press();
-                        widget
-                            .borrow_mut()
-                            .on_mouse_event(MouseEvent::Press(pos, k));
-                    }
-                }
-                MouseEvent::Release(pos, k) => {
-                    last_widget.release_press();
-
-                    let matched = match_item(&grid_box, &outlook_mouse_pos, pos);
-                    if let Some((widget, pos)) = matched {
-                        widget
-                            .borrow_mut()
-                            .on_mouse_event(MouseEvent::Release(pos, k));
-                    } else if leave_box_state {
-                        leave_box_state = false;
-                        if let Some(last) = last_widget.current_widget.take() {
-                            let mut last = last.borrow_mut();
-                            last.on_mouse_event(MouseEvent::Leave);
-                            last.on_mouse_event(MouseEvent::Release(pos, k));
-                        }
-                        last_widget.dispose_current();
-                    }
-                }
-            };
-
-            false
-        }
-    ));
+    fn take_current(&mut self) -> Option<BoxedWidgetRc> {
+        self.current_widget.take()
+    }
 }
 
 fn match_item(
-    grid_box: &Rc<RefCell<BoxedWidgetGrid>>,
-    outlook_mouse_pos: &impl OutlookMousePositionTranslateion,
+    grid_box: &BoxedWidgetGrid,
+    outlook_mouse_pos: &OutlookDrawConf,
     pos: (f64, f64),
 ) -> Option<(BoxedWidgetRc, (f64, f64))> {
-    let box_ctx = grid_box.borrow();
-
     let pos = outlook_mouse_pos.translate_mouse_position(pos);
 
-    box_ctx
+    grid_box
         .match_item(pos)
         .map(|(widget, pos)| (widget.ctx.clone(), pos))
+}
+
+pub fn on_mouse_event(event: MouseEvent, ctx: &mut BoxContext) -> bool {
+    match event {
+        MouseEvent::Enter(pos) | MouseEvent::Motion(pos) => {
+            let matched = match_item(&ctx.grid_box, &ctx.outlook_draw_conf, pos);
+
+            if let Some((widget, pos)) = matched {
+                ctx.last_widget.set_current(widget, pos);
+            } else {
+                ctx.last_widget.dispose_current();
+            }
+
+            ctx.leave_box_state = false;
+        }
+        MouseEvent::Leave => {
+            ctx.last_widget.dispose_current();
+            ctx.leave_box_state = true;
+        }
+        MouseEvent::Press(pos, k) => {
+            let matched = match_item(&ctx.grid_box, &ctx.outlook_draw_conf, pos);
+            if let Some((widget, pos)) = matched {
+                ctx.last_widget.lock_press();
+                widget
+                    .borrow_mut()
+                    .on_mouse_event(MouseEvent::Press(pos, k));
+            }
+        }
+        MouseEvent::Release(pos, k) => {
+            ctx.last_widget.release_press();
+
+            let matched = match_item(&ctx.grid_box, &ctx.outlook_draw_conf, pos);
+            if let Some((widget, pos)) = matched {
+                widget
+                    .borrow_mut()
+                    .on_mouse_event(MouseEvent::Release(pos, k));
+            } else if ctx.leave_box_state {
+                ctx.leave_box_state = false;
+                if let Some(last) = ctx.last_widget.take_current() {
+                    let mut last = last.borrow_mut();
+                    last.on_mouse_event(MouseEvent::Leave);
+                    last.on_mouse_event(MouseEvent::Release(pos, k));
+                }
+            }
+        }
+    };
+
+    false
 }

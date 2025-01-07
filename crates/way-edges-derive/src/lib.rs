@@ -1,9 +1,6 @@
 use proc_macro::{self, TokenStream};
 use quote::quote;
-use syn::{
-    parse_macro_input, punctuated::Punctuated, Data, DeriveInput, Error, Ident, ItemTrait, Meta,
-    MetaNameValue, Token, Type, Visibility,
-};
+use syn::{parse_macro_input, punctuated::Punctuated, DeriveInput, Meta, MetaNameValue, Token};
 
 #[proc_macro_derive(GetSize)]
 pub fn derive_size(input: TokenStream) -> TokenStream {

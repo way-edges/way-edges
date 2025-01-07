@@ -55,10 +55,10 @@ impl Animation {
             (self.calculate_func)(x)
         };
     }
-    pub(super) fn reset(&mut self) {
-        self.start_time = Instant::now();
-        self.cache_y = 0.;
-    }
+    // pub(super) fn reset(&mut self) {
+    //     self.start_time = Instant::now();
+    //     self.cache_y = 0.;
+    // }
     pub(super) fn flip(&mut self) {
         let passed = self.start_time.elapsed();
         if passed < self.animation_costs {

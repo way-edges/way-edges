@@ -188,6 +188,7 @@ macro_rules! template_parser {
                     $s
                 }
             }
+
             #[derive(Debug)]
             $visibility struct [<$name Processer>];
             impl TemplateArgProcesser for [<$name Processer>] {
@@ -205,7 +206,8 @@ macro_rules! template_parser {
 }
 
 mod test {
-    #![allow(unused_imports)]
+    #![allow(unused_imports, dead_code, unused_macros)]
+
     use super::*;
     use crate::template::arg::{
         TemplateArgFloatParser, TemplateArgFloatProcesser, TEMPLATE_ARG_FLOAT,
@@ -264,7 +266,7 @@ mod test {
     fn test_parse_content() {
         macro_rules! test {
             ($i:expr, $preset_str:expr, $float:expr, $s:expr) => {
-                make_template!(temp, $i, mut);
+                make_template!(temp, $i,);
                 let res = temp.parse(|parser| {
                     let a = match parser.name() {
                         TEMPLATE_ARG_PRESET => $preset_str.to_string(),

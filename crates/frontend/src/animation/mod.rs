@@ -1,11 +1,14 @@
 mod base;
 mod list;
-pub use list::{AnimationList, AnimationListRc};
-use way_edges_derive::wrap_rc;
 
 use std::{hash::Hash, ops::Not, rc::Rc, time::Duration};
 
-use base::{Animation, Curve};
+use way_edges_derive::wrap_rc;
+
+use base::Animation;
+pub use base::Curve;
+pub use list::AnimationList;
+// pub use list::{AnimationList, AnimationListRc};
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum ToggleDirection {

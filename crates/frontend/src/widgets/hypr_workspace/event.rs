@@ -1,5 +1,3 @@
-use backend::hypr_workspace::change_to_workspace;
-use gtk::gdk::BUTTON_PRIMARY;
 use gtk4_layer_shell::Edge;
 use util::binary_search_within_range;
 use way_edges_derive::wrap_rc;
@@ -71,47 +69,4 @@ impl HoverData {
     pub fn force_update_hover_id(&mut self, id: isize) {
         self.hover_id = id
     }
-}
-
-use crate::mouse_state::MouseEvent;
-use crate::window::WindowContext;
-
-pub(super) fn setup_event(window: &mut WindowContext, hover_data: HoverDataRc) {
-    window.setup_mouse_event_callback(move |_, event| {
-        let mut should_redraw = false;
-        macro_rules! hhh {
-            ($hover_data:expr, $pos:expr) => {{
-                let mut h = $hover_data.borrow_mut();
-                let old = h.hover_id;
-                h.update_hover_id_with_mouse_position($pos) != old
-            }};
-        }
-        match event {
-            MouseEvent::Release(pos, key) => {
-                if key == BUTTON_PRIMARY {
-                    should_redraw = hhh!(hover_data, pos);
-                    let id = hover_data.borrow().hover_id;
-                    if id > 0 {
-                        change_to_workspace(id as i32);
-                    }
-                };
-            }
-            MouseEvent::Enter(pos) => {
-                should_redraw = hhh!(hover_data, pos);
-            }
-            MouseEvent::Motion(pos) => {
-                should_redraw = hhh!(hover_data, pos);
-            }
-            MouseEvent::Leave => {
-                let mut h = hover_data.borrow_mut();
-                let old = h.hover_id;
-                if old != -1 {
-                    h.force_update_hover_id(-1);
-                    should_redraw = true;
-                }
-            }
-            _ => {}
-        };
-        should_redraw
-    });
 }
