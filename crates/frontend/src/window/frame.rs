@@ -1,17 +1,16 @@
 use gtk::DrawingArea;
-use way_edges_derive::wrap_rc;
 
 use crate::animation::{AnimationList, ToggleAnimationRc};
 use crate::frame::FrameManager;
 
-#[wrap_rc(rc = "pub(super)", normal = "pub(super)")]
 #[derive(Debug)]
 pub(super) struct WindowFrameManager {
     pop_animation: ToggleAnimationRc,
     animation_list: AnimationList,
     base: FrameManager,
 
-    animation_finished: bool,
+    pop_animation_finished: bool,
+    widget_animation_finished: bool,
 }
 impl WindowFrameManager {
     pub(super) fn new(
@@ -24,27 +23,42 @@ impl WindowFrameManager {
             animation_list,
             base: FrameManager::new(frame_rate),
 
-            animation_finished: true,
+            pop_animation_finished: true,
+            widget_animation_finished: true,
         }
     }
     pub(super) fn ensure_animations(&mut self, darea: &DrawingArea) -> bool {
         let widget_has_animation_update = self.animation_list.refresh_and_has_in_progress();
-        if widget_has_animation_update || {
+        let pop_animation_update = {
             let mut pop_animation = self.pop_animation.borrow_mut();
             pop_animation.refresh();
             pop_animation.is_in_progress()
-        } {
-            self.base.start(darea);
-            if self.animation_finished {
-                self.animation_finished = false
+        };
+
+        if widget_has_animation_update {
+            if self.widget_animation_finished {
+                self.widget_animation_finished = false
             }
-        } else if !self.animation_finished {
-            self.animation_finished = true;
+            self.base.start(darea);
+            return true;
+        } else if !self.widget_animation_finished {
+            self.widget_animation_finished = true;
+            self.base.start(darea);
+            return true;
+        }
+
+        if pop_animation_update {
+            if self.pop_animation_finished {
+                self.pop_animation_finished = false
+            }
+            self.base.start(darea);
+        } else if !self.pop_animation_finished {
+            self.pop_animation_finished = true;
             self.base.start(darea);
         } else {
             self.base.stop();
         }
 
-        widget_has_animation_update
+        false
     }
 }

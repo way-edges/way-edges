@@ -98,6 +98,7 @@ fn draw_slide_path(
     let ctx =
         cairo::Context::new(new_surface((size.0.ceil() as i32, size.1.ceil() as i32))).unwrap();
 
+    #[allow(dead_code)]
     struct BigTrangle {
         height: f64,
         width: f64,
@@ -105,6 +106,7 @@ fn draw_slide_path(
         top_angle: f64,
     }
 
+    #[allow(dead_code)]
     struct TrangleForRotation {
         rotate_angle: f64,
         height: f64,
@@ -188,10 +190,8 @@ fn draw_slide_path(
 
 struct DrawData {
     bar: ImageSurface,
-    bg_path: cairo::Path,
     fg_surf: ImageSurface,
     bg_size: (f64, f64),
-    text_translate_x: f64,
     normal_text_surf: ImageSurface,
 }
 impl DrawData {
@@ -304,8 +304,6 @@ fn make_draw_data(conf: &DrawConfig, progress: f64, is_forward: bool) -> DrawDat
 
     DrawData {
         bar: surf,
-        bg_path,
-        text_translate_x: translate_x,
         fg_surf,
         bg_size,
         normal_text_surf,

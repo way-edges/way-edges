@@ -126,6 +126,7 @@ impl MenuState {
 
 #[derive(Debug)]
 pub struct RootMenu {
+    #[allow(dead_code)]
     pub id: i32,
     pub submenus: Vec<MenuItem>,
 }

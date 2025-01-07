@@ -34,7 +34,7 @@ pub fn init_widget(
     let hypr_data = Rc::new(Cell::new(HyprGlobalData::default()));
     let hover_data = HoverData::new(conf.edge, w_conf.invert_direction);
 
-    let pop_func = window.make_pop_func();
+    let pop_func = window.make_pop_func(w_conf.pop_duration);
     let backend_id = backend::hypr_workspace::register_hypr_event_callback(glib::clone!(
         #[weak]
         hypr_data,
@@ -56,6 +56,7 @@ pub fn init_widget(
 }
 
 pub struct HyprWorkspaceCtx {
+    #[allow(dead_code)]
     backend_id: u32,
     draw_conf: DrawConf,
     hypr_data: Rc<Cell<HyprGlobalData>>,

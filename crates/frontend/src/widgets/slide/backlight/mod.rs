@@ -17,6 +17,7 @@ use config::{
 };
 
 pub struct BacklightContext {
+    #[allow(dead_code)]
     backend_id: i32,
     device: Option<String>,
     progress: Rc<Cell<f64>>,
@@ -81,7 +82,7 @@ pub fn preset(
         device,
         progress,
         draw_conf: DrawConfig::new(&w_conf, conf.edge),
-        progress_state: setup_event(&conf, &mut w_conf),
+        progress_state: setup_event(conf, &mut w_conf),
         only_redraw_on_internal_update: w_conf.redraw_only_on_internal_update,
     }
 }

@@ -1,6 +1,5 @@
 mod activate;
 mod args;
-mod common;
 mod daemon;
 
 // NOTE: thread 0

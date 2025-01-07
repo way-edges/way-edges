@@ -24,6 +24,7 @@ use crate::{
 };
 
 pub struct CustomContext {
+    #[allow(dead_code)]
     runner: Option<Runner<()>>,
     progress: Rc<Cell<f64>>,
     event_map: KeyEventMap,
@@ -62,11 +63,8 @@ impl WidgetContext for CustomContext {
             }
         }
 
-        match event {
-            MouseEvent::Release(_, key) => {
-                self.event_map.call(key);
-            }
-            _ => {}
+        if let MouseEvent::Release(_, key) = event {
+            self.event_map.call(key);
         }
 
         !self.only_redraw_on_internal_update

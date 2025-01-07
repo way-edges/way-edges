@@ -21,11 +21,6 @@ fn set_area_size(darea: &DrawingArea, size: (i32, i32)) {
     // darea.set_size_request(new_size.0, new_size.1);
 }
 
-#[macro_export]
-macro_rules! type_impl_redraw_notifier {
-    () => (impl Fn(Option<cairo::ImageSurface>) + 'static)
-}
-
 #[allow(clippy::too_many_arguments)]
 pub fn set_draw_func(
     darea: &DrawingArea,
@@ -36,19 +31,18 @@ pub fn set_draw_func(
     widget: Weak<RefCell<dyn WidgetContext>>,
     has_update: Rc<Cell<bool>>,
     mut frame_manager: WindowFrameManager,
-    buffer: Buffer,
+    mut buffer: Buffer,
     base_draw_func: impl Fn(&ApplicationWindow, &cairo::Context, (i32, i32), (i32, i32), f64) -> [i32; 4]
         + 'static,
     max_size_func: impl Fn((i32, i32)) -> (i32, i32) + 'static,
 ) {
-    let func = glib::clone!(
+    darea.set_draw_func(glib::clone!(
         #[weak]
         window,
         #[weak]
         start_pos,
         #[weak]
         pop_animation,
-        #[upgrade_or_panic]
         move |darea: &DrawingArea, ctx: &cairo::Context, w, h| {
             // check unfinished animation and redraw frame
             let widget_has_animation_update = frame_manager.ensure_animations(darea);
@@ -77,8 +71,7 @@ pub fn set_draw_func(
             ctx.set_source_surface(content, Z, Z).unwrap();
             ctx.paint().unwrap();
         }
-    );
-    darea.set_draw_func(func);
+    ));
 }
 
 pub fn make_max_size_func(edge: Edge, extra: i32) -> impl Fn((i32, i32)) -> (i32, i32) {

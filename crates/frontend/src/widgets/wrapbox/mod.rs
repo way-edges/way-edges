@@ -46,7 +46,7 @@ pub fn init_widget(
     mut w_conf: BoxConfig,
 ) -> impl WidgetContext {
     let grid_box = init_boxed_widgets(window, &mut w_conf);
-    let outlook_draw_conf = init_outlook(w_conf.outlook, &conf);
+    let outlook_draw_conf = init_outlook(w_conf.outlook, conf);
 
     BoxContext {
         grid_box,

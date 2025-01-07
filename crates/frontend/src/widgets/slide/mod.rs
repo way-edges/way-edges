@@ -23,16 +23,16 @@ pub fn init_widget(
 
     match std::mem::take(&mut w_conf.preset) {
         Preset::Backlight(backlight_config) => {
-            backlight::preset(window, &config, w_conf, backlight_config).make_rc()
+            backlight::preset(window, config, w_conf, backlight_config).make_rc()
         }
         Preset::Speaker(pulse_audio_config) => {
-            pulseaudio::speaker(window, &config, w_conf, pulse_audio_config).make_rc()
+            pulseaudio::speaker(window, config, w_conf, pulse_audio_config).make_rc()
         }
         Preset::Microphone(pulse_audio_config) => {
-            pulseaudio::microphone(window, &config, w_conf, pulse_audio_config).make_rc()
+            pulseaudio::microphone(window, config, w_conf, pulse_audio_config).make_rc()
         }
         Preset::Custom(custom_config) => {
-            custom::custom_preset(window, &config, w_conf, custom_config).make_rc()
+            custom::custom_preset(window, config, w_conf, custom_config).make_rc()
         }
     }
 }

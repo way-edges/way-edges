@@ -16,14 +16,12 @@ use super::WidgetContext;
 
 use gtk::gdk::BUTTON_MIDDLE;
 
-type PopStateGuard = Rc<()>;
-
 #[wrap_rc(rc = "pub", normal = "pub(super)")]
 #[derive(Educe)]
 #[educe(Debug)]
 pub struct WindowPopState {
     pin_state: bool,
-    pop_state: Rc<UnsafeCell<Option<PopStateGuard>>>,
+    pop_state: Rc<UnsafeCell<Option<Rc<()>>>>,
     pop_animation: ToggleAnimationRc,
     pin_key: u32,
     pop_duration: Duration,
@@ -75,6 +73,7 @@ pub fn setup_mouse_event_callback(
     start_pos: &Rc<Cell<(i32, i32)>>,
     mouse_state: &MouseStateRc,
     window_pop_state: &WindowPopStateRc,
+    has_update: &Rc<Cell<bool>>,
 
     widget: Weak<RefCell<dyn WidgetContext>>,
 ) {
@@ -89,6 +88,8 @@ pub fn setup_mouse_event_callback(
     let cb = glib::clone!(
         #[weak]
         start_pos,
+        #[weak]
+        has_update,
         #[weak]
         window_pop_state,
         move |data: &mut MouseStateData, mut event: MouseEvent| {
@@ -139,6 +140,10 @@ pub fn setup_mouse_event_callback(
             }
 
             let widget_trigger_redraw = w.borrow_mut().on_mouse_event(data, event);
+
+            if widget_trigger_redraw {
+                has_update.set(true);
+            }
 
             if trigger_redraw || widget_trigger_redraw {
                 redraw_func()

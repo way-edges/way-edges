@@ -21,6 +21,9 @@ pub struct HyprWorkspaceConfig {
     #[serde(default = "dt_workspace_transition_duration")]
     pub workspace_transition_duration: u64,
 
+    #[serde(default = "dt_pop_duration")]
+    pub pop_duration: u64,
+
     #[serde(default = "dt_deactive_color")]
     #[serde(deserialize_with = "common::color_translate")]
     pub deactive_color: RGBA,
@@ -43,6 +46,9 @@ fn dt_active_increase() -> f64 {
 }
 fn dt_workspace_transition_duration() -> u64 {
     100
+}
+fn dt_pop_duration() -> u64 {
+    1000
 }
 
 fn dt_deactive_color() -> RGBA {

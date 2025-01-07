@@ -55,7 +55,6 @@ impl MouseState {
     pub fn new() -> Self {
         Self {
             data: MouseStateData::new(),
-
             mouse_debug: false,
             cb: None,
         }
@@ -107,6 +106,12 @@ impl MouseState {
     fn hover_leave(&mut self) {
         self.data.hovering = false;
         self.call_event(MouseEvent::Leave);
+    }
+}
+
+impl Default for MouseState {
+    fn default() -> Self {
+        Self::new()
     }
 }
 impl MouseState {

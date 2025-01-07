@@ -6,6 +6,7 @@ use backend::system::{get_battery_info, get_cpu_info, get_disk_info, get_ram_inf
 use config::widgets::wrapbox::ring::RingPreset;
 use util::shell::shell_cmd;
 
+#[allow(dead_code)]
 fn from_kb(total: u64, avaibale: u64) -> (f64, f64, &'static str) {
     let mut c = 0;
     let mut total = total as f64;

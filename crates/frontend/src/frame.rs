@@ -1,6 +1,7 @@
 use std::os::unix::io::AsRawFd;
 use std::{cell::Cell, rc::Rc, time::Duration};
 
+use glib::translate::FromGlib;
 use glib::Priority;
 use gtk::prelude::WidgetExt;
 use gtk::DrawingArea;
@@ -29,7 +30,7 @@ impl FrameManager {
 
         glib::unix_fd_add_full_local(
             tfd.as_raw_fd(),
-            Priority::LOW,
+            unsafe { Priority::from_glib(120) },
             glib::IOCondition::IN,
             glib::clone!(
                 #[weak]

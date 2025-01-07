@@ -26,6 +26,7 @@ use config::{
 use util::draw::color_transition;
 
 pub struct PulseAudioContext {
+    #[allow(dead_code)]
     backend_id: i32,
     device: PulseAudioDevice,
     vinfo: Rc<UnsafeCell<VInfo>>,
