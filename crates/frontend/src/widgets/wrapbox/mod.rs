@@ -25,10 +25,9 @@ pub struct BoxContext {
     leave_box_state: bool,
 }
 impl WidgetContext for BoxContext {
-    fn redraw(&mut self) -> Option<cairo::ImageSurface> {
-        self.grid_box
-            .redraw_if_has_update()
-            .map(|content| self.outlook_draw_conf.draw(content))
+    fn redraw(&mut self) -> cairo::ImageSurface {
+        let content = self.grid_box.draw();
+        self.outlook_draw_conf.draw(content)
     }
 
     fn on_mouse_event(
@@ -43,7 +42,7 @@ impl WidgetContext for BoxContext {
 pub fn init_widget(
     window: &mut WindowContextBuilder,
     _: &Monitor,
-    conf: Config,
+    conf: &Config,
     mut w_conf: BoxConfig,
 ) -> impl WidgetContext {
     let grid_box = init_boxed_widgets(window, &mut w_conf);

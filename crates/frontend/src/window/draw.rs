@@ -1,29 +1,24 @@
-use std::rc::Rc;
+use std::cell::{Cell, RefCell};
+use std::rc::{Rc, Weak};
 
-use cairo::{ImageSurface, RectangleInt, Region};
+use cairo::{RectangleInt, Region};
 use config::common::NumOrRelative;
 use config::Config;
-use gtk::prelude::{DrawingAreaExt, DrawingAreaExtManual, NativeExt, SurfaceExt, WidgetExt};
-use gtk::{glib, DrawingArea};
+use gtk::prelude::{DrawingAreaExt, DrawingAreaExtManual, NativeExt, SurfaceExt};
+use gtk::{glib, ApplicationWindow, DrawingArea};
 use gtk4_layer_shell::Edge;
-use paste::paste;
-use util::{rc_func, Z};
+use util::Z;
 
+use crate::animation::ToggleAnimationRc;
 use crate::buffer::Buffer;
 
-use super::context::WindowContext;
+use super::frame::WindowFrameManager;
+use super::WidgetContext;
 
-fn update_buffer_and_area_size(
-    buffer: &Buffer,
-    darea: &DrawingArea,
-    img: ImageSurface,
-    max_size_func: &MaxSizeFunc,
-) {
-    let new_size = max_size_func((img.width(), img.height()));
-    darea.set_content_width(new_size.0);
-    darea.set_content_height(new_size.1);
+fn set_area_size(darea: &DrawingArea, size: (i32, i32)) {
+    darea.set_content_width(size.0);
+    darea.set_content_height(size.1);
     // darea.set_size_request(new_size.0, new_size.1);
-    buffer.update_buffer(img);
 }
 
 #[macro_export]
@@ -31,99 +26,61 @@ macro_rules! type_impl_redraw_notifier {
     () => (impl Fn(Option<cairo::ImageSurface>) + 'static)
 }
 
-type RedrawNotifyFunc = Rc<dyn Fn(Option<ImageSurface>) + 'static>;
-impl WindowContext {
-    pub fn redraw(&self, img: Option<ImageSurface>) {
-        if let Some(img) = img {
-            update_buffer_and_area_size(
-                &self.image_buffer,
-                &self.drawing_area,
-                img,
-                &self.max_widget_size_func,
-            );
+#[allow(clippy::too_many_arguments)]
+pub fn set_draw_func(
+    darea: &DrawingArea,
+    window: &ApplicationWindow,
+    start_pos: &Rc<Cell<(i32, i32)>>,
+    pop_animation: &ToggleAnimationRc,
+
+    widget: Weak<RefCell<dyn WidgetContext>>,
+    has_update: Rc<Cell<bool>>,
+    mut frame_manager: WindowFrameManager,
+    buffer: Buffer,
+    base_draw_func: impl Fn(&ApplicationWindow, &cairo::Context, (i32, i32), (i32, i32), f64) -> [i32; 4]
+        + 'static,
+    max_size_func: impl Fn((i32, i32)) -> (i32, i32) + 'static,
+) {
+    let func = glib::clone!(
+        #[weak]
+        window,
+        #[weak]
+        start_pos,
+        #[weak]
+        pop_animation,
+        #[upgrade_or_panic]
+        move |darea: &DrawingArea, ctx: &cairo::Context, w, h| {
+            // content
+            if has_update.get() {
+                if let Some(w) = widget.upgrade() {
+                    let img = w.borrow_mut().redraw();
+                    let size = max_size_func((img.width(), img.height()));
+                    set_area_size(darea, size);
+                    buffer.update_buffer(img);
+                }
+            }
+            let content = buffer.get_buffer();
+            let content_size = (content.width(), content.height());
+            let area_size = (w, h);
+
+            // check unfinished animation and redraw frame
+            frame_manager.ensure_animations(darea);
+
+            // pop animation
+            let progress = pop_animation.borrow_mut().progress();
+
+            // input area && pop progress
+            let pose = base_draw_func(&window, ctx, area_size, content_size, progress);
+            start_pos.replace((pose[0], pose[1]));
+
+            ctx.set_source_surface(content, Z, Z).unwrap();
+            ctx.paint().unwrap();
         }
-        self.drawing_area.queue_draw();
-    }
-    pub fn make_redraw_notifier_dyn(&self) -> RedrawNotifyFunc {
-        Rc::new(self.make_redraw_notifier())
-    }
-    pub fn make_redraw_notifier(&self) -> type_impl_redraw_notifier!() {
-        let drawing_area = &self.drawing_area;
-        let buffer = &self.image_buffer;
-        let max_size_func = &self.max_widget_size_func;
-        glib::clone!(
-            #[weak]
-            drawing_area,
-            #[weak]
-            buffer,
-            #[weak]
-            max_size_func,
-            move |img| {
-                if let Some(img) = img {
-                    update_buffer_and_area_size(&buffer, &drawing_area, img, &max_size_func);
-                }
-                drawing_area.queue_draw();
-            }
-        )
-    }
+    );
+    darea.set_draw_func(func);
 }
 
-impl WindowContext {
-    pub fn set_draw_func(&self, mut cb: Option<impl 'static + FnMut() -> Option<ImageSurface>>) {
-        let buffer = &self.image_buffer;
-        let window = &self.window;
-        let base_draw_func = &self.base_draw_func;
-        let max_size_func = &self.max_widget_size_func;
-        let start_pos = &self.start_pos;
-        let pop_window_state = &self.window_pop_state;
-        let frame_manager = self.frame_manager.clone();
-        let func = glib::clone!(
-            #[weak]
-            buffer,
-            #[weak]
-            window,
-            #[weak]
-            base_draw_func,
-            #[weak]
-            max_size_func,
-            #[weak]
-            start_pos,
-            #[weak]
-            pop_window_state,
-            #[weak]
-            frame_manager,
-            #[upgrade_or_panic]
-            move |darea: &DrawingArea, ctx: &cairo::Context, w, h| {
-                // content
-                if let Some(cb) = &mut cb {
-                    if let Some(img) = cb() {
-                        update_buffer_and_area_size(&buffer, darea, img, &max_size_func);
-                    }
-                }
-                let content = buffer.get_buffer();
-                let content_size = (content.width(), content.height());
-                let area_size = (w, h);
-
-                // pop animation
-                frame_manager.borrow_mut().ensure_animations(darea);
-                let progress = pop_window_state.borrow_mut().progress();
-
-                // check unfinished animation and redraw frame
-
-                // input area && pop progress
-                let pose = base_draw_func(&window, ctx, area_size, content_size, progress);
-                start_pos.replace((pose[0], pose[1]));
-
-                ctx.set_source_surface(content, Z, Z).unwrap();
-                ctx.paint().unwrap();
-            }
-        );
-        self.drawing_area.set_draw_func(func);
-    }
-}
-
-rc_func!(pub MaxSizeFunc, dyn Fn((i32, i32)) -> (i32, i32));
-pub fn make_max_size_func(edge: Edge, extra: i32) -> MaxSizeFunc {
+pub fn make_max_size_func(edge: Edge, extra: i32) -> impl Fn((i32, i32)) -> (i32, i32) {
     macro_rules! what_extra {
         ($size:expr, $extra:expr; H) => {
             $size.0 += $extra
@@ -149,14 +106,13 @@ pub fn make_max_size_func(edge: Edge, extra: i32) -> MaxSizeFunc {
         _ => unreachable!(),
     };
 
-    MaxSizeFunc(Rc::new(move |size| func(size, extra)))
+    move |size| func(size, extra)
 }
 
-rc_func!(
-    pub BaseDrawFunc,
-    dyn Fn(&gtk::ApplicationWindow, &cairo::Context, (i32, i32), (i32, i32), f64) -> [i32; 4]
-);
-pub fn make_base_draw_func(conf: &Config) -> BaseDrawFunc {
+#[allow(clippy::type_complexity)]
+pub fn make_base_draw_func(
+    conf: &Config,
+) -> impl Fn(&gtk::ApplicationWindow, &cairo::Context, (i32, i32), (i32, i32), f64) -> [i32; 4] {
     let edge = conf.edge;
     let position = conf.position;
     let extra = conf.extra_trigger_size.get_num_into().unwrap().ceil() as i32;
@@ -167,26 +123,24 @@ pub fn make_base_draw_func(conf: &Config) -> BaseDrawFunc {
     let preview_func = get_preview_size_func(edge, preview);
     let inr_func = get_input_region_func(edge, extra);
 
-    BaseDrawFunc(Rc::new(
-        move |window, ctx, area_size, content_size, animation_progress| {
-            let visible_y = visible_y_func(content_size, animation_progress);
-            let [x, y] = xy_func(area_size, content_size, visible_y);
-            let mut pose = [x, y, content_size.0, content_size.1];
+    move |window, ctx, area_size, content_size, animation_progress| {
+        let visible_y = visible_y_func(content_size, animation_progress);
+        let [x, y] = xy_func(area_size, content_size, visible_y);
+        let mut pose = [x, y, content_size.0, content_size.1];
 
-            preview_func(area_size, &mut pose);
+        preview_func(area_size, &mut pose);
 
-            // input region
-            if let Some(surf) = window.surface() {
-                let inr = inr_func(pose);
-                surf.set_input_region(&Region::create_rectangle(&inr));
-            }
+        // input region
+        if let Some(surf) = window.surface() {
+            let inr = inr_func(pose);
+            surf.set_input_region(&Region::create_rectangle(&inr));
+        }
 
-            // pop in progress
-            ctx.translate(pose[0] as f64, pose[1] as f64);
+        // pop in progress
+        ctx.translate(pose[0] as f64, pose[1] as f64);
 
-            pose
-        },
-    ))
+        pose
+    }
 }
 
 fn get_preview_size_func(edge: Edge, preview: NumOrRelative) -> impl Fn((i32, i32), &mut [i32; 4]) {

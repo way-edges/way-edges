@@ -57,31 +57,32 @@ pub fn init_widget(
     let widget_ctx = match conf.widget.take().unwrap() {
         config::widgets::Widget::Btn(btn_config) => {
             log::debug!("initializing button");
-            let w = button::init_widget(&mut builder, monitor, conf, btn_config);
+            let w = button::init_widget(&mut builder, monitor, &conf, btn_config);
             log::info!("initialized button");
             w.make_rc()
         }
         config::widgets::Widget::Slider(slide_config) => {
             log::debug!("initializing slider");
-            let w = slide::init_widget(&mut builder, monitor, conf, slide_config);
+            let w = slide::init_widget(&mut builder, monitor, &conf, slide_config);
             log::info!("initialized slider");
             w
         }
         config::widgets::Widget::HyprWorkspace(hypr_workspace_config) => {
             log::debug!("initializing hypr-workspace");
-            let w = hypr_workspace::init_widget(&mut builder, monitor, conf, hypr_workspace_config);
+            let w =
+                hypr_workspace::init_widget(&mut builder, monitor, &conf, hypr_workspace_config);
             log::info!("initialized hypr-workspace");
             w.make_rc()
         }
         config::widgets::Widget::WrapBox(box_config) => {
             log::debug!("initializing box");
-            let w = wrapbox::init_widget(&mut builder, monitor, conf, box_config);
+            let w = wrapbox::init_widget(&mut builder, monitor, &conf, box_config);
             log::info!("initialized box");
             w.make_rc()
         }
     };
 
-    let window = builder.build(widget_ctx);
+    let window = builder.build(conf, widget_ctx);
 
     window.show();
 

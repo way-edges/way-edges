@@ -40,13 +40,13 @@ pub struct PulseAudioContext {
     only_redraw_on_internal_update: bool,
 }
 impl WidgetContext for PulseAudioContext {
-    fn redraw(&mut self) -> Option<ImageSurface> {
+    fn redraw(&mut self) -> ImageSurface {
         let mute_y = self.mute_animation.borrow_mut().progress();
         let fg_color = color_transition(self.non_mute_color, self.mute_color, mute_y as f32);
         self.draw_conf.fg_color = fg_color;
 
         let p = unsafe { self.vinfo.get().as_ref().unwrap().vol };
-        Some(self.draw_conf.draw(p))
+        self.draw_conf.draw(p)
     }
 
     fn on_mouse_event(&mut self, _: &MouseStateData, event: MouseEvent) -> bool {

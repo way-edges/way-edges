@@ -49,9 +49,6 @@ impl BoxedWidgetCtx {
 }
 
 impl GridItemContent for BoxedWidgetCtx {
-    fn has_update(&mut self) -> bool {
-        !self.did_last_frame || self.has_update.get() || self.animation_list.has_in_progress()
-    }
     fn draw(&mut self) -> ImageSurface {
         let mut call_redraw = false;
         if self.animation_list.has_in_progress() {

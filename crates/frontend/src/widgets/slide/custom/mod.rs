@@ -35,9 +35,9 @@ pub struct CustomContext {
     only_redraw_on_internal_update: bool,
 }
 impl WidgetContext for CustomContext {
-    fn redraw(&mut self) -> Option<ImageSurface> {
+    fn redraw(&mut self) -> ImageSurface {
         let p = self.progress.get();
-        Some(self.draw_conf.draw(p))
+        self.draw_conf.draw(p)
     }
 
     fn on_mouse_event(&mut self, _: &MouseStateData, event: MouseEvent) -> bool {

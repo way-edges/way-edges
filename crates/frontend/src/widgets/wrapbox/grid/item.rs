@@ -4,7 +4,6 @@ use cairo::ImageSurface;
 
 pub trait GridItemContent {
     fn draw(&mut self) -> ImageSurface;
-    fn has_update(&mut self) -> bool;
 }
 
 #[derive(Debug)]

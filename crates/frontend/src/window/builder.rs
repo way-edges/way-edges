@@ -1,5 +1,5 @@
 use std::{
-    cell::{Cell, RefCell},
+    cell::{Cell, RefCell, UnsafeCell},
     rc::Rc,
     time::Duration,
 };
@@ -15,15 +15,26 @@ use gtk4_layer_shell::LayerShell;
 
 use crate::{
     animation::{AnimationList, ToggleAnimation, ToggleAnimationRc},
-    mouse_state::{MouseEvent, MouseStateData},
+    buffer::Buffer,
+    mouse_state::{MouseEvent, MouseState, MouseStateData},
 };
 
-use super::WindowContext;
+use super::{
+    draw::{make_base_draw_func, make_max_size_func, set_draw_func},
+    event::{setup_mouse_event_callback, WindowPopState},
+    frame::WindowFrameManager,
+    WindowContext,
+};
 
 pub trait WidgetContext {
-    fn redraw(&mut self) -> Option<ImageSurface>;
+    fn redraw(&mut self) -> ImageSurface;
     fn on_mouse_event(&mut self, data: &MouseStateData, event: MouseEvent) -> bool;
-    fn make_rc(self) -> Rc<RefCell<dyn WidgetContext>>;
+    fn make_rc(self) -> Rc<RefCell<dyn WidgetContext>>
+    where
+        Self: Sized + 'static,
+    {
+        Rc::new(RefCell::new(self))
+    }
 }
 
 type PopStateGuard = Rc<()>;
@@ -35,10 +46,12 @@ pub struct WindowContextBuilder {
     window: ApplicationWindow,
     drawing_area: DrawingArea,
 
+    has_update: Rc<Cell<bool>>,
+
     pop_animation: ToggleAnimationRc,
     animation_list: AnimationList,
     redraw_rc: Rc<dyn Fn()>,
-    pop_state: Rc<Cell<Option<PopStateGuard>>>,
+    pop_state: Rc<UnsafeCell<Option<PopStateGuard>>>,
     pop_duration: Duration,
 }
 impl WindowContextBuilder {
@@ -67,7 +80,7 @@ impl WindowContextBuilder {
 
                 let guard = Rc::new(());
                 let guard_weak = Rc::downgrade(&guard);
-                pop_state.set(Some(guard));
+                unsafe { pop_state.get().as_mut().unwrap().replace(guard) };
 
                 pop_animation
                     .borrow_mut()
@@ -88,10 +101,14 @@ impl WindowContextBuilder {
     }
     pub fn make_redraw_notifier(&self) -> impl Fn() {
         let drawing_area = &self.drawing_area;
+        let has_update = &self.has_update;
         glib::clone!(
             #[weak]
             drawing_area,
+            #[weak]
+            has_update,
             move || {
+                has_update.set(true);
                 drawing_area.queue_draw();
             }
         )
@@ -147,7 +164,7 @@ impl WindowContextBuilder {
             crate::animation::Curve::Linear,
         )
         .make_rc();
-        let pop_state = Rc::new(Cell::new(None));
+        let pop_state = Rc::new(UnsafeCell::new(None));
         let pop_duration = Duration::from_millis(conf.transition_duration);
 
         let animation_list = AnimationList::new();
@@ -170,7 +187,76 @@ impl WindowContextBuilder {
             pop_state,
             redraw_rc,
             pop_duration,
+            has_update: Rc::new(Cell::new(false)),
         })
     }
-    pub fn build(self, widget: Rc<RefCell<dyn WidgetContext>>) -> WindowContext {}
+    pub fn build(self, conf: Config, widget: Rc<RefCell<dyn WidgetContext>>) -> WindowContext {
+        let Self {
+            name,
+            monitor,
+            window,
+            drawing_area,
+            has_update,
+            pop_animation,
+            animation_list,
+            redraw_rc: _,
+            pop_state,
+            pop_duration: _,
+        } = self;
+
+        let start_pos = Rc::new(Cell::new((0, 0)));
+        let mouse_state = MouseState::new().connect(&drawing_area);
+        let window_pop_state = WindowPopState::new(pop_animation.clone(), pop_state).make_rc();
+
+        // draw
+        {
+            let frame_manager = WindowFrameManager::new(
+                conf.frame_rate.unwrap() as u64,
+                animation_list,
+                pop_animation.clone(),
+            );
+            let buffer = Buffer::default();
+            let base_draw_func = make_base_draw_func(&conf);
+            let max_size_func = make_max_size_func(
+                conf.edge,
+                conf.extra_trigger_size.get_num_into().unwrap().ceil() as i32,
+            );
+            let widget = Rc::downgrade(&widget);
+
+            set_draw_func(
+                &drawing_area,
+                &window,
+                &start_pos,
+                &pop_animation,
+                widget,
+                has_update,
+                frame_manager,
+                buffer,
+                base_draw_func,
+                max_size_func,
+            );
+        };
+
+        // event
+        {
+            let widget = Rc::downgrade(&widget);
+            setup_mouse_event_callback(
+                &drawing_area,
+                &start_pos,
+                &mouse_state,
+                &window_pop_state,
+                widget,
+            );
+        };
+
+        WindowContext {
+            name,
+            monitor,
+            window,
+            drawing_area,
+            start_pos,
+            mouse_state,
+            window_pop_state,
+        }
+    }
 }

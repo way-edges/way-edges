@@ -67,14 +67,6 @@ impl<T: GridItemContent> GridBox<T> {
             .as_ref()
             .and_then(|position_map| position_map.match_item(pos, &self.item_map))
     }
-    pub fn redraw_if_has_update(&mut self) -> Option<ImageSurface> {
-        let has_update = self.item_map.items.iter_mut().any(|w| w.has_update());
-        if has_update {
-            Some(self.draw())
-        } else {
-            None
-        }
-    }
     pub fn draw(&mut self) -> ImageSurface {
         if self.item_map.row_index.is_empty() {
             return ImageSurface::create(Format::ARgb32, 0, 0).unwrap();

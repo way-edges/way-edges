@@ -14,7 +14,7 @@ use gtk::{gdk::Monitor, prelude::MonitorExt};
 pub fn init_widget(
     _: &mut WindowContextBuilder,
     monitor: &Monitor,
-    config: Config,
+    config: &Config,
     mut btn_config: BtnConfig,
 ) -> impl WidgetContext {
     let geom = monitor.geometry();
@@ -34,8 +34,8 @@ pub struct BtnContext {
     event_map: KeyEventMap,
 }
 impl WidgetContext for BtnContext {
-    fn redraw(&mut self) -> Option<cairo::ImageSurface> {
-        Some(self.draw_conf.draw(self.pressing))
+    fn redraw(&mut self) -> cairo::ImageSurface {
+        self.draw_conf.draw(self.pressing)
     }
 
     fn on_mouse_event(&mut self, data: &MouseStateData, event: MouseEvent) -> bool {

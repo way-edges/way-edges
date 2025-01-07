@@ -338,10 +338,6 @@ impl GridItemContent for TrayRc {
         s.redraw_if_updated();
         s.buffer.get_buffer()
     }
-
-    fn has_update(&mut self) -> bool {
-        self.borrow().updated
-    }
 }
 impl Tray {
     pub fn on_mouse_event(&mut self, e: MouseEvent) {

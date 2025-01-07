@@ -12,7 +12,7 @@ use gtk::{gdk::Monitor, prelude::MonitorExt};
 pub fn init_widget(
     window: &mut WindowContextBuilder,
     monitor: &Monitor,
-    config: Config,
+    config: &Config,
     mut w_conf: SlideConfig,
 ) -> Rc<RefCell<dyn WidgetContext>> {
     let geom = monitor.geometry();
