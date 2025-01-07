@@ -79,6 +79,9 @@ impl WidgetContext for PulseAudioContext {
                 let vinfo = unsafe { self.vinfo.get().as_mut().unwrap() };
                 vinfo.is_muted = !vinfo.is_muted;
                 set_mute(&self.device, vinfo.is_muted);
+                self.mute_animation
+                    .borrow_mut()
+                    .set_direction(vinfo.is_muted.into());
                 true
             }
             _ => !self.only_redraw_on_internal_update,
