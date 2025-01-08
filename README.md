@@ -4,11 +4,11 @@ https://github.com/user-attachments/assets/b41205be-5740-46bd-ab53-c9713f40e042
 
 
 
-## Doc
+## 🔍 Doc
 
 Please refer to [https://way-edges.github.io/description]
 
-## Installation
+## 📥 Installation
 
 ### Arch(aur)
 
@@ -22,7 +22,7 @@ git clone https://github.com/way-edges/way-edges.git
 cd way-edges && cargo build --release
 ```
 
-## Configuration
+## ⚙️ Configuration
 
 Place `config.jsonc` under `~/.config/way-edges/`
 
@@ -43,7 +43,7 @@ Doc: https://way-edges.github.io/basic_config
 }
 ```
 
-## Launch
+## 🚀 Launch
 
 1. Run daemon first(`way-edges daemon`).
 2. Add group of widgets given group name specified in your configuration file(`way-edges add <group_name>`).
@@ -68,7 +68,7 @@ Options:
   -V, --version      Print version
 ```
 
-## Our purpose
+## 🧐 Our purpose
 
 1. the hidden widgets
 2. use less resources(ram, cpu)
