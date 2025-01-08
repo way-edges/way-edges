@@ -68,6 +68,13 @@ Options:
   -V, --version      Print version
 ```
 
+## Our purpose
+
+1. the hidden widgets
+2. use less resources(ram, cpu)
+3. a good performance
+4. ...
+
 ## 💛 Thanks
 Special thanks for:
 - [JakeStanger/system-tray](https://github.com/JakeStanger/system-tray). I forked one for zbus5.0 version: https://github.com/ogios/system-tray-zbus5.
