@@ -34,6 +34,7 @@ pub fn init_widget(
     let hypr_data = Rc::new(Cell::new(HyprGlobalData::default()));
     let hover_data = HoverData::new(conf.edge, w_conf.invert_direction);
 
+    let redraw_signal = window.make_redraw_notifier();
     let pop_func = window.make_pop_func(w_conf.pop_duration);
     let backend_id = backend::hypr_workspace::register_hypr_event_callback(glib::clone!(
         #[weak]
@@ -43,6 +44,7 @@ pub fn init_widget(
         move |data| {
             hypr_data.set(*data);
             workspace_transition.borrow_mut().flip();
+            redraw_signal();
             pop_func()
         }
     ));
