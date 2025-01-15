@@ -74,11 +74,11 @@ Options:
    - serves more as a **tool**, we do not want this to stop you from using other widgets(eg. eww/waybar...)
 2. lightweight
    - low-cost on ram specifically, also dependency(we're removing gtk&glib which is a WIP).
-   - having what `1.` suggests, we do not expect a tool to cost too may resources, so **lightweight** is one of our priority. 
+   - having what `1.` suggests, we do not expect a tool to cost too many resources, so **lightweight** is one of our priority. 
 3. ...
 
 > [!NOTE]
-> A good customization and styling capability is rather hard to implement here  
+> A good customization and styling capability is rather hard to be implemented here  
 > since we're actually **drawing** every frame ourselfs.
 >
 > We value any suggestions or assistance.
