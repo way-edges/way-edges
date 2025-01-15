@@ -14,7 +14,6 @@ frontend = { version = "0.1.0", path = "crates/frontend" }
 
 # gtk4-layer-shell = "0.4"
 gtk4-layer-shell = { git = "https://github.com/ogios/gtk4-layer-shell-gir.git" }
-
 gtk4-sys = { git = "https://github.com/ogios/gtk4-rs.git", version = "0.9", branch = "0.9", package = "gtk4-sys" }
 gtk = { git = "https://github.com/ogios/gtk4-rs.git", version = "0.9", branch = "0.9", package = "gtk4", features = [
   "v4_12",
@@ -40,15 +39,16 @@ env_logger = "0.11"
 lazy_static = "1.5.0"
 educe = { version = "0.6.0", default-features = false, features = ["Debug"] }
 paste = "1.0.15"
-
 serde_jsonrc = "0.1"
 serde = { version = "1.0", features = ["derive"] }
-
 tokio = { version = "1.39", features = ["net", "macros", "rt", "time", "sync"] }
-
 async-channel = "2.3"
-
 system-tray = { git = "https://github.com/ogios/system-tray-zbus5.git", branch = "zbus5" }
+
+# until it make calloop version 0.14
+smithay-client-toolkit = { git = "https://github.com/Smithay/client-toolkit.git" }
+wayland-client = "0.31.7"
+calloop = "0.14.2"
 
 [profile.release]
 opt-level = 3

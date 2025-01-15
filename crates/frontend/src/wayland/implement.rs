@@ -1,0 +1,259 @@
+use std::sync::Mutex;
+
+use smithay_client_toolkit::{
+    compositor::{CompositorHandler, SurfaceData as SctkSurfaceData, SurfaceDataExt},
+    delegate_compositor, delegate_layer, delegate_output, delegate_pointer, delegate_registry,
+    delegate_seat, delegate_shm,
+    output::{OutputHandler, OutputState},
+    registry::{ProvidesRegistryState, RegistryState},
+    registry_handlers,
+    seat::{
+        pointer::{PointerEvent, PointerEventKind, PointerHandler},
+        Capability, SeatHandler, SeatState,
+    },
+    shell::{
+        wlr_layer::{LayerShellHandler, LayerSurface, LayerSurfaceConfigure},
+        WaylandSurface,
+    },
+    shm::{Shm, ShmHandler},
+};
+use wayland_client::{
+    protocol::{
+        wl_output, wl_pointer, wl_seat,
+        wl_surface::{self, WlSurface},
+    },
+    Connection, Proxy, QueueHandle,
+};
+
+use super::app::{App, Widget};
+
+struct SurfaceData {
+    sctk: SctkSurfaceData,
+    widget: std::sync::Weak<Mutex<Widget>>,
+}
+impl SurfaceDataExt for SurfaceData {
+    fn surface_data(&self) -> &SctkSurfaceData {
+        &self.sctk
+    }
+}
+impl SurfaceData {
+    pub fn from_wl(wl: &WlSurface) -> &Self {
+        wl.data::<SurfaceData>().unwrap()
+    }
+}
+
+impl CompositorHandler for App {
+    fn scale_factor_changed(
+        &mut self,
+        _conn: &Connection,
+        _qh: &QueueHandle<Self>,
+        _surface: &wl_surface::WlSurface,
+        _new_factor: i32,
+    ) {
+        // Not needed for this example.
+    }
+
+    fn transform_changed(
+        &mut self,
+        _conn: &Connection,
+        _qh: &QueueHandle<Self>,
+        _surface: &wl_surface::WlSurface,
+        _new_transform: wl_output::Transform,
+    ) {
+        // Not needed for this example.
+    }
+
+    fn frame(
+        &mut self,
+        _conn: &Connection,
+        qh: &QueueHandle<Self>,
+        _surface: &wl_surface::WlSurface,
+        _time: u32,
+    ) {
+        let Some(widget) = SurfaceData::from_wl(_surface).widget.upgrade() else {
+            return;
+        };
+        widget.lock().draw();
+    }
+
+    fn surface_enter(
+        &mut self,
+        _conn: &Connection,
+        _qh: &QueueHandle<Self>,
+        _surface: &wl_surface::WlSurface,
+        _output: &wl_output::WlOutput,
+    ) {
+        // Not needed for this example.
+    }
+
+    fn surface_leave(
+        &mut self,
+        _conn: &Connection,
+        _qh: &QueueHandle<Self>,
+        _surface: &wl_surface::WlSurface,
+        _output: &wl_output::WlOutput,
+    ) {
+        // Not needed for this example.
+    }
+}
+
+impl OutputHandler for App {
+    fn output_state(&mut self) -> &mut OutputState {
+        &mut self.output_state
+    }
+
+    fn new_output(
+        &mut self,
+        _conn: &Connection,
+        _qh: &QueueHandle<Self>,
+        _output: wl_output::WlOutput,
+    ) {
+    }
+
+    fn update_output(
+        &mut self,
+        _conn: &Connection,
+        _qh: &QueueHandle<Self>,
+        _output: wl_output::WlOutput,
+    ) {
+        // TODO: MONITOR CHANGE
+    }
+
+    fn output_destroyed(
+        &mut self,
+        _conn: &Connection,
+        _qh: &QueueHandle<Self>,
+        _output: wl_output::WlOutput,
+    ) {
+    }
+}
+
+impl LayerShellHandler for App {
+    fn closed(&mut self, _conn: &Connection, _qh: &QueueHandle<Self>, _layer: &LayerSurface) {
+        self.exit = true
+    }
+
+    fn configure(
+        &mut self,
+        _conn: &Connection,
+        qh: &QueueHandle<Self>,
+        layer: &LayerSurface,
+        configure: LayerSurfaceConfigure,
+        _serial: u32,
+    ) {
+        let Some(layer) = SurfaceData::from_wl(layer.wl_surface()).widget.upgrade() else {
+            return;
+        };
+
+        // Initiate the first draw.
+        let layer = layer.lock().unwrap();
+        if !layer.configured {
+            layer.configured = true;
+            layer.draw(qh, &mut self.pool);
+        }
+    }
+}
+
+impl SeatHandler for App {
+    fn seat_state(&mut self) -> &mut SeatState {
+        &mut self.seat_state
+    }
+
+    fn new_seat(&mut self, _: &Connection, _: &QueueHandle<Self>, _: wl_seat::WlSeat) {}
+
+    fn new_capability(
+        &mut self,
+        _conn: &Connection,
+        qh: &QueueHandle<Self>,
+        seat: wl_seat::WlSeat,
+        capability: Capability,
+    ) {
+        // mouse
+        if capability == Capability::Pointer && self.pointer.is_none() {
+            println!("Set pointer capability");
+            let pointer = self
+                .seat_state
+                .get_pointer(qh, &seat)
+                .expect("Failed to create pointer");
+            self.pointer = Some(pointer);
+        }
+    }
+
+    fn remove_capability(
+        &mut self,
+        _conn: &Connection,
+        _: &QueueHandle<Self>,
+        _: wl_seat::WlSeat,
+        capability: Capability,
+    ) {
+        // mouse
+        if capability == Capability::Pointer && self.pointer.is_some() {
+            println!("Unset pointer capability");
+            self.pointer.take().unwrap().release();
+        }
+    }
+
+    fn remove_seat(&mut self, _: &Connection, _: &QueueHandle<Self>, _: wl_seat::WlSeat) {}
+}
+
+impl PointerHandler for App {
+    fn pointer_frame(
+        &mut self,
+        _conn: &Connection,
+        _qh: &QueueHandle<Self>,
+        _pointer: &wl_pointer::WlPointer,
+        events: &[PointerEvent],
+    ) {
+        use PointerEventKind::*;
+        for event in events {
+            // Ignore events for other surfaces
+            // if &event.surface != self.layer.wl_surface() {
+            //     continue;
+            // }
+            match event.kind {
+                Enter { .. } => {
+                    println!("Pointer entered @{:?}", event.position);
+                }
+                Leave { .. } => {
+                    println!("Pointer left");
+                }
+                Motion { .. } => {}
+                Press { button, .. } => {
+                    println!("Press {:x} @ {:?}", button, event.position);
+                }
+                Release { button, .. } => {
+                    println!("Release {:x} @ {:?}", button, event.position);
+                }
+                Axis {
+                    horizontal,
+                    vertical,
+                    ..
+                } => {
+                    println!("Scroll H:{horizontal:?}, V:{vertical:?}");
+                }
+            }
+        }
+    }
+}
+
+impl ShmHandler for App {
+    fn shm_state(&mut self) -> &mut Shm {
+        &mut self.shm
+    }
+}
+
+impl ProvidesRegistryState for App {
+    fn registry(&mut self) -> &mut RegistryState {
+        &mut self.registry_state
+    }
+    registry_handlers![OutputState, SeatState];
+}
+
+delegate_compositor!(App, surface: [SctkSurfaceData, SurfaceData]);
+delegate_output!(App);
+delegate_shm!(App);
+delegate_layer!(App);
+delegate_registry!(App);
+
+delegate_seat!(App);
+delegate_pointer!(App);
