@@ -17,6 +17,10 @@ async-channel.workspace = true
 pangocairo.workspace = true
 system-tray.workspace = true
 
+smithay-client-toolkit.workspace = true
+wayland-client.workspace = true
+calloop.workspace = true
+
 way-edges-derive.workspace = true
 config.workspace = true
 backend.workspace = true
