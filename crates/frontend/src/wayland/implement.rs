@@ -25,22 +25,7 @@ use wayland_client::{
     Connection, Proxy, QueueHandle,
 };
 
-use super::app::{App, Widget};
-
-struct SurfaceData {
-    sctk: SctkSurfaceData,
-    widget: std::sync::Weak<Mutex<Widget>>,
-}
-impl SurfaceDataExt for SurfaceData {
-    fn surface_data(&self) -> &SctkSurfaceData {
-        &self.sctk
-    }
-}
-impl SurfaceData {
-    pub fn from_wl(wl: &WlSurface) -> &Self {
-        wl.data::<SurfaceData>().unwrap()
-    }
-}
+use super::app::{App, SurfaceData, Widget};
 
 impl CompositorHandler for App {
     fn scale_factor_changed(

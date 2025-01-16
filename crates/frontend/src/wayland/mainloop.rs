@@ -61,7 +61,6 @@ fn main() {
 
     init_backend_runtime_handle();
 
-    // TODO: IPC
     let (sender, r) = calloop::channel::channel();
     start_ipc(sender);
     event_loop.handle().insert_source(r, |event, _, app| {
@@ -73,7 +72,6 @@ fn main() {
         app.handle_ipc(cmd);
     });
 
-    // TODO: CONFIG WATCH
     let (sender, r) = calloop::channel::channel();
     start_configuration_file_watcher(sender);
     event_loop.handle().insert_source(r, |event, _, app| {
