@@ -7,7 +7,7 @@ use std::{
 use gtk::{gdk::Display, IconTheme};
 use system_tray::client::Client;
 
-use crate::get_main_runtime_handle;
+use crate::runtime::get_backend_runtime_handle;
 
 use super::event::{match_event, TrayEvent};
 
@@ -81,7 +81,7 @@ pub fn init_tray_client() {
         return;
     }
 
-    let client = get_main_runtime_handle().block_on(async { Client::new().await.unwrap() });
+    let client = get_backend_runtime_handle().block_on(async { Client::new().await.unwrap() });
     let mut tray_rx = client.subscribe();
 
     TRAY_CONTEXT.store(
