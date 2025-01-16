@@ -64,16 +64,14 @@ fn main() {
     // TODO: IPC
     let (sender, r) = calloop::channel::channel();
     start_ipc(sender);
-    event_loop
-        .handle()
-        .insert_source(r, |event, metadata, app| {
-            let calloop::channel::Event::Msg(cmd) = event else {
-                log::error!("IPC server shutdown, exiting...");
-                app.exit = true;
-                return;
-            };
-            app.handle_ipc(cmd);
-        });
+    event_loop.handle().insert_source(r, |event, _, app| {
+        let calloop::channel::Event::Msg(cmd) = event else {
+            log::error!("IPC server shutdown, exiting...");
+            app.exit = true;
+            return;
+        };
+        app.handle_ipc(cmd);
+    });
 
     // TODO: CONFIG WATCH
     let (sender, r) = calloop::channel::channel();
