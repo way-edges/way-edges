@@ -2,7 +2,7 @@ use zbus::proxy;
 use zbus::Connection;
 
 use crate::backlight::match_device;
-use crate::get_main_runtime_handle;
+use crate::runtime::get_backend_runtime_handle;
 
 // NOTE: this dbus proxy takes 2 threads
 // it'll create 1 thread which always on after first connection
@@ -31,7 +31,7 @@ pub fn set_backlight(device_name: Option<&String>, p: f64) {
     let device = match_device(device_name).unwrap();
     let device_name = device.name().to_string();
     let v = (device.max() as f64) * p;
-    get_main_runtime_handle().spawn(async move {
+    get_backend_runtime_handle().spawn(async move {
         if let Err(e) = set_brightness(&device_name, v as u32).await {
             log::error!("Error setting brightness: {e}");
         }

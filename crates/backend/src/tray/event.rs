@@ -1,6 +1,7 @@
-use std::future::Future;
-
 use system_tray::client::ActivateRequest;
+use util::notify_send;
+
+use crate::runtime::get_backend_runtime_handle;
 
 use super::context::get_tray_context;
 
@@ -63,8 +64,12 @@ pub fn match_event(e: system_tray::client::Event) -> Option<TrayEvent> {
     }
 }
 
-pub fn tray_request_event(
-    req: ActivateRequest,
-) -> impl Future<Output = Result<(), system_tray::error::Error>> {
-    get_tray_context().client.activate(req)
+pub fn tray_request_event(req: ActivateRequest) {
+    get_backend_runtime_handle().spawn(async move {
+        if let Err(e) = get_tray_context().client.activate(req).await {
+            let msg = format!("error requesting tray activation: {e}");
+            log::error!("{msg}");
+            notify_send("Tray activation", &msg, true);
+        }
+    });
 }

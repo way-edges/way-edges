@@ -1,5 +1,9 @@
 use std::collections::HashMap;
 
+use backend::{
+    config_file_watch::start_configuration_file_watcher, ipc::start_ipc,
+    runtime::init_backend_runtime_handle,
+};
 use calloop::EventLoop;
 use smithay_client_toolkit::{
     compositor::CompositorState,
@@ -15,10 +19,8 @@ use wayland_client::{globals::registry_queue_init, Connection};
 use super::app::App;
 
 fn main() {
-    // All Wayland apps start by connecting the compositor (server).
     let conn = Connection::connect_to_env().unwrap();
 
-    // Enumerate the list of globals to get the protocols the server implements.
     let (globals, event_queue) = registry_queue_init(&conn).unwrap();
     let qh = event_queue.handle();
 
@@ -39,10 +41,6 @@ fn main() {
     let registry_state = RegistryState::new(&globals);
     let seat_state = SeatState::new(&globals, &qh);
 
-    // TODO: IPC
-
-    // TODO: CONFIG WATCH
-
     let mut app = App {
         exit: false,
         queue_handle: qh,
@@ -61,10 +59,36 @@ fn main() {
         groups: HashMap::new(),
     };
 
-    loop {
+    init_backend_runtime_handle();
+
+    // TODO: IPC
+    let (sender, r) = calloop::channel::channel();
+    start_ipc(sender);
+    event_loop
+        .handle()
+        .insert_source(r, |event, metadata, app| {
+            let calloop::channel::Event::Msg(cmd) = event else {
+                log::error!("IPC server shutdown, exiting...");
+                app.exit = true;
+                return;
+            };
+            app.handle_ipc(cmd);
+        });
+
+    // TODO: CONFIG WATCH
+    let (sender, r) = calloop::channel::channel();
+    start_configuration_file_watcher(sender);
+    event_loop.handle().insert_source(r, |event, _, app| {
+        if let calloop::channel::Event::Closed = event {
+            log::error!("IPC server shutdown, exiting...");
+            app.exit = true;
+            return;
+        };
+        app.reload();
+    });
+
+    while !app.exit {
         event_loop.dispatch(None, &mut app);
-        if app.exit {
-            break;
-        }
     }
+    log::info!("EXITED");
 }

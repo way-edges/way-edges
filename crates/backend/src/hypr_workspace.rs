@@ -13,7 +13,7 @@ use hyprland::{
 
 use util::notify_send;
 
-use crate::get_main_runtime_handle;
+use crate::runtime::get_backend_runtime_handle;
 
 fn notify_hyprland_log(msg: &str, is_critical: bool) {
     notify_send("Way-Edges Hyprland error", msg, is_critical);
@@ -264,7 +264,7 @@ pub fn init_hyprland_listener() {
         });
     }
 
-    get_main_runtime_handle().spawn(async move {
+    get_backend_runtime_handle().spawn(async move {
         log::info!("hyprland workspace listener is running");
 
         if let Err(e) = listener.start_listener_async().await {

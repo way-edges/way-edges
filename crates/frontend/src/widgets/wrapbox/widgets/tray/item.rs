@@ -5,15 +5,11 @@ use educe::Educe;
 use gtk::gdk::{BUTTON_PRIMARY, BUTTON_SECONDARY};
 use system_tray::{client::ActivateRequest, item::StatusNotifierItem};
 
-use backend::{
-    get_main_runtime_handle,
-    tray::{
-        icon::{parse_icon_given_data, parse_icon_given_name, parse_icon_given_pixmaps},
-        tray_request_event, tray_update_item_theme_search_path,
-    },
+use backend::tray::{
+    icon::{parse_icon_given_data, parse_icon_given_name, parse_icon_given_pixmaps},
+    tray_request_event, tray_update_item_theme_search_path,
 };
 use config::widgets::wrapbox::tray::TrayConfig;
-use util::notify_send;
 use way_edges_derive::wrap_rc;
 
 use crate::{
@@ -281,13 +277,7 @@ impl Tray {
     }
 
     fn send_request(req: ActivateRequest) {
-        get_main_runtime_handle().spawn(async move {
-            if let Err(e) = tray_request_event(req).await {
-                let msg = format!("error requesting tray activation: {e}");
-                log::error!("{msg}");
-                notify_send("Tray activation", &msg, true);
-            }
-        });
+        tray_request_event(req)
     }
 
     pub fn tray_clicked_req(&self) {
