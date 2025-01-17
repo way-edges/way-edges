@@ -32,10 +32,16 @@ impl CompositorHandler for App {
         &mut self,
         _conn: &Connection,
         _qh: &QueueHandle<Self>,
-        _surface: &wl_surface::WlSurface,
-        _new_factor: i32,
+        surface: &wl_surface::WlSurface,
+        new_factor: i32,
     ) {
-        // Not needed for this example.
+        let data = SurfaceData::from_wl(surface);
+        if let Some(w) = data.get_widget() {
+            let mut w = w.lock().unwrap();
+            w.scale = new_factor as u32;
+            w.layer.set_buffer_scale(new_factor as u32);
+        }
+        // TODO: calculate size for layer: width or height / scale
     }
 
     fn transform_changed(
@@ -55,7 +61,7 @@ impl CompositorHandler for App {
         _surface: &wl_surface::WlSurface,
         _time: u32,
     ) {
-        let Some(widget) = SurfaceData::from_wl(_surface).widget.upgrade() else {
+        let Some(widget) = SurfaceData::from_wl(_surface).get_widget() else {
             return;
         };
         widget.lock().draw();
@@ -126,7 +132,7 @@ impl LayerShellHandler for App {
         configure: LayerSurfaceConfigure,
         _serial: u32,
     ) {
-        let Some(layer) = SurfaceData::from_wl(layer.wl_surface()).widget.upgrade() else {
+        let Some(layer) = SurfaceData::from_wl(layer.wl_surface()).get_widget() else {
             return;
         };
 
