@@ -1,6 +1,9 @@
 use cairo::ImageSurface;
 use interval_task::runner::Runner;
-use std::{cell::Cell, rc::Rc, time::Duration};
+use std::{
+    sync::{Arc, Mutex},
+    time::Duration,
+};
 
 use config::{
     widgets::{
@@ -20,13 +23,14 @@ use super::base::{
 };
 use crate::{
     mouse_state::{MouseEvent, MouseStateData},
-    window::{WidgetContext, WindowContextBuilder},
+    wayland::app::{App, WidgetBuilder},
+    window::WidgetContext,
 };
 
 pub struct CustomContext {
     #[allow(dead_code)]
     runner: Option<Runner<()>>,
-    progress: Rc<Cell<f64>>,
+    progress: Arc<Mutex<f64>>,
     event_map: KeyEventMap,
     on_change: Option<Template>,
 
@@ -37,13 +41,21 @@ pub struct CustomContext {
 }
 impl WidgetContext for CustomContext {
     fn redraw(&mut self) -> ImageSurface {
-        let p = self.progress.get();
+        let p = *self.progress.lock().unwrap();
         self.draw_conf.draw(p)
     }
 
     fn on_mouse_event(&mut self, _: &MouseStateData, event: MouseEvent) -> bool {
+        let mut redraw = false;
+
         if let Some(p) = self.progress_state.if_change_progress(event.clone()) {
-            self.progress.set(p);
+            if !self.only_redraw_on_internal_update {
+                let mut old_p = self.progress.lock().unwrap();
+                if *old_p != p {
+                    *old_p = p;
+                    redraw = true
+                }
+            }
 
             if let Some(template) = self.on_change.as_mut() {
                 use util::template::arg;
@@ -67,20 +79,20 @@ impl WidgetContext for CustomContext {
             self.event_map.call(key);
         }
 
-        !self.only_redraw_on_internal_update
+        redraw
     }
 }
 
 pub fn custom_preset(
-    window: &mut WindowContextBuilder,
+    builder: &mut WidgetBuilder,
     conf: &Config,
     mut w_conf: SlideConfig,
     mut preset_conf: CustomConfig,
 ) -> impl WidgetContext {
-    let progress = Rc::new(Cell::new(0.));
+    let progress = Arc::new(Mutex::new(0.));
 
     // interval
-    let runner = interval_update(window, &preset_conf, &progress);
+    let runner = interval_update(builder, &preset_conf, &progress);
 
     // key event map
     let event_map = std::mem::take(&mut preset_conf.event_map);
@@ -100,23 +112,30 @@ pub fn custom_preset(
 }
 
 fn interval_update(
-    window: &mut WindowContextBuilder,
+    window: &mut WidgetBuilder,
     preset_conf: &CustomConfig,
-    progress_cache: &Rc<Cell<f64>>,
+    progress_cache: &Arc<Mutex<f64>>,
 ) -> Option<Runner<()>> {
     if preset_conf.interval_update.0 > 0 && !preset_conf.interval_update.1.is_empty() {
-        let (s, r) = async_channel::bounded(1);
+        let redraw_signal = window.make_redraw_notifier(None::<fn(&mut App)>);
+        let progress_cache_weak = Arc::downgrade(progress_cache);
+
         let cmd = preset_conf.interval_update.1.clone();
         let mut runner = interval_task::runner::new_runner(
             Duration::from_millis(preset_conf.interval_update.0),
             || (),
             move |_| {
+                let Some(progress_cache) = progress_cache_weak.upgrade() else {
+                    return true;
+                };
+
                 match shell_cmd(&cmd).and_then(|res| {
                     use std::str::FromStr;
                     f64::from_str(res.trim()).map_err(|_| "Invalid number".to_string())
                 }) {
                     Ok(progress) => {
-                        s.force_send(progress).unwrap();
+                        *progress_cache.lock().unwrap() = progress;
+                        redraw_signal.ping();
                     }
                     Err(err) => log::error!("slide custom updata error: {err}"),
                 }
@@ -126,16 +145,6 @@ fn interval_update(
         );
         runner.start().unwrap();
 
-        let redraw_signal = window.make_redraw_notifier();
-        let progress_cache_weak = Rc::downgrade(progress_cache);
-        gtk::glib::spawn_future_local(async move {
-            while let Ok(progress) = r.recv().await {
-                if let Some(progress_cache) = progress_cache_weak.upgrade() {
-                    progress_cache.set(progress)
-                }
-                redraw_signal()
-            }
-        });
         Some(runner)
     } else {
         None

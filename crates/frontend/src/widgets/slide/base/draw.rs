@@ -2,7 +2,7 @@ use cairo::Path;
 use config::widgets::slide::base::SlideConfig;
 use gtk::cairo::Context;
 use gtk::prelude::*;
-use gtk4_layer_shell::Edge;
+use smithay_client_toolkit::shell::wlr_layer::Anchor;
 
 use std::f64::consts::PI;
 
@@ -28,14 +28,14 @@ pub struct DrawConfig {
     func: fn(&DrawConfig, f64) -> ImageSurface,
 }
 impl DrawConfig {
-    pub fn new(slide_conf: &SlideConfig, edge: Edge) -> Self {
+    pub fn new(slide_conf: &SlideConfig, edge: Anchor) -> Self {
         let content_size = slide_conf.size().unwrap();
 
         let func = match edge {
-            Edge::Left => draw_left,
-            Edge::Right => draw_right,
-            Edge::Top => draw_top,
-            Edge::Bottom => draw_bottom,
+            Anchor::LEFT => draw_left,
+            Anchor::RIGHT => draw_right,
+            Anchor::TOP => draw_top,
+            Anchor::BOTTOM => draw_bottom,
             _ => unreachable!(),
         };
 

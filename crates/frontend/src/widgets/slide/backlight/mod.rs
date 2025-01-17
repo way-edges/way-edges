@@ -1,6 +1,5 @@
 use cairo::ImageSurface;
-use gtk::glib;
-use std::{cell::Cell, rc::Rc};
+use std::sync::{Arc, Mutex};
 
 use super::base::{
     draw::DrawConfig,
@@ -8,7 +7,8 @@ use super::base::{
 };
 use crate::{
     mouse_state::{MouseEvent, MouseStateData},
-    window::{WidgetContext, WindowContextBuilder},
+    wayland::app::{App, WidgetBuilder},
+    window::WidgetContext,
 };
 
 use config::{
@@ -20,7 +20,7 @@ pub struct BacklightContext {
     #[allow(dead_code)]
     backend_id: i32,
     device: Option<String>,
-    progress: Rc<Cell<f64>>,
+    progress: Arc<Mutex<f64>>,
 
     draw_conf: DrawConfig,
 
@@ -29,50 +29,61 @@ pub struct BacklightContext {
 }
 impl WidgetContext for BacklightContext {
     fn redraw(&mut self) -> ImageSurface {
-        let p = self.progress.get();
+        let p = *self.progress.lock().unwrap();
         self.draw_conf.draw(p)
     }
 
     fn on_mouse_event(&mut self, _: &MouseStateData, event: MouseEvent) -> bool {
+        let mut redraw = false;
+
         if let Some(p) = self.progress_state.if_change_progress(event.clone()) {
-            self.progress.set(p);
+            if !self.only_redraw_on_internal_update {
+                let mut old_p = self.progress.lock().unwrap();
+                if *old_p != p {
+                    *old_p = p;
+                    redraw = true
+                }
+            }
+
             backend::backlight::dbus::set_backlight(self.device.as_ref(), p);
         }
 
-        !self.only_redraw_on_internal_update
+        redraw
     }
 }
 
 pub fn preset(
-    window: &mut WindowContextBuilder,
+    builder: &mut WidgetBuilder,
     conf: &Config,
     mut w_conf: SlideConfig,
     mut preset_conf: BacklightConfig,
 ) -> impl WidgetContext {
     let device = preset_conf.device.take();
-    let progress = Rc::new(Cell::new(0.));
-    let redraw_signal = window.make_redraw_notifier();
+    let progress = Arc::new(Mutex::new(0.));
+    let redraw_signal = builder.make_redraw_notifier(None::<fn(&mut App)>);
 
     let mut backend_cache = 0.;
+    let progress_weak = Arc::downgrade(&progress);
     let backend_id = backend::backlight::register_callback(
-        glib::clone!(
-            #[weak]
-            progress,
-            move |p| {
-                let mut do_redraw = false;
-                if p != progress.get() {
-                    progress.set(p);
-                    do_redraw = true
-                }
-                if p != backend_cache {
-                    backend_cache = p;
-                    do_redraw = true
-                }
-                if do_redraw {
-                    redraw_signal()
-                }
+        move |p| {
+            let Some(progress) = progress_weak.upgrade() else {
+                return;
+            };
+
+            let mut do_redraw = false;
+            let mut progress = progress.lock().unwrap();
+            if p != *progress {
+                *progress = p;
+                do_redraw = true
             }
-        ),
+            if p != backend_cache {
+                backend_cache = p;
+                do_redraw = true
+            }
+            if do_redraw {
+                redraw_signal.ping();
+            }
+        },
         device.clone(),
     )
     .unwrap();

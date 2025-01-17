@@ -2,9 +2,9 @@ use crate::mouse_state::MouseEvent;
 use config::widgets::slide::base::SlideConfig;
 use config::Config;
 use gtk::gdk::BUTTON_PRIMARY;
-use gtk4_layer_shell::Edge;
+use smithay_client_toolkit::shell::wlr_layer::Anchor;
 
-fn make_translate_func(edge: Edge) -> fn(i32, i32, (f64, f64)) -> f64 {
+fn make_translate_func(edge: Anchor) -> fn(i32, i32, (f64, f64)) -> f64 {
     macro_rules! hhh {
         ($len:expr, $border_width:expr, $pos:expr, VERTICAL) => {
             (($len as f64 - ($pos.1 - $border_width as f64)) / $len as f64)
@@ -30,8 +30,8 @@ fn make_translate_func(edge: Edge) -> fn(i32, i32, (f64, f64)) -> f64 {
     create_func!(tob, HORIZONTAL);
 
     match edge {
-        Edge::Left | Edge::Right => lor,
-        Edge::Top | Edge::Bottom => tob,
+        Anchor::LEFT | Anchor::RIGHT => lor,
+        Anchor::TOP | Anchor::BOTTOM => tob,
         _ => unreachable!(),
     }
 }
