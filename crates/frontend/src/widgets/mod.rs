@@ -1,82 +1,73 @@
 use backend::monitor::get_monitor_context;
 use gtk::{gdk::Monitor, prelude::MonitorExt};
+use smithay_client_toolkit::shell::wlr_layer::Anchor;
 
-use crate::window::{WidgetContext, WindowContext, WindowContextBuilder};
+use crate::{
+    wayland::app::WidgetBuilder,
+    window::{WidgetContext, WindowContext, WindowContextBuilder},
+};
 
 mod button;
 mod hypr_workspace;
 mod slide;
 mod wrapbox;
 
-fn process_config(conf: &mut config::Config, monitor: &Monitor) {
-    let geom = monitor.geometry();
-    let size = (geom.width(), geom.height());
-
+fn process_config(conf: &mut config::Config, size: (i32, i32)) {
     // margins
-    conf.margins.iter_mut().for_each(|(edge, n)| {
-        if !n.is_relative() {
-            return;
-        }
-
-        let max = match edge {
-            gtk4_layer_shell::Edge::Left | gtk4_layer_shell::Edge::Right => size.0,
-            gtk4_layer_shell::Edge::Top | gtk4_layer_shell::Edge::Bottom => size.1,
-            _ => unreachable!(),
+    macro_rules! calculate_margins {
+        ($m:expr, $s:expr) => {
+            if $m.is_relative() {
+                $m.calculate_relative($s as f64);
+            }
         };
-        n.calculate_relative(max as f64);
-    });
+    }
+    calculate_margins!(conf.margins.left, size.0);
+    calculate_margins!(conf.margins.right, size.0);
+    calculate_margins!(conf.margins.top, size.1);
+    calculate_margins!(conf.margins.bottom, size.1);
 
     // extra
     if conf.extra_trigger_size.is_relative() {
         let max = match conf.edge {
-            gtk4_layer_shell::Edge::Left | gtk4_layer_shell::Edge::Right => size.0,
-            gtk4_layer_shell::Edge::Top | gtk4_layer_shell::Edge::Bottom => size.1,
+            Anchor::LEFT | Anchor::RIGHT => size.0,
+            Anchor::TOP | Anchor::BOTTOM => size.1,
             _ => unreachable!(),
         };
         conf.extra_trigger_size.calculate_relative(max as f64);
     }
-
-    // frame_rate
-    if conf.frame_rate.is_none() {
-        conf.frame_rate = Some(monitor.refresh_rate());
-    }
 }
 
-pub fn init_widget(
-    app: &gtk::Application,
+pub fn init_widget<'a>(
     mut conf: config::Config,
+    builder: &mut WidgetBuilder<'a>,
 ) -> Result<WindowContext, String> {
-    let monitor = get_monitor_context()
-        .get_monitor(&conf.monitor)
-        .ok_or(format!("Failed to get monitor {:?}", conf.monitor))?;
+    let monitor = builder.app.output_state.info(&builder.output).unwrap();
+    let size = monitor.modes[0].dimensions;
 
-    process_config(&mut conf, monitor);
-
-    let mut builder = WindowContextBuilder::new(app, monitor, &conf)?;
+    process_config(&mut conf, size);
 
     let widget_ctx = match conf.widget.take().unwrap() {
         config::widgets::Widget::Btn(btn_config) => {
             log::debug!("initializing button");
-            let w = button::init_widget(&mut builder, monitor, &conf, btn_config);
+            let w = button::init_widget(builder, size, &conf, btn_config);
             log::info!("initialized button");
             w.make_rc()
         }
         config::widgets::Widget::Slider(slide_config) => {
             log::debug!("initializing slider");
-            let w = slide::init_widget(&mut builder, monitor, &conf, slide_config);
+            let w = slide::init_widget(builder, size, &conf, slide_config);
             log::info!("initialized slider");
             w
         }
         config::widgets::Widget::HyprWorkspace(hypr_workspace_config) => {
             log::debug!("initializing hypr-workspace");
-            let w =
-                hypr_workspace::init_widget(&mut builder, monitor, &conf, hypr_workspace_config);
+            let w = hypr_workspace::init_widget(builder, size, &conf, hypr_workspace_config);
             log::info!("initialized hypr-workspace");
             w.make_rc()
         }
         config::widgets::Widget::WrapBox(box_config) => {
             log::debug!("initializing box");
-            let w = wrapbox::init_widget(&mut builder, monitor, &conf, box_config);
+            let w = wrapbox::init_widget(builder, size, &conf, box_config);
             log::info!("initialized box");
             w.make_rc()
         }
