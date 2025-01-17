@@ -23,13 +23,13 @@ impl Default for MonitorSpecifier {
 #[derive(Debug, Deserialize, Clone, Default)]
 pub struct Margins {
     #[serde(default)]
-    pub left: i32,
+    pub left: NumOrRelative,
     #[serde(default)]
-    pub top: i32,
+    pub top: NumOrRelative,
     #[serde(default)]
-    pub right: i32,
+    pub right: NumOrRelative,
     #[serde(default)]
-    pub bottom: i32,
+    pub bottom: NumOrRelative,
 }
 
 #[derive(Debug, Deserialize)]
@@ -60,8 +60,6 @@ struct ConfigShadow {
 
     #[serde(default = "dt_transition_duration")]
     pub transition_duration: u64,
-    #[serde(default)]
-    pub frame_rate: Option<i32>,
     #[serde(default = "dt_extra_trigger_size")]
     pub extra_trigger_size: NumOrRelative,
 
@@ -89,7 +87,6 @@ impl From<ConfigShadow> for Config {
             widget: Some(value.widget),
             ignore_exclusive: value.ignore_exclusive,
             transition_duration: value.transition_duration,
-            frame_rate: value.frame_rate,
             extra_trigger_size: value.extra_trigger_size,
             preview_size: value.preview_size,
         }
@@ -107,7 +104,6 @@ pub struct Config {
     pub name: String,
     pub ignore_exclusive: bool,
     pub transition_duration: u64,
-    pub frame_rate: Option<i32>,
     pub extra_trigger_size: NumOrRelative,
     pub preview_size: NumOrRelative,
     pub widget: Option<Widget>,
