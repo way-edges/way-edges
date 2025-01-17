@@ -1,12 +1,11 @@
-use std::sync::Mutex;
-
 use smithay_client_toolkit::{
-    compositor::{CompositorHandler, SurfaceData as SctkSurfaceData, SurfaceDataExt},
+    compositor::{CompositorHandler, SurfaceData as SctkSurfaceData},
     delegate_compositor, delegate_layer, delegate_output, delegate_pointer, delegate_registry,
-    delegate_seat, delegate_shm,
+    delegate_seat, delegate_shm, delegate_simple,
     output::{OutputHandler, OutputState},
-    reexports::protocols::wp::fractional_scale::v1::client::wp_fractional_scale_v1::{
-        self, WpFractionalScaleV1,
+    reexports::protocols::wp::fractional_scale::v1::client::{
+        wp_fractional_scale_manager_v1::WpFractionalScaleManagerV1,
+        wp_fractional_scale_v1::{self, WpFractionalScaleV1},
     },
     registry::{ProvidesRegistryState, RegistryState},
     registry_handlers,
@@ -25,10 +24,10 @@ use wayland_client::{
         wl_output, wl_pointer, wl_seat,
         wl_surface::{self, WlSurface},
     },
-    Connection, Proxy, QueueHandle,
+    Connection, QueueHandle,
 };
 
-use super::app::{App, SurfaceData, Widget};
+use super::app::{App, SurfaceData};
 
 impl CompositorHandler for App {
     fn scale_factor_changed(
@@ -108,7 +107,7 @@ impl OutputHandler for App {
         _qh: &QueueHandle<Self>,
         _output: wl_output::WlOutput,
     ) {
-        // TODO: MONITOR CHANGE
+        self.reload();
     }
 
     fn output_destroyed(
@@ -264,6 +263,7 @@ delegate_output!(App);
 delegate_shm!(App);
 delegate_layer!(App);
 delegate_registry!(App);
+delegate_simple!(App, WpFractionalScaleManagerV1, 1);
 
 delegate_seat!(App);
 delegate_pointer!(App);
