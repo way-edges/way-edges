@@ -2,13 +2,12 @@ use std::{
     cell::{Cell, UnsafeCell},
     collections::HashMap,
     rc::Rc,
-    sync::{atomic::AtomicPtr, mpsc::Receiver, Arc, Mutex, MutexGuard, Weak},
+    sync::{atomic::AtomicPtr, Arc, Mutex, MutexGuard, Weak},
     time::Duration,
 };
 
 use backend::ipc::IPCCommand;
 use calloop::{
-    channel::Sender,
     ping::{make_ping, Ping},
     LoopHandle, LoopSignal,
 };
@@ -17,20 +16,24 @@ use glib::clone::{Downgrade, Upgrade};
 use smithay_client_toolkit::{
     compositor::{CompositorState, SurfaceData as SctkSurfaceData, SurfaceDataExt},
     output::OutputState,
-    registry::RegistryState,
+    reexports::protocols::wp::fractional_scale::v1::client::{
+        wp_fractional_scale_manager_v1::WpFractionalScaleManagerV1,
+        wp_fractional_scale_v1::WpFractionalScaleV1,
+    },
+    registry::{GlobalProxy, RegistryState},
     seat::SeatState,
     shell::{
-        wlr_layer::{Anchor, LayerShell, LayerSurface},
+        wlr_layer::{LayerShell, LayerSurface},
         WaylandSurface,
     },
     shm::{slot::SlotPool, Shm},
 };
 use wayland_client::{
-    protocol::{wl_pointer, wl_surface::WlSurface},
+    protocol::{wl_output::WlOutput, wl_pointer, wl_surface::WlSurface},
     Proxy, QueueHandle,
 };
 
-use crate::animation::{AnimationList, ToggleAnimationRc};
+use crate::animation::{AnimationList, ToggleAnimation, ToggleAnimationRc};
 
 pub struct App {
     pub exit: bool,
@@ -44,6 +47,7 @@ pub struct App {
     pub registry_state: RegistryState,
     pub output_state: OutputState,
     pub seat_state: SeatState,
+    pub fractional_manager: GlobalProxy<WpFractionalScaleManagerV1>,
     pub pointer: Option<wl_pointer::WlPointer>,
 
     pub shell: LayerShell,
@@ -136,13 +140,21 @@ impl Group {
 pub struct Widget {
     pub configured: bool,
     pub layer: LayerSurface,
-    pub scale: u32,
+    pub scale: Scale,
 }
 impl Widget {
     fn toggle_pin(&mut self) {
         todo!()
     }
+    pub fn update_normal(&mut self, normal: u32) {
+        self.scale.update_normal(normal)
+    }
+    pub fn update_fraction(&mut self, fraction: u32) {
+        self.scale.update_fraction(fraction)
+    }
     fn init_widget(conf: config::Config, app: &App) -> Result<Arc<Mutex<Self>>, String> {
+        let builder = WidgetBuilder::new(&conf, app)?;
+
         // Arc::new_cyclic(|weak| {
         //     SurfaceData::from_wl()
         //     Mutex::new(s)
@@ -152,17 +164,50 @@ impl Widget {
     }
 }
 
+pub struct Scale {
+    normal: u32,
+    fraction: u32,
+    fractional_client: Option<WpFractionalScaleV1>,
+}
+impl Scale {
+    pub fn new(fractional_client: Option<WpFractionalScaleV1>) -> Self {
+        Self {
+            normal: 1,
+            fraction: 0,
+            fractional_client,
+        }
+    }
+    pub fn update_normal(&mut self, normal: u32) {
+        self.normal = normal;
+    }
+    pub fn update_fraction(&mut self, fraction: u32) {
+        self.fraction = fraction;
+    }
+    pub fn calculate_size(&self, width: u32, height: u32) -> (u32, u32) {
+        if self.fractional_client.is_some() && self.fraction != 0 {
+            (
+                (width * self.fraction + 60) / 120,
+                (height * self.fraction + 60) / 120,
+            )
+        } else {
+            (width / self.normal, height / self.normal)
+        }
+    }
+}
+
 pub struct WidgetBuilder<'a> {
-    name: String,
-    monitor: MonitorSpecifier,
-    app: &'a App,
-    layer: LayerSurface,
+    pub name: String,
+    pub monitor: MonitorSpecifier,
+    pub output: WlOutput,
+    pub app: &'a App,
+    pub layer: LayerSurface,
+    pub scale: Scale,
 
-    has_update: Rc<Cell<bool>>,
+    pub has_update: Rc<Cell<bool>>,
 
-    pop_animation: ToggleAnimationRc,
-    animation_list: AnimationList,
-    pop_state: Rc<UnsafeCell<Option<Rc<()>>>>,
+    pub pop_animation: ToggleAnimationRc,
+    pub animation_list: AnimationList,
+    pub pop_state: Rc<UnsafeCell<Option<Rc<()>>>>,
 }
 impl<'a> WidgetBuilder<'a> {
     pub fn new_animation(&mut self, time_cost: u64) -> ToggleAnimationRc {
@@ -255,17 +300,18 @@ impl<'a> WidgetBuilder<'a> {
 }
 impl<'a> WidgetBuilder<'a> {
     fn new(conf: &config::Config, app: &'a App) -> Result<WidgetBuilder<'a>, String> {
-        let outputs = app.output_state.outputs();
-        let output = match conf.monitor {
-            MonitorSpecifier::ID(index) => outputs.nth(index),
+        let mut outputs = app.output_state.outputs();
+        let output = match &conf.monitor {
+            MonitorSpecifier::ID(index) => outputs.nth(*index),
             MonitorSpecifier::Name(name) => outputs.find(|out| {
                 app.output_state
                     .info(out)
                     .and_then(|info| info.name)
-                    .map(|output_name| output_name == name)
+                    .map(|output_name| &output_name == name)
                     .is_some()
             }),
-        };
+        }
+        .ok_or(format!("output not found: {:?}", conf.monitor))?;
 
         let surface = app.compositor_state.create_surface_with_data(
             &app.queue_handle,
@@ -274,23 +320,56 @@ impl<'a> WidgetBuilder<'a> {
                 widget: AtomicPtr::new(std::ptr::null_mut()),
             },
         );
+        let fractional = app
+            .fractional_manager
+            .get()
+            .inspect_err(|e| log::error!("Fatal on Fractional scale: {e}"))
+            .ok()
+            .map(|manager| {
+                manager.get_fractional_scale(&surface, &app.queue_handle, surface.clone())
+            });
+        let scale = Scale::new(fractional);
+
         let layer = app.shell.create_layer_surface(
             &app.queue_handle,
             surface,
             conf.layer,
             Some("way-edges-widget"),
-            output.as_ref(),
+            Some(&output),
         );
         layer.set_anchor(conf.edge | conf.position);
         if conf.ignore_exclusive {
             layer.set_exclusive_zone(-1);
         };
         layer.set_margin(
-            conf.margins.top,
-            conf.margins.right,
-            conf.margins.bottom,
-            conf.margins.left,
+            conf.margins.top.get_num().unwrap() as i32,
+            conf.margins.right.get_num().unwrap() as i32,
+            conf.margins.bottom.get_num().unwrap() as i32,
+            conf.margins.left.get_num().unwrap() as i32,
         );
+        layer.set_size(1, 1);
+        layer.commit();
+
+        let pop_animation = ToggleAnimation::new(
+            Duration::from_millis(conf.transition_duration),
+            crate::animation::Curve::Linear,
+        )
+        .make_rc();
+        let pop_state = Rc::new(UnsafeCell::new(None));
+        let animation_list = AnimationList::new();
+
+        Ok(Self {
+            name: conf.name.clone(),
+            monitor: conf.monitor.clone(),
+            output,
+            app,
+            layer,
+            pop_animation,
+            animation_list,
+            pop_state,
+            has_update: Rc::new(Cell::new(true)),
+            scale,
+        })
     }
 }
 

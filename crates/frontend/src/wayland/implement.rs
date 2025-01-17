@@ -5,6 +5,9 @@ use smithay_client_toolkit::{
     delegate_compositor, delegate_layer, delegate_output, delegate_pointer, delegate_registry,
     delegate_seat, delegate_shm,
     output::{OutputHandler, OutputState},
+    reexports::protocols::wp::fractional_scale::v1::client::wp_fractional_scale_v1::{
+        self, WpFractionalScaleV1,
+    },
     registry::{ProvidesRegistryState, RegistryState},
     registry_handlers,
     seat::{
@@ -38,10 +41,8 @@ impl CompositorHandler for App {
         let data = SurfaceData::from_wl(surface);
         if let Some(w) = data.get_widget() {
             let mut w = w.lock().unwrap();
-            w.scale = new_factor as u32;
-            w.layer.set_buffer_scale(new_factor as u32);
+            w.update_normal(new_factor as u32);
         }
-        // TODO: calculate size for layer: width or height / scale
     }
 
     fn transform_changed(
@@ -223,6 +224,24 @@ impl PointerHandler for App {
                     println!("Scroll H:{horizontal:?}, V:{vertical:?}");
                 }
             }
+        }
+    }
+}
+
+impl wayland_client::Dispatch<WpFractionalScaleV1, WlSurface> for App {
+    fn event(
+        state: &mut App,
+        _: &WpFractionalScaleV1,
+        event: wp_fractional_scale_v1::Event,
+        surface: &WlSurface,
+        _: &wayland_client::Connection,
+        _: &QueueHandle<App>,
+    ) {
+        if let wp_fractional_scale_v1::Event::PreferredScale { scale } = event {
+            let Some(w) = SurfaceData::from_wl(surface).get_widget() else {
+                return;
+            };
+            w.lock().unwrap().update_fraction(scale);
         }
     }
 }
