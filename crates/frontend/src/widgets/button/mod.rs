@@ -2,23 +2,21 @@ mod draw;
 
 use crate::{
     mouse_state::{MouseEvent, MouseStateData},
-    window::{WidgetContext, WindowContextBuilder},
+    wayland::app::WidgetBuilder,
+    window::WidgetContext,
 };
 use config::{
     widgets::{button::BtnConfig, common::KeyEventMap},
     Config,
 };
 use draw::DrawConfig;
-use gtk::{gdk::Monitor, prelude::MonitorExt};
 
-pub fn init_widget(
-    _: &mut WindowContextBuilder,
-    monitor: &Monitor,
+pub fn init_widget<'a>(
+    _: &mut WidgetBuilder<'a>,
+    size: (i32, i32),
     config: &Config,
     mut btn_config: BtnConfig,
 ) -> impl WidgetContext {
-    let geom = monitor.geometry();
-    let size = (geom.width(), geom.height());
     btn_config.size.calculate_relative(size, config.edge);
 
     BtnContext {
