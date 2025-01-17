@@ -2,7 +2,7 @@ use std::{
     cell::{Cell, UnsafeCell},
     collections::HashMap,
     rc::Rc,
-    sync::{mpsc::Receiver, Arc, Mutex, MutexGuard},
+    sync::{atomic::AtomicPtr, mpsc::Receiver, Arc, Mutex, MutexGuard, Weak},
     time::Duration,
 };
 
@@ -20,7 +20,7 @@ use smithay_client_toolkit::{
     registry::RegistryState,
     seat::SeatState,
     shell::{
-        wlr_layer::{LayerShell, LayerSurface},
+        wlr_layer::{Anchor, LayerShell, LayerSurface},
         WaylandSurface,
     },
     shm::{slot::SlotPool, Shm},
@@ -136,20 +136,13 @@ impl Group {
 pub struct Widget {
     pub configured: bool,
     pub layer: LayerSurface,
+    pub scale: u32,
 }
 impl Widget {
     fn toggle_pin(&mut self) {
         todo!()
     }
     fn init_widget(conf: config::Config, app: &App) -> Result<Arc<Mutex<Self>>, String> {
-        let surface = app.compositor_state.create_surface_with_data(
-            &app.queue_handle,
-            SurfaceData {
-                sctk: SctkSurfaceData::new(None, 1),
-                widget: weak.clone(),
-            },
-        );
-
         // Arc::new_cyclic(|weak| {
         //     SurfaceData::from_wl()
         //     Mutex::new(s)
@@ -261,7 +254,38 @@ impl<'a> WidgetBuilder<'a> {
     }
 }
 impl<'a> WidgetBuilder<'a> {
-    fn new(conf: &config::Config, app: &'a App) -> Result<WidgetBuilder<'a>, String> {}
+    fn new(conf: &config::Config, app: &'a App) -> Result<WidgetBuilder<'a>, String> {
+        let outputs = app.output_state.outputs();
+        let output = match conf.monitor {
+            MonitorSpecifier::ID(index) => outputs.nth(index),
+            MonitorSpecifier::Name(name) => outputs.find(|out| {
+                app.output_state
+                    .info(out)
+                    .and_then(|info| info.name)
+                    .map(|output_name| output_name == name)
+                    .is_some()
+            }),
+        };
+
+        let surface = app.compositor_state.create_surface_with_data(
+            &app.queue_handle,
+            SurfaceData {
+                sctk: SctkSurfaceData::new(None, 1),
+                widget: AtomicPtr::new(std::ptr::null_mut()),
+            },
+        );
+        let layer = app.shell.create_layer_surface(
+            &app.queue_handle,
+            surface,
+            conf.layer,
+            Some("way-edges-widget"),
+            output.as_ref(),
+        );
+        layer.set_anchor(conf.edge | conf.position);
+        if conf.ignore_exclusive {
+            layer.set_exclusive_zone(-1);
+        };
+    }
 }
 
 // TODO: we are not really access this in multithreaded situation, so we don't need
@@ -272,7 +296,7 @@ impl<'a> WidgetBuilder<'a> {
 
 pub struct SurfaceData {
     pub sctk: SctkSurfaceData,
-    pub widget: std::sync::Weak<Mutex<Widget>>,
+    pub widget: AtomicPtr<std::sync::Weak<Mutex<Widget>>>,
 }
 impl SurfaceDataExt for SurfaceData {
     fn surface_data(&self) -> &SctkSurfaceData {
@@ -282,5 +306,20 @@ impl SurfaceDataExt for SurfaceData {
 impl SurfaceData {
     pub fn from_wl(wl: &WlSurface) -> &Self {
         wl.data::<SurfaceData>().unwrap()
+    }
+    fn store_widget(&self, widget: Weak<Mutex<Widget>>) {
+        self.widget.store(
+            Box::into_raw(Box::new(widget)),
+            std::sync::atomic::Ordering::SeqCst,
+        );
+    }
+    pub fn get_widget(&self) -> Option<Arc<Mutex<Widget>>> {
+        unsafe {
+            self.widget
+                .load(std::sync::atomic::Ordering::SeqCst)
+                .as_ref()
+                .unwrap()
+        }
+        .upgrade()
     }
 }
