@@ -285,6 +285,12 @@ impl<'a> WidgetBuilder<'a> {
         if conf.ignore_exclusive {
             layer.set_exclusive_zone(-1);
         };
+        layer.set_margin(
+            conf.margins.top,
+            conf.margins.right,
+            conf.margins.bottom,
+            conf.margins.left,
+        );
     }
 }
 

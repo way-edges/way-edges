@@ -1,12 +1,11 @@
-use gtk4_layer_shell::{Edge, Layer};
+// use gtk4_layer_shell::{Edge, Layer};
 use serde::Deserialize;
-use std::collections::HashMap;
+use smithay_client_toolkit::shell::wlr_layer::{Anchor, Layer};
 
 use crate::widgets::Widget;
 
 use super::common::{
-    deserialize_edge, deserialize_layer, deserialize_margins, deserialize_optional_edge,
-    NumOrRelative,
+    deserialize_edge, deserialize_layer, deserialize_optional_edge, NumOrRelative,
 };
 
 #[derive(Debug, Clone, Deserialize)]
@@ -21,23 +20,34 @@ impl Default for MonitorSpecifier {
     }
 }
 
+#[derive(Debug, Deserialize, Clone, Default)]
+pub struct Margins {
+    #[serde(default)]
+    pub left: i32,
+    #[serde(default)]
+    pub top: i32,
+    #[serde(default)]
+    pub right: i32,
+    #[serde(default)]
+    pub bottom: i32,
+}
+
 #[derive(Debug, Deserialize)]
 struct ConfigShadow {
     #[serde(default = "dt_edge")]
     #[serde(deserialize_with = "deserialize_edge")]
-    pub edge: Edge,
+    pub edge: Anchor,
 
     #[serde(default)]
     #[serde(deserialize_with = "deserialize_optional_edge")]
-    pub position: Option<Edge>,
+    pub position: Option<Anchor>,
 
     #[serde(default = "dt_layer")]
     #[serde(deserialize_with = "deserialize_layer")]
     pub layer: Layer,
 
     #[serde(default)]
-    #[serde(deserialize_with = "deserialize_margins")]
-    pub margins: HashMap<Edge, NumOrRelative>,
+    pub margins: Margins,
 
     #[serde(default)]
     pub monitor: MonitorSpecifier,
@@ -89,10 +99,10 @@ impl From<ConfigShadow> for Config {
 #[derive(Debug, Deserialize)]
 #[serde(from = "ConfigShadow")]
 pub struct Config {
-    pub edge: Edge,
-    pub position: Edge,
+    pub edge: Anchor,
+    pub position: Anchor,
     pub layer: Layer,
-    pub margins: HashMap<Edge, NumOrRelative>,
+    pub margins: Margins,
     pub monitor: MonitorSpecifier,
     pub name: String,
     pub ignore_exclusive: bool,
@@ -106,8 +116,8 @@ pub struct Config {
 fn dt_name() -> String {
     gtk::gio::dbus_generate_guid().to_string()
 }
-fn dt_edge() -> Edge {
-    Edge::Left
+fn dt_edge() -> Anchor {
+    Anchor::LEFT
 }
 fn dt_layer() -> Layer {
     Layer::Top

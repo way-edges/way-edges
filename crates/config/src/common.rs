@@ -1,6 +1,6 @@
-use gtk4_layer_shell::{Edge, Layer};
 use serde::{Deserialize, Deserializer};
-use std::{collections::HashMap, str::FromStr};
+use smithay_client_toolkit::shell::wlr_layer::{Anchor, Layer};
+use std::str::FromStr;
 
 #[derive(Debug, Clone, Copy)]
 pub enum NumOrRelative {
@@ -125,23 +125,23 @@ impl<'de> Deserialize<'de> for NumOrRelative {
     }
 }
 
-fn match_edge(edge: &str) -> Option<Edge> {
+fn match_edge(edge: &str) -> Option<Anchor> {
     Some(match edge {
-        "top" => Edge::Top,
-        "left" => Edge::Left,
-        "bottom" => Edge::Bottom,
-        "right" => Edge::Right,
+        "top" => Anchor::TOP,
+        "left" => Anchor::LEFT,
+        "bottom" => Anchor::BOTTOM,
+        "right" => Anchor::RIGHT,
         _ => return None,
     })
 }
 
-pub fn deserialize_optional_edge<'de, D>(d: D) -> Result<Option<Edge>, D::Error>
+pub fn deserialize_optional_edge<'de, D>(d: D) -> Result<Option<Anchor>, D::Error>
 where
     D: Deserializer<'de>,
 {
     struct EventMapVisitor;
     impl serde::de::Visitor<'_> for EventMapVisitor {
-        type Value = Option<Edge>;
+        type Value = Option<Anchor>;
 
         fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
             formatter.write_str("edge only support: left, right, top, bottom")
@@ -172,7 +172,7 @@ where
     d.deserialize_any(EventMapVisitor)
 }
 
-pub fn deserialize_edge<'de, D>(d: D) -> Result<Edge, D::Error>
+pub fn deserialize_edge<'de, D>(d: D) -> Result<Anchor, D::Error>
 where
     D: Deserializer<'de>,
 {
@@ -219,39 +219,6 @@ where
             E: serde::de::Error,
         {
             self.visit_str(v.as_str())
-        }
-    }
-
-    d.deserialize_any(EventMapVisitor)
-}
-
-pub fn deserialize_margins<'de, D>(d: D) -> Result<HashMap<Edge, NumOrRelative>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    struct EventMapVisitor;
-    impl<'de> serde::de::Visitor<'de> for EventMapVisitor {
-        type Value = HashMap<Edge, NumOrRelative>;
-
-        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-            formatter.write_str("margins for `left/right/top/bottom` only support: int or str")
-        }
-
-        fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
-        where
-            A: serde::de::MapAccess<'de>,
-        {
-            let mut v = HashMap::new();
-            while let Some((key, value)) = map.next_entry::<&str, _>()? {
-                let Some(edge) = match_edge(key) else {
-                    return Err(serde::de::Error::invalid_value(
-                        serde::de::Unexpected::Str(key),
-                        &self,
-                    ));
-                };
-                v.insert(edge, value);
-            }
-            Ok(v)
         }
     }
 
