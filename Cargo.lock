@@ -595,6 +595,7 @@ dependencies = [
  "regex",
  "serde",
  "serde_jsonrc",
+ "smithay-client-toolkit",
  "util",
  "way-edges-derive",
  "xdg",
