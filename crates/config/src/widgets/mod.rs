@@ -54,9 +54,9 @@ pub mod common {
     use std::{collections::HashMap, fmt::Display, str::FromStr};
 
     use gtk::gdk::RGBA;
-    use gtk4_layer_shell::Edge;
     use serde::{self, de, Deserialize, Deserializer};
     use serde_jsonrc::Value;
+    use smithay_client_toolkit::shell::wlr_layer::Anchor;
     use util::shell::shell_cmd_non_block;
 
     use crate::common::NumOrRelative;
@@ -67,10 +67,10 @@ pub mod common {
         pub length: NumOrRelative,
     }
     impl CommonSize {
-        pub fn calculate_relative(&mut self, monitor_size: (i32, i32), edge: Edge) {
+        pub fn calculate_relative(&mut self, monitor_size: (i32, i32), edge: Anchor) {
             let max_size = match edge {
-                Edge::Left | Edge::Right => (monitor_size.0, monitor_size.1),
-                Edge::Top | Edge::Bottom => (monitor_size.1, monitor_size.0),
+                Anchor::LEFT | Anchor::RIGHT => (monitor_size.0, monitor_size.1),
+                Anchor::TOP | Anchor::BOTTOM => (monitor_size.1, monitor_size.0),
                 _ => unreachable!(),
             };
             self.thickness.calculate_relative(max_size.0 as f64);
