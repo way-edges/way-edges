@@ -40,6 +40,7 @@ fn main() {
     let output_state = OutputState::new(&globals, &qh);
     let registry_state = RegistryState::new(&globals);
     let seat_state = SeatState::new(&globals, &qh);
+    let fractional_manager = globals.bind(&qh, 0..=1, ()).into();
 
     let mut app = App {
         exit: false,
@@ -51,6 +52,7 @@ fn main() {
         registry_state,
         seat_state,
         output_state,
+        fractional_manager,
         shm,
         pool,
         pointer: None,
