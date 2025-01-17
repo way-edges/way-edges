@@ -3,7 +3,11 @@ use gtk::{
     gdk::{BUTTON_SECONDARY, RGBA},
     glib,
 };
-use std::{cell::UnsafeCell, rc::Rc, time::Duration};
+use std::{
+    ops::Deref,
+    rc::Rc,
+    sync::{Arc, Mutex},
+};
 
 use super::base::{
     draw::DrawConfig,
@@ -12,7 +16,8 @@ use super::base::{
 use crate::{
     animation::ToggleAnimationRc,
     mouse_state::{MouseEvent, MouseStateData},
-    window::{WidgetContext, WindowContextBuilder},
+    wayland::app::{App, WidgetBuilder},
+    window::WidgetContext,
 };
 
 use backend::pulseaudio::{
@@ -29,7 +34,7 @@ pub struct PulseAudioContext {
     #[allow(dead_code)]
     backend_id: i32,
     device: PulseAudioDevice,
-    vinfo: Rc<UnsafeCell<VInfo>>,
+    vinfo: Arc<Mutex<VInfo>>,
     debounce_ctx: Option<Rc<()>>,
 
     non_mute_color: RGBA,
@@ -46,66 +51,77 @@ impl WidgetContext for PulseAudioContext {
         let fg_color = color_transition(self.non_mute_color, self.mute_color, mute_y as f32);
         self.draw_conf.fg_color = fg_color;
 
-        let p = unsafe { self.vinfo.get().as_ref().unwrap().vol };
+        let p = self.vinfo.lock().unwrap().vol;
         self.draw_conf.draw(p)
     }
 
     fn on_mouse_event(&mut self, _: &MouseStateData, event: MouseEvent) -> bool {
+        let mut redraw = false;
+
         if let Some(p) = self.progress_state.if_change_progress(event.clone()) {
-            unsafe { self.vinfo.get().as_mut().unwrap().vol = p }
+            if !self.only_redraw_on_internal_update {
+                let mut vinfo = self.vinfo.lock().unwrap();
+                if vinfo.vol != p {
+                    vinfo.vol = p;
+                    redraw = true
+                }
+            }
+            let device = self.device.clone();
+            set_vol(&device, p);
 
             // debounce
-            if let Some(last) = self.debounce_ctx.take() {
-                drop(last)
-            }
-            let ctx = Rc::new(());
-            let device = self.device.clone();
-            glib::timeout_add_local_once(
-                Duration::from_millis(1),
-                glib::clone!(
-                    #[weak]
-                    ctx,
-                    move || {
-                        let _ = ctx;
-                        set_vol(&device, p);
-                    }
-                ),
-            );
-            self.debounce_ctx = Some(ctx);
+            // if let Some(last) = self.debounce_ctx.take() {
+            //     drop(last)
+            // }
+            // let ctx = Rc::new(());
+            // let device = self.device.clone();
+            // glib::timeout_add_local_once(
+            //     Duration::from_millis(1),
+            //     glib::clone!(
+            //         #[weak]
+            //         ctx,
+            //         move || {
+            //             let _ = ctx;
+            //             set_vol(&device, p);
+            //         }
+            //     ),
+            // );
+            // self.debounce_ctx = Some(ctx);
         }
 
         match event {
             MouseEvent::Release(_, BUTTON_SECONDARY) => {
-                let vinfo = unsafe { self.vinfo.get().as_mut().unwrap() };
+                let mut vinfo = self.vinfo.lock().unwrap();
                 vinfo.is_muted = !vinfo.is_muted;
                 set_mute(&self.device, vinfo.is_muted);
-                self.mute_animation
-                    .borrow_mut()
-                    .set_direction(vinfo.is_muted.into());
-                true
+                // self.mute_animation
+                //     .borrow_mut()
+                //     .set_direction(vinfo.is_muted.into());
+                // true
             }
-            _ => !self.only_redraw_on_internal_update,
+            _ => {}
         }
+
+        redraw
     }
 }
 
 fn common(
-    window: &mut WindowContextBuilder,
+    builder: &mut WidgetBuilder,
     conf: &Config,
     mut w_conf: SlideConfig,
     preset_conf: PulseAudioConfig,
     device: PulseAudioDevice,
 ) -> impl WidgetContext {
     // TODO: PUT TIME COST INTO CONFIG?
-    let mute_animation = window.new_animation(200);
+    let mute_animation = builder.new_animation(200);
     let non_mute_color = w_conf.fg_color;
     let mute_color = preset_conf.mute_color;
-    let vinfo = Rc::new(UnsafeCell::new(VInfo::default()));
+    let vinfo = Arc::new(Mutex::new(VInfo::default()));
 
-    let redraw_signal = window.make_redraw_notifier();
+    let redraw_signal = builder.make_redraw_notifier(None::<fn(&mut App)>);
 
-    let vinfo_weak = Rc::downgrade(&vinfo);
-    let progress_cache = 0.;
+    let vinfo_weak = Arc::downgrade(&vinfo);
     let backend_id = backend::pulseaudio::register_callback(
         glib::clone!(
             #[weak]
@@ -114,11 +130,8 @@ fn common(
                 let Some(vinfo_old) = vinfo_weak.upgrade() else {
                     return;
                 };
-                let vinfo_old = unsafe { vinfo_old.get().as_mut().unwrap() };
-                if vinfo_old == vinfo {
-                    if vinfo.vol != progress_cache {
-                        redraw_signal();
-                    }
+                let mut vinfo_old = vinfo_old.lock().unwrap();
+                if vinfo_old.deref() == vinfo {
                     return;
                 }
 
@@ -128,7 +141,7 @@ fn common(
                         .set_direction(vinfo.is_muted.into());
                 }
                 *vinfo_old = vinfo.clone();
-                redraw_signal()
+                redraw_signal.ping();
             }
         ),
         device.clone(),
@@ -150,7 +163,7 @@ fn common(
 }
 
 pub fn speaker(
-    window: &mut WindowContextBuilder,
+    builder: &mut WidgetBuilder,
     config: &Config,
     w_conf: SlideConfig,
     mut preset_conf: PulseAudioConfig,
@@ -162,11 +175,11 @@ pub fn speaker(
             PulseAudioDevice::NamedSink(name)
         });
 
-    common(window, config, w_conf, preset_conf, device)
+    common(builder, config, w_conf, preset_conf, device)
 }
 
 pub fn microphone(
-    window: &mut WindowContextBuilder,
+    builder: &mut WidgetBuilder,
     config: &Config,
     w_conf: SlideConfig,
     mut preset_conf: PulseAudioConfig,
@@ -178,5 +191,5 @@ pub fn microphone(
             PulseAudioDevice::NamedSource(name)
         });
 
-    common(window, config, w_conf, preset_conf, device)
+    common(builder, config, w_conf, preset_conf, device)
 }
