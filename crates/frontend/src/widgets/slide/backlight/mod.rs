@@ -1,5 +1,5 @@
 use cairo::ImageSurface;
-use std::sync::{Arc, Mutex};
+use std::{cell::Cell, rc::Rc};
 
 use super::base::{
     draw::DrawConfig,
@@ -7,7 +7,7 @@ use super::base::{
 };
 use crate::{
     mouse_state::{MouseEvent, MouseStateData},
-    wayland::app::{App, WidgetBuilder},
+    wayland::app::WidgetBuilder,
     window::WidgetContext,
 };
 
@@ -20,7 +20,7 @@ pub struct BacklightContext {
     #[allow(dead_code)]
     backend_id: i32,
     device: Option<String>,
-    progress: Arc<Mutex<f64>>,
+    progress: Rc<Cell<f64>>,
 
     draw_conf: DrawConfig,
 
@@ -29,26 +29,20 @@ pub struct BacklightContext {
 }
 impl WidgetContext for BacklightContext {
     fn redraw(&mut self) -> ImageSurface {
-        let p = *self.progress.lock().unwrap();
+        let p = self.progress.get();
         self.draw_conf.draw(p)
     }
 
     fn on_mouse_event(&mut self, _: &MouseStateData, event: MouseEvent) -> bool {
-        let mut redraw = false;
-
         if let Some(p) = self.progress_state.if_change_progress(event.clone()) {
             if !self.only_redraw_on_internal_update {
-                let mut old_p = self.progress.lock().unwrap();
-                if *old_p != p {
-                    *old_p = p;
-                    redraw = true
-                }
+                self.progress.set(p);
             }
 
             backend::backlight::dbus::set_backlight(self.device.as_ref(), p);
         }
 
-        redraw
+        !self.only_redraw_on_internal_update
     }
 }
 
@@ -59,30 +53,18 @@ pub fn preset(
     mut preset_conf: BacklightConfig,
 ) -> impl WidgetContext {
     let device = preset_conf.device.take();
-    let progress = Arc::new(Mutex::new(0.));
-    let redraw_signal = builder.make_redraw_notifier(None::<fn(&mut App)>);
+    let progress = Rc::new(Cell::new(0.));
 
-    let mut backend_cache = 0.;
-    let progress_weak = Arc::downgrade(&progress);
+    let progress_weak = Rc::downgrade(&progress);
+    let redraw_signal = builder.make_redraw_channel(move |_, p| {
+        let Some(progress) = progress_weak.upgrade() else {
+            return;
+        };
+        progress.set(p);
+    });
     let backend_id = backend::backlight::register_callback(
         move |p| {
-            let Some(progress) = progress_weak.upgrade() else {
-                return;
-            };
-
-            let mut do_redraw = false;
-            let mut progress = progress.lock().unwrap();
-            if p != *progress {
-                *progress = p;
-                do_redraw = true
-            }
-            if p != backend_cache {
-                backend_cache = p;
-                do_redraw = true
-            }
-            if do_redraw {
-                redraw_signal.ping();
-            }
+            redraw_signal.send(p);
         },
         device.clone(),
     )

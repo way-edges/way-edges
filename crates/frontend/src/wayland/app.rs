@@ -8,6 +8,7 @@ use std::{
 
 use backend::ipc::IPCCommand;
 use calloop::{
+    channel::Sender,
     ping::{make_ping, Ping},
     LoopHandle, LoopSignal,
 };
@@ -33,7 +34,7 @@ use wayland_client::{
     Proxy, QueueHandle,
 };
 
-use crate::animation::{AnimationList, ToggleAnimation, ToggleAnimationRc};
+use crate::animation::{AnimationList, ToggleAnimation, ToggleAnimationRc, ToggleAnimationRcWeak};
 
 pub struct App {
     pub exit: bool,
@@ -195,6 +196,75 @@ impl Scale {
     }
 }
 
+struct PopEssential {
+    pop_animation: ToggleAnimationRcWeak,
+    pop_state: std::rc::Weak<UnsafeCell<Option<Rc<()>>>>,
+    pop_duration: Duration,
+    layer: LayerSurface,
+}
+impl PopEssential {
+    fn pop(&self, app: &App) {
+        // pop up
+        let guard_weak = {
+            let Some(pop_animation) = self.pop_animation.upgrade() else {
+                return;
+            };
+            let Some(pop_state) = self.pop_state.upgrade() else {
+                return;
+            };
+
+            let guard = Rc::new(());
+            let guard_weak = Rc::downgrade(&guard);
+            unsafe { pop_state.get().as_mut().unwrap().replace(guard) };
+
+            pop_animation
+                .borrow_mut()
+                .set_direction(crate::animation::ToggleDirection::Forward);
+            app.signal_redraw(&self.layer);
+
+            guard_weak
+        };
+
+        // hide
+        let layer = self.layer.clone();
+        let pop_animation = self.pop_animation.clone();
+        let pop_duration = self.pop_duration;
+        app.event_loop_handle.insert_source(
+            calloop::timer::Timer::from_duration(pop_duration),
+            move |_, _, app| {
+                let Some(pop_animation) = pop_animation.upgrade() else {
+                    return calloop::timer::TimeoutAction::Drop;
+                };
+                if guard_weak.upgrade().is_none() {
+                    return calloop::timer::TimeoutAction::Drop;
+                }
+
+                pop_animation
+                    .borrow_mut()
+                    .set_direction(crate::animation::ToggleDirection::Backward);
+                app.signal_redraw(&layer);
+
+                calloop::timer::TimeoutAction::Drop
+            },
+        );
+    }
+}
+
+struct RedrawEssentail {
+    has_update: std::rc::Weak<Cell<bool>>,
+    layer: LayerSurface,
+}
+impl RedrawEssentail {
+    fn redraw(&self, app: &App) {
+        let Some(has_update) = self.has_update.upgrade() else {
+            return;
+        };
+        has_update.set(true);
+        // signal redraw
+        app.signal_redraw(&self.layer);
+    }
+}
+
 pub struct WidgetBuilder<'a> {
     pub name: String,
     pub monitor: MonitorSpecifier,
@@ -216,83 +286,111 @@ impl<'a> WidgetBuilder<'a> {
     pub fn extend_animation_list(&mut self, list: &AnimationList) {
         self.animation_list.extend_list(list);
     }
-    pub fn make_pop_func(&mut self, pop_duration: u64) -> Ping {
-        let (ping, source) = make_ping().unwrap();
-
+    fn make_pop_essential(&self, pop_duration: u64) -> PopEssential {
         let layer = self.layer.clone();
         let pop_animation = self.pop_animation.downgrade();
         let pop_state = Rc::downgrade(&self.pop_state);
         let pop_duration = Duration::from_millis(pop_duration);
+        PopEssential {
+            pop_animation,
+            pop_state,
+            pop_duration,
+            layer,
+        }
+    }
+    pub fn make_pop_channel<T: 'static>(
+        &mut self,
+        pop_duration: u64,
+        mut func: impl FnMut(&mut App, T) + 'static,
+    ) -> Sender<T> {
+        let (sender, source) = calloop::channel::channel();
 
+        let pop_essential = self.make_pop_essential(pop_duration);
+        self.app
+            .event_loop_handle
+            .insert_source(source, move |event, _, app| {
+                if let calloop::channel::Event::Msg(msg) = event {
+                    func(app, msg);
+                    pop_essential.pop(app);
+                }
+            });
+
+        sender
+    }
+    pub fn make_pop_ping_with_func(
+        &mut self,
+        pop_duration: u64,
+        mut func: impl FnMut(&mut App) + 'static,
+    ) -> Ping {
+        let (ping, source) = make_ping().unwrap();
+
+        let pop_essential = self.make_pop_essential(pop_duration);
         self.app
             .event_loop_handle
             .insert_source(source, move |_, _, app| {
-                // pop up
-                let guard_weak = {
-                    let Some(pop_animation) = pop_animation.upgrade() else {
-                        return;
-                    };
-                    let Some(pop_state) = pop_state.upgrade() else {
-                        return;
-                    };
-
-                    let guard = Rc::new(());
-                    let guard_weak = Rc::downgrade(&guard);
-                    unsafe { pop_state.get().as_mut().unwrap().replace(guard) };
-
-                    pop_animation
-                        .borrow_mut()
-                        .set_direction(crate::animation::ToggleDirection::Forward);
-                    app.signal_redraw(&layer);
-
-                    guard_weak
-                };
-
-                // hide
-                let layer = layer.clone();
-                let pop_animation = pop_animation.clone();
-                app.event_loop_handle.insert_source(
-                    calloop::timer::Timer::from_duration(pop_duration),
-                    move |_, _, app| {
-                        let Some(pop_animation) = pop_animation.upgrade() else {
-                            return calloop::timer::TimeoutAction::Drop;
-                        };
-                        if guard_weak.upgrade().is_none() {
-                            return calloop::timer::TimeoutAction::Drop;
-                        }
-
-                        pop_animation
-                            .borrow_mut()
-                            .set_direction(crate::animation::ToggleDirection::Backward);
-                        app.signal_redraw(&layer);
-
-                        calloop::timer::TimeoutAction::Drop
-                    },
-                );
+                func(app);
+                pop_essential.pop(app);
             });
 
         ping
     }
-    pub fn make_redraw_notifier(&self, mut func: Option<impl FnMut(&mut App) + 'static>) -> Ping {
+    pub fn make_pop_ping(&mut self, pop_duration: u64) -> Ping {
         let (ping, source) = make_ping().unwrap();
 
-        let has_update = Rc::downgrade(&self.has_update);
-        let layer = self.layer.clone();
-
+        let pop_essential = self.make_pop_essential(pop_duration);
         self.app
             .event_loop_handle
             .insert_source(source, move |_, _, app| {
-                let Some(has_update) = has_update.upgrade() else {
-                    return;
-                };
-                has_update.set(true);
+                pop_essential.pop(app);
+            });
 
-                if let Some(func) = func.as_mut() {
-                    func(app)
-                };
+        ping
+    }
 
-                // signal redraw
-                app.signal_redraw(&layer);
+    fn make_redraw_essentail(&self) -> RedrawEssentail {
+        let has_update = Rc::downgrade(&self.has_update);
+        let layer = self.layer.clone();
+        RedrawEssentail { has_update, layer }
+    }
+    pub fn make_redraw_channel<T: 'static>(
+        &self,
+        mut func: impl FnMut(&mut App, T) + 'static,
+    ) -> Sender<T> {
+        let (sender, source) = calloop::channel::channel();
+
+        let redraw_essential = self.make_redraw_essentail();
+        self.app
+            .event_loop_handle
+            .insert_source(source, move |event, _, app| {
+                if let calloop::channel::Event::Msg(msg) = event {
+                    func(app, msg);
+                    redraw_essential.redraw(app);
+                }
+            });
+
+        sender
+    }
+    pub fn make_redraw_ping_with_func(&self, mut func: impl FnMut(&mut App) + 'static) -> Ping {
+        let (ping, source) = make_ping().unwrap();
+
+        let redraw_essential = self.make_redraw_essentail();
+        self.app
+            .event_loop_handle
+            .insert_source(source, move |_, _, app| {
+                func(app);
+                redraw_essential.redraw(app);
+            });
+
+        ping
+    }
+    pub fn make_redraw_ping(&self) -> Ping {
+        let (ping, source) = make_ping().unwrap();
+
+        let redraw_essential = self.make_redraw_essentail();
+        self.app
+            .event_loop_handle
+            .insert_source(source, move |_, _, app| {
+                redraw_essential.redraw(app);
             });
 
         ping

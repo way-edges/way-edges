@@ -1,9 +1,6 @@
 use cairo::ImageSurface;
 use interval_task::runner::Runner;
-use std::{
-    sync::{Arc, Mutex},
-    time::Duration,
-};
+use std::{cell::Cell, rc::Rc, time::Duration};
 
 use config::{
     widgets::{
@@ -23,14 +20,14 @@ use super::base::{
 };
 use crate::{
     mouse_state::{MouseEvent, MouseStateData},
-    wayland::app::{App, WidgetBuilder},
+    wayland::app::WidgetBuilder,
     window::WidgetContext,
 };
 
 pub struct CustomContext {
     #[allow(dead_code)]
     runner: Option<Runner<()>>,
-    progress: Arc<Mutex<f64>>,
+    progress: Rc<Cell<f64>>,
     event_map: KeyEventMap,
     on_change: Option<Template>,
 
@@ -41,20 +38,14 @@ pub struct CustomContext {
 }
 impl WidgetContext for CustomContext {
     fn redraw(&mut self) -> ImageSurface {
-        let p = *self.progress.lock().unwrap();
+        let p = self.progress.get();
         self.draw_conf.draw(p)
     }
 
     fn on_mouse_event(&mut self, _: &MouseStateData, event: MouseEvent) -> bool {
-        let mut redraw = false;
-
         if let Some(p) = self.progress_state.if_change_progress(event.clone()) {
             if !self.only_redraw_on_internal_update {
-                let mut old_p = self.progress.lock().unwrap();
-                if *old_p != p {
-                    *old_p = p;
-                    redraw = true
-                }
+                self.progress.set(p);
             }
 
             if let Some(template) = self.on_change.as_mut() {
@@ -79,7 +70,7 @@ impl WidgetContext for CustomContext {
             self.event_map.call(key);
         }
 
-        redraw
+        !self.only_redraw_on_internal_update
     }
 }
 
@@ -89,7 +80,7 @@ pub fn custom_preset(
     mut w_conf: SlideConfig,
     mut preset_conf: CustomConfig,
 ) -> impl WidgetContext {
-    let progress = Arc::new(Mutex::new(0.));
+    let progress = Rc::new(Cell::new(0.));
 
     // interval
     let runner = interval_update(builder, &preset_conf, &progress);
@@ -114,28 +105,28 @@ pub fn custom_preset(
 fn interval_update(
     window: &mut WidgetBuilder,
     preset_conf: &CustomConfig,
-    progress_cache: &Arc<Mutex<f64>>,
+    progress_cache: &Rc<Cell<f64>>,
 ) -> Option<Runner<()>> {
     if preset_conf.interval_update.0 > 0 && !preset_conf.interval_update.1.is_empty() {
-        let redraw_signal = window.make_redraw_notifier(None::<fn(&mut App)>);
-        let progress_cache_weak = Arc::downgrade(progress_cache);
+        let progress_cache_weak = Rc::downgrade(progress_cache);
+        let redraw_signal = window.make_redraw_channel(move |_, p| {
+            let Some(progress_cache) = progress_cache_weak.upgrade() else {
+                return;
+            };
+            progress_cache.set(p);
+        });
 
         let cmd = preset_conf.interval_update.1.clone();
         let mut runner = interval_task::runner::new_runner(
             Duration::from_millis(preset_conf.interval_update.0),
             || (),
             move |_| {
-                let Some(progress_cache) = progress_cache_weak.upgrade() else {
-                    return true;
-                };
-
                 match shell_cmd(&cmd).and_then(|res| {
                     use std::str::FromStr;
                     f64::from_str(res.trim()).map_err(|_| "Invalid number".to_string())
                 }) {
                     Ok(progress) => {
-                        *progress_cache.lock().unwrap() = progress;
-                        redraw_signal.ping();
+                        redraw_signal.send(progress);
                     }
                     Err(err) => log::error!("slide custom updata error: {err}"),
                 }
