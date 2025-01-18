@@ -1,9 +1,8 @@
 use std::rc::Rc;
 
 use cairo::ImageSurface;
-use educe::Educe;
 use gtk::gdk::{BUTTON_PRIMARY, BUTTON_SECONDARY};
-use system_tray::{client::ActivateRequest, item::StatusNotifierItem};
+use system_tray::{event::ActivateRequest, item::StatusNotifierItem};
 
 use backend::tray::{
     icon::{parse_icon_given_data, parse_icon_given_name, parse_icon_given_pixmaps},
@@ -233,8 +232,7 @@ pub enum MenuType {
 }
 
 #[wrap_rc(rc = "pub", normal = "pub")]
-#[derive(Educe)]
-#[educe(Debug)]
+#[derive(Debug)]
 pub struct Tray {
     pub tray_id: TrayID,
     pub id: String,
@@ -250,9 +248,6 @@ pub struct Tray {
     pub buffer: Buffer,
 
     pub config: Rc<TrayConfig>,
-
-    #[educe(Debug(ignore))]
-    pub redraw_signal: Rc<dyn Fn()>,
 }
 
 impl Tray {
@@ -308,7 +303,6 @@ impl Tray {
     }
     fn set_updated(&mut self) {
         self.updated = true;
-        (self.redraw_signal)();
     }
     fn redraw_if_updated(&mut self) {
         if self.updated {
@@ -331,13 +325,14 @@ impl GridItemContent for TrayRc {
     }
 }
 impl Tray {
-    pub fn on_mouse_event(&mut self, e: MouseEvent) {
+    pub fn on_mouse_event(&mut self, e: MouseEvent) -> bool {
         use super::layout::HoveringItem;
+        let mut redraw = false;
 
         match e {
             MouseEvent::Release(pos, key) => {
                 let Some(hovering) = self.layout.get_hovering(pos) else {
-                    return;
+                    return false;
                 };
 
                 if key == BUTTON_SECONDARY {
@@ -346,6 +341,7 @@ impl Tray {
                         HoveringItem::TrayIcon => {
                             self.is_open = !self.is_open;
                             self.set_updated();
+                            redraw = true
                         }
                         HoveringItem::MenuItem(id) => {
                             // find id chain
@@ -374,6 +370,7 @@ impl Tray {
                                 id_chain.reverse();
                                 state.set_open_id(id_chain);
                                 self.set_updated();
+                                redraw = true
                             }
                         }
                     }
@@ -393,18 +390,21 @@ impl Tray {
 
                 if self.get_menu_state().unwrap().1.set_hovering(hover_id) {
                     self.set_updated();
+                    redraw = true
                 }
             }
             MouseEvent::Leave => {
                 if let Some((_, state)) = self.get_menu_state() {
                     if state.set_hovering(-1) {
                         self.set_updated();
+                        redraw = true
                     }
                 }
             }
             // ignore press
             _ => {}
         }
+        redraw
     }
 }
 
@@ -454,7 +454,6 @@ pub fn create_tray_item(
         is_open: false,
         layout: TrayLayout::default(),
         buffer: Buffer::default(),
-        redraw_signal: module.redraw_signal.clone(),
         config: module.config.clone(),
     }
     .make_rc()

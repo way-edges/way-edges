@@ -1,16 +1,12 @@
 use std::{collections::HashMap, rc::Rc};
 
 use cairo::ImageSurface;
-use educe::Educe;
 use system_tray::item::StatusNotifierItem;
 
 use config::widgets::wrapbox::tray::TrayConfig;
 use way_edges_derive::wrap_rc;
 
-use crate::{
-    mouse_state::MouseEvent,
-    widgets::wrapbox::{grid::GridBox, BoxTemporaryCtx},
-};
+use crate::{mouse_state::MouseEvent, widgets::wrapbox::grid::GridBox};
 
 use super::item::{create_tray_item, TrayID, TrayRc};
 
@@ -37,16 +33,13 @@ impl TrayModuleState {
 }
 
 #[wrap_rc(rc = "pub", normal = "pub")]
-#[derive(Educe)]
-#[educe(Debug)]
+#[derive(Debug)]
 pub struct TrayModule {
     // id
     pub grid: GridBox<TrayRc>,
     pub id_tray_map: HashMap<TrayID, TrayRc>,
     pub module_state: TrayModuleState,
     pub config: Rc<TrayConfig>,
-    #[educe(Debug(ignore))]
-    pub redraw_signal: Rc<dyn Fn()>,
 }
 impl TrayModule {
     pub fn draw_content(&mut self) -> ImageSurface {
@@ -62,14 +55,10 @@ impl TrayModule {
         let tray = create_tray_item(self, id.clone(), tray_item, self.config.icon_size);
         self.grid.add(tray.clone());
         self.id_tray_map.insert(id, tray);
-
-        (self.redraw_signal)()
     }
     pub fn remove_tray(&mut self, id: &String) {
         self.grid.rm(id);
         self.id_tray_map.remove(id);
-
-        (self.redraw_signal)()
     }
 
     pub fn find_tray(&mut self, id: &String) -> Option<TrayRc> {
@@ -85,26 +74,28 @@ impl TrayModule {
             .map(|(rc, pos)| (rc.clone(), pos))
     }
 
-    pub fn leave_last_tray(&mut self) {
+    pub fn leave_last_tray(&mut self) -> bool {
         if let Some(f) = self.module_state.current_mouse_in.take() {
-            f.borrow_mut().on_mouse_event(MouseEvent::Leave);
+            f.borrow_mut().on_mouse_event(MouseEvent::Leave)
+        } else {
+            false
         }
     }
 
-    pub fn replace_current_tray(&mut self, tray: TrayRc) {
+    pub fn replace_current_tray(&mut self, tray: TrayRc) -> bool {
         if let Some(f) = self.module_state.set_current_tary(tray) {
-            f.borrow_mut().on_mouse_event(MouseEvent::Leave);
+            f.borrow_mut().on_mouse_event(MouseEvent::Leave)
+        } else {
+            false
         }
     }
 }
 
-pub fn new_tray_module(box_temp_ctx: &mut BoxTemporaryCtx, config: TrayConfig) -> TrayModule {
-    let redraw_signal = Rc::new(box_temp_ctx.make_redraw_signal());
+pub fn new_tray_module(config: TrayConfig) -> TrayModule {
     let grid = GridBox::new(config.tray_gap as f64, config.grid_align);
 
     TrayModule {
         grid,
-        redraw_signal,
         config: Rc::new(config),
         id_tray_map: HashMap::new(),
         module_state: TrayModuleState::new(),

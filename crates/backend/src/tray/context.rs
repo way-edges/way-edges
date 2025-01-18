@@ -1,9 +1,11 @@
 use std::{
     collections::HashMap,
     path::PathBuf,
+    rc::Rc,
     sync::atomic::{AtomicBool, AtomicPtr},
 };
 
+use calloop::channel::Sender;
 use gtk::{gdk::Display, IconTheme};
 use system_tray::client::Client;
 
@@ -11,11 +13,10 @@ use crate::runtime::get_backend_runtime_handle;
 
 use super::event::{match_event, TrayEvent};
 
-type TrayCallback = Box<dyn FnMut(&TrayEvent)>;
 pub(super) struct TrayContext {
     pub client: Client,
     icon_theme: IconTheme,
-    cbs: HashMap<i32, TrayCallback>,
+    cbs: HashMap<i32, Sender<Rc<TrayEvent>>>,
     count: i32,
 }
 impl TrayContext {
@@ -34,9 +35,12 @@ impl TrayContext {
         &self.icon_theme
     }
     pub fn call(&mut self, e: TrayEvent) {
-        self.cbs.iter_mut().for_each(|(_, cb)| cb(&e));
+        let e = Rc::new(e);
+        self.cbs.iter().for_each(|(_, cb)| {
+            cb.send(e.clone()).unwrap();
+        });
     }
-    fn add_cb(&mut self, mut cb: TrayCallback) -> i32 {
+    fn add_cb(&mut self, cb: Sender<Rc<TrayEvent>>) -> i32 {
         let key = self.count;
         self.count += 1;
 
@@ -50,10 +54,10 @@ impl TrayContext {
                     id.clone(),
                     super::event::Event::ItemNew(item.clone().into()),
                 );
-                cb(&e);
+                cb.send(Rc::new(e)).unwrap();
                 if let Some(menu) = menu {
                     let e = (id.clone(), super::event::Event::MenuNew(menu.clone()));
-                    cb(&e);
+                    cb.send(Rc::new(e)).unwrap();
                 }
             });
 
@@ -90,11 +94,8 @@ pub fn init_tray_client() {
     );
     CONTEXT_INITED.store(true, std::sync::atomic::Ordering::Release);
 
-    use gtk::glib;
-
-    glib::spawn_future_local(async move {
+    get_backend_runtime_handle().spawn(async move {
         while let Ok(ev) = tray_rx.recv().await {
-            // println!("{ev:?}\n"); // do something with event...
             let e = match_event(ev);
             if let Some(e) = e {
                 get_tray_context().call(e);
@@ -105,8 +106,8 @@ pub fn init_tray_client() {
     // get_main_runtime_handle().spawn();
 }
 
-pub fn register_tray(cb: impl FnMut(&TrayEvent) + 'static) -> i32 {
-    get_tray_context().add_cb(Box::new(cb))
+pub fn register_tray(cb: Sender<Rc<TrayEvent>>) -> i32 {
+    get_tray_context().add_cb(cb)
 }
 
 pub fn unregister_tray(id: i32) {

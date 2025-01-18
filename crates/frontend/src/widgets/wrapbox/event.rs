@@ -1,21 +1,13 @@
 use std::rc::Rc;
 
+use util::Or;
+
 use super::{
     box_traits::{BoxedWidgetGrid, BoxedWidgetRc},
     outlook::OutlookDrawConf,
     BoxContext,
 };
 use crate::mouse_state::MouseEvent;
-
-struct Or(bool);
-impl Or {
-    fn or(&mut self, b: bool) {
-        self.0 = self.0 || b
-    }
-    fn res(self) -> bool {
-        self.0
-    }
-}
 
 /// last hover widget, for trigger mouse leave option for that widget.
 pub struct LastWidget {
