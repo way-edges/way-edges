@@ -1,8 +1,8 @@
 use cairo::ImageSurface;
 use gtk::{gdk::RGBA, prelude::GdkCairoContextExt};
-use gtk4_layer_shell::Edge;
 
 use config::widgets::wrapbox::{OutlookMargins, OutlookWindowConfig};
+use smithay_client_toolkit::shell::wlr_layer::Anchor;
 use util::{
     draw::{color_mix, draw_rect_path, new_surface},
     Z,
@@ -20,12 +20,12 @@ pub struct DrawConf {
     corners: [bool; 4],
 }
 impl DrawConf {
-    pub fn new(outlook: OutlookWindowConfig, edge: Edge) -> Self {
+    pub fn new(outlook: OutlookWindowConfig, edge: Anchor) -> Self {
         let corners = match edge {
-            Edge::Left => [false, true, true, false],
-            Edge::Right => [true, false, false, true],
-            Edge::Top => [false, false, true, true],
-            Edge::Bottom => [true, true, false, false],
+            Anchor::LEFT => [false, true, true, false],
+            Anchor::RIGHT => [true, false, false, true],
+            Anchor::TOP => [false, false, true, true],
+            Anchor::BOTTOM => [true, true, false, false],
             _ => unreachable!(),
         };
 

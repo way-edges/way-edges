@@ -8,13 +8,13 @@ use std::{cell::Cell, rc::Rc};
 
 use crate::{
     animation::{AnimationList, ToggleAnimationRc},
-    window::{WidgetContext, WindowContextBuilder},
+    wayland::app::{App, WidgetBuilder},
+    window::WidgetContext,
 };
 use box_traits::{BoxedWidgetCtx, BoxedWidgetGrid};
 use config::{widgets::wrapbox::BoxConfig, Config};
 use event::LastWidget;
 use grid::{builder::GrideBoxBuilder, GridBox};
-use gtk::{gdk::Monitor, glib};
 use outlook::{init_outlook, OutlookDrawConf};
 
 pub struct BoxContext {
@@ -40,8 +40,7 @@ impl WidgetContext for BoxContext {
 }
 
 pub fn init_widget(
-    window: &mut WindowContextBuilder,
-    _: &Monitor,
+    window: &mut WidgetBuilder,
     conf: &Config,
     mut w_conf: BoxConfig,
 ) -> impl WidgetContext {
@@ -59,10 +58,7 @@ pub fn init_widget(
     }
 }
 
-fn init_boxed_widgets(
-    window: &mut WindowContextBuilder,
-    box_conf: &mut BoxConfig,
-) -> BoxedWidgetGrid {
+fn init_boxed_widgets(window: &mut WidgetBuilder, box_conf: &mut BoxConfig) -> BoxedWidgetGrid {
     let mut builder = GrideBoxBuilder::<BoxedWidgetCtx>::new();
     let ws = std::mem::take(&mut box_conf.widgets);
 
@@ -104,15 +100,15 @@ fn init_boxed_widgets(
     builder.build(box_conf.gap, box_conf.align)
 }
 
-struct BoxTemporaryCtx<'a> {
-    window: &'a mut WindowContextBuilder,
+struct BoxTemporaryCtx<'a, 'b> {
+    builder: &'a mut WidgetBuilder<'b>,
     animation_list: AnimationList,
     has_update: Rc<Cell<bool>>,
 }
-impl<'a> BoxTemporaryCtx<'a> {
-    fn new(window: &'a mut WindowContextBuilder) -> Self {
+impl<'a, 'b> BoxTemporaryCtx<'a, 'b> {
+    fn new(builder: &'a mut WidgetBuilder<'b>) -> Self {
         Self {
-            window,
+            builder,
             animation_list: AnimationList::new(),
             has_update: Rc::new(Cell::new(false)),
         }
@@ -120,22 +116,45 @@ impl<'a> BoxTemporaryCtx<'a> {
     fn new_animation(&mut self, time_cost: u64) -> ToggleAnimationRc {
         self.animation_list.new_transition(time_cost)
     }
-    fn make_redraw_signal(&mut self) -> impl Fn() {
-        let func = self.window.make_redraw_notifier();
-        let has_update = &self.has_update;
-        glib::clone!(
-            #[weak]
-            has_update,
-            move || {
-                has_update.set(true);
-                func()
-            }
-        )
+    fn redraw_essential(&self) -> impl Fn() + 'static {
+        let has_update = Rc::downgrade(&self.has_update);
+        move || {
+            let Some(has_update) = has_update.upgrade() else {
+                return;
+            };
+            has_update.set(true);
+        }
+    }
+    fn make_redraw_channel<T: 'static>(
+        &mut self,
+        mut func: impl FnMut(&mut App, T) + 'static,
+    ) -> calloop::channel::Sender<T> {
+        let update = self.redraw_essential();
+        self.builder.make_redraw_channel(move |app, msg| {
+            update();
+            func(app, msg);
+        })
+    }
+    fn make_redraw_ping_with_func(
+        &mut self,
+        mut func: impl FnMut(&mut App) + 'static,
+    ) -> calloop::ping::Ping {
+        let update = self.redraw_essential();
+        self.builder.make_redraw_ping_with_func(move |app| {
+            update();
+            func(app);
+        })
+    }
+    fn make_redraw_ping(&mut self) -> calloop::ping::Ping {
+        let update = self.redraw_essential();
+        self.builder.make_redraw_ping_with_func(move |_| {
+            update();
+        })
     }
 
     #[allow(clippy::wrong_self_convention)]
     fn to_boxed_widget_ctx(self, ctx: impl box_traits::BoxedWidget + 'static) -> BoxedWidgetCtx {
-        self.window.extend_animation_list(&self.animation_list);
+        self.builder.extend_animation_list(&self.animation_list);
         BoxedWidgetCtx::new(ctx, self.animation_list, self.has_update)
     }
 }

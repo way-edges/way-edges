@@ -7,6 +7,16 @@ use super::{
 };
 use crate::mouse_state::MouseEvent;
 
+struct Or(bool);
+impl Or {
+    fn or(&mut self, b: bool) {
+        self.0 = self.0 || b
+    }
+    fn res(self) -> bool {
+        self.0
+    }
+}
+
 /// last hover widget, for trigger mouse leave option for that widget.
 pub struct LastWidget {
     press_lock: bool,
@@ -20,36 +30,42 @@ impl LastWidget {
         }
     }
 
-    fn set_current(&mut self, w: BoxedWidgetRc, pos: (f64, f64)) {
+    fn set_current(&mut self, w: BoxedWidgetRc, pos: (f64, f64)) -> bool {
         if self.press_lock {
-            return;
+            return false;
         }
+
+        let mut redraw = Or(false);
 
         if let Some(last) = self.current_widget.take() {
             if Rc::ptr_eq(&last, &w) {
                 // if same widget
-                w.borrow_mut().on_mouse_event(MouseEvent::Motion(pos));
+                redraw.or(w.borrow_mut().on_mouse_event(MouseEvent::Motion(pos)));
             } else {
                 // not same widget
-                last.borrow_mut().on_mouse_event(MouseEvent::Leave);
-                w.borrow_mut().on_mouse_event(MouseEvent::Enter(pos));
+                redraw.or(last.borrow_mut().on_mouse_event(MouseEvent::Leave));
+                redraw.or(w.borrow_mut().on_mouse_event(MouseEvent::Enter(pos)));
             }
         } else {
             // if no last widget
-            w.borrow_mut().on_mouse_event(MouseEvent::Enter(pos));
+            redraw.or(w.borrow_mut().on_mouse_event(MouseEvent::Enter(pos)));
         }
         self.current_widget = Some(w);
+
+        redraw.res()
     }
 
-    fn dispose_current(&mut self) {
+    fn dispose_current(&mut self) -> bool {
         // here we trust that press_lock from MouseState works fine:
         // won't trigger `leave` while pressing
         if self.press_lock {
-            return;
+            return false;
         }
 
         if let Some(last) = self.current_widget.take() {
-            last.borrow_mut().on_mouse_event(MouseEvent::Leave);
+            last.borrow_mut().on_mouse_event(MouseEvent::Leave)
+        } else {
+            false
         }
     }
 
@@ -77,29 +93,31 @@ fn match_item(
 }
 
 pub fn on_mouse_event(event: MouseEvent, ctx: &mut BoxContext) -> bool {
+    let mut redraw = Or(false);
+
     match event {
         MouseEvent::Enter(pos) | MouseEvent::Motion(pos) => {
             let matched = match_item(&ctx.grid_box, &ctx.outlook_draw_conf, pos);
 
             if let Some((widget, pos)) = matched {
-                ctx.last_widget.set_current(widget, pos);
+                redraw.or(ctx.last_widget.set_current(widget, pos));
             } else {
-                ctx.last_widget.dispose_current();
+                redraw.or(ctx.last_widget.dispose_current());
             }
 
             ctx.leave_box_state = false;
         }
         MouseEvent::Leave => {
-            ctx.last_widget.dispose_current();
+            redraw.or(ctx.last_widget.dispose_current());
             ctx.leave_box_state = true;
         }
         MouseEvent::Press(pos, k) => {
             let matched = match_item(&ctx.grid_box, &ctx.outlook_draw_conf, pos);
             if let Some((widget, pos)) = matched {
                 ctx.last_widget.lock_press();
-                widget
+                redraw.or(widget
                     .borrow_mut()
-                    .on_mouse_event(MouseEvent::Press(pos, k));
+                    .on_mouse_event(MouseEvent::Press(pos, k)));
             }
         }
         MouseEvent::Release(pos, k) => {
@@ -107,19 +125,19 @@ pub fn on_mouse_event(event: MouseEvent, ctx: &mut BoxContext) -> bool {
 
             let matched = match_item(&ctx.grid_box, &ctx.outlook_draw_conf, pos);
             if let Some((widget, pos)) = matched {
-                widget
+                redraw.or(widget
                     .borrow_mut()
-                    .on_mouse_event(MouseEvent::Release(pos, k));
+                    .on_mouse_event(MouseEvent::Release(pos, k)));
             } else if ctx.leave_box_state {
                 ctx.leave_box_state = false;
                 if let Some(last) = ctx.last_widget.take_current() {
                     let mut last = last.borrow_mut();
-                    last.on_mouse_event(MouseEvent::Leave);
-                    last.on_mouse_event(MouseEvent::Release(pos, k));
+                    redraw.or(last.on_mouse_event(MouseEvent::Leave));
+                    redraw.or(last.on_mouse_event(MouseEvent::Release(pos, k)));
                 }
             }
         }
     };
 
-    false
+    redraw.res()
 }
