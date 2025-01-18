@@ -15,7 +15,9 @@ pub type BoxedWidgetGrid = GridBox<BoxedWidgetCtx>;
 
 pub trait BoxedWidget: Debug {
     fn content(&mut self) -> ImageSurface;
-    fn on_mouse_event(&mut self, _: MouseEvent) {}
+    fn on_mouse_event(&mut self, _: MouseEvent) -> bool {
+        false
+    }
 }
 
 #[derive(Debug)]
