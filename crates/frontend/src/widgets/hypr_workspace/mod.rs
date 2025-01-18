@@ -5,49 +5,46 @@ use std::{cell::Cell, rc::Rc};
 
 use crate::{
     mouse_state::{MouseEvent, MouseStateData},
-    window::{WidgetContext, WindowContextBuilder},
+    wayland::app::WidgetBuilder,
+    window::WidgetContext,
 };
 use backend::hypr_workspace::{change_to_workspace, HyprGlobalData};
 use config::{widgets::hypr_workspace::HyprWorkspaceConfig, Config};
 use draw::DrawConf;
 use event::HoverData;
-use gtk::{
-    gdk::{Monitor, BUTTON_PRIMARY},
-    glib,
-    prelude::MonitorExt,
-};
+use glib::clone::{Downgrade, Upgrade};
+use gtk::{gdk::BUTTON_PRIMARY, glib};
 
 pub fn init_widget(
-    window: &mut WindowContextBuilder,
-    monitor: &Monitor,
+    builder: &mut WidgetBuilder,
+    size: (i32, i32),
     conf: &Config,
     mut w_conf: HyprWorkspaceConfig,
 ) -> impl WidgetContext {
-    let geom = monitor.geometry();
-    let size = (geom.width(), geom.height());
     w_conf.size.calculate_relative(size, conf.edge);
 
-    let workspace_transition = window.new_animation(w_conf.workspace_transition_duration);
+    let workspace_transition = builder.new_animation(w_conf.workspace_transition_duration);
 
     let draw_conf = DrawConf::new(&w_conf, workspace_transition.clone(), conf.edge);
 
     let hypr_data = Rc::new(Cell::new(HyprGlobalData::default()));
     let hover_data = HoverData::new(conf.edge, w_conf.invert_direction);
 
-    let redraw_signal = window.make_redraw_notifier();
-    let pop_func = window.make_pop_func(w_conf.pop_duration);
-    let backend_id = backend::hypr_workspace::register_hypr_event_callback(glib::clone!(
-        #[weak]
-        hypr_data,
-        #[weak]
-        workspace_transition,
-        move |data| {
-            hypr_data.set(*data);
-            workspace_transition.borrow_mut().flip();
-            redraw_signal();
-            pop_func()
-        }
-    ));
+    let hypr_data_weak = Rc::downgrade(&hypr_data);
+    let workspace_transition_weak = workspace_transition.downgrade();
+    let pop_signal_sender = builder.make_pop_channel(w_conf.pop_duration, move |_, msg| {
+        let Some(hypr_data) = hypr_data_weak.upgrade() else {
+            return;
+        };
+        let Some(workspace_transition) = workspace_transition_weak.upgrade() else {
+            return;
+        };
+        hypr_data.set(msg);
+        workspace_transition.borrow_mut().flip();
+    });
+    let backend_id = backend::hypr_workspace::register_hypr_event_callback(move |data| {
+        pop_signal_sender.send(*data);
+    });
 
     HyprWorkspaceCtx {
         backend_id,

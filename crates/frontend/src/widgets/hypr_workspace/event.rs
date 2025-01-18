@@ -1,11 +1,11 @@
-use gtk4_layer_shell::Edge;
+use smithay_client_toolkit::shell::wlr_layer::Anchor;
 use util::binary_search_within_range;
 use way_edges_derive::wrap_rc;
 
 type ItemLocation = Vec<[f64; 2]>;
 type MatchItemFunc = fn(&ItemLocation, (f64, f64)) -> isize;
 
-fn make_hover_match_func(edge: Edge) -> MatchItemFunc {
+fn make_hover_match_func(edge: Anchor) -> MatchItemFunc {
     macro_rules! create_func {
         ($name:ident, $i:tt) => {
             fn $name(item_location: &ItemLocation, mouse_pos: (f64, f64)) -> isize {
@@ -16,8 +16,8 @@ fn make_hover_match_func(edge: Edge) -> MatchItemFunc {
     create_func!(h, 0);
     create_func!(v, 1);
     match edge {
-        Edge::Top | Edge::Bottom => h,
-        Edge::Left | Edge::Right => v,
+        Anchor::TOP | Anchor::BOTTOM => h,
+        Anchor::LEFT | Anchor::RIGHT => v,
         _ => unreachable!(),
     }
 }
@@ -34,7 +34,7 @@ pub struct HoverData {
 }
 
 impl HoverData {
-    pub fn new(edge: Edge, invert_direction: bool) -> Self {
+    pub fn new(edge: Anchor, invert_direction: bool) -> Self {
         Self {
             item_location: vec![],
             match_item_func: make_hover_match_func(edge),

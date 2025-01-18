@@ -1,9 +1,9 @@
 use cairo::{Context, ImageSurface};
 use gtk::{gdk::RGBA, prelude::GdkCairoContextExt};
-use gtk4_layer_shell::Edge;
 
 use backend::hypr_workspace::HyprGlobalData;
 use config::widgets::hypr_workspace::HyprWorkspaceConfig;
+use smithay_client_toolkit::shell::wlr_layer::Anchor;
 use util::{
     draw::{color_mix, color_transition, new_surface},
     Z,
@@ -33,13 +33,13 @@ impl DrawConf {
     pub fn new(
         w_conf: &HyprWorkspaceConfig,
         workspace_transition: ToggleAnimationRc,
-        edge: Edge,
+        edge: Anchor,
     ) -> Self {
         let (thickness, length) = w_conf.size().unwrap();
 
         let func = match edge {
-            Edge::Left | Edge::Right => draw_vertical,
-            Edge::Top | Edge::Bottom => draw_horizontal,
+            Anchor::LEFT | Anchor::RIGHT => draw_vertical,
+            Anchor::TOP | Anchor::BOTTOM => draw_horizontal,
             _ => unreachable!(),
         };
 
