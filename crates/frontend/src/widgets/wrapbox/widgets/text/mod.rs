@@ -3,10 +3,9 @@ mod draw;
 use std::cell::UnsafeCell;
 use std::{rc::Rc, time::Duration};
 
-use async_channel::{Receiver, Sender};
+use calloop::channel::Sender;
 use chrono::{Local, Utc};
 use draw::TextDrawer;
-use gtk::glib;
 use interval_task::runner::Runner;
 
 use config::widgets::wrapbox::text::{TextConfig, TextPreset};
@@ -32,7 +31,7 @@ fn time_preset(s: Sender<String>, format: String, time_zone: Option<String>) -> 
         Duration::from_millis(1000),
         || (),
         move |_| {
-            s.force_send(f()).unwrap();
+            s.send(f()).unwrap();
             false
         },
     )
@@ -48,23 +47,19 @@ fn custom_preset(s: Sender<String>, update_with_interval_ms: (u64, String)) -> R
         Duration::from_millis(time),
         || (),
         move |_| {
-            s.force_send(f()).unwrap();
+            s.send(f()).unwrap();
             false
         },
     )
 }
 
-fn match_preset(preset: TextPreset) -> (Runner<()>, Receiver<String>) {
-    let (s, r) = async_channel::bounded(1);
-    (
-        match preset {
-            TextPreset::Time { format, time_zone } => time_preset(s, format, time_zone),
-            TextPreset::Custom {
-                update_with_interval_ms,
-            } => custom_preset(s, update_with_interval_ms),
-        },
-        r,
-    )
+fn match_preset(preset: TextPreset, s: Sender<String>) -> Runner<()> {
+    match preset {
+        TextPreset::Time { format, time_zone } => time_preset(s, format, time_zone),
+        TextPreset::Custom {
+            update_with_interval_ms,
+        } => custom_preset(s, update_with_interval_ms),
+    }
 }
 
 #[derive(Debug)]
@@ -78,19 +73,16 @@ pub struct TextCtx {
 pub fn init_text(box_temp_ctx: &mut BoxTemporaryCtx, conf: TextConfig) -> impl BoxedWidget {
     let drawer = TextDrawer::new(&conf);
 
-    let (mut runner, r) = match_preset(conf.preset);
     let text = Rc::new(UnsafeCell::new(String::default()));
     let text_weak = Rc::downgrade(&text);
-    let redraw_signal = box_temp_ctx.make_redraw_signal();
-    glib::spawn_future_local(async move {
-        while let Ok(res) = r.recv().await {
-            let Some(text) = text_weak.upgrade() else {
-                break;
-            };
-            unsafe { *text.get().as_mut().unwrap() = res };
-            redraw_signal();
-        }
+    let redraw_signal = box_temp_ctx.make_redraw_channel(move |_, msg| {
+        let Some(text) = text_weak.upgrade() else {
+            return;
+        };
+        unsafe { *text.get().as_mut().unwrap() = msg };
     });
+
+    let mut runner = match_preset(conf.preset, redraw_signal);
     runner.start().unwrap();
 
     TextCtx {
