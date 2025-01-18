@@ -25,15 +25,14 @@ hyprland = { version = "0.4.0-beta.2", default-features = false, features = [
   "tokio",
   "listener",
 ] }
-libpulse-binding = "2.28"
-libpulse-glib-binding = "2.28.1"
+# libpulse-binding = "2.28"
+libpulse-binding = { git = "https://github.com/ogios/pulse-binding-rust.git", branch = "tokio-bindings" }
+libpulse-tokio = { git = "https://github.com/ogios/pulse-binding-rust.git", branch = "tokio-bindings" }
 zbus = "5.0"
 blight = "0.7"
 inotify = "0.11.0"
 futures-util = "0.3.31"
 
-notify = { version = "7.0.0", default-features = false }
-notify-debouncer-full = "0.4.0"
 sysinfo = { version = "0.33.1", default-features = false, features = [
   "disk",
   "system",
