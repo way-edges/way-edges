@@ -1,4 +1,4 @@
-use async_channel::{Receiver, Sender};
+use calloop::channel::Sender;
 use interval_task::runner::Runner;
 use std::time::Duration;
 
@@ -52,7 +52,7 @@ macro_rules! new_runner {
             Duration::from_millis($time),
             || (),
             move |_| {
-                $s.force_send($f()).unwrap();
+                $s.send($f()).unwrap();
                 false
             },
         )
@@ -173,8 +173,7 @@ pub struct RunnerResult {
     pub preset_text: String,
 }
 
-pub fn parse_preset(preset: RingPreset) -> (Runner<()>, Receiver<RunnerResult>) {
-    let (s, r) = async_channel::bounded(1);
+pub fn parse_preset(preset: RingPreset, s: Sender<RunnerResult>) -> Runner<()> {
     let runner = match preset {
         RingPreset::Ram { update_interval } => ram(s, update_interval),
         RingPreset::Swap { update_interval } => swap(s, update_interval),
@@ -193,5 +192,5 @@ pub fn parse_preset(preset: RingPreset) -> (Runner<()>, Receiver<RunnerResult>) 
         } => custom(s, update_interval, cmd),
     };
 
-    (runner, r)
+    runner
 }
