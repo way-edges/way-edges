@@ -15,7 +15,10 @@ pub fn start_configuration_file_watcher(sender: Sender<()>) {
 
         inotify
             .watches()
-            .add(path, WatchMask::CREATE | WatchMask::MODIFY)
+            .add(
+                path,
+                WatchMask::CREATE | WatchMask::MODIFY | WatchMask::DELETE,
+            )
             .unwrap();
 
         let mut debouncer = None;

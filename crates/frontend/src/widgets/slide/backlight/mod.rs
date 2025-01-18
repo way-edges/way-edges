@@ -62,13 +62,7 @@ pub fn preset(
         };
         progress.set(p);
     });
-    let backend_id = backend::backlight::register_callback(
-        move |p| {
-            redraw_signal.send(p);
-        },
-        device.clone(),
-    )
-    .unwrap();
+    let backend_id = backend::backlight::register_callback(redraw_signal, device.clone()).unwrap();
 
     BacklightContext {
         backend_id,
