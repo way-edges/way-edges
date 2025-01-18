@@ -51,7 +51,7 @@ pub fn init_widget<'a>(
             log::debug!("initializing button");
             let w = button::init_widget(builder, size, &conf, btn_config);
             log::info!("initialized button");
-            w.make_rc()
+            Box::new(w)
         }
         config::widgets::Widget::Slider(slide_config) => {
             log::debug!("initializing slider");
@@ -63,13 +63,13 @@ pub fn init_widget<'a>(
             log::debug!("initializing hypr-workspace");
             let w = hypr_workspace::init_widget(builder, size, &conf, hypr_workspace_config);
             log::info!("initialized hypr-workspace");
-            w.make_rc()
+            Box::new(w)
         }
         config::widgets::Widget::WrapBox(box_config) => {
             log::debug!("initializing box");
-            let w = wrapbox::init_widget(builder, size, &conf, box_config);
+            let w = wrapbox::init_widget(builder, &conf, box_config);
             log::info!("initialized box");
-            w.make_rc()
+            Box::new(w)
         }
     };
 
