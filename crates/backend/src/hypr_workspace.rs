@@ -138,7 +138,7 @@ static GLOBAL_HYPR_LISTENER_CTX: AtomicPtr<HyprListenerCtx> = AtomicPtr::new(std
 fn is_ctx_inited() -> bool {
     CTX_INITED.load(std::sync::atomic::Ordering::Relaxed)
 }
-fn get_hypr_listener() -> &'static mut HyprListenerCtx {
+fn get_hypr_ctx() -> &'static mut HyprListenerCtx {
     unsafe {
         GLOBAL_HYPR_LISTENER_CTX
             .load(std::sync::atomic::Ordering::Relaxed)
@@ -161,12 +161,12 @@ impl WorkspaceIDToInt for WorkspaceType {
 
 pub fn register_hypr_event_callback(cb: Sender<HyprGlobalData>) -> HyprCallbackId {
     init_hyprland_listener();
-    let hypr = get_hypr_listener();
+    let hypr = get_hypr_ctx();
     hypr.add_cb(cb)
 }
 
 pub fn unregister_hypr_event_callback(id: HyprCallbackId) {
-    get_hypr_listener().remove_cb(id)
+    get_hypr_ctx().remove_cb(id)
 }
 
 enum Signal {
@@ -273,10 +273,10 @@ pub fn init_hyprland_listener() {
         log::info!("hyprland workspace listener stopped");
     });
 
-    gtk::glib::spawn_future_local(async move {
+    get_backend_runtime_handle().spawn(async move {
         log::info!("start hyprland workspace signal listener");
         while let Ok(s) = r.recv().await {
-            get_hypr_listener().on_signal(s)
+            get_hypr_ctx().on_signal(s)
         }
         log::info!("stop hyprland workspace signal listener");
     });
