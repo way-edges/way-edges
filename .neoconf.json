@@ -1,0 +1,3 @@
+{
+  "rust": { "cfgs": ["tokio_unstable"] }
+}
