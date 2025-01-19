@@ -9,7 +9,6 @@ way-edges-derive.workspace = true
 util.workspace = true
 config.workspace = true
 backend.workspace = true
-ipc.workspace = true
 frontend.workspace = true
 
 gtk.workspace = true
