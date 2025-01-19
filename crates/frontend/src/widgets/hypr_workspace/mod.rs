@@ -42,9 +42,7 @@ pub fn init_widget(
         hypr_data.set(msg);
         workspace_transition.borrow_mut().flip();
     });
-    let backend_id = backend::hypr_workspace::register_hypr_event_callback(move |data| {
-        pop_signal_sender.send(*data);
-    });
+    let backend_id = backend::hypr_workspace::register_hypr_event_callback(pop_signal_sender);
 
     HyprWorkspaceCtx {
         backend_id,
