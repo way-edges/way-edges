@@ -51,12 +51,12 @@ impl PA {
         }
     }
     fn call_device(&mut self, device: &PulseAudioDevice, vinfo: VInfo) {
-        self.device_map.get(device).map(|ids| {
+        if let Some(ids) = self.device_map.get(device) {
             ids.iter().for_each(|id| {
                 let cb = self.cbs.get(id).unwrap();
-                cb.send(vinfo.clone()).unwrap();
+                cb.send(vinfo).unwrap();
             })
-        });
+        }
     }
     fn call(&mut self, device: PulseAudioDevice, vinfo: VInfo) {
         match &device {

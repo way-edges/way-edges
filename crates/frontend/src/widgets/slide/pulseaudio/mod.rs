@@ -123,13 +123,7 @@ fn common(
         }
         vinfo_old.set(vinfo);
     });
-    let backend_id = backend::pulseaudio::register_callback(
-        move |vinfo| {
-            redraw_signal.send(*vinfo);
-        },
-        device.clone(),
-    )
-    .unwrap();
+    let backend_id = backend::pulseaudio::register_callback(redraw_signal, device.clone()).unwrap();
 
     PulseAudioContext {
         backend_id,
