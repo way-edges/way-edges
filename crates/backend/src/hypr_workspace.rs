@@ -6,6 +6,7 @@ use std::{
     sync::atomic::{AtomicBool, AtomicPtr},
 };
 
+use calloop::channel::Sender;
 use hyprland::{
     event_listener::{self},
     shared::{HyprData, HyprDataActive, WorkspaceType},
@@ -25,7 +26,6 @@ fn notify_hyprland_log(msg: &str, is_critical: bool) {
 }
 
 pub type HyprCallbackId = u32;
-pub type HyprCallback = Box<dyn 'static + FnMut(&HyprGlobalData)>;
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct HyprGlobalData {
@@ -79,7 +79,7 @@ impl HyprGlobalData {
 
 struct HyprListenerCtx {
     id_cache: u32,
-    cb: HashMap<HyprCallbackId, HyprCallback>,
+    cb: HashMap<HyprCallbackId, Sender<HyprGlobalData>>,
     data: HyprGlobalData,
 }
 
@@ -92,9 +92,9 @@ impl HyprListenerCtx {
             data: HyprGlobalData::new(),
         }
     }
-    fn add_cb(&mut self, mut cb: HyprCallback) -> HyprCallbackId {
+    fn add_cb(&mut self, cb: Sender<HyprGlobalData>) -> HyprCallbackId {
         let id = self.id_cache;
-        cb(&self.data);
+        cb.send(self.data).unwrap();
         self.cb.insert(id, cb);
         self.id_cache += 1;
         id
@@ -128,12 +128,10 @@ impl HyprListenerCtx {
     }
     fn call(&mut self) {
         self.cb.values_mut().for_each(|f| {
-            f(&self.data);
+            f.send(self.data).unwrap();
         })
     }
 }
-unsafe impl Send for HyprListenerCtx {}
-unsafe impl Sync for HyprListenerCtx {}
 
 static CTX_INITED: AtomicBool = AtomicBool::new(false);
 static GLOBAL_HYPR_LISTENER_CTX: AtomicPtr<HyprListenerCtx> = AtomicPtr::new(std::ptr::null_mut());
@@ -161,10 +159,10 @@ impl WorkspaceIDToInt for WorkspaceType {
     }
 }
 
-pub fn register_hypr_event_callback(cb: impl FnMut(&HyprGlobalData) + 'static) -> HyprCallbackId {
+pub fn register_hypr_event_callback(cb: Sender<HyprGlobalData>) -> HyprCallbackId {
     init_hyprland_listener();
     let hypr = get_hypr_listener();
-    hypr.add_cb(Box::new(cb))
+    hypr.add_cb(cb)
 }
 
 pub fn unregister_hypr_event_callback(id: HyprCallbackId) {
