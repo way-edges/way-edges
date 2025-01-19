@@ -1,11 +1,6 @@
-use backend::monitor::get_monitor_context;
-use gtk::{gdk::Monitor, prelude::MonitorExt};
 use smithay_client_toolkit::shell::wlr_layer::Anchor;
 
-use crate::{
-    wayland::app::WidgetBuilder,
-    window::{WidgetContext, WindowContext, WindowContextBuilder},
-};
+use crate::{wayland::app::WidgetBuilder, window::WidgetContext};
 
 mod button;
 mod hypr_workspace;
@@ -38,15 +33,15 @@ fn process_config(conf: &mut config::Config, size: (i32, i32)) {
 }
 
 pub fn init_widget<'a>(
-    mut conf: config::Config,
+    conf: &mut config::Config,
     builder: &mut WidgetBuilder<'a>,
-) -> Result<WindowContext, String> {
+) -> Box<dyn WidgetContext> {
     let monitor = builder.app.output_state.info(&builder.output).unwrap();
     let size = monitor.modes[0].dimensions;
 
-    process_config(&mut conf, size);
+    process_config(conf, size);
 
-    let widget_ctx = match conf.widget.take().unwrap() {
+    match conf.widget.take().unwrap() {
         config::widgets::Widget::Btn(btn_config) => {
             log::debug!("initializing button");
             let w = button::init_widget(builder, size, &conf, btn_config);
@@ -71,11 +66,5 @@ pub fn init_widget<'a>(
             log::info!("initialized box");
             Box::new(w)
         }
-    };
-
-    let window = builder.build(conf, widget_ctx);
-
-    window.show();
-
-    Ok(window)
+    }
 }

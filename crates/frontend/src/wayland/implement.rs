@@ -24,8 +24,10 @@ use wayland_client::{
         wl_output, wl_pointer, wl_seat,
         wl_surface::{self, WlSurface},
     },
-    Connection, QueueHandle,
+    Connection, Proxy, QueueHandle,
 };
+
+use crate::mouse_state::MouseEvent;
 
 use super::app::{App, SurfaceData};
 
@@ -195,34 +197,12 @@ impl PointerHandler for App {
         _pointer: &wl_pointer::WlPointer,
         events: &[PointerEvent],
     ) {
-        use PointerEventKind::*;
+        // as for keys: [https://github.com/torvalds/linux/blob/fda5e3f284002ea55dac1c98c1498d6dd684046e/include/uapi/linux/input-event-codes.h#L355]
         for event in events {
-            // Ignore events for other surfaces
-            // if &event.surface != self.layer.wl_surface() {
-            //     continue;
-            // }
-            match event.kind {
-                Enter { .. } => {
-                    println!("Pointer entered @{:?}", event.position);
-                }
-                Leave { .. } => {
-                    println!("Pointer left");
-                }
-                Motion { .. } => {}
-                Press { button, .. } => {
-                    println!("Press {:x} @ {:?}", button, event.position);
-                }
-                Release { button, .. } => {
-                    println!("Release {:x} @ {:?}", button, event.position);
-                }
-                Axis {
-                    horizontal,
-                    vertical,
-                    ..
-                } => {
-                    println!("Scroll H:{horizontal:?}, V:{vertical:?}");
-                }
-            }
+            let Some(w) = SurfaceData::from_wl(&event.surface).get_widget() else {
+                continue;
+            };
+            w.lock().unwrap().on_mouse_event(_qh, event);
         }
     }
 }

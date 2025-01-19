@@ -22,7 +22,7 @@ use smithay_client_toolkit::{
         wp_fractional_scale_v1::WpFractionalScaleV1,
     },
     registry::{GlobalProxy, RegistryState},
-    seat::SeatState,
+    seat::{pointer::PointerEvent, SeatState},
     shell::{
         wlr_layer::{LayerShell, LayerSurface},
         WaylandSurface,
@@ -34,7 +34,15 @@ use wayland_client::{
     Proxy, QueueHandle,
 };
 
-use crate::animation::{AnimationList, ToggleAnimation, ToggleAnimationRc, ToggleAnimationRcWeak};
+use crate::{
+    animation::{AnimationList, ToggleAnimation, ToggleAnimationRc, ToggleAnimationRcWeak},
+    buffer::Buffer,
+    mouse_state::{MouseEvent, MouseState},
+    widgets::init_widget,
+    window::WidgetContext,
+};
+
+use super::window_pop_state::WindowPopState;
 
 pub struct App {
     pub exit: bool,
@@ -139,9 +147,23 @@ impl Group {
 }
 
 pub struct Widget {
+    pub name: String,
+    pub monitor: MonitorSpecifier,
     pub configured: bool,
+
+    pub output: WlOutput,
     pub layer: LayerSurface,
     pub scale: Scale,
+
+    pub has_update: Rc<Cell<bool>>,
+    pub pop_animation: ToggleAnimationRc,
+    pub animation_list: AnimationList,
+    pub mouse_state: MouseState,
+    pub window_pop_state: WindowPopState,
+    pub start_pos: (i32, i32),
+
+    pub w: Box<dyn WidgetContext>,
+    pub buffer: Buffer,
 }
 impl Widget {
     fn toggle_pin(&mut self) {
@@ -153,8 +175,69 @@ impl Widget {
     pub fn update_fraction(&mut self, fraction: u32) {
         self.scale.update_fraction(fraction)
     }
-    fn init_widget(conf: config::Config, app: &App) -> Result<Arc<Mutex<Self>>, String> {
-        let builder = WidgetBuilder::new(&conf, app)?;
+    pub fn on_mouse_event(&mut self, qh: &QueueHandle<App>, event: &PointerEvent) {
+        let Some(mut event) = self.mouse_state.from_wl_pointer(event) else {
+            return;
+        };
+
+        let data = &mut self.mouse_state.data;
+
+        let mut trigger_redraw = false;
+        let mut do_redraw = || {
+            if !trigger_redraw {
+                trigger_redraw = true;
+            }
+        };
+
+        fn change_pos(pose: &mut (f64, f64), start_pose: (i32, i32)) {
+            pose.0 -= start_pose.0 as f64;
+            pose.1 -= start_pose.1 as f64;
+        }
+
+        match &mut event {
+            MouseEvent::Release(pos, _) | MouseEvent::Press(pos, _) => {
+                change_pos(pos, self.start_pos)
+            }
+            MouseEvent::Enter(pos) | MouseEvent::Motion(pos) => change_pos(pos, self.start_pos),
+            MouseEvent::Leave => {}
+        }
+
+        match event {
+            MouseEvent::Release(_, key) => {
+                if key == self.window_pop_state.pin_key {
+                    self.window_pop_state.toggle_pin(data.hovering);
+                    do_redraw()
+                };
+            }
+            MouseEvent::Enter(_) => {
+                self.window_pop_state.enter();
+                do_redraw()
+            }
+            MouseEvent::Leave => {
+                self.window_pop_state.leave();
+                do_redraw()
+            }
+            MouseEvent::Motion(_) => self.window_pop_state.invalidate_pop(),
+            _ => {}
+        }
+
+        let widget_trigger_redraw = self.w.on_mouse_event(data, event);
+
+        if widget_trigger_redraw {
+            self.has_update.set(true);
+        }
+
+        if trigger_redraw || widget_trigger_redraw {
+            self.layer
+                .wl_surface()
+                .frame(qh, self.layer.wl_surface().clone());
+        }
+    }
+
+    fn init_widget(mut conf: config::Config, app: &App) -> Result<Arc<Mutex<Self>>, String> {
+        let mut builder = WidgetBuilder::new(&conf, app)?;
+        let w = init_widget(&mut conf, &mut builder);
+        let s = builder.build(conf, w);
 
         // Arc::new_cyclic(|weak| {
         //     SurfaceData::from_wl()
@@ -468,6 +551,42 @@ impl<'a> WidgetBuilder<'a> {
             has_update: Rc::new(Cell::new(true)),
             scale,
         })
+    }
+    pub fn build(self, conf: config::Config, w: Box<dyn WidgetContext>) -> Widget {
+        let Self {
+            name,
+            monitor,
+            output,
+            app,
+            layer,
+            scale,
+            has_update,
+            pop_animation,
+            animation_list,
+            pop_state,
+        } = self;
+
+        let start_pos = (0, 0);
+        let mouse_state = MouseState::new();
+        let window_pop_state = WindowPopState::new(pop_animation.clone(), pop_state);
+        let buffer = Buffer::default();
+
+        Widget {
+            name,
+            monitor,
+            configured: false,
+            output,
+            layer,
+            scale,
+            has_update,
+            pop_animation,
+            animation_list,
+            mouse_state,
+            window_pop_state,
+            start_pos,
+            w,
+            buffer,
+        }
     }
 }
 
