@@ -1,12 +1,5 @@
-use std::{
-    collections::HashMap,
-    sync::{
-        atomic::{AtomicPtr, Ordering},
-        Arc, OnceLock, RwLock,
-    },
-};
+use std::sync::atomic::{AtomicPtr, Ordering};
 
-use gtk::glib;
 use libpulse_binding::{
     self as pulse,
     callbacks::ListResult,
@@ -45,15 +38,6 @@ pub struct VInfo {
 
 static CONTEXT: AtomicPtr<Context> = AtomicPtr::new(std::ptr::null_mut());
 
-fn init_mainloop_and_context() -> (TokioMain, &'static mut Context) {
-    let m = libpulse_tokio::TokioMain::new();
-    let c = Context::new(&m, "Volume Monitor").expect("Failed to create context");
-    CONTEXT.store(Box::into_raw(Box::new(c)), Ordering::Release);
-
-    (m, unsafe {
-        CONTEXT.load(Ordering::Acquire).as_mut().unwrap()
-    })
-}
 pub fn with_context<T>(f: impl FnOnce(&mut Context) -> T) -> T {
     let a = unsafe { CONTEXT.load(Ordering::Acquire).as_mut().unwrap() };
     f(a)
@@ -73,9 +57,8 @@ pub fn drain_list<'a, T: 'a>(ls: ListResult<&'a T>) -> Option<&'a T> {
 }
 
 use libpulse_tokio::TokioMain;
-use util::notify_send;
 
-use crate::runtime::get_backend_runtime_handle;
+use crate::runtime::get_backend_runtime;
 
 use super::get_pa;
 
@@ -154,30 +137,6 @@ pub fn subscribe_cb(facility: Option<Facility>, _: Option<Operation>, index: u32
     });
 }
 
-fn context_connect(ctx: &mut Context) {
-    ctx.connect(None, FlagSet::NOAUTOSPAWN, None)
-        .map_err(|e| format!("Failed to connect context: {e}"))
-        .unwrap();
-
-    ctx.set_state_callback(Some(Box::new(move || {
-        with_context(|ctx| match ctx.get_state() {
-            pulse::context::State::Failed => {
-                log::error!("Fail to connect pulseaudio context, retry in ");
-                glib::timeout_add_seconds_once(3, init_pulseaudio_subscriber);
-            }
-            pulse::context::State::Terminated => {
-                let msg = "Pulseaudio terminated, wtf happened?!";
-                log::error!("msg");
-                notify_send("Pulseaudio terminated", msg, true);
-            }
-            pulse::context::State::Ready => with_pulse_audio_connected(ctx),
-            _ => {
-                log::warn!("Unknow state");
-            }
-        });
-    })));
-}
-
 fn setup_subscribe(ctx: &mut Context) {
     ctx.subscribe(
         InterestMaskSet::SINK | InterestMaskSet::SOURCE | InterestMaskSet::SERVER,
@@ -204,11 +163,25 @@ fn with_pulse_audio_connected(ctx: &mut Context) {
     get_initial_data(ctx);
 }
 
+fn init_mainloop_and_context() -> (TokioMain, &'static mut Context) {
+    let m = libpulse_tokio::TokioMain::new();
+    let c = Context::new(&m, "Volume Monitor").expect("Failed to create context");
+    CONTEXT.store(Box::into_raw(Box::new(c)), Ordering::Release);
+
+    (m, unsafe {
+        CONTEXT.load(Ordering::Acquire).as_mut().unwrap()
+    })
+}
+
 pub fn init_pulseaudio_subscriber() {
-    get_backend_runtime_handle().spawn(async {
+    get_backend_runtime().spawn_local(async {
         let (mut m, ctx) = init_mainloop_and_context();
 
-        match m.wait_for_ready(&ctx).await {
+        ctx.connect(None, FlagSet::NOFAIL, None)
+            .map_err(|e| format!("Failed to connect context: {e}"))
+            .unwrap();
+
+        match m.wait_for_ready(ctx).await {
             Ok(pulse::context::State::Ready) => {}
             Ok(c) => {
                 log::error!("Pulse context {:?}, not continuing", c);
@@ -218,6 +191,10 @@ pub fn init_pulseaudio_subscriber() {
             }
         }
 
-        context_connect(ctx);
+        with_pulse_audio_connected(ctx);
+
+        let res = m.run().await;
+
+        log::error!("Pulse mainloop exited with retval: {res:?}");
     });
 }
