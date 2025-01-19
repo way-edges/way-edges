@@ -7,7 +7,6 @@ resolver = "2"
 way-edges-derive = { version = "0.1.0", path = "crates/way-edges-derive" }
 config = { version = "0.1.0", path = "crates/config" }
 util = { version = "0.1.0", path = "crates/util" }
-ipc = { version = "0.1.0", path = "crates/ipc" }
 backend = { version = "0.1.0", path = "crates/backend" }
 frontend = { version = "0.1.0", path = "crates/frontend" }
 
