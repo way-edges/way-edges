@@ -9,13 +9,14 @@ use std::{cell::Cell, rc::Rc};
 use crate::{
     animation::{AnimationList, ToggleAnimationRc},
     wayland::app::{App, WidgetBuilder},
-    window::WidgetContext,
 };
 use box_traits::{BoxedWidgetCtx, BoxedWidgetGrid};
 use config::{widgets::wrapbox::BoxConfig, Config};
 use event::LastWidget;
 use grid::{builder::GrideBoxBuilder, GridBox};
 use outlook::{init_outlook, OutlookDrawConf};
+
+use super::WidgetContext;
 
 pub struct BoxContext {
     grid_box: GridBox<BoxedWidgetCtx>,

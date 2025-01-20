@@ -6,7 +6,6 @@ use std::{cell::Cell, rc::Rc};
 use crate::{
     mouse_state::{MouseEvent, MouseStateData},
     wayland::app::WidgetBuilder,
-    window::WidgetContext,
 };
 use backend::hypr_workspace::{change_to_workspace, HyprGlobalData};
 use config::{widgets::hypr_workspace::HyprWorkspaceConfig, Config};
@@ -14,6 +13,8 @@ use draw::DrawConf;
 use event::HoverData;
 use glib::clone::{Downgrade, Upgrade};
 use gtk::{gdk::BUTTON_PRIMARY, glib};
+
+use super::WidgetContext;
 
 pub fn init_widget(
     builder: &mut WidgetBuilder,

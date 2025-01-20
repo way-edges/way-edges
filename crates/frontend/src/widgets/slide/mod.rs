@@ -3,8 +3,10 @@ mod base;
 mod custom;
 mod pulseaudio;
 
-use crate::{wayland::app::WidgetBuilder, window::WidgetContext};
+use crate::wayland::app::WidgetBuilder;
 use config::{widgets::slide::base::SlideConfig, Config};
+
+use super::WidgetContext;
 
 pub fn init_widget(
     builder: &mut WidgetBuilder,

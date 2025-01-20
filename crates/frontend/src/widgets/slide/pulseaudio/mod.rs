@@ -14,7 +14,7 @@ use crate::{
     animation::ToggleAnimationRc,
     mouse_state::{MouseEvent, MouseStateData},
     wayland::app::WidgetBuilder,
-    window::WidgetContext,
+    widgets::WidgetContext,
 };
 
 use backend::pulseaudio::{
