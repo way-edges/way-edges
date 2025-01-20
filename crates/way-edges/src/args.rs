@@ -1,5 +1,6 @@
 use std::sync::OnceLock;
 
+use backend::ipc;
 use clap::{CommandFactory, Parser, Subcommand};
 
 use clap_complete::{
@@ -113,7 +114,7 @@ pub enum Command {
     Exit,
 }
 impl Command {
-    pub async fn send_ipc(&self) -> Result<(), String> {
+    pub fn send_ipc(&self) {
         let (command, args) = match self {
             Self::Add { name } => (ipc::IPC_COMMAND_ADD, vec![name.clone()]),
             Self::Remove { name } => (ipc::IPC_COMMAND_REMOVE, vec![name.clone()]),
@@ -123,21 +124,22 @@ impl Command {
             } => {
                 let (group_name, widget_name) = name
                     .split_once(':')
-                    .ok_or("widget must be specified with: `group_name:widget_name`")?;
+                    .ok_or("widget must be specified with: `group_name:widget_name`")
+                    .unwrap();
                 (
                     ipc::IPC_COMMAND_TOGGLE_PIN,
                     vec![group_name.to_string(), widget_name.to_string()],
                 )
             }
-            _ => return Ok(()),
+            _ => {
+                return;
+            }
         };
 
         ipc::send_command(ipc::CommandBody {
             command: command.to_string(),
             args,
-        })
-        .await
-        .map_err(|e| e.to_string())
+        });
     }
 }
 

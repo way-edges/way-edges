@@ -1,14 +1,12 @@
 use std::env;
 
-mod activate;
+use frontend::run_app;
+
+// mod activate;
 mod args;
-mod daemon;
+// mod daemon;
 
-// NOTE: thread 0
-#[tokio::main(flavor = "current_thread")]
-async fn main() {
-    backend::set_main_runtime_handle();
-
+fn main() {
     // completion script output, and exit
     args::if_print_completion_and_exit();
 
@@ -23,10 +21,10 @@ async fn main() {
     let cmd = args::get_args();
     match &cmd.command {
         args::Command::Daemon => {
-            daemon::daemon().await;
+            run_app();
         }
         _ => {
-            cmd.command.send_ipc().await.unwrap();
+            cmd.command.send_ipc();
         }
     }
 }

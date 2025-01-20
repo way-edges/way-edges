@@ -18,7 +18,7 @@ use wayland_client::{globals::registry_queue_init, Connection};
 
 use super::app::App;
 
-fn main() {
+pub fn run_app() {
     let conn = Connection::connect_to_env().unwrap();
 
     let (globals, event_queue) = registry_queue_init(&conn).unwrap();
@@ -65,28 +65,34 @@ fn main() {
 
     let (sender, r) = calloop::channel::channel();
     start_ipc(sender);
-    event_loop.handle().insert_source(r, |event, _, app| {
-        let calloop::channel::Event::Msg(cmd) = event else {
-            log::error!("IPC server shutdown, exiting...");
-            app.exit = true;
-            return;
-        };
-        app.handle_ipc(cmd);
-    });
+    event_loop
+        .handle()
+        .insert_source(r, |event, _, app| {
+            let calloop::channel::Event::Msg(cmd) = event else {
+                log::error!("IPC server shutdown, exiting...");
+                app.exit = true;
+                return;
+            };
+            app.handle_ipc(cmd);
+        })
+        .unwrap();
 
     let (sender, r) = calloop::channel::channel();
     start_configuration_file_watcher(sender);
-    event_loop.handle().insert_source(r, |event, _, app| {
-        if let calloop::channel::Event::Closed = event {
-            log::error!("IPC server shutdown, exiting...");
-            app.exit = true;
-            return;
-        };
-        app.reload();
-    });
+    event_loop
+        .handle()
+        .insert_source(r, |event, _, app| {
+            if let calloop::channel::Event::Closed = event {
+                log::error!("IPC server shutdown, exiting...");
+                app.exit = true;
+                return;
+            };
+            app.reload();
+        })
+        .unwrap();
 
     while !app.exit {
-        event_loop.dispatch(None, &mut app);
+        event_loop.dispatch(None, &mut app).unwrap();
     }
     log::info!("EXITED");
 }
