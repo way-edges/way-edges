@@ -8,11 +8,13 @@ use super::{base::Curve, ToggleAnimation, ToggleAnimationRc};
 #[derive(Debug)]
 pub struct AnimationList {
     inner: HashSet<ToggleAnimationRc>,
+    pub has_in_progress: bool,
 }
 impl AnimationList {
     pub fn new() -> Self {
         Self {
             inner: HashSet::new(),
+            has_in_progress: false,
         }
     }
 
@@ -27,7 +29,7 @@ impl AnimationList {
         item
     }
 
-    pub fn refresh_and_has_in_progress(&mut self) -> bool {
+    pub fn refresh(&mut self) {
         let mut has = false;
         self.inner.iter().for_each(|f| {
             let mut f = f.borrow_mut();
@@ -36,23 +38,7 @@ impl AnimationList {
                 has = true
             }
         });
-        has
-    }
-
-    pub fn has_in_progress(&self) -> bool {
-        let mut has = false;
-        self.inner.iter().for_each(|f| {
-            if !has && f.borrow().is_in_progress() {
-                has = true
-            };
-        });
-        has
-    }
-
-    pub fn refresh(&mut self) {
-        self.inner.iter().for_each(|f| {
-            f.borrow_mut().refresh();
-        });
+        self.has_in_progress = has;
     }
 
     pub fn extend_list(&mut self, l: &Self) {
