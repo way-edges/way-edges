@@ -12,8 +12,8 @@ use draw::DrawConfig;
 
 use super::WidgetContext;
 
-pub fn init_widget<'a>(
-    _: &mut WidgetBuilder<'a>,
+pub fn init_widget(
+    _: &mut WidgetBuilder,
     size: (i32, i32),
     config: &Config,
     mut btn_config: BtnConfig,

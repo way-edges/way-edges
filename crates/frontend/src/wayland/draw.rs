@@ -10,6 +10,7 @@ pub struct DrawCore {
     visible_y_func: fn((i32, i32), f64) -> i32,
     /// arg: area_size, content_size, visible_y
     /// out: x&y coordinate
+    #[allow(clippy::type_complexity)]
     xy_coordinate_func: fn((i32, i32), (i32, i32), i32) -> [i32; 2],
     /// arg: area_size, pose, preview
     preview_size_func: fn((i32, i32), &mut [i32; 4], NumOrRelative),
