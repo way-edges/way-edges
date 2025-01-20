@@ -108,6 +108,32 @@ pub struct Config {
     pub preview_size: NumOrRelative,
     pub widget: Option<Widget>,
 }
+impl Config {
+    pub fn resolve_relative(&mut self, size: (i32, i32)) {
+        // margins
+        macro_rules! calculate_margins {
+            ($m:expr, $s:expr) => {
+                if $m.is_relative() {
+                    $m.calculate_relative($s as f64);
+                }
+            };
+        }
+        calculate_margins!(self.margins.left, size.0);
+        calculate_margins!(self.margins.right, size.0);
+        calculate_margins!(self.margins.top, size.1);
+        calculate_margins!(self.margins.bottom, size.1);
+
+        // extra
+        if self.extra_trigger_size.is_relative() {
+            let max = match self.edge {
+                Anchor::LEFT | Anchor::RIGHT => size.0,
+                Anchor::TOP | Anchor::BOTTOM => size.1,
+                _ => unreachable!(),
+            };
+            self.extra_trigger_size.calculate_relative(max as f64);
+        }
+    }
+}
 
 fn dt_name() -> String {
     gtk::gio::dbus_generate_guid().to_string()
