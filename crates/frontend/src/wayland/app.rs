@@ -88,7 +88,7 @@ impl App {
             return;
         };
         if let Some(mut w) = group.get_widget(wn) {
-            w.toggle_pin()
+            w.toggle_pin(&self.queue_handle)
         }
     }
 
