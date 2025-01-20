@@ -8,7 +8,7 @@ use super::base::{
 use crate::{
     mouse_state::{MouseEvent, MouseStateData},
     wayland::app::WidgetBuilder,
-    window::WidgetContext,
+    widgets::WidgetContext,
 };
 
 use config::{

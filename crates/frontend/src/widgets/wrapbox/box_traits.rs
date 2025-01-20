@@ -53,7 +53,7 @@ impl BoxedWidgetCtx {
 impl GridItemContent for BoxedWidgetCtx {
     fn draw(&mut self) -> ImageSurface {
         let mut call_redraw = false;
-        if self.animation_list.has_in_progress() {
+        if self.animation_list.has_in_progress {
             if self.did_last_frame {
                 self.did_last_frame = false
             }

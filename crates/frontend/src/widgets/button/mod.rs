@@ -3,13 +3,14 @@ mod draw;
 use crate::{
     mouse_state::{MouseEvent, MouseStateData},
     wayland::app::WidgetBuilder,
-    window::WidgetContext,
 };
 use config::{
     widgets::{button::BtnConfig, common::KeyEventMap},
     Config,
 };
 use draw::DrawConfig;
+
+use super::WidgetContext;
 
 pub fn init_widget<'a>(
     _: &mut WidgetBuilder<'a>,

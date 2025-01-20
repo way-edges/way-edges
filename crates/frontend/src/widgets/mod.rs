@@ -1,11 +1,20 @@
+use cairo::ImageSurface;
 use smithay_client_toolkit::shell::wlr_layer::Anchor;
 
-use crate::{wayland::app::WidgetBuilder, window::WidgetContext};
+use crate::{
+    mouse_state::{MouseEvent, MouseStateData},
+    wayland::app::WidgetBuilder,
+};
 
 mod button;
 mod hypr_workspace;
 mod slide;
 mod wrapbox;
+
+pub trait WidgetContext {
+    fn redraw(&mut self) -> ImageSurface;
+    fn on_mouse_event(&mut self, data: &MouseStateData, event: MouseEvent) -> bool;
+}
 
 fn process_config(conf: &mut config::Config, size: (i32, i32)) {
     // margins

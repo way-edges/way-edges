@@ -38,8 +38,7 @@ use crate::{
     animation::{AnimationList, ToggleAnimation, ToggleAnimationRc, ToggleAnimationRcWeak},
     buffer::Buffer,
     mouse_state::{MouseEvent, MouseState},
-    widgets::init_widget,
-    window::WidgetContext,
+    widgets::{init_widget, WidgetContext},
 };
 
 use super::{draw::DrawCore, window_pop_state::WindowPopState};
@@ -277,6 +276,11 @@ impl Widget {
             .calculate_size(self.width as u32, self.height as u32);
         self.layer.set_size(w, h);
 
+        // need next frame
+        if self.needs_next_frame() {
+            redraw(&self.layer, &app.queue_handle);
+        }
+
         self.layer.commit();
     }
 
@@ -358,11 +362,7 @@ impl Widget {
         let s = builder.build(conf, w);
 
         Ok(Arc::new_cyclic(|weak| {
-            let surf_data = SurfaceData::from_wl(s.layer.wl_surface());
-            surf_data.widget.store(
-                Box::into_raw(Box::new(weak.clone())),
-                std::sync::atomic::Ordering::Relaxed,
-            );
+            SurfaceData::from_wl(s.layer.wl_surface()).store_widget(weak.clone());
             Mutex::new(s)
         }))
     }
@@ -436,24 +436,26 @@ impl PopEssential {
         let layer = self.layer.clone();
         let pop_animation = self.pop_animation.clone();
         let pop_duration = self.pop_duration;
-        app.event_loop_handle.insert_source(
-            calloop::timer::Timer::from_duration(pop_duration),
-            move |_, _, app| {
-                let Some(pop_animation) = pop_animation.upgrade() else {
-                    return calloop::timer::TimeoutAction::Drop;
-                };
-                if guard_weak.upgrade().is_none() {
-                    return calloop::timer::TimeoutAction::Drop;
-                }
+        app.event_loop_handle
+            .insert_source(
+                calloop::timer::Timer::from_duration(pop_duration),
+                move |_, _, app| {
+                    let Some(pop_animation) = pop_animation.upgrade() else {
+                        return calloop::timer::TimeoutAction::Drop;
+                    };
+                    if guard_weak.upgrade().is_none() {
+                        return calloop::timer::TimeoutAction::Drop;
+                    }
 
-                pop_animation
-                    .borrow_mut()
-                    .set_direction(crate::animation::ToggleDirection::Backward);
-                app.signal_redraw(&layer);
+                    pop_animation
+                        .borrow_mut()
+                        .set_direction(crate::animation::ToggleDirection::Backward);
+                    app.signal_redraw(&layer);
 
-                calloop::timer::TimeoutAction::Drop
-            },
-        );
+                    calloop::timer::TimeoutAction::Drop
+                },
+            )
+            .unwrap();
     }
 }
 
@@ -486,7 +488,7 @@ pub struct WidgetBuilder<'a> {
     pub animation_list: AnimationList,
     pub pop_state: Rc<UnsafeCell<Option<Rc<()>>>>,
 }
-impl<'a> WidgetBuilder<'a> {
+impl WidgetBuilder<'_> {
     pub fn new_animation(&mut self, time_cost: u64) -> ToggleAnimationRc {
         self.animation_list.new_transition(time_cost)
     }
@@ -520,7 +522,8 @@ impl<'a> WidgetBuilder<'a> {
                     func(app, msg);
                     pop_essential.pop(app);
                 }
-            });
+            })
+            .unwrap();
 
         sender
     }
@@ -537,7 +540,8 @@ impl<'a> WidgetBuilder<'a> {
             .insert_source(source, move |_, _, app| {
                 func(app);
                 pop_essential.pop(app);
-            });
+            })
+            .unwrap();
 
         ping
     }
@@ -549,7 +553,8 @@ impl<'a> WidgetBuilder<'a> {
             .event_loop_handle
             .insert_source(source, move |_, _, app| {
                 pop_essential.pop(app);
-            });
+            })
+            .unwrap();
 
         ping
     }
@@ -573,7 +578,8 @@ impl<'a> WidgetBuilder<'a> {
                     func(app, msg);
                     redraw_essential.redraw(app);
                 }
-            });
+            })
+            .unwrap();
 
         sender
     }
@@ -586,7 +592,8 @@ impl<'a> WidgetBuilder<'a> {
             .insert_source(source, move |_, _, app| {
                 func(app);
                 redraw_essential.redraw(app);
-            });
+            })
+            .unwrap();
 
         ping
     }
@@ -598,8 +605,8 @@ impl<'a> WidgetBuilder<'a> {
             .event_loop_handle
             .insert_source(source, move |_, _, app| {
                 redraw_essential.redraw(app);
-            });
-
+            })
+            .unwrap();
         ping
     }
 }
