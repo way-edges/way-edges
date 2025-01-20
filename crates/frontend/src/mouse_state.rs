@@ -9,8 +9,6 @@ pub enum MouseEvent {
     Motion((f64, f64)),
 }
 
-pub type MouseEventFunc = Box<dyn FnMut(&mut MouseStateData, MouseEvent) + 'static>;
-
 #[derive(Debug)]
 pub struct MouseStateData {
     pub hovering: bool,

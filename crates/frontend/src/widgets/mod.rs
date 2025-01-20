@@ -10,7 +10,7 @@ mod hypr_workspace;
 mod slide;
 mod wrapbox;
 
-pub trait WidgetContext {
+pub trait WidgetContext: std::fmt::Debug {
     fn redraw(&mut self) -> ImageSurface;
     fn on_mouse_event(&mut self, data: &MouseStateData, event: MouseEvent) -> bool;
 }
