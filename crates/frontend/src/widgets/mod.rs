@@ -1,5 +1,4 @@
 use cairo::ImageSurface;
-use smithay_client_toolkit::shell::wlr_layer::Anchor;
 
 use crate::{
     mouse_state::{MouseEvent, MouseStateData},
@@ -16,39 +15,12 @@ pub trait WidgetContext {
     fn on_mouse_event(&mut self, data: &MouseStateData, event: MouseEvent) -> bool;
 }
 
-fn process_config(conf: &mut config::Config, size: (i32, i32)) {
-    // margins
-    macro_rules! calculate_margins {
-        ($m:expr, $s:expr) => {
-            if $m.is_relative() {
-                $m.calculate_relative($s as f64);
-            }
-        };
-    }
-    calculate_margins!(conf.margins.left, size.0);
-    calculate_margins!(conf.margins.right, size.0);
-    calculate_margins!(conf.margins.top, size.1);
-    calculate_margins!(conf.margins.bottom, size.1);
-
-    // extra
-    if conf.extra_trigger_size.is_relative() {
-        let max = match conf.edge {
-            Anchor::LEFT | Anchor::RIGHT => size.0,
-            Anchor::TOP | Anchor::BOTTOM => size.1,
-            _ => unreachable!(),
-        };
-        conf.extra_trigger_size.calculate_relative(max as f64);
-    }
-}
-
 pub fn init_widget(
     conf: &mut config::Config,
     builder: &mut WidgetBuilder,
 ) -> Box<dyn WidgetContext> {
     let monitor = builder.app.output_state.info(&builder.output).unwrap();
     let size = monitor.modes[0].dimensions;
-
-    process_config(conf, size);
 
     match conf.widget.take().unwrap() {
         config::widgets::Widget::Btn(btn_config) => {

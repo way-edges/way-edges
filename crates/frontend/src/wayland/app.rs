@@ -357,7 +357,7 @@ impl Widget {
     }
 
     fn init_widget(mut conf: config::Config, app: &App) -> Result<Arc<Mutex<Self>>, String> {
-        let mut builder = WidgetBuilder::new(&conf, app)?;
+        let mut builder = WidgetBuilder::new(&mut conf, app)?;
         let w = init_widget(&mut conf, &mut builder);
         let s = builder.build(conf, w);
 
@@ -611,7 +611,7 @@ impl WidgetBuilder<'_> {
     }
 }
 impl<'a> WidgetBuilder<'a> {
-    fn new(conf: &config::Config, app: &'a App) -> Result<WidgetBuilder<'a>, String> {
+    fn new(conf: &mut config::Config, app: &'a App) -> Result<WidgetBuilder<'a>, String> {
         let mut outputs = app.output_state.outputs();
         let output = match &conf.monitor {
             MonitorSpecifier::ID(index) => outputs.nth(*index),
@@ -624,6 +624,9 @@ impl<'a> WidgetBuilder<'a> {
             }),
         }
         .ok_or(format!("output not found: {:?}", conf.monitor))?;
+        let monitor = app.output_state.info(&output).unwrap();
+        let size = monitor.modes[0].dimensions;
+        conf.resolve_relative(size);
 
         let surface = app.compositor_state.create_surface_with_data(
             &app.queue_handle,
