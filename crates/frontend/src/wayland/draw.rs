@@ -40,7 +40,7 @@ impl DrawCore {
     }
     pub fn draw_pop(
         &self,
-        ctx: cairo::Context,
+        ctx: &cairo::Context,
         area_size: (i32, i32),
         content_size: (i32, i32),
         animation_progress: f64,

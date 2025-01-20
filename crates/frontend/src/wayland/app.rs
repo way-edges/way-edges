@@ -15,7 +15,7 @@ use calloop::{
 use config::MonitorSpecifier;
 use glib::clone::{Downgrade, Upgrade};
 use smithay_client_toolkit::{
-    compositor::{CompositorState, SurfaceData as SctkSurfaceData, SurfaceDataExt},
+    compositor::{CompositorState, Region, SurfaceData as SctkSurfaceData, SurfaceDataExt},
     output::OutputState,
     reexports::protocols::wp::fractional_scale::v1::client::{
         wp_fractional_scale_manager_v1::WpFractionalScaleManagerV1,
@@ -146,6 +146,10 @@ impl Group {
     }
 }
 
+fn redraw(layer: &LayerSurface, qh: &QueueHandle<App>) {
+    layer.wl_surface().frame(qh, layer.wl_surface().clone());
+}
+
 pub struct Widget {
     pub name: String,
     pub monitor: MonitorSpecifier,
@@ -155,30 +159,141 @@ pub struct Widget {
     pub layer: LayerSurface,
     pub scale: Scale,
 
-    pub has_update: Rc<Cell<bool>>,
     pub pop_animation: ToggleAnimationRc,
     pub animation_list: AnimationList,
+    pub pop_animation_finished: bool,
+    pub widget_animation_finished: bool,
+
+    pub has_update: Rc<Cell<bool>>,
     pub mouse_state: MouseState,
     pub window_pop_state: WindowPopState,
     pub start_pos: (i32, i32),
 
     pub w: Box<dyn WidgetContext>,
     pub buffer: Buffer,
+    pub width: i32,
+    pub height: i32,
     pub draw_core: DrawCore,
 }
 impl Widget {
+    fn needs_next_frame(&mut self) -> bool {
+        let widget_has_animation_update = self.animation_list.has_in_progress;
+        let pop_animation_update = self.pop_animation.borrow().is_in_progress();
+
+        if widget_has_animation_update {
+            if self.widget_animation_finished {
+                self.widget_animation_finished = false
+            }
+            return true;
+        } else if !self.widget_animation_finished {
+            self.widget_animation_finished = true;
+            return true;
+        }
+
+        if pop_animation_update {
+            if self.pop_animation_finished {
+                self.pop_animation_finished = false
+            }
+            return true;
+        } else if !self.pop_animation_finished {
+            self.pop_animation_finished = true;
+            return true;
+        }
+
+        false
+    }
+    fn prepare_content(&mut self) {
+        self.animation_list.refresh();
+        self.pop_animation.borrow_mut().refresh();
+
+        // update content
+        let widget_has_animation_update = self.animation_list.has_in_progress;
+        if self.has_update.get() || widget_has_animation_update {
+            self.has_update.set(false);
+            let img = self.w.redraw();
+            let size = self.draw_core.calc_max_size((img.width(), img.height()));
+            self.width = size.0;
+            self.height = size.1;
+            self.buffer.update_buffer(img);
+        }
+    }
+    fn draw_content(&mut self, ctx: &cairo::Context) -> [i32; 4] {
+        // prepare pop
+        let content = self.buffer.get_buffer();
+        let content_size = (content.width(), content.height());
+        let area_size = (self.width, self.height);
+        let progress = self.pop_animation.borrow_mut().progress();
+
+        // translate pop
+        let pose = self
+            .draw_core
+            .draw_pop(ctx, area_size, content_size, progress);
+        self.start_pos = (pose[0], pose[1]);
+        pose
+    }
+    pub fn draw(&mut self, app: &mut App) {
+        self.prepare_content();
+
+        // create and draw content
+        let (buffer, canvas) = app
+            .pool
+            .create_buffer(
+                self.width,
+                self.height,
+                self.width * 4,
+                wayland_client::protocol::wl_shm::Format::Argb8888,
+            )
+            .unwrap();
+        let surf = unsafe {
+            cairo::ImageSurface::create_for_data_unsafe(
+                canvas.as_mut_ptr(),
+                cairo::Format::ARgb32,
+                self.width,
+                self.height,
+                self.width * 4,
+            )
+            .unwrap()
+        };
+        let ctx = cairo::Context::new(&surf).unwrap();
+        let pose = self.draw_content(&ctx);
+
+        // attach content
+        self.layer
+            .wl_surface()
+            .damage_buffer(0, 0, self.width, self.height);
+        buffer
+            .attach_to(self.layer.wl_surface())
+            .expect("buffer attach");
+
+        // set input region
+        let input_rect = self.draw_core.calc_input_region(pose);
+        let r = Region::new(&app.compositor_state).unwrap();
+        r.add(input_rect[0], input_rect[1], input_rect[2], input_rect[3]);
+        self.layer.set_input_region(Some(r.wl_region()));
+
+        // set size
+        let (w, h) = self
+            .scale
+            .calculate_size(self.width as u32, self.height as u32);
+        self.layer.set_size(w, h);
+
+        self.layer.commit();
+    }
+
     fn toggle_pin(&mut self, qh: &QueueHandle<App>) {
         self.window_pop_state
             .toggle_pin(self.mouse_state.is_hovering());
-        self.layer
-            .wl_surface()
-            .frame(qh, self.layer.wl_surface().clone());
+        redraw(&self.layer, qh);
     }
-    pub fn update_normal(&mut self, normal: u32) {
-        self.scale.update_normal(normal)
+    pub fn update_normal(&mut self, normal: u32, qh: &QueueHandle<App>) {
+        if self.scale.update_normal(normal) {
+            redraw(&self.layer, qh);
+        }
     }
-    pub fn update_fraction(&mut self, fraction: u32) {
-        self.scale.update_fraction(fraction)
+    pub fn update_fraction(&mut self, fraction: u32, qh: &QueueHandle<App>) {
+        if self.scale.update_fraction(fraction) {
+            redraw(&self.layer, qh);
+        }
     }
     pub fn on_mouse_event(&mut self, qh: &QueueHandle<App>, event: &PointerEvent) {
         let Some(mut event) = self.mouse_state.from_wl_pointer(event) else {
@@ -233,9 +348,7 @@ impl Widget {
         }
 
         if trigger_redraw || widget_trigger_redraw {
-            self.layer
-                .wl_surface()
-                .frame(qh, self.layer.wl_surface().clone());
+            redraw(&self.layer, qh);
         }
     }
 
@@ -268,11 +381,15 @@ impl Scale {
             fractional_client,
         }
     }
-    pub fn update_normal(&mut self, normal: u32) {
+    pub fn update_normal(&mut self, normal: u32) -> bool {
+        let changed = self.normal != normal;
         self.normal = normal;
+        changed
     }
-    pub fn update_fraction(&mut self, fraction: u32) {
+    pub fn update_fraction(&mut self, fraction: u32) -> bool {
+        let changed = self.fraction != fraction;
         self.fraction = fraction;
+        changed
     }
     pub fn calculate_size(&self, width: u32, height: u32) -> (u32, u32) {
         if self.fractional_client.is_some() && self.fraction != 0 {
@@ -595,6 +712,10 @@ impl<'a> WidgetBuilder<'a> {
             w,
             buffer,
             draw_core,
+            pop_animation_finished: true,
+            widget_animation_finished: true,
+            width: 1,
+            height: 1,
         }
     }
 }

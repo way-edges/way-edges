@@ -10,7 +10,7 @@ use smithay_client_toolkit::{
     registry::{ProvidesRegistryState, RegistryState},
     registry_handlers,
     seat::{
-        pointer::{PointerEvent, PointerEventKind, PointerHandler},
+        pointer::{PointerEvent, PointerHandler},
         Capability, SeatHandler, SeatState,
     },
     shell::{
@@ -24,10 +24,8 @@ use wayland_client::{
         wl_output, wl_pointer, wl_seat,
         wl_surface::{self, WlSurface},
     },
-    Connection, Proxy, QueueHandle,
+    Connection, QueueHandle,
 };
-
-use crate::mouse_state::MouseEvent;
 
 use super::app::{App, SurfaceData};
 
@@ -35,14 +33,14 @@ impl CompositorHandler for App {
     fn scale_factor_changed(
         &mut self,
         _conn: &Connection,
-        _qh: &QueueHandle<Self>,
+        qh: &QueueHandle<Self>,
         surface: &wl_surface::WlSurface,
         new_factor: i32,
     ) {
         let data = SurfaceData::from_wl(surface);
         if let Some(w) = data.get_widget() {
             let mut w = w.lock().unwrap();
-            w.update_normal(new_factor as u32);
+            w.update_normal(new_factor as u32, qh);
         }
     }
 
@@ -59,14 +57,14 @@ impl CompositorHandler for App {
     fn frame(
         &mut self,
         _conn: &Connection,
-        qh: &QueueHandle<Self>,
+        _qh: &QueueHandle<Self>,
         _surface: &wl_surface::WlSurface,
         _time: u32,
     ) {
         let Some(widget) = SurfaceData::from_wl(_surface).get_widget() else {
             return;
         };
-        widget.lock().draw();
+        widget.lock().unwrap().draw(self);
     }
 
     fn surface_enter(
@@ -129,9 +127,9 @@ impl LayerShellHandler for App {
     fn configure(
         &mut self,
         _conn: &Connection,
-        qh: &QueueHandle<Self>,
+        _qh: &QueueHandle<Self>,
         layer: &LayerSurface,
-        configure: LayerSurfaceConfigure,
+        _configure: LayerSurfaceConfigure,
         _serial: u32,
     ) {
         let Some(layer) = SurfaceData::from_wl(layer.wl_surface()).get_widget() else {
@@ -139,10 +137,10 @@ impl LayerShellHandler for App {
         };
 
         // Initiate the first draw.
-        let layer = layer.lock().unwrap();
+        let mut layer = layer.lock().unwrap();
         if !layer.configured {
             layer.configured = true;
-            layer.draw(qh, &mut self.pool);
+            layer.draw(self);
         }
     }
 }
@@ -209,18 +207,18 @@ impl PointerHandler for App {
 
 impl wayland_client::Dispatch<WpFractionalScaleV1, WlSurface> for App {
     fn event(
-        state: &mut App,
+        _state: &mut App,
         _: &WpFractionalScaleV1,
         event: wp_fractional_scale_v1::Event,
         surface: &WlSurface,
         _: &wayland_client::Connection,
-        _: &QueueHandle<App>,
+        qh: &QueueHandle<App>,
     ) {
         if let wp_fractional_scale_v1::Event::PreferredScale { scale } = event {
             let Some(w) = SurfaceData::from_wl(surface).get_widget() else {
                 return;
             };
-            w.lock().unwrap().update_fraction(scale);
+            w.lock().unwrap().update_fraction(scale, qh);
         }
     }
 }
