@@ -244,12 +244,14 @@ impl Widget {
         let w = init_widget(&mut conf, &mut builder);
         let s = builder.build(conf, w);
 
-        // Arc::new_cyclic(|weak| {
-        //     SurfaceData::from_wl()
-        //     Mutex::new(s)
-        // })
-
-        todo!()
+        Ok(Arc::new_cyclic(|weak| {
+            let surf_data = SurfaceData::from_wl(s.layer.wl_surface());
+            surf_data.widget.store(
+                Box::into_raw(Box::new(weak.clone())),
+                std::sync::atomic::Ordering::Relaxed,
+            );
+            Mutex::new(s)
+        }))
     }
 }
 
