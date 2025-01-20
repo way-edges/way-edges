@@ -167,8 +167,12 @@ pub struct Widget {
     pub draw_core: DrawCore,
 }
 impl Widget {
-    fn toggle_pin(&mut self) {
-        todo!()
+    fn toggle_pin(&mut self, qh: &QueueHandle<App>) {
+        self.window_pop_state
+            .toggle_pin(self.mouse_state.is_hovering());
+        self.layer
+            .wl_surface()
+            .frame(qh, self.layer.wl_surface().clone());
     }
     pub fn update_normal(&mut self, normal: u32) {
         self.scale.update_normal(normal)
