@@ -42,7 +42,7 @@ use crate::{
     window::WidgetContext,
 };
 
-use super::window_pop_state::WindowPopState;
+use super::{draw::DrawCore, window_pop_state::WindowPopState};
 
 pub struct App {
     pub exit: bool,
@@ -164,6 +164,7 @@ pub struct Widget {
 
     pub w: Box<dyn WidgetContext>,
     pub buffer: Buffer,
+    pub draw_core: DrawCore,
 }
 impl Widget {
     fn toggle_pin(&mut self) {
@@ -557,7 +558,7 @@ impl<'a> WidgetBuilder<'a> {
             name,
             monitor,
             output,
-            app,
+            app: _,
             layer,
             scale,
             has_update,
@@ -570,6 +571,7 @@ impl<'a> WidgetBuilder<'a> {
         let mouse_state = MouseState::new();
         let window_pop_state = WindowPopState::new(pop_animation.clone(), pop_state);
         let buffer = Buffer::default();
+        let draw_core = DrawCore::new(&conf);
 
         Widget {
             name,
@@ -586,6 +588,7 @@ impl<'a> WidgetBuilder<'a> {
             start_pos,
             w,
             buffer,
+            draw_core,
         }
     }
 }
