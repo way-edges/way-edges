@@ -237,6 +237,13 @@ impl Widget {
     }
     pub fn draw(&mut self, app: &mut App) {
         self.prepare_content();
+        log::debug!("frame");
+
+        // set size
+        let (w, h) = self
+            .scale
+            .calculate_size(self.width as u32, self.height as u32);
+        self.layer.set_size(w, h);
 
         // create and draw content
         let (buffer, canvas) = app
@@ -248,6 +255,13 @@ impl Widget {
                 wayland_client::protocol::wl_shm::Format::Argb8888,
             )
             .unwrap();
+        buffer
+            .attach_to(self.layer.wl_surface())
+            .expect("buffer attach");
+        // clear old buffer*
+        canvas.iter_mut().for_each(|i| {
+            *i = 0;
+        });
         let surf = unsafe {
             cairo::ImageSurface::create_for_data_unsafe(
                 canvas.as_mut_ptr(),
@@ -265,9 +279,6 @@ impl Widget {
         self.layer
             .wl_surface()
             .damage_buffer(0, 0, self.width, self.height);
-        buffer
-            .attach_to(self.layer.wl_surface())
-            .expect("buffer attach");
 
         // set input region
         let input_rect = self.draw_core.calc_input_region(pose);
@@ -275,18 +286,12 @@ impl Widget {
         r.add(input_rect[0], input_rect[1], input_rect[2], input_rect[3]);
         self.layer.set_input_region(Some(r.wl_region()));
 
-        // set size
-        let (w, h) = self
-            .scale
-            .calculate_size(self.width as u32, self.height as u32);
-        self.layer.set_size(w, h);
+        self.layer.commit();
 
         // need next frame
         if self.needs_next_frame() {
             redraw(&self.layer, &app.queue_handle);
         }
-
-        self.layer.commit();
     }
 
     fn toggle_pin(&mut self, qh: &QueueHandle<App>) {
@@ -308,6 +313,8 @@ impl Widget {
         let Some(mut event) = self.mouse_state.from_wl_pointer(event) else {
             return;
         };
+
+        log::debug!("pointer: {event:?}");
 
         let data = &mut self.mouse_state.data;
 
@@ -357,6 +364,7 @@ impl Widget {
         }
 
         if trigger_redraw || widget_trigger_redraw {
+            println!("trigger_redraw");
             redraw(&self.layer, qh);
         }
     }

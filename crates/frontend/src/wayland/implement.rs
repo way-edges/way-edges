@@ -37,6 +37,7 @@ impl CompositorHandler for App {
         surface: &wl_surface::WlSurface,
         new_factor: i32,
     ) {
+        log::debug!("scale factor changes");
         let data = SurfaceData::from_wl(surface);
         if let Some(w) = data.get_widget() {
             let mut w = w.lock().unwrap();
@@ -195,17 +196,16 @@ impl PointerHandler for App {
     fn pointer_frame(
         &mut self,
         _conn: &Connection,
-        _qh: &QueueHandle<Self>,
+        qh: &QueueHandle<Self>,
         _pointer: &wl_pointer::WlPointer,
         events: &[PointerEvent],
     ) {
         // as for keys: [https://github.com/torvalds/linux/blob/fda5e3f284002ea55dac1c98c1498d6dd684046e/include/uapi/linux/input-event-codes.h#L355]
-        log::debug!("pointer: {events:?}");
         for event in events {
             let Some(w) = SurfaceData::from_wl(&event.surface).get_widget() else {
                 continue;
             };
-            w.lock().unwrap().on_mouse_event(_qh, event);
+            w.lock().unwrap().on_mouse_event(qh, event);
         }
     }
 }
