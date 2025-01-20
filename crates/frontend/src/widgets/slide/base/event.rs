@@ -47,6 +47,7 @@ pub fn setup_event(conf: &Config, w_conf: &mut SlideConfig) -> ProgressState {
         func,
     }
 }
+#[derive(Debug)]
 pub struct ProgressState {
     left_pressing: bool,
 

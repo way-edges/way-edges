@@ -10,6 +10,7 @@ use super::{
 use crate::mouse_state::MouseEvent;
 
 /// last hover widget, for trigger mouse leave option for that widget.
+#[derive(Debug)]
 pub struct LastWidget {
     press_lock: bool,
     current_widget: Option<BoxedWidgetRc>,

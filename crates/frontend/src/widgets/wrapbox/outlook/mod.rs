@@ -11,6 +11,7 @@ pub fn init_outlook(outlook: Outlook, conf: &Config) -> OutlookDrawConf {
     }
 }
 
+#[derive(Debug)]
 pub enum OutlookDrawConf {
     Window(window::DrawConf),
 }

@@ -18,6 +18,7 @@ use outlook::{init_outlook, OutlookDrawConf};
 
 use super::WidgetContext;
 
+#[derive(Debug)]
 pub struct BoxContext {
     grid_box: GridBox<BoxedWidgetCtx>,
     outlook_draw_conf: OutlookDrawConf,

@@ -24,6 +24,7 @@ use crate::{
     widgets::WidgetContext,
 };
 
+#[derive(Debug)]
 pub struct CustomContext {
     #[allow(dead_code)]
     runner: Option<Runner<()>>,

@@ -29,6 +29,7 @@ use smithay_client_toolkit::{
     },
     shm::{slot::SlotPool, Shm},
 };
+use util::Z;
 use wayland_client::{
     protocol::{wl_output::WlOutput, wl_pointer, wl_surface::WlSurface},
     Proxy, QueueHandle,
@@ -149,6 +150,7 @@ fn redraw(layer: &LayerSurface, qh: &QueueHandle<App>) {
     layer.wl_surface().frame(qh, layer.wl_surface().clone());
 }
 
+#[derive(Debug)]
 pub struct Widget {
     pub name: String,
     pub monitor: MonitorSpecifier,
@@ -228,6 +230,9 @@ impl Widget {
             .draw_core
             .draw_pop(ctx, area_size, content_size, progress);
         self.start_pos = (pose[0], pose[1]);
+
+        ctx.set_source_surface(content, Z, Z).unwrap();
+        ctx.paint().unwrap();
         pose
     }
     pub fn draw(&mut self, app: &mut App) {
@@ -368,6 +373,7 @@ impl Widget {
     }
 }
 
+#[derive(Debug)]
 pub struct Scale {
     normal: u32,
     fraction: u32,
@@ -612,14 +618,13 @@ impl WidgetBuilder<'_> {
 }
 impl<'a> WidgetBuilder<'a> {
     fn new(conf: &mut config::Config, app: &'a App) -> Result<WidgetBuilder<'a>, String> {
-        let mut outputs = app.output_state.outputs();
         let output = match &conf.monitor {
-            MonitorSpecifier::ID(index) => outputs.nth(*index),
-            MonitorSpecifier::Name(name) => outputs.find(|out| {
+            MonitorSpecifier::ID(index) => app.output_state.outputs().nth(*index),
+            MonitorSpecifier::Name(name) => app.output_state.outputs().find(|out| {
                 app.output_state
                     .info(out)
                     .and_then(|info| info.name)
-                    .map(|output_name| &output_name == name)
+                    .filter(|output_name| output_name == name)
                     .is_some()
             }),
         }

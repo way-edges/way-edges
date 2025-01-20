@@ -27,6 +27,7 @@ pub fn init_widget(
     }
 }
 
+#[derive(Debug)]
 pub struct BtnContext {
     draw_conf: DrawConfig,
     pressing: bool,

@@ -132,14 +132,18 @@ impl LayerShellHandler for App {
         _configure: LayerSurfaceConfigure,
         _serial: u32,
     ) {
+        log::debug!("configure layer");
         let Some(layer) = SurfaceData::from_wl(layer.wl_surface()).get_widget() else {
             return;
         };
+
+        log::debug!("get configure widget");
 
         // Initiate the first draw.
         let mut layer = layer.lock().unwrap();
         if !layer.configured {
             layer.configured = true;
+            log::debug!("first draw");
             layer.draw(self);
         }
     }
@@ -196,6 +200,7 @@ impl PointerHandler for App {
         events: &[PointerEvent],
     ) {
         // as for keys: [https://github.com/torvalds/linux/blob/fda5e3f284002ea55dac1c98c1498d6dd684046e/include/uapi/linux/input-event-codes.h#L355]
+        log::debug!("pointer: {events:?}");
         for event in events {
             let Some(w) = SurfaceData::from_wl(&event.surface).get_widget() else {
                 continue;

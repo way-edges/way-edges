@@ -11,6 +11,7 @@ use util::draw::new_surface;
 use util::Z;
 
 // for top only
+#[derive(Debug)]
 pub struct DrawConfig {
     length: i32,
     thickness: i32,

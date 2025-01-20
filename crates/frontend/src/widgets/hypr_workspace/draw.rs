@@ -13,6 +13,7 @@ use crate::animation::ToggleAnimationRc;
 
 use super::event::HoverData;
 
+#[derive(Debug)]
 pub struct DrawConf {
     thickness: i32,
     length: i32,

@@ -53,6 +53,7 @@ pub fn init_widget(
     }
 }
 
+#[derive(Debug)]
 pub struct HyprWorkspaceCtx {
     #[allow(dead_code)]
     backend_id: u32,

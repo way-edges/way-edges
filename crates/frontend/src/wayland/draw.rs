@@ -1,6 +1,7 @@
 use config::common::NumOrRelative;
 use smithay_client_toolkit::shell::wlr_layer::Anchor;
 
+#[derive(Debug)]
 pub struct DrawCore {
     extra_trigger_size: i32,
     preview_size: NumOrRelative,

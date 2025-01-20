@@ -13,6 +13,7 @@ use util::Z;
 
 use super::font::get_pango_context;
 
+#[derive(Debug)]
 pub struct DrawConfig {
     length: i32,
     thickness: i32,

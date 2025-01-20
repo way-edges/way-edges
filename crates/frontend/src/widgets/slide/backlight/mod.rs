@@ -16,6 +16,7 @@ use config::{
     Config,
 };
 
+#[derive(Debug)]
 pub struct BacklightContext {
     #[allow(dead_code)]
     backend_id: i32,
