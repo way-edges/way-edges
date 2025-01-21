@@ -198,34 +198,36 @@ impl Widget {
         let widget_has_animation_update = self.animation_list.has_in_progress();
         let pop_animation_update = self.pop_animation.borrow().is_in_progress();
 
-        if widget_has_animation_update {
-            if self.widget_animation_finished {
-                self.widget_animation_finished = false
-            }
-            return true;
-        } else if !self.widget_animation_finished {
-            self.widget_animation_finished = true;
-            return true;
-        }
-
-        if pop_animation_update {
-            if self.pop_animation_finished {
-                self.pop_animation_finished = false
-            }
-            return true;
-        } else if !self.pop_animation_finished {
-            self.pop_animation_finished = true;
-            return true;
-        }
-
-        false
+        widget_has_animation_update
+            || !self.widget_animation_finished
+            || pop_animation_update
+            || !self.pop_animation_finished
     }
     fn prepare_content(&mut self) {
         self.animation_list.refresh();
         self.pop_animation.borrow_mut().refresh();
 
+        if self.pop_animation.borrow().is_in_progress() {
+            if self.pop_animation_finished {
+                self.pop_animation_finished = false
+            }
+        } else if !self.pop_animation_finished {
+            self.pop_animation_finished = true;
+        }
+
         // update content
-        let widget_has_animation_update = self.animation_list.has_in_progress();
+        let widget_has_animation_update = if self.animation_list.has_in_progress() {
+            if self.widget_animation_finished {
+                self.widget_animation_finished = false
+            }
+            true
+        } else if !self.widget_animation_finished {
+            self.widget_animation_finished = true;
+            true
+        } else {
+            false
+        };
+
         if self.widget_has_update || widget_has_animation_update {
             self.widget_has_update = false;
             let img = self.w.redraw();
