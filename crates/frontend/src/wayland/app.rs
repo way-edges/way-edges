@@ -1,8 +1,8 @@
 use std::{
-    cell::{Cell, UnsafeCell},
+    cell::UnsafeCell,
     collections::HashMap,
     rc::Rc,
-    sync::{atomic::AtomicPtr, Arc, Mutex, MutexGuard, Weak},
+    sync::{atomic::AtomicPtr, Arc, Mutex, Weak},
     time::Duration,
 };
 
@@ -87,8 +87,8 @@ impl App {
         let Some(Some(group)) = self.groups.get_mut(gn) else {
             return;
         };
-        if let Some(mut w) = group.get_widget(wn) {
-            w.toggle_pin(&self.queue_handle)
+        if let Some(w) = group.get_widget(wn) {
+            w.lock().unwrap().toggle_pin(self)
         }
     }
 
@@ -117,13 +117,6 @@ impl App {
         .ok()
     }
 }
-impl App {
-    fn signal_redraw(&self, layer: &LayerSurface) {
-        layer
-            .wl_surface()
-            .frame(&self.queue_handle, layer.wl_surface().clone());
-    }
-}
 
 pub struct Group {
     pub widgets: HashMap<String, Arc<Mutex<Widget>>>,
@@ -141,13 +134,9 @@ impl Group {
 
         Ok(Self { widgets })
     }
-    fn get_widget(&self, name: &str) -> Option<MutexGuard<Widget>> {
-        self.widgets.get(name).map(|w| w.lock().unwrap())
+    fn get_widget(&self, name: &str) -> Option<Arc<Mutex<Widget>>> {
+        self.widgets.get(name).cloned()
     }
-}
-
-fn redraw(layer: &LayerSurface, qh: &QueueHandle<App>) {
-    layer.wl_surface().frame(qh, layer.wl_surface().clone());
 }
 
 #[derive(Debug)]
@@ -160,12 +149,6 @@ pub struct Widget {
     pub layer: LayerSurface,
     pub scale: Scale,
 
-    pub pop_animation: ToggleAnimationRc,
-    pub animation_list: AnimationList,
-    pub pop_animation_finished: bool,
-    pub widget_animation_finished: bool,
-
-    pub has_update: Rc<Cell<bool>>,
     pub mouse_state: MouseState,
     pub window_pop_state: WindowPopState,
     pub start_pos: (i32, i32),
@@ -175,9 +158,43 @@ pub struct Widget {
     pub width: i32,
     pub height: i32,
     pub draw_core: DrawCore,
+
+    pub pop_animation: ToggleAnimationRc,
+    pub animation_list: AnimationList,
+
+    pop_animation_finished: bool,
+    widget_animation_finished: bool,
+
+    widget_has_update: bool,
+    next_frame: bool,
+    frame_available: bool,
 }
 impl Widget {
-    fn needs_next_frame(&mut self) -> bool {
+    fn call_frame(&mut self, qh: &QueueHandle<App>) {
+        self.frame_available = false;
+        self.layer
+            .wl_surface()
+            .frame(qh, self.layer.wl_surface().clone());
+    }
+    pub fn on_frame_callback(&mut self, app: &mut App) {
+        if self.has_animation_update() || self.next_frame {
+            self.draw(app);
+        } else {
+            self.frame_available = true;
+        }
+    }
+    fn on_widget_update(&mut self, app: &mut App) {
+        self.widget_has_update = true;
+        self.try_redraw(app);
+    }
+    fn try_redraw(&mut self, app: &mut App) {
+        if self.frame_available {
+            self.draw(app)
+        } else {
+            self.next_frame = true;
+        }
+    }
+    fn has_animation_update(&mut self) -> bool {
         let widget_has_animation_update = self.animation_list.has_in_progress;
         let pop_animation_update = self.pop_animation.borrow().is_in_progress();
 
@@ -209,8 +226,8 @@ impl Widget {
 
         // update content
         let widget_has_animation_update = self.animation_list.has_in_progress;
-        if self.has_update.get() || widget_has_animation_update {
-            self.has_update.set(false);
+        if self.widget_has_update || widget_has_animation_update {
+            self.widget_has_update = false;
             let img = self.w.redraw();
             let size = self.draw_core.calc_max_size((img.width(), img.height()));
             self.width = size.0;
@@ -236,6 +253,9 @@ impl Widget {
         pose
     }
     pub fn draw(&mut self, app: &mut App) {
+        if self.next_frame {
+            self.next_frame = false
+        }
         self.prepare_content();
         log::debug!("frame");
 
@@ -286,30 +306,27 @@ impl Widget {
         r.add(input_rect[0], input_rect[1], input_rect[2], input_rect[3]);
         self.layer.set_input_region(Some(r.wl_region()));
 
-        self.layer.commit();
+        self.call_frame(&app.queue_handle);
 
-        // need next frame
-        if self.needs_next_frame() {
-            redraw(&self.layer, &app.queue_handle);
-        }
+        self.layer.commit();
     }
 
-    fn toggle_pin(&mut self, qh: &QueueHandle<App>) {
+    fn toggle_pin(&mut self, app: &mut App) {
         self.window_pop_state
             .toggle_pin(self.mouse_state.is_hovering());
-        redraw(&self.layer, qh);
+        self.try_redraw(app);
     }
-    pub fn update_normal(&mut self, normal: u32, qh: &QueueHandle<App>) {
+    pub fn update_normal(&mut self, normal: u32, app: &mut App) {
         if self.scale.update_normal(normal) {
-            redraw(&self.layer, qh);
+            self.try_redraw(app);
         }
     }
-    pub fn update_fraction(&mut self, fraction: u32, qh: &QueueHandle<App>) {
+    pub fn update_fraction(&mut self, fraction: u32, app: &mut App) {
         if self.scale.update_fraction(fraction) {
-            redraw(&self.layer, qh);
+            self.try_redraw(app);
         }
     }
-    pub fn on_mouse_event(&mut self, qh: &QueueHandle<App>, event: &PointerEvent) {
+    pub fn on_mouse_event(&mut self, app: &mut App, event: &PointerEvent) {
         let Some(mut event) = self.mouse_state.from_wl_pointer(event) else {
             return;
         };
@@ -360,12 +377,9 @@ impl Widget {
         let widget_trigger_redraw = self.w.on_mouse_event(data, event);
 
         if widget_trigger_redraw {
-            self.has_update.set(true);
-        }
-
-        if trigger_redraw || widget_trigger_redraw {
-            println!("trigger_redraw");
-            redraw(&self.layer, qh);
+            self.on_widget_update(app);
+        } else if trigger_redraw {
+            self.try_redraw(app);
         }
     }
 
@@ -424,7 +438,13 @@ struct PopEssential {
     layer: LayerSurface,
 }
 impl PopEssential {
-    fn pop(&self, app: &App) {
+    fn signal_pop_redraw(layer: &LayerSurface, app: &mut App) {
+        let Some(w) = SurfaceData::from_wl(layer.wl_surface()).get_widget() else {
+            return;
+        };
+        w.lock().unwrap().try_redraw(app);
+    }
+    fn pop(&self, app: &mut App) {
         // pop up
         let guard_weak = {
             let Some(pop_animation) = self.pop_animation.upgrade() else {
@@ -441,7 +461,7 @@ impl PopEssential {
             pop_animation
                 .borrow_mut()
                 .set_direction(crate::animation::ToggleDirection::Forward);
-            app.signal_redraw(&self.layer);
+            Self::signal_pop_redraw(&self.layer, app);
 
             guard_weak
         };
@@ -464,7 +484,7 @@ impl PopEssential {
                     pop_animation
                         .borrow_mut()
                         .set_direction(crate::animation::ToggleDirection::Backward);
-                    app.signal_redraw(&layer);
+                    Self::signal_pop_redraw(&layer, app);
 
                     calloop::timer::TimeoutAction::Drop
                 },
@@ -474,17 +494,14 @@ impl PopEssential {
 }
 
 struct RedrawEssentail {
-    has_update: std::rc::Weak<Cell<bool>>,
     layer: LayerSurface,
 }
 impl RedrawEssentail {
-    fn redraw(&self, app: &App) {
-        let Some(has_update) = self.has_update.upgrade() else {
+    fn redraw(&self, app: &mut App) {
+        let Some(w) = SurfaceData::from_wl(self.layer.wl_surface()).get_widget() else {
             return;
         };
-        has_update.set(true);
-        // signal redraw
-        app.signal_redraw(&self.layer);
+        w.lock().unwrap().on_widget_update(app);
     }
 }
 
@@ -495,8 +512,6 @@ pub struct WidgetBuilder<'a> {
     pub app: &'a App,
     pub layer: LayerSurface,
     pub scale: Scale,
-
-    pub has_update: Rc<Cell<bool>>,
 
     pub pop_animation: ToggleAnimationRc,
     pub animation_list: AnimationList,
@@ -574,9 +589,8 @@ impl WidgetBuilder<'_> {
     }
 
     fn make_redraw_essentail(&self) -> RedrawEssentail {
-        let has_update = Rc::downgrade(&self.has_update);
         let layer = self.layer.clone();
-        RedrawEssentail { has_update, layer }
+        RedrawEssentail { layer }
     }
     pub fn make_redraw_channel<T: 'static>(
         &self,
@@ -695,7 +709,6 @@ impl<'a> WidgetBuilder<'a> {
             pop_animation,
             animation_list,
             pop_state,
-            has_update: Rc::new(Cell::new(true)),
             scale,
         })
     }
@@ -707,7 +720,6 @@ impl<'a> WidgetBuilder<'a> {
             app: _,
             layer,
             scale,
-            has_update,
             pop_animation,
             animation_list,
             pop_state,
@@ -726,7 +738,6 @@ impl<'a> WidgetBuilder<'a> {
             output,
             layer,
             scale,
-            has_update,
             pop_animation,
             animation_list,
             mouse_state,
@@ -739,6 +750,9 @@ impl<'a> WidgetBuilder<'a> {
             widget_animation_finished: true,
             width: 1,
             height: 1,
+            widget_has_update: true,
+            next_frame: false,
+            frame_available: true,
         }
     }
 }
