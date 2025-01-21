@@ -1,5 +1,7 @@
 use std::{cell::UnsafeCell, rc::Rc, time::Duration};
 
+use smithay_client_toolkit::seat::pointer::BTN_MIDDLE;
+
 use crate::animation::{ToggleAnimationRc, ToggleDirection};
 
 #[derive(Debug)]
@@ -16,7 +18,7 @@ impl WindowPopState {
             pin_state: false,
             pop_state,
             pop_animation: ani,
-            pin_key: 0x112,
+            pin_key: BTN_MIDDLE,
             pop_duration: Duration::from_secs(1),
         }
     }

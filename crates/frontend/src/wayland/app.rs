@@ -215,7 +215,6 @@ impl Widget {
             self.pop_animation_finished = true;
         }
 
-        // update content
         let widget_has_animation_update = if self.animation_list.has_in_progress() {
             if self.widget_animation_finished {
                 self.widget_animation_finished = false
@@ -228,6 +227,7 @@ impl Widget {
             false
         };
 
+        // update content
         if self.widget_has_update || widget_has_animation_update {
             self.widget_has_update = false;
             let img = self.w.redraw();

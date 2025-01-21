@@ -1,9 +1,9 @@
 use cairo::ImageSurface;
+use glib;
 use glib::clone::{Downgrade, Upgrade};
-use gtk::{
-    gdk::{BUTTON_SECONDARY, RGBA},
-    glib,
-};
+use gtk::gdk::RGBA;
+use smithay_client_toolkit::seat::pointer::BTN_RIGHT;
+use std::sync::Arc;
 use std::{cell::Cell, rc::Rc};
 
 use super::base::{
@@ -33,7 +33,7 @@ pub struct PulseAudioContext {
     backend_id: i32,
     device: PulseAudioDevice,
     vinfo: Rc<Cell<VInfo>>,
-    debounce_ctx: Option<Rc<()>>,
+    debounce_ctx: Option<Arc<()>>,
 
     non_mute_color: RGBA,
     mute_color: RGBA,
@@ -54,40 +54,26 @@ impl WidgetContext for PulseAudioContext {
     }
 
     fn on_mouse_event(&mut self, _: &MouseStateData, event: MouseEvent) -> bool {
+        println!("gfg");
         if let Some(p) = self.progress_state.if_change_progress(event.clone()) {
+            println!("sss");
             if !self.only_redraw_on_internal_update {
                 let mut vinfo = self.vinfo.get();
                 vinfo.vol = p;
                 self.vinfo.set(vinfo);
             }
-            let device = self.device.clone();
-            set_vol(&device, p);
 
             // debounce
-            // if let Some(last) = self.debounce_ctx.take() {
-            //     drop(last)
-            // }
-            // let ctx = Rc::new(());
-            // let device = self.device.clone();
-            // glib::timeout_add_local_once(
-            //     Duration::from_millis(1),
-            //     glib::clone!(
-            //         #[weak]
-            //         ctx,
-            //         move || {
-            //             let _ = ctx;
-            //             set_vol(&device, p);
-            //         }
-            //     ),
-            // );
-            // self.debounce_ctx = Some(ctx);
+            if let Some(last) = self.debounce_ctx.take() {
+                drop(last)
+            }
+            let ctx = Arc::new(());
+            set_vol(self.device.clone(), p, std::sync::Arc::downgrade(&ctx));
+            self.debounce_ctx = Some(ctx);
         }
 
-        match event {
-            MouseEvent::Release(_, BUTTON_SECONDARY) => {
-                set_mute(&self.device, !self.vinfo.get().is_muted);
-            }
-            _ => {}
+        if let MouseEvent::Release(_, BTN_RIGHT) = event {
+            set_mute(self.device.clone(), !self.vinfo.get().is_muted);
         }
 
         !self.only_redraw_on_internal_update
@@ -130,13 +116,13 @@ fn common(
         backend_id,
         device,
         vinfo,
-        debounce_ctx: None,
         non_mute_color,
         mute_color,
         mute_animation,
         draw_conf: DrawConfig::new(&w_conf, conf.edge),
         progress_state: setup_event(conf, &mut w_conf),
         only_redraw_on_internal_update: w_conf.redraw_only_on_internal_update,
+        debounce_ctx: None,
     }
 }
 

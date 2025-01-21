@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
 use cairo::ImageSurface;
-use gtk::gdk::{BUTTON_PRIMARY, BUTTON_SECONDARY};
+use smithay_client_toolkit::seat::pointer::{BTN_LEFT, BTN_RIGHT};
 use system_tray::{event::ActivateRequest, item::StatusNotifierItem};
 
 use backend::tray::{
@@ -335,7 +335,7 @@ impl Tray {
                     return false;
                 };
 
-                if key == BUTTON_SECONDARY {
+                if key == BTN_RIGHT {
                     // toggle state
                     match hovering {
                         HoveringItem::TrayIcon => {
@@ -374,7 +374,7 @@ impl Tray {
                             }
                         }
                     }
-                } else if key == BUTTON_PRIMARY {
+                } else if key == BTN_LEFT {
                     match hovering {
                         HoveringItem::TrayIcon => self.tray_clicked_req(),
                         HoveringItem::MenuItem(id) => self.menu_item_clicked_req(id),
