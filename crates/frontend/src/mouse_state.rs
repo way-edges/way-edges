@@ -47,6 +47,7 @@ impl MouseState {
         }
     }
 
+    #[allow(clippy::wrong_self_convention)]
     pub fn from_wl_pointer(&mut self, event: &PointerEvent) -> Option<MouseEvent> {
         use PointerEventKind::*;
         match event.kind {

@@ -174,7 +174,7 @@ pub struct RunnerResult {
 }
 
 pub fn parse_preset(preset: RingPreset, s: Sender<RunnerResult>) -> Runner<()> {
-    let runner = match preset {
+    match preset {
         RingPreset::Ram { update_interval } => ram(s, update_interval),
         RingPreset::Swap { update_interval } => swap(s, update_interval),
         RingPreset::Cpu {
@@ -190,7 +190,5 @@ pub fn parse_preset(preset: RingPreset, s: Sender<RunnerResult>) -> Runner<()> {
             update_interval,
             cmd,
         } => custom(s, update_interval, cmd),
-    };
-
-    runner
+    }
 }
