@@ -1,7 +1,7 @@
 use cairo::ImageSurface;
-use gtk::{gdk::RGBA, prelude::GdkCairoContextExt};
 
 use config::widgets::wrapbox::{OutlookMargins, OutlookWindowConfig};
+use gdk::{prelude::GdkCairoContextExt, RGBA};
 use smithay_client_toolkit::shell::wlr_layer::Anchor;
 use util::{
     draw::{color_mix, draw_rect_path, new_surface},

@@ -4,7 +4,7 @@ pub mod tray;
 
 use std::str::FromStr;
 
-use gtk::gdk::RGBA;
+use gdk::RGBA;
 use ring::RingConfig;
 use serde::Deserialize;
 use text::TextConfig;

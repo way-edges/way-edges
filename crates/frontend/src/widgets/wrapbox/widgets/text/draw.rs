@@ -1,5 +1,5 @@
 use cairo::ImageSurface;
-use gtk::gdk::RGBA;
+use gdk::RGBA;
 
 use config::widgets::wrapbox::text::TextConfig;
 use util::draw::draw_text_to_size;

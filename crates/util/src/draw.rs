@@ -1,7 +1,7 @@
 use std::f64::consts::PI;
 
 use cairo::{Format, ImageSurface, Path};
-use gtk::{gdk::RGBA, pango::Layout, prelude::GdkCairoContextExt};
+use gdk::{pango::Layout, prelude::GdkCairoContextExt, RGBA};
 
 use crate::Z;
 

@@ -5,8 +5,8 @@ edition = "2021"
 
 [dependencies]
 
-gtk4-layer-shell.workspace = true
-gtk.workspace = true
+gdk.workspace = true
+gio.workspace = true
 log.workspace = true
 env_logger.workspace = true
 lazy_static.workspace = true

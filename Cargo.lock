@@ -277,9 +277,10 @@ dependencies = [
  "cairo-rs",
  "calloop",
  "config",
+ "freedesktop-icons",
  "futures-util",
+ "gdk4",
  "gio",
- "gtk4",
  "hyprland",
  "inotify",
  "lazy_static",
@@ -586,8 +587,8 @@ version = "0.1.0"
 dependencies = [
  "educe",
  "env_logger",
- "gtk4",
- "gtk4-layer-shell",
+ "gdk4",
+ "gio",
  "lazy_static",
  "log",
  "regex",
@@ -658,6 +659,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "dirs"
+version = "5.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "44c45a9d03d6676652bcb5e724c7e988de1acad23a711b5217ab9cbecbec2225"
+dependencies = [
+ "dirs-sys",
+]
+
+[[package]]
 name = "dirs-next"
 version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -665,6 +675,18 @@ checksum = "b98cf8ebf19c3d1b223e151f99a4f9f0690dca41414773390fc824184ac833e1"
 dependencies = [
  "cfg-if",
  "dirs-sys-next",
+]
+
+[[package]]
+name = "dirs-sys"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "520f05a5cbd335fae5a99ff7a6ab8627577660ee5cfd6a94a6a929b52ff0321c"
+dependencies = [
+ "libc",
+ "option-ext",
+ "redox_users",
+ "windows-sys 0.48.0",
 ]
 
 [[package]]
@@ -825,13 +847,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "37909eebbb50d72f9059c3b6d82c0463f2ff062c9e95845c43a6c9c0355411be"
 
 [[package]]
-name = "field-offset"
-version = "0.3.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "38e2275cc4e4fc009b0669731a1e5ab7ebf11f469eaede2bab9309a5b4d6057f"
+name = "freedesktop-icons"
+version = "0.2.6"
+source = "git+https://github.com/ogios/freedesktop-icons?branch=main#b23139a6779e04e7d35e6f3f46bed2a8eb879246"
 dependencies = [
- "memoffset",
- "rustc_version",
+ "dirs",
+ "ini_core",
+ "thiserror 1.0.69",
+ "tracing",
+ "xdg",
 ]
 
 [[package]]
@@ -868,10 +892,9 @@ dependencies = [
  "chrono-tz",
  "config",
  "educe",
+ "gdk4",
  "gio",
  "glib",
- "gtk4",
- "gtk4-layer-shell",
  "interval-task",
  "lazy_static",
  "log",
@@ -1124,131 +1147,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "graphene-rs"
-version = "0.20.8"
-source = "git+https://github.com/ogios/gtk-rs-core.git?branch=0.20#1bcef084aed4f7b293049cc2d854f1b25b6d46b2"
-dependencies = [
- "glib",
- "graphene-sys",
- "libc",
-]
-
-[[package]]
-name = "graphene-sys"
-version = "0.20.8"
-source = "git+https://github.com/ogios/gtk-rs-core.git?branch=0.20#1bcef084aed4f7b293049cc2d854f1b25b6d46b2"
-dependencies = [
- "glib-sys",
- "libc",
- "pkg-config",
- "system-deps",
-]
-
-[[package]]
-name = "gsk4"
-version = "0.9.5"
-source = "git+https://github.com/ogios/gtk4-rs.git?branch=0.9#48adc5960b023ba665c88b60e4cee7de3923e7f0"
-dependencies = [
- "cairo-rs",
- "gdk4",
- "glib",
- "graphene-rs",
- "gsk4-sys",
- "libc",
- "pango",
-]
-
-[[package]]
-name = "gsk4-sys"
-version = "0.9.5"
-source = "git+https://github.com/ogios/gtk4-rs.git?branch=0.9#48adc5960b023ba665c88b60e4cee7de3923e7f0"
-dependencies = [
- "cairo-sys-rs",
- "gdk4-sys",
- "glib-sys",
- "gobject-sys",
- "graphene-sys",
- "libc",
- "pango-sys",
- "system-deps",
-]
-
-[[package]]
-name = "gtk4"
-version = "0.9.5"
-source = "git+https://github.com/ogios/gtk4-rs.git?branch=0.9#48adc5960b023ba665c88b60e4cee7de3923e7f0"
-dependencies = [
- "cairo-rs",
- "field-offset",
- "futures-channel",
- "gdk-pixbuf",
- "gdk4",
- "gio",
- "glib",
- "graphene-rs",
- "gsk4",
- "gtk4-macros",
- "gtk4-sys",
- "libc",
- "pango",
-]
-
-[[package]]
-name = "gtk4-layer-shell"
-version = "0.4.0"
-source = "git+https://github.com/ogios/gtk4-layer-shell-gir.git#9eaa764fb56dbde720715f4b4b70f9a2d1adc03e"
-dependencies = [
- "bitflags 2.8.0",
- "gdk4",
- "glib",
- "glib-sys",
- "gtk4",
- "gtk4-layer-shell-sys",
- "libc",
-]
-
-[[package]]
-name = "gtk4-layer-shell-sys"
-version = "0.3.0"
-source = "git+https://github.com/ogios/gtk4-layer-shell-gir.git#9eaa764fb56dbde720715f4b4b70f9a2d1adc03e"
-dependencies = [
- "gdk4-sys",
- "glib-sys",
- "gtk4-sys",
- "libc",
- "system-deps",
-]
-
-[[package]]
-name = "gtk4-macros"
-version = "0.9.5"
-source = "git+https://github.com/ogios/gtk4-rs.git?branch=0.9#48adc5960b023ba665c88b60e4cee7de3923e7f0"
-dependencies = [
- "proc-macro-crate",
- "proc-macro2",
- "quote",
- "syn 2.0.96",
-]
-
-[[package]]
-name = "gtk4-sys"
-version = "0.9.5"
-source = "git+https://github.com/ogios/gtk4-rs.git?branch=0.9#48adc5960b023ba665c88b60e4cee7de3923e7f0"
-dependencies = [
- "cairo-sys-rs",
- "gdk-pixbuf-sys",
- "gdk4-sys",
- "gio-sys",
- "glib-sys",
- "gobject-sys",
- "graphene-sys",
- "gsk4-sys",
- "libc",
- "pango-sys",
- "system-deps",
-]
-
-[[package]]
 name = "hashbrown"
 version = "0.15.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1341,6 +1239,15 @@ checksum = "62f822373a4fe84d4bb149bf54e584a7f4abec90e072ed49cda0edea5b95471f"
 dependencies = [
  "equivalent",
  "hashbrown",
+]
+
+[[package]]
+name = "ini_core"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7a467a31a9f439b5262fa99c17084537bff57f24703d5a09a2b5c9657ec73a61"
+dependencies = [
+ "cfg-if",
 ]
 
 [[package]]
@@ -1687,6 +1594,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1261fe7e33c73b354eab43b1273a57c8f967d0391e80353e51f764ac02cf6775"
 
 [[package]]
+name = "option-ext"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "04744f49eae99ab78e0d5c0b603ab218f515ea8cfe5a456d7629ad883a3b6e7d"
+
+[[package]]
 name = "ordered-stream"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1994,15 +1907,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "719b953e2095829ee67db738b3bfa9fa368c94900df327b3f07fe6e794d2fe1f"
 
 [[package]]
-name = "rustc_version"
-version = "0.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cfcb3a22ef46e85b45de6ee7e79d063319ebb6594faafcf1c225ea92ab6e9b92"
-dependencies = [
- "semver",
-]
-
-[[package]]
 name = "rustix"
 version = "0.38.43"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2038,12 +1942,6 @@ name = "scoped-tls"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e1cf6437eb19a8f4a6cc0f7dca544973b0b78843adbfeb3683d1a94a0024a294"
-
-[[package]]
-name = "semver"
-version = "1.0.24"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3cb6eb87a131f756572d7fb904f6e7b68633f09cca868c5df1c4b8d1a694bbba"
 
 [[package]]
 name = "serde"
@@ -2538,7 +2436,7 @@ version = "0.1.0"
 dependencies = [
  "cairo-rs",
  "downcast-rs",
- "gtk4",
+ "gdk4",
  "log",
  "notify-rust",
  "pangocairo",
@@ -2626,7 +2524,6 @@ dependencies = [
  "env_logger",
  "frontend",
  "gio",
- "gtk4",
  "log",
  "tokio",
  "util",

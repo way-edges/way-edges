@@ -1,9 +1,10 @@
 use std::f64::consts::PI;
 
 use cairo::{Context, ImageSurface};
-use gtk::{pango::Layout, prelude::GdkCairoContextExt};
 
 use config::widgets::wrapbox::tray::{HeaderDrawConfig, MenuDrawConfig};
+use gdk::prelude::GdkCairoContextExt;
+use pango::Layout;
 use util::{
     draw::{draw_text_to_size, new_surface},
     Z,

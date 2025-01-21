@@ -1,12 +1,10 @@
 use std::{
     collections::HashMap,
-    path::PathBuf,
     rc::Rc,
     sync::atomic::{AtomicBool, AtomicPtr},
 };
 
 use calloop::channel::Sender;
-use gtk::{gdk::Display, IconTheme};
 use system_tray::client::Client;
 
 use crate::runtime::get_backend_runtime_handle;
@@ -15,24 +13,16 @@ use super::event::{match_event, TrayEvent};
 
 pub(super) struct TrayContext {
     pub client: Client,
-    icon_theme: IconTheme,
     cbs: HashMap<i32, Sender<Rc<TrayEvent>>>,
     count: i32,
 }
 impl TrayContext {
     fn new(client: Client) -> Self {
-        // NOTE: INVESTIGATE LATER
-        let display = Display::default().unwrap();
-        let icon_theme = IconTheme::for_display(&display);
         Self {
             client,
-            icon_theme,
             cbs: HashMap::new(),
             count: 0,
         }
-    }
-    pub fn get_icon_theme(&self) -> &IconTheme {
-        &self.icon_theme
     }
     pub fn call(&mut self, e: TrayEvent) {
         let e = Rc::new(e);
@@ -114,12 +104,12 @@ pub fn unregister_tray(id: i32) {
     get_tray_context().remove_cb(id);
 }
 
-pub fn tray_update_item_theme_search_path(theme: String) {
-    let icon_theme = get_tray_context().get_icon_theme();
-    if !icon_theme
-        .search_path()
-        .contains(&PathBuf::from(theme.clone()))
-    {
-        icon_theme.add_search_path(theme);
-    }
-}
+// pub fn tray_update_item_theme_search_path(theme: String) {
+//     let icon_theme = get_tray_context().get_icon_theme();
+//     if !icon_theme
+//         .search_path()
+//         .contains(&PathBuf::from(theme.clone()))
+//     {
+//         icon_theme.add_search_path(theme);
+//     }
+// }

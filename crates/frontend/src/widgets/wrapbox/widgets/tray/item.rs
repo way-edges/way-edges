@@ -6,7 +6,7 @@ use system_tray::{event::ActivateRequest, item::StatusNotifierItem};
 
 use backend::tray::{
     icon::{parse_icon_given_data, parse_icon_given_name, parse_icon_given_pixmaps},
-    tray_request_event, tray_update_item_theme_search_path,
+    tray_request_event,
 };
 use config::widgets::wrapbox::tray::TrayConfig;
 use way_edges_derive::wrap_rc;
@@ -424,9 +424,10 @@ pub fn create_tray_item(
     let id = value.id.clone();
     let title = value.title.clone();
 
-    if let Some(theme) = value.icon_theme_path.clone() {
-        tray_update_item_theme_search_path(theme);
-    }
+    // TODO: ICON THEME
+    // if let Some(theme) = value.icon_theme_path.clone() {
+    //     tray_update_item_theme_search_path(theme);
+    // }
 
     // NOTE: THIS LOOK RIDICULOUS I KNOW, ANY BETTER IDEA? I'M FRUSTRATED.
     let icon = value

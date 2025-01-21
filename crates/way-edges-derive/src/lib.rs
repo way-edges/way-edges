@@ -82,13 +82,13 @@ pub fn wrap_rc(attr: TokenStream, item: TokenStream) -> TokenStream {
 
         #[derive(Debug, Clone)]
         #pub_rc struct #rc_weak_name(std::rc::Weak<std::cell::RefCell<#normal_name>>);
-        impl gtk::glib::clone::Upgrade for #rc_weak_name {
+        impl glib::clone::Upgrade for #rc_weak_name {
             type Strong = #rc_name;
             fn upgrade(&self) -> Option<Self::Strong> {
                 std::rc::Weak::upgrade(&self.0).map(#rc_name)
             }
         }
-        impl gtk::glib::clone::Downgrade for #rc_name {
+        impl glib::clone::Downgrade for #rc_name {
             type Weak = #rc_weak_name;
             fn downgrade(&self) -> Self::Weak {
                 #rc_weak_name(std::rc::Rc::downgrade(&self.0))

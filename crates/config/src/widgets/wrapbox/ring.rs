@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use crate::widgets::common::color_translate;
-use gtk::gdk::RGBA;
+use gdk::RGBA;
 use serde::{Deserialize, Deserializer};
 use util::template::{
     arg::{TemplateArgFloatProcesser, TemplateArgRingPresetProcesser},
