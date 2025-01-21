@@ -33,7 +33,7 @@ impl CompositorHandler for App {
     fn scale_factor_changed(
         &mut self,
         _conn: &Connection,
-        qh: &QueueHandle<Self>,
+        _qh: &QueueHandle<Self>,
         surface: &wl_surface::WlSurface,
         new_factor: i32,
     ) {
@@ -41,7 +41,7 @@ impl CompositorHandler for App {
         let data = SurfaceData::from_wl(surface);
         if let Some(w) = data.get_widget() {
             let mut w = w.lock().unwrap();
-            w.update_normal(new_factor as u32, qh);
+            w.update_normal(new_factor as u32, self);
         }
     }
 
@@ -65,7 +65,7 @@ impl CompositorHandler for App {
         let Some(widget) = SurfaceData::from_wl(_surface).get_widget() else {
             return;
         };
-        widget.lock().unwrap().draw(self);
+        widget.lock().unwrap().on_frame_callback(self);
     }
 
     fn surface_enter(
@@ -196,7 +196,7 @@ impl PointerHandler for App {
     fn pointer_frame(
         &mut self,
         _conn: &Connection,
-        qh: &QueueHandle<Self>,
+        _qh: &QueueHandle<Self>,
         _pointer: &wl_pointer::WlPointer,
         events: &[PointerEvent],
     ) {
@@ -205,25 +205,25 @@ impl PointerHandler for App {
             let Some(w) = SurfaceData::from_wl(&event.surface).get_widget() else {
                 continue;
             };
-            w.lock().unwrap().on_mouse_event(qh, event);
+            w.lock().unwrap().on_mouse_event(self, event);
         }
     }
 }
 
 impl wayland_client::Dispatch<WpFractionalScaleV1, WlSurface> for App {
     fn event(
-        _state: &mut App,
+        app: &mut App,
         _: &WpFractionalScaleV1,
         event: wp_fractional_scale_v1::Event,
         surface: &WlSurface,
         _: &wayland_client::Connection,
-        qh: &QueueHandle<App>,
+        _qh: &QueueHandle<App>,
     ) {
         if let wp_fractional_scale_v1::Event::PreferredScale { scale } = event {
             let Some(w) = SurfaceData::from_wl(surface).get_widget() else {
                 return;
             };
-            w.lock().unwrap().update_fraction(scale, qh);
+            w.lock().unwrap().update_fraction(scale, app);
         }
     }
 }
