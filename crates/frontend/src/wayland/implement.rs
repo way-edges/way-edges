@@ -166,7 +166,8 @@ impl SeatHandler for App {
     ) {
         // mouse
         if capability == Capability::Pointer && self.pointer.is_none() {
-            println!("Set pointer capability");
+            log::info!("got pointer capability");
+
             let pointer = self
                 .seat_state
                 .get_pointer(qh, &seat)
@@ -184,7 +185,7 @@ impl SeatHandler for App {
     ) {
         // mouse
         if capability == Capability::Pointer && self.pointer.is_some() {
-            println!("Unset pointer capability");
+            log::warn!("remove pointer capability");
             self.pointer.take().unwrap().release();
         }
     }

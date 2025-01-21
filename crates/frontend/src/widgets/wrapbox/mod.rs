@@ -133,8 +133,8 @@ impl<'a, 'b> BoxTemporaryCtx<'a, 'b> {
     ) -> calloop::channel::Sender<T> {
         let update = self.redraw_essential();
         self.builder.make_redraw_channel(move |app, msg| {
-            update();
             func(app, msg);
+            update();
         })
     }
     fn make_redraw_ping_with_func(
@@ -143,8 +143,8 @@ impl<'a, 'b> BoxTemporaryCtx<'a, 'b> {
     ) -> calloop::ping::Ping {
         let update = self.redraw_essential();
         self.builder.make_redraw_ping_with_func(move |app| {
-            update();
             func(app);
+            update();
         })
     }
     fn make_redraw_ping(&mut self) -> calloop::ping::Ping {
