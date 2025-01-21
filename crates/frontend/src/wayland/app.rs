@@ -195,7 +195,7 @@ impl Widget {
         }
     }
     fn has_animation_update(&mut self) -> bool {
-        let widget_has_animation_update = self.animation_list.has_in_progress;
+        let widget_has_animation_update = self.animation_list.has_in_progress();
         let pop_animation_update = self.pop_animation.borrow().is_in_progress();
 
         if widget_has_animation_update {
@@ -225,7 +225,7 @@ impl Widget {
         self.pop_animation.borrow_mut().refresh();
 
         // update content
-        let widget_has_animation_update = self.animation_list.has_in_progress;
+        let widget_has_animation_update = self.animation_list.has_in_progress();
         if self.widget_has_update || widget_has_animation_update {
             self.widget_has_update = false;
             let img = self.w.redraw();
@@ -331,7 +331,7 @@ impl Widget {
             return;
         };
 
-        log::debug!("pointer: {event:?}");
+        // log::debug!("pointer: {event:?}");
 
         let data = &mut self.mouse_state.data;
 
