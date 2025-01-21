@@ -11,8 +11,9 @@ use backend::hypr_workspace::{change_to_workspace, HyprGlobalData};
 use config::{widgets::hypr_workspace::HyprWorkspaceConfig, Config};
 use draw::DrawConf;
 use event::HoverData;
+use glib;
 use glib::clone::{Downgrade, Upgrade};
-use gtk::{gdk::BUTTON_PRIMARY, glib};
+use smithay_client_toolkit::seat::pointer::BTN_LEFT;
 
 use super::WidgetContext;
 
@@ -77,7 +78,7 @@ impl WidgetContext for HyprWorkspaceCtx {
         }
         match event {
             MouseEvent::Release(pos, key) => {
-                if key == BUTTON_PRIMARY {
+                if key == BTN_LEFT {
                     should_redraw = hhh!(self.hover_data, pos);
                     let id = self.hover_data.hover_id;
                     if id > 0 {

@@ -53,8 +53,14 @@ fn change_source_vol(ctx: &Context, name: &str, vol_percentage: f64) {
 }
 
 // i don't know how to set it with pulseaudio api
-pub fn set_vol(os: &PulseAudioDevice, v: f64) {
-    get_backend_runtime_handle().block_on(async {
+pub fn set_vol(os: PulseAudioDevice, v: f64, debounce_ctx: std::sync::Weak<()>) {
+    get_backend_runtime_handle().spawn(async move {
+        // debounce 1ms
+        tokio::time::sleep(std::time::Duration::from_millis(1)).await;
+
+        if debounce_ctx.upgrade().is_none() {
+            return;
+        }
         pa::with_context(|ctx| match os {
             PulseAudioDevice::DefaultSink => {
                 if let Some(name) = get_default_sink() {
@@ -67,17 +73,17 @@ pub fn set_vol(os: &PulseAudioDevice, v: f64) {
                 };
             }
             PulseAudioDevice::NamedSink(name) => {
-                change_sink_vol(ctx, name, v);
+                change_sink_vol(ctx, &name, v);
             }
             PulseAudioDevice::NamedSource(name) => {
-                change_source_vol(ctx, name, v);
+                change_source_vol(ctx, &name, v);
             }
         })
     });
 }
 
-pub fn set_mute(os: &PulseAudioDevice, mute: bool) {
-    get_backend_runtime_handle().block_on(async {
+pub fn set_mute(os: PulseAudioDevice, mute: bool) {
+    get_backend_runtime_handle().spawn_blocking(move || {
         pa::with_context(move |ctx| {
             let mut ins = ctx.introspect();
             match os {
@@ -92,12 +98,12 @@ pub fn set_mute(os: &PulseAudioDevice, mute: bool) {
                     };
                 }
                 PulseAudioDevice::NamedSink(name) => {
-                    ins.set_sink_mute_by_name(name, mute, None);
+                    ins.set_sink_mute_by_name(&name, mute, None);
                 }
                 PulseAudioDevice::NamedSource(name) => {
-                    ins.set_source_mute_by_name(name, mute, None);
+                    ins.set_source_mute_by_name(&name, mute, None);
                 }
             }
         })
-    })
+    });
 }

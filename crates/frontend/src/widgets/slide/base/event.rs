@@ -1,7 +1,7 @@
 use crate::mouse_state::MouseEvent;
 use config::widgets::slide::base::SlideConfig;
 use config::Config;
-use gtk::gdk::BUTTON_PRIMARY;
+use smithay_client_toolkit::seat::pointer::BTN_LEFT;
 use smithay_client_toolkit::shell::wlr_layer::Anchor;
 
 fn make_translate_func(edge: Anchor) -> fn(i32, i32, (f64, f64)) -> f64 {
@@ -60,13 +60,13 @@ impl ProgressState {
         let mut p = None;
         match event {
             MouseEvent::Press(pos, key) => {
-                if key == BUTTON_PRIMARY {
+                if key == BTN_LEFT {
                     self.left_pressing = true;
                     p = Some((self.func)(self.length, self.border_width, pos))
                 }
             }
             MouseEvent::Release(_, key) => {
-                if key == BUTTON_PRIMARY {
+                if key == BTN_LEFT {
                     self.left_pressing = false;
                 }
             }
