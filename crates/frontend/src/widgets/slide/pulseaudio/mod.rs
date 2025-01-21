@@ -1,7 +1,7 @@
 use cairo::ImageSurface;
+use gdk::RGBA;
 use glib;
 use glib::clone::{Downgrade, Upgrade};
-use gdk::RGBA;
 use smithay_client_toolkit::seat::pointer::BTN_RIGHT;
 use std::sync::Arc;
 use std::{cell::Cell, rc::Rc};
@@ -54,9 +54,7 @@ impl WidgetContext for PulseAudioContext {
     }
 
     fn on_mouse_event(&mut self, _: &MouseStateData, event: MouseEvent) -> bool {
-        println!("gfg");
         if let Some(p) = self.progress_state.if_change_progress(event.clone()) {
-            println!("sss");
             if !self.only_redraw_on_internal_update {
                 let mut vinfo = self.vinfo.get();
                 vinfo.vol = p;
