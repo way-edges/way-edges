@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use educe::Educe;
-use gtk::gdk::RGBA;
+use gdk::RGBA;
 use serde::Deserialize;
 use way_edges_derive::GetSize;
 

@@ -1,6 +1,7 @@
 use cairo::{Format, ImageSurface};
-use gtk::pango::Layout;
-use gtk::{gdk::RGBA, prelude::GdkCairoContextExt};
+use gdk::prelude::GdkCairoContextExt;
+use gdk::RGBA;
+use pango::Layout;
 
 use config::widgets::wrapbox::ring::RingConfig;
 use util::draw::{draw_fan, draw_text_to_size, new_surface};

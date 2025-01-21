@@ -1,8 +1,8 @@
 use cairo::{Context, ImageSurface};
-use gtk::{gdk::RGBA, prelude::GdkCairoContextExt};
 
 use backend::hypr_workspace::HyprGlobalData;
 use config::widgets::hypr_workspace::HyprWorkspaceConfig;
+use gdk::{prelude::GdkCairoContextExt, RGBA};
 use smithay_client_toolkit::shell::wlr_layer::Anchor;
 use util::{
     draw::{color_mix, color_transition, new_surface},

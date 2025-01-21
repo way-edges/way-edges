@@ -136,7 +136,7 @@ impl Config {
 }
 
 fn dt_name() -> String {
-    gtk::gio::dbus_generate_guid().to_string()
+    gio::dbus_generate_guid().to_string()
 }
 fn dt_edge() -> Anchor {
     Anchor::LEFT

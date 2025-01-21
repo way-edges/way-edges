@@ -1,12 +1,11 @@
 use super::BtnConfig;
-use gtk::cairo::Context;
-use gtk::prelude::*;
+use gdk::prelude::GdkCairoContextExt;
 use smithay_client_toolkit::shell::wlr_layer::Anchor;
 
 use std::f64::consts::PI;
 
-use gtk::cairo::{self, ImageSurface, LinearGradient};
-use gtk::gdk::RGBA;
+use cairo::{self, Context, ImageSurface, LinearGradient};
+use gdk::RGBA;
 use util::draw::new_surface;
 use util::Z;
 

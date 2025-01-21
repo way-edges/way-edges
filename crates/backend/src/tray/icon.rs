@@ -1,17 +1,13 @@
 use std::io::Cursor;
 
 use cairo::ImageSurface;
-use gio::prelude::FileExt;
-use gtk::{
+use gdk::{
     gdk_pixbuf::{Colorspace, Pixbuf},
     prelude::GdkCairoContextExt,
-    IconLookupFlags, TextDirection,
 };
 use system_tray::item::IconPixmap;
 
 use util::Z;
-
-use super::context::get_tray_context;
 
 fn new_image_surface_from_buf(buf: Pixbuf) -> ImageSurface {
     let width = buf.width();
@@ -39,17 +35,12 @@ fn scale_image_to_size(img: ImageSurface, size: i32) -> ImageSurface {
 
     surf
 }
+// TODO: ICON THEME
 pub fn parse_icon_given_name(name: &str, size: i32) -> Option<ImageSurface> {
-    let icon_paintable = get_tray_context().get_icon_theme().lookup_icon(
-        name,
-        &[],
-        size,
-        1,
-        TextDirection::Ltr,
-        IconLookupFlags::empty(),
-    );
-    let f = icon_paintable.file()?.path()?;
-    let pixbuf = Pixbuf::from_file(f.as_path()).ok()?;
+    let file_path = freedesktop_icons::lookup(name)
+        .with_size(size as u16)
+        .find()?;
+    let pixbuf = Pixbuf::from_file(file_path).ok()?;
 
     Some(scale_image_to_size(
         new_image_surface_from_buf(pixbuf),

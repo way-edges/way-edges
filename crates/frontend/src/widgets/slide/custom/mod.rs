@@ -127,7 +127,7 @@ fn interval_update(
                     f64::from_str(res.trim()).map_err(|_| "Invalid number".to_string())
                 }) {
                     Ok(progress) => {
-                        redraw_signal.send(progress);
+                        redraw_signal.send(progress).unwrap();
                     }
                     Err(err) => log::error!("slide custom updata error: {err}"),
                 }

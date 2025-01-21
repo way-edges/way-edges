@@ -14,7 +14,7 @@ use crate::{
 
 use super::WidgetContext;
 
-use gtk::gdk::BUTTON_MIDDLE;
+use gdk::BUTTON_MIDDLE;
 
 #[wrap_rc(rc = "pub", normal = "pub(super)")]
 #[derive(Educe)]

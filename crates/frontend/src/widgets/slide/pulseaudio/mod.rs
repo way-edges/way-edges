@@ -1,7 +1,7 @@
 use cairo::ImageSurface;
 use glib;
 use glib::clone::{Downgrade, Upgrade};
-use gtk::gdk::RGBA;
+use gdk::RGBA;
 use smithay_client_toolkit::seat::pointer::BTN_RIGHT;
 use std::sync::Arc;
 use std::{cell::Cell, rc::Rc};

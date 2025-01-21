@@ -1,13 +1,11 @@
-use cairo::Path;
 use config::widgets::slide::base::SlideConfig;
-use gtk::cairo::Context;
-use gtk::prelude::*;
+use gdk::prelude::GdkCairoContextExt;
 use smithay_client_toolkit::shell::wlr_layer::Anchor;
 
 use std::f64::consts::PI;
 
-use gtk::cairo::{self, ImageSurface};
-use gtk::gdk::RGBA;
+use cairo::{self, Context, ImageSurface, Path};
+use gdk::RGBA;
 use util::draw::new_surface;
 use util::Z;
 

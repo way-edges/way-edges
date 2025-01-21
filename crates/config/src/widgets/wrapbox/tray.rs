@@ -1,5 +1,5 @@
 use educe::Educe;
-use gtk::gdk::RGBA;
+use gdk::RGBA;
 use serde::Deserialize;
 
 use super::super::common;

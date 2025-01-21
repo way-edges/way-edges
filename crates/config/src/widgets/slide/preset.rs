@@ -1,4 +1,4 @@
-use gtk::gdk::RGBA;
+use gdk::RGBA;
 use serde::{Deserialize, Deserializer};
 use util::template::{
     arg::TemplateArgFloatProcesser,

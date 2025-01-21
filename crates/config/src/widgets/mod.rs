@@ -53,7 +53,7 @@ pub enum Widget {
 pub mod common {
     use std::{collections::HashMap, fmt::Display, str::FromStr};
 
-    use gtk::gdk::RGBA;
+    use gdk::RGBA;
     use serde::{self, de, Deserialize, Deserializer};
     use serde_jsonrc::Value;
     use smithay_client_toolkit::shell::wlr_layer::Anchor;
