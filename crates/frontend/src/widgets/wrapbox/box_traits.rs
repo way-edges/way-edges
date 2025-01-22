@@ -1,17 +1,13 @@
-use std::{
-    cell::{Cell, RefCell},
-    fmt::Debug,
-    rc::Rc,
-};
+use std::{cell::Cell, fmt::Debug, rc::Rc};
 
 use cairo::ImageSurface;
+use way_edges_derive::wrap_rc;
 
 use crate::{animation::AnimationList, buffer::Buffer, mouse_state::MouseEvent};
 
 use super::grid::{item::GridItemContent, GridBox};
 
-pub type BoxedWidgetRc = Rc<RefCell<dyn BoxedWidget>>;
-pub type BoxedWidgetGrid = GridBox<BoxedWidgetCtx>;
+pub type BoxedWidgetGrid = GridBox<BoxedWidgetCtxRc>;
 
 pub trait BoxedWidget: Debug {
     fn content(&mut self) -> ImageSurface;
@@ -20,13 +16,14 @@ pub trait BoxedWidget: Debug {
     }
 }
 
+#[wrap_rc(rc = "pub", normal = "pub")]
 #[derive(Debug)]
 pub struct BoxedWidgetCtx {
-    pub ctx: BoxedWidgetRc,
-    has_update: Rc<Cell<bool>>,
-    animation_list: AnimationList,
-    did_last_frame: bool,
-    buffer: Buffer,
+    pub ctx: Box<dyn BoxedWidget>,
+    pub has_update: Rc<Cell<bool>>,
+    pub animation_list: AnimationList,
+    pub did_last_frame: bool,
+    pub buffer: Buffer,
 }
 impl BoxedWidgetCtx {
     pub fn new(
@@ -35,7 +32,7 @@ impl BoxedWidgetCtx {
         has_update: Rc<Cell<bool>>,
     ) -> Self {
         Self {
-            ctx: Rc::new(RefCell::new(ctx)),
+            ctx: Box::new(ctx),
             animation_list,
             did_last_frame: true,
             buffer: Buffer::default(),
@@ -48,9 +45,6 @@ impl BoxedWidgetCtx {
     fn get_buffer(&self) -> ImageSurface {
         self.buffer.get_buffer()
     }
-}
-
-impl GridItemContent for BoxedWidgetCtx {
     fn draw(&mut self) -> ImageSurface {
         let mut call_redraw = false;
         if self.animation_list.has_in_progress() {
@@ -67,10 +61,35 @@ impl GridItemContent for BoxedWidgetCtx {
         }
 
         if call_redraw {
-            let content = self.ctx.borrow_mut().content();
+            let content = self.ctx.content();
             self.update_buffer(content);
         }
 
         self.get_buffer()
+    }
+    pub fn on_mouse_event(&mut self, event: MouseEvent) -> bool {
+        let should_update = self.ctx.on_mouse_event(event);
+        if should_update {
+            self.has_update.set(true);
+        }
+        should_update
+    }
+}
+
+impl GridItemContent for BoxedWidgetCtxRc {
+    fn draw(&mut self) -> ImageSurface {
+        self.borrow_mut().draw()
+    }
+}
+
+impl PartialEq for BoxedWidgetCtxRc {
+    fn eq(&self, other: &Self) -> bool {
+        Rc::ptr_eq(&self.0, &other.0)
+    }
+}
+
+impl PartialEq for BoxedWidgetCtxRcWeak {
+    fn eq(&self, other: &Self) -> bool {
+        std::rc::Weak::ptr_eq(&self.0, &other.0)
     }
 }
