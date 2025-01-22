@@ -178,6 +178,7 @@ pub fn binary_search_end<T: Debug + PartialOrd + Copy + Display + Default>(l: &[
     }
 }
 
+#[derive(Debug)]
 pub struct Or(pub bool);
 impl Or {
     pub fn or(&mut self, b: bool) {

@@ -1,9 +1,8 @@
-use std::rc::Rc;
-
+use glib::clone::{Downgrade, Upgrade};
 use util::Or;
 
 use super::{
-    box_traits::{BoxedWidgetGrid, BoxedWidgetRc},
+    box_traits::{BoxedWidgetCtxRc, BoxedWidgetCtxRcWeak, BoxedWidgetGrid},
     outlook::OutlookDrawConf,
     BoxContext,
 };
@@ -13,7 +12,7 @@ use crate::mouse_state::MouseEvent;
 #[derive(Debug)]
 pub struct LastWidget {
     press_lock: bool,
-    current_widget: Option<BoxedWidgetRc>,
+    current_widget: Option<BoxedWidgetCtxRcWeak>,
 }
 impl LastWidget {
     pub fn new() -> Self {
@@ -23,7 +22,7 @@ impl LastWidget {
         }
     }
 
-    fn set_current(&mut self, w: BoxedWidgetRc, pos: (f64, f64)) -> bool {
+    fn set_current(&mut self, w: BoxedWidgetCtxRc, pos: (f64, f64)) -> bool {
         if self.press_lock {
             return false;
         }
@@ -31,7 +30,8 @@ impl LastWidget {
         let mut redraw = Or(false);
 
         if let Some(last) = self.current_widget.take() {
-            if Rc::ptr_eq(&last, &w) {
+            let last = last.upgrade().unwrap();
+            if last == w {
                 // if same widget
                 redraw.or(w.borrow_mut().on_mouse_event(MouseEvent::Motion(pos)));
             } else {
@@ -43,7 +43,7 @@ impl LastWidget {
             // if no last widget
             redraw.or(w.borrow_mut().on_mouse_event(MouseEvent::Enter(pos)));
         }
-        self.current_widget = Some(w);
+        self.current_widget = Some(w.downgrade());
 
         redraw.res()
     }
@@ -56,7 +56,10 @@ impl LastWidget {
         }
 
         if let Some(last) = self.current_widget.take() {
-            last.borrow_mut().on_mouse_event(MouseEvent::Leave)
+            last.upgrade()
+                .unwrap()
+                .borrow_mut()
+                .on_mouse_event(MouseEvent::Leave)
         } else {
             false
         }
@@ -68,8 +71,8 @@ impl LastWidget {
     fn release_press(&mut self) {
         self.press_lock = false
     }
-    fn take_current(&mut self) -> Option<BoxedWidgetRc> {
-        self.current_widget.take()
+    fn take_current(&mut self) -> Option<BoxedWidgetCtxRc> {
+        self.current_widget.take().map(|w| w.upgrade().unwrap())
     }
 }
 
@@ -77,12 +80,12 @@ fn match_item(
     grid_box: &BoxedWidgetGrid,
     outlook_mouse_pos: &OutlookDrawConf,
     pos: (f64, f64),
-) -> Option<(BoxedWidgetRc, (f64, f64))> {
+) -> Option<(BoxedWidgetCtxRc, (f64, f64))> {
     let pos = outlook_mouse_pos.translate_mouse_position(pos);
 
     grid_box
         .match_item(pos)
-        .map(|(widget, pos)| (widget.ctx.clone(), pos))
+        .map(|(widget, pos)| (widget.clone(), pos))
 }
 
 pub fn on_mouse_event(event: MouseEvent, ctx: &mut BoxContext) -> bool {

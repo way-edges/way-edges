@@ -10,7 +10,7 @@ use crate::{
     animation::{AnimationList, ToggleAnimationRc},
     wayland::app::{App, WidgetBuilder},
 };
-use box_traits::{BoxedWidgetCtx, BoxedWidgetGrid};
+use box_traits::{BoxedWidgetCtx, BoxedWidgetCtxRc, BoxedWidgetGrid};
 use config::{widgets::wrapbox::BoxConfig, Config};
 use event::LastWidget;
 use grid::{builder::GrideBoxBuilder, GridBox};
@@ -20,7 +20,7 @@ use super::WidgetContext;
 
 #[derive(Debug)]
 pub struct BoxContext {
-    grid_box: GridBox<BoxedWidgetCtx>,
+    grid_box: GridBox<BoxedWidgetCtxRc>,
     outlook_draw_conf: OutlookDrawConf,
 
     last_widget: LastWidget,
@@ -61,7 +61,7 @@ pub fn init_widget(
 }
 
 fn init_boxed_widgets(window: &mut WidgetBuilder, box_conf: &mut BoxConfig) -> BoxedWidgetGrid {
-    let mut builder = GrideBoxBuilder::<BoxedWidgetCtx>::new();
+    let mut builder = GrideBoxBuilder::<BoxedWidgetCtxRc>::new();
     let ws = std::mem::take(&mut box_conf.widgets);
 
     use config::widgets::wrapbox::BoxedWidget;
@@ -96,7 +96,7 @@ fn init_boxed_widgets(window: &mut WidgetBuilder, box_conf: &mut BoxConfig) -> B
             }
         };
 
-        builder.add(boxed_widget_context, (w.index[0], w.index[1]));
+        builder.add(boxed_widget_context.make_rc(), (w.index[0], w.index[1]));
     });
 
     builder.build(box_conf.gap, box_conf.align)
@@ -137,6 +137,7 @@ impl<'a, 'b> BoxTemporaryCtx<'a, 'b> {
             update();
         })
     }
+    #[allow(dead_code)]
     fn make_redraw_ping_with_func(
         &mut self,
         mut func: impl FnMut(&mut App) + 'static,
@@ -147,6 +148,7 @@ impl<'a, 'b> BoxTemporaryCtx<'a, 'b> {
             update();
         })
     }
+    #[allow(dead_code)]
     fn make_redraw_ping(&mut self) -> calloop::ping::Ping {
         let update = self.redraw_essential();
         self.builder.make_redraw_ping_with_func(move |_| {
