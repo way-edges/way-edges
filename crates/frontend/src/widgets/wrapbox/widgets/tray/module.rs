@@ -52,7 +52,13 @@ impl TrayModule {
             return;
         }
 
-        let tray = create_tray_item(self, id.clone(), tray_item, self.config.icon_size);
+        let tray = create_tray_item(
+            self,
+            id.clone(),
+            tray_item,
+            self.config.icon_size,
+            self.config.icon_theme.as_deref(),
+        );
         self.grid.add(tray.clone());
         self.id_tray_map.insert(id, tray);
     }

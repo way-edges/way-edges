@@ -5,7 +5,7 @@ use smithay_client_toolkit::seat::pointer::{BTN_LEFT, BTN_RIGHT};
 use system_tray::{event::ActivateRequest, item::StatusNotifierItem};
 
 use backend::tray::{
-    icon::{parse_icon_given_data, parse_icon_given_name, parse_icon_given_pixmaps},
+    icon::{fallback_icon, parse_icon_given_data, parse_icon_given_name, parse_icon_given_pixmaps},
     tray_request_event,
 };
 use config::widgets::wrapbox::tray::TrayConfig;
@@ -126,20 +126,24 @@ pub struct RootMenu {
     pub submenus: Vec<MenuItem>,
 }
 impl RootMenu {
-    pub fn from_tray_menu(tray_menu: &system_tray::menu::TrayMenu, icon_size: i32) -> Self {
+    pub fn from_tray_menu(
+        tray_menu: &system_tray::menu::TrayMenu,
+        icon_size: i32,
+        icon_theme: Option<&str>,
+    ) -> Self {
         Self {
             id: tray_menu.id as i32,
-            submenus: tray_menu.submenus.vec_into_menu(icon_size),
+            submenus: tray_menu.submenus.vec_into_menu(icon_size, icon_theme),
         }
     }
 }
 trait VecTrayMenuIntoVecLocalMenuItem {
-    fn vec_into_menu(&self, icon_size: i32) -> Vec<MenuItem>;
+    fn vec_into_menu(&self, icon_size: i32, icon_theme: Option<&str>) -> Vec<MenuItem>;
 }
 impl VecTrayMenuIntoVecLocalMenuItem for Vec<system_tray::menu::MenuItem> {
-    fn vec_into_menu(&self, icon_size: i32) -> Vec<MenuItem> {
+    fn vec_into_menu(&self, icon_size: i32, icon_theme: Option<&str>) -> Vec<MenuItem> {
         self.iter()
-            .map(|item| MenuItem::from_menu_item(item, icon_size))
+            .map(|item| MenuItem::from_menu_item(item, icon_size, icon_theme))
             .collect()
     }
 }
@@ -156,17 +160,25 @@ pub struct MenuItem {
 }
 
 impl MenuItem {
-    fn from_menu_item(value: &system_tray::menu::MenuItem, icon_size: i32) -> Self {
+    fn from_menu_item(
+        value: &system_tray::menu::MenuItem,
+        icon_size: i32,
+        icon_theme: Option<&str>,
+    ) -> Self {
         let id = value.id;
         let label = value.label.clone();
         let enabled = value.enabled;
 
         let icon = value
-            .icon_name
-            .clone()
-            .filter(|name| !name.is_empty())
-            .and_then(|name| parse_icon_given_name(&name, icon_size))
-            .or(value.icon_data.clone().and_then(parse_icon_given_data));
+            .icon_data
+            .as_ref()
+            .and_then(parse_icon_given_data)
+            .or_else(|| {
+                value.icon_name.as_ref().and_then(|name| {
+                    parse_icon_given_name(name, icon_size, icon_theme)
+                        .or_else(|| fallback_icon(icon_size, icon_theme))
+                })
+            });
 
         let menu_type = match value.menu_type {
             system_tray::menu::MenuType::Separator => MenuType::Separator,
@@ -204,7 +216,7 @@ impl MenuItem {
                 value
                     .submenu
                     .iter()
-                    .map(|item| MenuItem::from_menu_item(item, icon_size))
+                    .map(|item| MenuItem::from_menu_item(item, icon_size, icon_theme))
                     .collect(),
             )
         } else {
@@ -420,25 +432,26 @@ pub fn create_tray_item(
     tray_id: TrayID,
     value: &StatusNotifierItem,
     icon_size: i32,
+    icon_theme: Option<&str>,
 ) -> TrayRc {
     let id = value.id.clone();
     let title = value.title.clone();
 
-    // TODO: ICON THEME
-    // if let Some(theme) = value.icon_theme_path.clone() {
-    //     tray_update_item_theme_search_path(theme);
-    // }
+    // NOTE: IGNORE ICON_THEME_PATH
+    // println!("THEME PATH: {:?}", value.icon_theme_path);
 
-    // NOTE: THIS LOOK RIDICULOUS I KNOW, ANY BETTER IDEA? I'M FRUSTRATED.
     let icon = value
         .icon_name
         .clone()
         .filter(|icon_name| !icon_name.is_empty())
-        .and_then(|name| parse_icon_given_name(&name, icon_size))
-        .or(value
-            .icon_pixmap
-            .as_ref()
-            .and_then(|icon_pix_map| parse_icon_given_pixmaps(icon_pix_map, icon_size)))
+        .and_then(|name| parse_icon_given_name(&name, icon_size, icon_theme))
+        .or_else(|| {
+            value
+                .icon_pixmap
+                .as_ref()
+                .and_then(|icon_pix_map| parse_icon_given_pixmaps(icon_pix_map, icon_size))
+        })
+        .or_else(|| fallback_icon(icon_size, icon_theme))
         .unwrap_or(ImageSurface::create(cairo::Format::ARgb32, icon_size, icon_size).unwrap());
 
     let menu_path = value.menu.clone();

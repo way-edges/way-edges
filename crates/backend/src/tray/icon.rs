@@ -1,4 +1,4 @@
-use std::io::Cursor;
+use std::{io::Cursor, path::PathBuf, sync::LazyLock};
 
 use cairo::ImageSurface;
 use gdk::{
@@ -35,24 +35,49 @@ fn scale_image_to_size(img: ImageSurface, size: i32) -> ImageSurface {
 
     surf
 }
-// TODO: ICON THEME
-pub fn parse_icon_given_name(name: &str, size: i32) -> Option<ImageSurface> {
-    let file_path = freedesktop_icons::lookup(name)
-        .with_size(size as u16)
-        .find()?;
-    let pixbuf = Pixbuf::from_file(file_path).ok()?;
-
+fn draw_icon_file(file_path: PathBuf, size: i32) -> Option<ImageSurface> {
+    let pixbuf = Pixbuf::from_file(file_path)
+        .inspect_err(|e| {
+            log::error!("draw_icon_file error: {e}");
+        })
+        .ok()?;
     Some(scale_image_to_size(
         new_image_surface_from_buf(pixbuf),
         size,
     ))
 }
-pub fn parse_icon_given_data(vec: Vec<u8>) -> Option<ImageSurface> {
+static DEFAULT_ICON_THEME: LazyLock<Option<String>> = LazyLock::new(linicon_theme::get_icon_theme);
+
+pub fn fallback_icon(size: i32, theme: Option<&str>) -> Option<ImageSurface> {
+    let mut builder = freedesktop_icons::lookup("image-missing")
+        .with_size(size as u16)
+        .with_size_scheme(freedesktop_icons::SizeScheme::LargerClosest)
+        .with_cache();
+    if let Some(t) = theme.or(DEFAULT_ICON_THEME.as_deref()) {
+        builder = builder.with_theme(t);
+    }
+    let file_path = builder.find()?;
+
+    draw_icon_file(file_path, size)
+}
+pub fn parse_icon_given_name(name: &str, size: i32, theme: Option<&str>) -> Option<ImageSurface> {
+    let mut builder = freedesktop_icons::lookup(name)
+        .with_size(size as u16)
+        .with_size_scheme(freedesktop_icons::SizeScheme::LargerClosest);
+    if let Some(t) = theme.or(DEFAULT_ICON_THEME.as_deref()) {
+        builder = builder.with_theme(t);
+    }
+    let file_path = builder.find()?;
+
+    draw_icon_file(file_path, size)
+}
+pub fn parse_icon_given_data(vec: &Vec<u8>) -> Option<ImageSurface> {
     ImageSurface::create_from_png(&mut Cursor::new(vec)).ok()
 }
 pub fn parse_icon_given_pixmaps(vec: &[IconPixmap], size: i32) -> Option<ImageSurface> {
     if vec.is_empty() {
-        parse_icon_given_name("image-missing", size)
+        None
+        // parse_icon_given_name("image-missing", size)
     } else {
         // we can do endian convert, but it's too hard
         // https://stackoverflow.com/a/10588779/21873016

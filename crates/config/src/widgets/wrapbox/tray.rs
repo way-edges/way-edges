@@ -74,6 +74,8 @@ impl Default for MenuDrawConfig {
 #[derive(Educe, Deserialize)]
 #[educe(Debug)]
 pub struct TrayConfig {
+    #[serde(default)]
+    pub icon_theme: Option<String>,
     #[serde(default = "dt_icon_size")]
     pub icon_size: i32,
     #[serde(default = "dt_tray_gap")]
