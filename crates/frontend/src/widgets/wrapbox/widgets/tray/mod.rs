@@ -98,7 +98,8 @@ pub fn init_widget(box_temp_ctx: &mut BoxTemporaryCtx, config: TrayConfig) -> Tr
             Event::IconUpdate(tray_icon) => {
                 if let Some(tray) = m.find_tray(id) {
                     let size = m.config.icon_size;
-                    let surf = parse_icon_given_name(tray_icon, size).unwrap_or(
+                    let theme = m.config.icon_theme.as_deref();
+                    let surf = parse_icon_given_name(tray_icon, size, theme).unwrap_or(
                         ImageSurface::create(cairo::Format::ARgb32, size, size).unwrap(),
                     );
                     tray.borrow_mut().update_icon(surf);
@@ -106,7 +107,9 @@ pub fn init_widget(box_temp_ctx: &mut BoxTemporaryCtx, config: TrayConfig) -> Tr
             }
             Event::MenuNew(tray_menu) => {
                 if let Some(tray) = m.find_tray(id) {
-                    let root_menu = RootMenu::from_tray_menu(tray_menu, m.config.icon_size);
+                    let size = m.config.icon_size;
+                    let theme = m.config.icon_theme.as_deref();
+                    let root_menu = RootMenu::from_tray_menu(tray_menu, size, theme);
                     tray.borrow_mut().update_menu(root_menu);
                 }
             }

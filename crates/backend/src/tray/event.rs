@@ -16,6 +16,7 @@ pub enum Event {
 }
 
 pub fn match_event(e: system_tray::event::Event) -> Option<TrayEvent> {
+    println!("EVENT: {e:#?}");
     match e {
         system_tray::event::Event::Add(id, status_notifier_item) => {
             Some((id, Event::ItemNew(status_notifier_item)))
