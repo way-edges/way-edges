@@ -11,7 +11,6 @@ use backend::tray::{
     icon::parse_icon_given_name, init_tray_client, register_tray, unregister_tray, Event,
 };
 use config::widgets::wrapbox::tray::TrayConfig;
-use glib::clone::{Downgrade, Upgrade};
 use item::RootMenu;
 use module::{new_tray_module, TrayModuleRc};
 use util::Or;

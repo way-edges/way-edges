@@ -13,7 +13,6 @@ use calloop::{
     LoopHandle, LoopSignal,
 };
 use config::MonitorSpecifier;
-use glib::clone::{Downgrade, Upgrade};
 use smithay_client_toolkit::{
     compositor::{CompositorState, SurfaceData as SctkSurfaceData, SurfaceDataExt},
     output::OutputState,

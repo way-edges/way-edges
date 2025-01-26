@@ -1,4 +1,3 @@
-use glib::clone::{Downgrade, Upgrade};
 use util::Or;
 
 use super::{

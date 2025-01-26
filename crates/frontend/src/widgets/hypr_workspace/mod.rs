@@ -11,8 +11,6 @@ use backend::hypr_workspace::{change_to_workspace, HyprGlobalData};
 use config::{widgets::hypr_workspace::HyprWorkspaceConfig, Config};
 use draw::DrawConf;
 use event::HoverData;
-use glib;
-use glib::clone::{Downgrade, Upgrade};
 use smithay_client_toolkit::seat::pointer::BTN_LEFT;
 
 use super::WidgetContext;
