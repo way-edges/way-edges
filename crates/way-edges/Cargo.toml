@@ -11,7 +11,6 @@ config.workspace = true
 backend.workspace = true
 frontend.workspace = true
 
-gio.workspace = true
 log.workspace = true
 env_logger.workspace = true
 tokio.workspace = true

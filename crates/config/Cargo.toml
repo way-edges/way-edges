@@ -6,7 +6,6 @@ edition = "2021"
 [dependencies]
 
 gdk.workspace = true
-gio.workspace = true
 log.workspace = true
 env_logger.workspace = true
 lazy_static.workspace = true
