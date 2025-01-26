@@ -22,7 +22,7 @@ jobs:
 
       - name: Build and compress
         run: |
-          cargo build --release
+          RUSTFLAGS="--cfg tokio_unstable" cargo build --release
           chmod +x target/release/way-edges
           tar zcf target/release/way-edges_linux-x86_64.tar.gz target/release/way-edges
 
