@@ -12,11 +12,11 @@ use calloop::{
     ping::{make_ping, Ping},
     LoopHandle, LoopSignal,
 };
-use config::{common::NumOrRelative, MonitorSpecifier};
+use config::MonitorSpecifier;
 use glib::clone::{Downgrade, Upgrade};
 use smithay_client_toolkit::{
     compositor::{CompositorState, SurfaceData as SctkSurfaceData, SurfaceDataExt},
-    output::{OutputInfo, OutputState},
+    output::OutputState,
     reexports::protocols::wp::{
         fractional_scale::v1::client::{
             wp_fractional_scale_manager_v1::WpFractionalScaleManagerV1,
@@ -27,7 +27,7 @@ use smithay_client_toolkit::{
     registry::{GlobalProxy, RegistryState},
     seat::{pointer::PointerEvent, SeatState},
     shell::{
-        wlr_layer::{Anchor, LayerShell, LayerSurface},
+        wlr_layer::{LayerShell, LayerSurface},
         WaylandSurface,
     },
     shm::{slot::SlotPool, Shm},
