@@ -123,29 +123,41 @@ impl App {
 }
 
 pub struct Group {
-    pub widgets: HashMap<String, Arc<Mutex<Widget>>>,
+    named_widgets: HashMap<String, Arc<Mutex<Widget>>>,
+    #[allow(dead_code)]
+    unnamed_widgets: Box<[Arc<Mutex<Widget>>]>,
 }
 impl Group {
     fn init_group(widgets_config: Vec<config::Config>, app: &App) -> Result<Self, String> {
-        let widgets = widgets_config
-            .into_iter()
-            .map(|cfg| {
-                let widget_name = cfg.name.clone();
-                let window_ctx = Widget::init_widget(cfg, app)?;
-                Ok((widget_name, window_ctx))
-            })
-            .collect::<Result<HashMap<String, Arc<Mutex<Widget>>>, String>>()?;
+        let mut named = HashMap::new();
+        let mut unnamed = Vec::new();
 
-        Ok(Self { widgets })
+        for conf in widgets_config.into_iter() {
+            let name = conf.name.clone();
+            let ctx = Widget::init_widget(conf, app)?;
+
+            if let Some(name) = name {
+                named.insert(name, ctx);
+            } else {
+                unnamed.push(ctx);
+            };
+        }
+
+        named.shrink_to_fit();
+        let unnamed = unnamed.into_boxed_slice();
+
+        Ok(Self {
+            named_widgets: named,
+            unnamed_widgets: unnamed,
+        })
     }
     fn get_widget(&self, name: &str) -> Option<Arc<Mutex<Widget>>> {
-        self.widgets.get(name).cloned()
+        self.named_widgets.get(name).cloned()
     }
 }
 
 #[derive(Debug)]
 pub struct Widget {
-    pub name: String,
     pub monitor: MonitorSpecifier,
     pub configured: bool,
 
@@ -536,7 +548,6 @@ impl RedrawEssentail {
 }
 
 pub struct WidgetBuilder<'a> {
-    pub name: String,
     pub monitor: MonitorSpecifier,
     pub output: WlOutput,
     pub app: &'a App,
@@ -750,7 +761,6 @@ impl<'a> WidgetBuilder<'a> {
         let animation_list = AnimationList::new();
 
         Ok(Self {
-            name: conf.name.clone(),
             monitor: conf.monitor.clone(),
             output,
             app,
@@ -763,7 +773,6 @@ impl<'a> WidgetBuilder<'a> {
     }
     pub fn build(self, conf: config::Config, w: Box<dyn WidgetContext>) -> Widget {
         let Self {
-            name,
             monitor,
             output,
             app: _,
@@ -781,7 +790,6 @@ impl<'a> WidgetBuilder<'a> {
         let draw_core = DrawCore::new(&conf);
 
         Widget {
-            name,
             monitor,
             configured: false,
             output,

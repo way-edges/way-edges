@@ -52,8 +52,8 @@ struct ConfigShadow {
     #[serde(default)]
     pub monitor: MonitorSpecifier,
 
-    #[serde(default = "dt_name")]
-    pub name: String,
+    #[serde(default)]
+    pub name: Option<String>,
 
     #[serde(default)]
     pub ignore_exclusive: bool,
@@ -101,7 +101,7 @@ pub struct Config {
     pub layer: Layer,
     pub margins: Margins,
     pub monitor: MonitorSpecifier,
-    pub name: String,
+    pub name: Option<String>,
     pub ignore_exclusive: bool,
     pub transition_duration: u64,
     pub extra_trigger_size: NumOrRelative,
@@ -135,9 +135,6 @@ impl Config {
     }
 }
 
-fn dt_name() -> String {
-    gio::dbus_generate_guid().to_string()
-}
 fn dt_edge() -> Anchor {
     Anchor::LEFT
 }
