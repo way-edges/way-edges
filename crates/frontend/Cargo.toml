@@ -4,7 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-glib.workspace = true
 gdk.workspace = true
 cairo.workspace = true
 pango.workspace = true

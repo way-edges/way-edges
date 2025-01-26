@@ -943,7 +943,6 @@ dependencies = [
  "config",
  "educe",
  "gdk4",
- "glib",
  "interval-task",
  "lazy_static",
  "log",
