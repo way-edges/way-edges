@@ -438,7 +438,10 @@ impl Scale {
             if scale == 0 {
                 scale = 120
             }
-            let size = ((width * 120 + 60) / scale, (height * 120 + 60) / scale);
+            let size = (
+                ((width * 120 + 60) / scale).max(1),
+                ((height * 120 + 60) / scale).max(1),
+            );
 
             // viewport
             fractional.2.set_destination(size.0 as i32, size.1 as i32);
