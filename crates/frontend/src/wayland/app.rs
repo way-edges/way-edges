@@ -15,7 +15,7 @@ use calloop::{
 use config::MonitorSpecifier;
 use glib::clone::{Downgrade, Upgrade};
 use smithay_client_toolkit::{
-    compositor::{CompositorState, Region, SurfaceData as SctkSurfaceData, SurfaceDataExt},
+    compositor::{CompositorState, SurfaceData as SctkSurfaceData, SurfaceDataExt},
     output::OutputState,
     reexports::protocols::wp::{
         fractional_scale::v1::client::{
@@ -159,8 +159,8 @@ pub struct Widget {
 
     pub w: Box<dyn WidgetContext>,
     pub buffer: Buffer,
-    pub width: i32,
-    pub height: i32,
+    pub content_width: i32,
+    pub content_height: i32,
     pub draw_core: DrawCore,
 
     pub pop_animation: ToggleAnimationRc,
@@ -235,43 +235,32 @@ impl Widget {
         if self.widget_has_update || widget_has_animation_update {
             self.widget_has_update = false;
             let img = self.w.redraw();
-            let size = self.draw_core.calc_max_size((img.width(), img.height()));
-            self.width = size.0;
-            self.height = size.1;
+            self.content_width = img.width();
+            self.content_height = img.height();
             self.buffer.update_buffer(img);
         }
-    }
-    fn draw_content(&mut self, ctx: &cairo::Context) -> [i32; 4] {
-        // prepare pop
-        let content = self.buffer.get_buffer();
-        let content_size = (content.width(), content.height());
-        let area_size = (self.width, self.height);
-        let progress = self.pop_animation.borrow_mut().progress();
-
-        // translate pop
-        let pose = self
-            .draw_core
-            .draw_pop(ctx, area_size, content_size, progress);
-        self.start_pos = (pose[0], pose[1]);
-
-        ctx.set_source_surface(content, Z, Z).unwrap();
-        ctx.paint().unwrap();
-        pose
     }
     pub fn draw(&mut self, app: &mut App) {
         if self.next_frame {
             self.next_frame = false
         }
         self.prepare_content();
-        log::debug!("frame");
+
+        let progress = self.pop_animation.borrow_mut().progress();
+        let coordinate = self
+            .draw_core
+            .calc_coordinate((self.content_width, self.content_height), progress);
+        self.start_pos = (coordinate[0], coordinate[1]);
+        let width = coordinate[2];
+        let height = coordinate[3];
 
         // create and draw content
         let (buffer, canvas) = app
             .pool
             .create_buffer(
-                self.width,
-                self.height,
-                self.width * 4,
+                width,
+                height,
+                width * 4,
                 wayland_client::protocol::wl_shm::Format::Argb8888,
             )
             .unwrap();
@@ -286,30 +275,23 @@ impl Widget {
             cairo::ImageSurface::create_for_data_unsafe(
                 canvas.as_mut_ptr(),
                 cairo::Format::ARgb32,
-                self.width,
-                self.height,
-                self.width * 4,
+                width,
+                height,
+                width * 4,
             )
             .unwrap()
         };
         let ctx = cairo::Context::new(&surf).unwrap();
-        let pose = self.draw_content(&ctx);
+        ctx.translate(coordinate[0] as f64, coordinate[1] as f64);
+        ctx.set_source_surface(self.buffer.get_buffer(), Z, Z)
+            .unwrap();
+        ctx.paint().unwrap();
 
         // attach content
-        self.layer
-            .wl_surface()
-            .damage_buffer(0, 0, self.width, self.height);
-
-        // set input region
-        let input_rect = self.draw_core.calc_input_region(pose);
-        let r = Region::new(&app.compositor_state).unwrap();
-        r.add(input_rect[0], input_rect[1], input_rect[2], input_rect[3]);
-        self.layer.set_input_region(Some(r.wl_region()));
+        self.layer.wl_surface().damage_buffer(0, 0, width, height);
 
         // set size
-        let (w, h) = self
-            .scale
-            .calculate_size(self.width as u32, self.height as u32);
+        let (w, h) = self.scale.calculate_size(width as u32, height as u32);
         self.layer.set_size(w, h);
 
         self.call_frame(&app.queue_handle);
@@ -341,8 +323,6 @@ impl Widget {
         let Some(mut event) = self.mouse_state.from_wl_pointer(event) else {
             return;
         };
-
-        // log::debug!("pointer: {event:?}");
 
         let data = &mut self.mouse_state.data;
 
@@ -817,8 +797,8 @@ impl<'a> WidgetBuilder<'a> {
             draw_core,
             pop_animation_finished: true,
             widget_animation_finished: true,
-            width: 1,
-            height: 1,
+            content_width: 1,
+            content_height: 1,
             widget_has_update: true,
             next_frame: false,
             frame_available: true,
