@@ -67,7 +67,7 @@ type PopCoordinateFunc = fn((i32, i32), i32, i32) -> [i32; 4];
 fn make_pop_coordiante_pose_func(edge: Anchor) -> PopCoordinateFunc {
     fn top(size: (i32, i32), visible_y: i32, extra: i32) -> [i32; 4] {
         let x = 0;
-        let y = size.1 - visible_y;
+        let y = visible_y - size.1;
         let w = size.0;
         let h = visible_y + extra;
         [x, y, w, h]
@@ -80,7 +80,7 @@ fn make_pop_coordiante_pose_func(edge: Anchor) -> PopCoordinateFunc {
         [x, y, w, h]
     }
     fn left(size: (i32, i32), visible_y: i32, extra: i32) -> [i32; 4] {
-        let x = size.0 - visible_y;
+        let x = visible_y - size.0;
         let y = 0;
         let w = visible_y + extra;
         let h = size.1;
