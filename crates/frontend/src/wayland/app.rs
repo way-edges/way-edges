@@ -353,16 +353,15 @@ impl Widget {
             }
         };
 
-        fn change_pos(pose: &mut (f64, f64), start_pose: (i32, i32)) {
-            pose.0 -= start_pose.0 as f64;
-            pose.1 -= start_pose.1 as f64;
-        }
-
         match &mut event {
-            MouseEvent::Release(pos, _) | MouseEvent::Press(pos, _) => {
-                change_pos(pos, self.start_pos)
+            MouseEvent::Release(pos, _)
+            | MouseEvent::Press(pos, _)
+            | MouseEvent::Enter(pos)
+            | MouseEvent::Motion(pos) => {
+                self.scale.calculate_pos(pos);
+                pos.0 -= self.start_pos.0 as f64;
+                pos.1 -= self.start_pos.1 as f64;
             }
-            MouseEvent::Enter(pos) | MouseEvent::Motion(pos) => change_pos(pos, self.start_pos),
             MouseEvent::Leave => {}
         }
 
@@ -451,9 +450,25 @@ impl Scale {
 
             // viewport
             fractional.2.set_destination(size.0 as i32, size.1 as i32);
-        }
 
-        (width / self.normal, height / self.normal)
+            size
+        } else {
+            (width / self.normal, height / self.normal)
+        }
+    }
+    fn calculate_pos(&self, pos: &mut (f64, f64)) {
+        if let Some(fractional) = self.fractional.as_ref() {
+            let mut scale = fractional.0;
+            if scale == 0 {
+                scale = 120
+            }
+            let scale_f64 = scale as f64 / 120.;
+            pos.0 *= scale_f64;
+            pos.1 *= scale_f64;
+        } else {
+            pos.0 *= self.normal as f64;
+            pos.1 *= self.normal as f64;
+        }
     }
 }
 impl Drop for Scale {
