@@ -12,11 +12,11 @@ use calloop::{
     ping::{make_ping, Ping},
     LoopHandle, LoopSignal,
 };
-use config::MonitorSpecifier;
+use config::{common::NumOrRelative, MonitorSpecifier};
 use glib::clone::{Downgrade, Upgrade};
 use smithay_client_toolkit::{
     compositor::{CompositorState, SurfaceData as SctkSurfaceData, SurfaceDataExt},
-    output::OutputState,
+    output::{OutputInfo, OutputState},
     reexports::protocols::wp::{
         fractional_scale::v1::client::{
             wp_fractional_scale_manager_v1::WpFractionalScaleManagerV1,
@@ -27,7 +27,7 @@ use smithay_client_toolkit::{
     registry::{GlobalProxy, RegistryState},
     seat::{pointer::PointerEvent, SeatState},
     shell::{
-        wlr_layer::{LayerShell, LayerSurface},
+        wlr_layer::{Anchor, LayerShell, LayerSurface},
         WaylandSurface,
     },
     shm::{slot::SlotPool, Shm},
@@ -184,6 +184,8 @@ pub struct Widget {
     widget_has_update: bool,
     next_frame: bool,
     frame_available: bool,
+
+    margins: [i32; 4],
 }
 impl Widget {
     fn call_frame(&mut self, qh: &QueueHandle<App>) {
@@ -325,11 +327,17 @@ impl Widget {
         if self.scale.update_normal(normal) {
             self.try_redraw(app);
         }
+        let margins = self.scale.calculate_margin(self.margins);
+        self.layer
+            .set_margin(margins[0], margins[1], margins[2], margins[3]);
     }
     pub fn update_fraction(&mut self, fraction: u32, app: &mut App) {
         if self.scale.update_fraction(fraction) {
             self.try_redraw(app);
         }
+        let margins = self.scale.calculate_margin(self.margins);
+        self.layer
+            .set_margin(margins[0], margins[1], margins[2], margins[3]);
     }
     pub fn on_mouse_event(&mut self, app: &mut App, event: &PointerEvent) {
         let Some(mut event) = self.mouse_state.from_wl_pointer(event) else {
@@ -465,6 +473,20 @@ impl Scale {
             pos.1 *= self.normal as f64;
         }
     }
+    fn calculate_margin(&self, margins: [i32; 4]) -> [i32; 4] {
+        let c = |m: i32| {
+            (if let Some(fractional) = self.fractional.as_ref() {
+                let mut scale = fractional.0;
+                if scale == 0 {
+                    scale = 120
+                }
+                (m as u32 * 120 + 60) / scale
+            } else {
+                m as u32 / self.normal
+            }) as i32
+        };
+        [c(margins[0]), c(margins[1]), c(margins[2]), c(margins[3])]
+    }
 }
 impl Drop for Scale {
     fn drop(&mut self) {
@@ -551,6 +573,7 @@ impl RedrawEssentail {
 }
 
 pub struct WidgetBuilder<'a> {
+    pub margins: [i32; 4],
     pub monitor: MonitorSpecifier,
     pub output: WlOutput,
     pub app: &'a App,
@@ -746,12 +769,13 @@ impl<'a> WidgetBuilder<'a> {
         if conf.ignore_exclusive {
             layer.set_exclusive_zone(-1);
         };
-        layer.set_margin(
+        let margins = [
             conf.margins.top.get_num().unwrap() as i32,
             conf.margins.right.get_num().unwrap() as i32,
             conf.margins.bottom.get_num().unwrap() as i32,
             conf.margins.left.get_num().unwrap() as i32,
-        );
+        ];
+        layer.set_margin(margins[0], margins[1], margins[2], margins[3]);
         layer.set_size(1, 1);
         layer.commit();
 
@@ -772,6 +796,7 @@ impl<'a> WidgetBuilder<'a> {
             animation_list,
             pop_state,
             scale,
+            margins,
         })
     }
     pub fn build(self, conf: config::Config, w: Box<dyn WidgetContext>) -> Widget {
@@ -784,6 +809,7 @@ impl<'a> WidgetBuilder<'a> {
             pop_animation,
             animation_list,
             pop_state,
+            margins,
         } = self;
 
         let start_pos = (0, 0);
@@ -813,6 +839,7 @@ impl<'a> WidgetBuilder<'a> {
             widget_has_update: true,
             next_frame: false,
             frame_available: true,
+            margins,
         }
     }
 }
