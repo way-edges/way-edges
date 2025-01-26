@@ -41,6 +41,7 @@ pub fn run_app() {
     let registry_state = RegistryState::new(&globals);
     let seat_state = SeatState::new(&globals, &qh);
     let fractional_manager = globals.bind(&qh, 0..=1, ()).into();
+    let viewporter_manager = globals.bind(&qh, 0..=1, ()).into();
 
     let mut app = App {
         exit: false,
@@ -53,6 +54,7 @@ pub fn run_app() {
         seat_state,
         output_state,
         fractional_manager,
+        viewporter_manager,
         shm,
         pool,
         pointer: None,

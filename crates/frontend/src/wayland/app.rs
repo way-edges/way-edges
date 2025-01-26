@@ -17,9 +17,12 @@ use glib::clone::{Downgrade, Upgrade};
 use smithay_client_toolkit::{
     compositor::{CompositorState, Region, SurfaceData as SctkSurfaceData, SurfaceDataExt},
     output::OutputState,
-    reexports::protocols::wp::fractional_scale::v1::client::{
-        wp_fractional_scale_manager_v1::WpFractionalScaleManagerV1,
-        wp_fractional_scale_v1::WpFractionalScaleV1,
+    reexports::protocols::wp::{
+        fractional_scale::v1::client::{
+            wp_fractional_scale_manager_v1::WpFractionalScaleManagerV1,
+            wp_fractional_scale_v1::WpFractionalScaleV1,
+        },
+        viewporter::client::{wp_viewport::WpViewport, wp_viewporter::WpViewporter},
     },
     registry::{GlobalProxy, RegistryState},
     seat::{pointer::PointerEvent, SeatState},
@@ -57,6 +60,7 @@ pub struct App {
     pub output_state: OutputState,
     pub seat_state: SeatState,
     pub fractional_manager: GlobalProxy<WpFractionalScaleManagerV1>,
+    pub viewporter_manager: GlobalProxy<WpViewporter>,
     pub pointer: Option<wl_pointer::WlPointer>,
 
     pub shell: LayerShell,
@@ -261,12 +265,6 @@ impl Widget {
         self.prepare_content();
         log::debug!("frame");
 
-        // set size
-        let (w, h) = self
-            .scale
-            .calculate_size(self.width as u32, self.height as u32);
-        self.layer.set_size(w, h);
-
         // create and draw content
         let (buffer, canvas) = app
             .pool
@@ -308,6 +306,12 @@ impl Widget {
         r.add(input_rect[0], input_rect[1], input_rect[2], input_rect[3]);
         self.layer.set_input_region(Some(r.wl_region()));
 
+        // set size
+        let (w, h) = self
+            .scale
+            .calculate_size(self.width as u32, self.height as u32);
+        self.layer.set_size(w, h);
+
         self.call_frame(&app.queue_handle);
 
         self.layer.commit();
@@ -319,6 +323,11 @@ impl Widget {
         self.try_redraw(app);
     }
     pub fn update_normal(&mut self, normal: u32, app: &mut App) {
+        // IGNORING NORMAL SCALE IF FRACTIONAL SCALE IS AVAILABLE
+        if self.scale.is_fractional() {
+            return;
+        }
+
         if self.scale.update_normal(normal) {
             self.try_redraw(app);
         }
@@ -400,36 +409,60 @@ impl Widget {
 #[derive(Debug)]
 pub struct Scale {
     normal: u32,
-    fraction: u32,
-    fractional_client: Option<WpFractionalScaleV1>,
+    fractional: Option<(u32, WpFractionalScaleV1, WpViewport)>,
 }
 impl Scale {
-    pub fn new(fractional_client: Option<WpFractionalScaleV1>) -> Self {
+    fn new_fractional(fractional_client: WpFractionalScaleV1, viewprot: WpViewport) -> Self {
         Self {
             normal: 1,
-            fraction: 0,
-            fractional_client,
+            fractional: Some((0, fractional_client, viewprot)),
         }
     }
-    pub fn update_normal(&mut self, normal: u32) -> bool {
+    fn new_normal() -> Self {
+        Self {
+            normal: 1,
+            fractional: None,
+        }
+    }
+    fn is_fractional(&self) -> bool {
+        self.fractional.is_some()
+    }
+    fn update_normal(&mut self, normal: u32) -> bool {
         let changed = self.normal != normal;
         self.normal = normal;
         changed
     }
-    pub fn update_fraction(&mut self, fraction: u32) -> bool {
-        let changed = self.fraction != fraction;
-        self.fraction = fraction;
-        changed
-    }
-    pub fn calculate_size(&self, width: u32, height: u32) -> (u32, u32) {
-        if self.fractional_client.is_some() && self.fraction != 0 {
-            (
-                (width * self.fraction + 60) / 120,
-                (height * self.fraction + 60) / 120,
-            )
+    fn update_fraction(&mut self, fraction: u32) -> bool {
+        if let Some(fractional) = self.fractional.as_mut() {
+            let changed = fractional.0 != fraction;
+            fractional.0 = fraction;
+            changed
         } else {
-            (width / self.normal, height / self.normal)
+            false
         }
+    }
+    fn calculate_size(&self, width: u32, height: u32) -> (u32, u32) {
+        if let Some(fractional) = self.fractional.as_ref() {
+            let mut scale = fractional.0;
+            if scale == 0 {
+                scale = 120
+            }
+            let size = ((width * 120 + 60) / scale, (height * 120 + 60) / scale);
+
+            // viewport
+            fractional.2.set_destination(size.0 as i32, size.1 as i32);
+        }
+
+        (width / self.normal, height / self.normal)
+    }
+}
+impl Drop for Scale {
+    fn drop(&mut self) {
+        #[allow(clippy::option_map_unit_fn)]
+        self.fractional.as_ref().map(|(_, f, v)| {
+            f.destroy();
+            v.destroy();
+        });
     }
 }
 
@@ -671,8 +704,27 @@ impl<'a> WidgetBuilder<'a> {
             .ok()
             .map(|manager| {
                 manager.get_fractional_scale(&surface, &app.queue_handle, surface.clone())
+            })
+            .and_then(|fractional| {
+                app.viewporter_manager
+                    .get()
+                    .inspect_err(|e| {
+                        // NOTE: DESTROY FRACTIONAL IF WE FAILED TO GET VIEWPORT
+                        fractional.destroy();
+                        log::error!("Fatal on Viewporter: {e}");
+                    })
+                    .ok()
+                    .map(|manager| {
+                        (
+                            fractional,
+                            manager.get_viewport(&surface, &app.queue_handle, ()),
+                        )
+                    })
             });
-        let scale = Scale::new(fractional);
+        let scale = match fractional {
+            Some((f, v)) => Scale::new_fractional(f, v),
+            None => Scale::new_normal(),
+        };
 
         let layer = app.shell.create_layer_surface(
             &app.queue_handle,

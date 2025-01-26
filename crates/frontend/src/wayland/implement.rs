@@ -3,9 +3,12 @@ use smithay_client_toolkit::{
     delegate_compositor, delegate_layer, delegate_output, delegate_pointer, delegate_registry,
     delegate_seat, delegate_shm, delegate_simple,
     output::{OutputHandler, OutputState},
-    reexports::protocols::wp::fractional_scale::v1::client::{
-        wp_fractional_scale_manager_v1::WpFractionalScaleManagerV1,
-        wp_fractional_scale_v1::{self, WpFractionalScaleV1},
+    reexports::protocols::wp::{
+        fractional_scale::v1::client::{
+            wp_fractional_scale_manager_v1::WpFractionalScaleManagerV1,
+            wp_fractional_scale_v1::{self, WpFractionalScaleV1},
+        },
+        viewporter::client::{wp_viewport::WpViewport, wp_viewporter::WpViewporter},
     },
     registry::{ProvidesRegistryState, RegistryState},
     registry_handlers,
@@ -20,6 +23,7 @@ use smithay_client_toolkit::{
     shm::{Shm, ShmHandler},
 };
 use wayland_client::{
+    delegate_noop,
     protocol::{
         wl_output, wl_pointer, wl_seat,
         wl_surface::{self, WlSurface},
@@ -248,6 +252,8 @@ delegate_shm!(App);
 delegate_layer!(App);
 delegate_registry!(App);
 delegate_simple!(App, WpFractionalScaleManagerV1, 1);
+delegate_simple!(App, WpViewporter, 1);
+delegate_noop!(App: WpViewport);
 
 delegate_seat!(App);
 delegate_pointer!(App);
