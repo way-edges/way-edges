@@ -60,9 +60,9 @@ pub struct MenuDrawConfig {
 impl Default for MenuDrawConfig {
     fn default() -> Self {
         Self {
-            margin: [12, 16],
+            margin: [12, 12],
             marker_size: 20,
-            font_pixel_height: 20,
+            font_pixel_height: 24,
             separator_height: 5,
             border_color: RGBA::WHITE,
             text_color: RGBA::WHITE,
