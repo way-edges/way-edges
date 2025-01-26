@@ -186,6 +186,9 @@ pub struct Widget {
     frame_available: bool,
 
     margins: [i32; 4],
+
+    // for damage
+    output_size: (i32, i32),
 }
 impl Widget {
     fn call_frame(&mut self, qh: &QueueHandle<App>) {
@@ -302,7 +305,9 @@ impl Widget {
         ctx.paint().unwrap();
 
         // attach content
-        self.layer.wl_surface().damage_buffer(0, 0, width, height);
+        self.layer
+            .wl_surface()
+            .damage_buffer(0, 0, self.output_size.0, self.output_size.1);
 
         // set size
         let (w, h) = self.scale.calculate_size(width as u32, height as u32);
@@ -574,6 +579,8 @@ impl RedrawEssentail {
 
 pub struct WidgetBuilder<'a> {
     pub margins: [i32; 4],
+    pub output_size: (i32, i32),
+
     pub monitor: MonitorSpecifier,
     pub output: WlOutput,
     pub app: &'a App,
@@ -719,8 +726,8 @@ impl<'a> WidgetBuilder<'a> {
         }
         .ok_or(format!("output not found: {:?}", conf.monitor))?;
         let monitor = app.output_state.info(&output).unwrap();
-        let size = monitor.modes[0].dimensions;
-        conf.resolve_relative(size);
+        let output_size = monitor.modes[0].dimensions;
+        conf.resolve_relative(output_size);
 
         let surface = app.compositor_state.create_surface_with_data(
             &app.queue_handle,
@@ -797,6 +804,7 @@ impl<'a> WidgetBuilder<'a> {
             pop_state,
             scale,
             margins,
+            output_size,
         })
     }
     pub fn build(self, conf: config::Config, w: Box<dyn WidgetContext>) -> Widget {
@@ -810,6 +818,7 @@ impl<'a> WidgetBuilder<'a> {
             animation_list,
             pop_state,
             margins,
+            output_size,
         } = self;
 
         let start_pos = (0, 0);
@@ -840,6 +849,7 @@ impl<'a> WidgetBuilder<'a> {
             next_frame: false,
             frame_available: true,
             margins,
+            output_size,
         }
     }
 }
