@@ -59,10 +59,15 @@ fn complete_group_and_widget(current: &std::ffi::OsStr) -> Vec<CompletionCandida
         raw_group
             .widgets
             .iter()
-            .filter(|widget| !widget.name.is_empty() && widget.name.starts_with(widget_name))
-            .map(|widget| {
-                let name = group_name.to_owned() + ":" + &widget.name;
-                CompletionCandidate::new(&name)
+            .filter_map(|widget| {
+                let name = widget.name.as_ref()?;
+
+                if !name.is_empty() && name.starts_with(widget_name) {
+                    let name = group_name.to_owned() + ":" + name;
+                    Some(CompletionCandidate::new(&name))
+                } else {
+                    None
+                }
             })
             .collect()
     } else {
