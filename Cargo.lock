@@ -287,6 +287,7 @@ dependencies = [
  "libpulse-tokio",
  "linicon-theme",
  "log",
+ "niri-ipc",
  "serde",
  "serde_jsonrc",
  "starship-battery",
@@ -1555,6 +1556,16 @@ dependencies = [
  "libc",
  "wasi",
  "windows-sys 0.52.0",
+]
+
+[[package]]
+name = "niri-ipc"
+version = "25.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b7c1f0aac0ed080c4ca82b805cffc2cfba701bf3cd59e32dea3d18f263e0d236"
+dependencies = [
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
