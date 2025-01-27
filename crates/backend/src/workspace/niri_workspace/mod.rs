@@ -9,7 +9,7 @@ use tokio::io;
 
 use crate::runtime::get_backend_runtime_handle;
 
-use super::{WorkspaceCtx, WorkspaceData, ID};
+use super::{WorkspaceCtx, WorkspaceData, WorkspaceHandler, ID};
 
 fn workspace_vec_to_data(v: Vec<Workspace>) -> WorkspaceData {
     // TODO: FILTER OUT THE EMPTY WORKSPACE IN THE END
@@ -116,11 +116,27 @@ fn start_listener() {
     });
 }
 
-pub fn register_niri_event_callback(cb: Sender<WorkspaceData>) -> ID {
+pub fn register_niri_event_callback(cb: Sender<WorkspaceData>) -> WorkspaceHandler {
     start_listener();
-    get_niri_ctx().add_cb(cb)
+    let cb_id = get_niri_ctx().add_cb(cb);
+    WorkspaceHandler::Niri(NiriWorkspaceHandler { cb_id })
 }
 
 pub fn unregister_niri_event_callback(id: ID) {
     get_niri_ctx().remove_cb(id)
+}
+
+#[derive(Debug)]
+pub struct NiriWorkspaceHandler {
+    cb_id: ID,
+}
+impl Drop for NiriWorkspaceHandler {
+    fn drop(&mut self) {
+        unregister_niri_event_callback(self.cb_id);
+    }
+}
+impl NiriWorkspaceHandler {
+    pub fn change_to_workspace(&mut self, workspace_id: i32) {
+        todo!()
+    }
 }

@@ -6,8 +6,8 @@ use crate::{
 };
 
 mod button;
-mod hypr_workspace;
 mod slide;
+mod workspace;
 mod wrapbox;
 
 pub trait WidgetContext: std::fmt::Debug {
@@ -35,10 +35,10 @@ pub fn init_widget(
             log::info!("initialized slider");
             w
         }
-        config::widgets::Widget::HyprWorkspace(hypr_workspace_config) => {
-            log::debug!("initializing hypr-workspace");
-            let w = hypr_workspace::init_widget(builder, size, conf, hypr_workspace_config);
-            log::info!("initialized hypr-workspace");
+        config::widgets::Widget::Workspace(workspace_config) => {
+            log::debug!("initializing workspace");
+            let w = workspace::init_widget(builder, size, conf, workspace_config);
+            log::info!("initialized workspace");
             Box::new(w)
         }
         config::widgets::Widget::WrapBox(box_config) => {

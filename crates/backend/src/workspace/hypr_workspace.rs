@@ -16,7 +16,7 @@ use util::notify_send;
 
 use crate::{runtime::get_backend_runtime_handle, workspace::WorkspaceData};
 
-use super::{WorkspaceCtx, ID};
+use super::{WorkspaceCtx, WorkspaceHandler, ID};
 
 fn notify_hyprland_log(msg: &str, is_critical: bool) {
     notify_send("Way-Edges Hyprland error", msg, is_critical);
@@ -102,22 +102,13 @@ impl WorkspaceIDToInt for WorkspaceType {
     }
 }
 
-pub fn register_hypr_event_callback(cb: Sender<WorkspaceData>) -> ID {
-    init_hyprland_listener();
-    get_hypr_ctx().add_cb(cb)
-}
-
-pub fn unregister_hypr_event_callback(id: ID) {
-    get_hypr_ctx().remove_cb(id)
-}
-
 enum Signal {
     Add(i32),
     Destroy(i32),
     Change(i32),
 }
 
-pub fn init_hyprland_listener() {
+fn init_hyprland_listener() {
     if is_ctx_inited() {
         return;
     }
@@ -189,13 +180,34 @@ pub fn init_hyprland_listener() {
     });
 }
 
-pub fn change_to_workspace(id: i32) {
-    use hyprland::dispatch::*;
+pub fn register_hypr_event_callback(cb: Sender<WorkspaceData>) -> WorkspaceHandler {
+    init_hyprland_listener();
+    let cb_id = get_hypr_ctx().add_cb(cb);
+    WorkspaceHandler::Hyprland(HyprWorkspaceHandler { cb_id })
+}
 
-    log::debug!("change to workspace: {id}");
+pub fn unregister_hypr_event_callback(id: ID) {
+    get_hypr_ctx().remove_cb(id)
+}
 
-    // ignore
-    let _ = Dispatch::call(DispatchType::Workspace(WorkspaceIdentifierWithSpecial::Id(
-        id,
-    )));
+#[derive(Debug)]
+pub struct HyprWorkspaceHandler {
+    cb_id: ID,
+}
+impl Drop for HyprWorkspaceHandler {
+    fn drop(&mut self) {
+        unregister_hypr_event_callback(self.cb_id);
+    }
+}
+impl HyprWorkspaceHandler {
+    pub fn change_to_workspace(&mut self, workspace_id: i32) {
+        use hyprland::dispatch::*;
+
+        log::debug!("change to workspace: {workspace_id}");
+
+        // ignore
+        let _ = Dispatch::call(DispatchType::Workspace(WorkspaceIdentifierWithSpecial::Id(
+            workspace_id,
+        )));
+    }
 }
