@@ -121,6 +121,6 @@ pub fn register_niri_event_callback(cb: Sender<WorkspaceData>) -> ID {
     get_niri_ctx().add_cb(cb)
 }
 
-pub fn unregister_hypr_event_callback(id: ID) {
+pub fn unregister_niri_event_callback(id: ID) {
     get_niri_ctx().remove_cb(id)
 }
