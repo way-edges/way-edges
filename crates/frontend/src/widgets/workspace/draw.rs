@@ -120,7 +120,7 @@ fn draw_common_horizontal(
 
         // mouse hover color
         if let Some(hover_color) = conf.hover_color {
-            if id as isize == hover_id {
+            if id as isize - 1 == hover_id {
                 color = color_mix(hover_color, color);
             }
         }

@@ -54,9 +54,9 @@ impl HoverData {
         } else {
             // to match workspace id
             if self.invert_direction {
-                self.item_location.len() as isize - id
+                self.item_location.len() as isize - 1 - id
             } else {
-                id + 1
+                id
             }
         }
     }
