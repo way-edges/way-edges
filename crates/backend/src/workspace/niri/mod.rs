@@ -137,6 +137,18 @@ impl Drop for NiriWorkspaceHandler {
 }
 impl NiriWorkspaceHandler {
     pub fn change_to_workspace(&mut self, workspace_id: i32) {
-        todo!()
+        get_backend_runtime_handle().spawn(async move {
+            connection::Connection::make_connection()
+                .await
+                .expect("Failed to connect to niri socket")
+                .push_request(niri_ipc::Request::Action(
+                    niri_ipc::Action::FocusWorkspace {
+                        reference: niri_ipc::WorkspaceReferenceArg::Id(workspace_id as u64),
+                    },
+                ))
+                .await
+                .expect("Failed to request workspace change")
+                .expect("request error");
+        });
     }
 }
