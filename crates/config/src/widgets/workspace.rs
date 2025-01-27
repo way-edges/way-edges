@@ -5,7 +5,7 @@ use std::str::FromStr;
 use way_edges_derive::GetSize;
 
 #[derive(Debug, Deserialize, GetSize)]
-pub struct HyprWorkspaceConfig {
+pub struct WorkspaceConfig {
     #[serde(flatten)]
     // flatten does not support `default` yet.
     // issue: https://github.com/serde-rs/serde/issues/1626
@@ -36,6 +36,8 @@ pub struct HyprWorkspaceConfig {
 
     #[serde(default)]
     pub invert_direction: bool,
+
+    pub preset: WorkspacePreset,
 }
 
 fn dt_gap() -> i32 {
@@ -56,4 +58,10 @@ fn dt_deactive_color() -> RGBA {
 }
 fn dt_active_color() -> RGBA {
     RGBA::from_str("#669bbc").unwrap()
+}
+
+#[derive(Debug, Deserialize)]
+pub enum WorkspacePreset {
+    Hyprland,
+    Niri,
 }

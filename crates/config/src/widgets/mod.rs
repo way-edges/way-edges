@@ -1,12 +1,12 @@
 use button::BtnConfig;
-use hypr_workspace::HyprWorkspaceConfig;
 use serde::Deserialize;
 use slide::base::SlideConfig;
+use workspace::WorkspaceConfig;
 use wrapbox::BoxConfig;
 
 pub mod button;
-pub mod hypr_workspace;
 pub mod slide;
+pub mod workspace;
 pub mod wrapbox;
 
 #[derive(Debug, Deserialize)]
@@ -15,40 +15,8 @@ pub enum Widget {
     Btn(BtnConfig),
     Slider(SlideConfig),
     WrapBox(BoxConfig),
-    HyprWorkspace(HyprWorkspaceConfig),
+    Workspace(WorkspaceConfig),
 }
-
-// macro_rules! match_widget {
-//     ($t:expr, $raw:expr, $($name:ident),*) => {
-//         match $t {
-//             $(
-//                 $name::NAME => $name::visit_config($raw),
-//             )*
-//             _ => Err(format!("unknown widget type: {}", $t)),
-//         }.map_err(serde::de::Error::custom)
-//     };
-// }
-// pub(crate) use match_widget;
-//
-// impl<'de> Deserialize<'de> for Widget {
-//     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-//     where
-//         D: Deserializer<'de>,
-//     {
-//         let raw = serde_jsonrc::value::Value::deserialize(deserializer)?;
-//
-//         if !raw.is_object() {
-//             return Err(serde::de::Error::custom("Widget must be object"));
-//         }
-//         let t = raw
-//             .get("type")
-//             .ok_or(serde::de::Error::missing_field("type"))?
-//             .as_str()
-//             .ok_or(serde::de::Error::custom("widget type must be string"))?;
-//
-//         match_widget!(t, raw, button, slide, wrapbox, hypr_workspace)
-//     }
-// }
 
 pub mod common {
     use std::{collections::HashMap, fmt::Display, str::FromStr};
