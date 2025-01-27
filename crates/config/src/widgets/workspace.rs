@@ -37,6 +37,8 @@ pub struct WorkspaceConfig {
     #[serde(default)]
     pub invert_direction: bool,
 
+    #[serde(default)]
+    pub output_name: Option<String>,
     pub preset: WorkspacePreset,
 }
 
@@ -61,6 +63,7 @@ fn dt_active_color() -> RGBA {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum WorkspacePreset {
     Hyprland,
     Niri,

@@ -142,13 +142,10 @@ impl LayerShellHandler for App {
             return;
         };
 
-        log::debug!("get configure widget");
-
         // Initiate the first draw.
         let mut layer = layer.lock().unwrap();
         if !layer.configured {
             layer.configured = true;
-            log::debug!("first draw");
             layer.draw(self);
         }
     }
