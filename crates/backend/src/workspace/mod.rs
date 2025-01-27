@@ -24,8 +24,8 @@ impl Default for WorkspaceData {
 }
 
 pub struct WorkspaceCB {
-    sender: Sender<WorkspaceData>,
-    output: String,
+    pub sender: Sender<WorkspaceData>,
+    pub output: String,
 }
 
 type ID = u32;
@@ -64,13 +64,13 @@ pub enum WorkspaceHandler {
     Niri(NiriWorkspaceHandler),
 }
 impl WorkspaceHandler {
-    pub fn change_to_workspace(&mut self, output: &str, index: usize) {
+    pub fn change_to_workspace(&mut self, index: usize) {
         match self {
             WorkspaceHandler::Hyprland(h) => {
-                h.change_to_workspace(output, index);
+                h.change_to_workspace(index);
             }
             WorkspaceHandler::Niri(h) => {
-                h.change_to_workspace(output, index);
+                h.change_to_workspace(index);
             }
         }
     }

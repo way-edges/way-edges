@@ -8,8 +8,8 @@ use crate::{
     wayland::app::WidgetBuilder,
 };
 use backend::workspace::{
-    hypr::register_hypr_event_callback, niri::register_niri_event_callback, WorkspaceData,
-    WorkspaceHandler,
+    hypr::register_hypr_event_callback, niri::register_niri_event_callback, WorkspaceCB,
+    WorkspaceData, WorkspaceHandler,
 };
 use config::{
     widgets::workspace::{WorkspaceConfig, WorkspacePreset},
@@ -17,7 +17,7 @@ use config::{
 };
 use draw::DrawConf;
 use event::HoverData;
-use smithay_client_toolkit::seat::pointer::BTN_LEFT;
+use smithay_client_toolkit::{output::OutputInfo, seat::pointer::BTN_LEFT};
 
 use super::WidgetContext;
 
@@ -26,8 +26,12 @@ pub fn init_widget(
     size: (i32, i32),
     conf: &Config,
     mut w_conf: WorkspaceConfig,
+    output: &OutputInfo,
 ) -> impl WidgetContext {
     w_conf.size.calculate_relative(size, conf.edge);
+    if w_conf.output_name.is_none() {
+        w_conf.output_name = output.name.clone();
+    }
 
     let workspace_transition = builder.new_animation(w_conf.workspace_transition_duration);
 
@@ -55,9 +59,13 @@ pub fn init_widget(
         workspace_transition.borrow_mut().flip();
     });
 
+    let cb = WorkspaceCB {
+        sender: pop_signal_sender,
+        output: w_conf.output_name.take().unwrap(),
+    };
     let workspace_handler = match w_conf.preset {
-        WorkspacePreset::Hyprland => register_hypr_event_callback(pop_signal_sender),
-        WorkspacePreset::Niri => register_niri_event_callback(pop_signal_sender),
+        WorkspacePreset::Hyprland => register_hypr_event_callback(cb),
+        WorkspacePreset::Niri => register_niri_event_callback(cb),
     };
 
     WorkspaceCtx {
@@ -95,7 +103,7 @@ impl WidgetContext for WorkspaceCtx {
                     should_redraw = hhh!(self.hover_data, pos);
                     let id = self.hover_data.hover_id;
                     if id > 0 {
-                        self.workspace_handler.change_to_workspace(id as i32);
+                        self.workspace_handler.change_to_workspace(id as usize);
                     }
                 };
             }

@@ -37,7 +37,7 @@ pub fn init_widget(
         }
         config::widgets::Widget::Workspace(workspace_config) => {
             log::debug!("initializing workspace");
-            let w = workspace::init_widget(builder, size, conf, workspace_config);
+            let w = workspace::init_widget(builder, size, conf, workspace_config, &monitor);
             log::info!("initialized workspace");
             Box::new(w)
         }
