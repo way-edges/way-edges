@@ -8,8 +8,8 @@ use crate::{
     wayland::app::WidgetBuilder,
 };
 use backend::workspace::{
-    hypr_workspace::register_hypr_event_callback, niri_workspace::register_niri_event_callback,
-    WorkspaceData, WorkspaceHandler,
+    hypr::register_hypr_event_callback, niri::register_niri_event_callback, WorkspaceData,
+    WorkspaceHandler,
 };
 use config::{
     widgets::workspace::{WorkspaceConfig, WorkspacePreset},

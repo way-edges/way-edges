@@ -1,11 +1,11 @@
 use std::collections::HashMap;
 
 use calloop::channel::Sender;
-use hypr_workspace::HyprWorkspaceHandler;
-use niri_workspace::NiriWorkspaceHandler;
+use hypr::HyprWorkspaceHandler;
+use niri::NiriWorkspaceHandler;
 
-pub mod hypr_workspace;
-pub mod niri_workspace;
+pub mod hypr;
+pub mod niri;
 
 #[derive(Debug, Clone, Copy)]
 pub struct WorkspaceData {
