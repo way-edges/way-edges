@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 
 use calloop::channel::Sender;
+use hypr_workspace::HyprWorkspaceHandler;
+use niri_workspace::NiriWorkspaceHandler;
 
 pub mod hypr_workspace;
 pub mod niri_workspace;
@@ -51,5 +53,23 @@ impl WorkspaceCtx {
         self.cb.values_mut().for_each(|f| {
             f.send(self.current).unwrap();
         })
+    }
+}
+
+#[derive(Debug)]
+pub enum WorkspaceHandler {
+    Hyprland(HyprWorkspaceHandler),
+    Niri(NiriWorkspaceHandler),
+}
+impl WorkspaceHandler {
+    pub fn change_to_workspace(&mut self, workspace_id: i32) {
+        match self {
+            WorkspaceHandler::Hyprland(h) => {
+                h.change_to_workspace(workspace_id);
+            }
+            WorkspaceHandler::Niri(h) => {
+                h.change_to_workspace(workspace_id);
+            }
+        }
     }
 }

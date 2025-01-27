@@ -1,7 +1,7 @@
 use cairo::{Context, ImageSurface};
 
-use backend::hypr_workspace::HyprGlobalData;
-use config::widgets::hypr_workspace::HyprWorkspaceConfig;
+use backend::workspace::WorkspaceData;
+use config::widgets::workspace::WorkspaceConfig;
 use gdk::{prelude::GdkCairoContextExt, RGBA};
 use smithay_client_toolkit::shell::wlr_layer::Anchor;
 use util::{
@@ -28,11 +28,11 @@ pub struct DrawConf {
 
     invert_direction: bool,
 
-    func: fn(&DrawConf, &HyprGlobalData, &mut HoverData) -> ImageSurface,
+    func: fn(&DrawConf, WorkspaceData, WorkspaceData, &mut HoverData) -> ImageSurface,
 }
 impl DrawConf {
     pub fn new(
-        w_conf: &HyprWorkspaceConfig,
+        w_conf: &WorkspaceConfig,
         workspace_transition: ToggleAnimationRc,
         edge: Anchor,
     ) -> Self {
@@ -57,25 +57,31 @@ impl DrawConf {
             func,
         }
     }
-    pub fn draw(&self, global_data: &HyprGlobalData, hover_data: &mut HoverData) -> ImageSurface {
-        (self.func)(self, global_data, hover_data)
+    pub fn draw(
+        &self,
+        data: WorkspaceData,
+        prev_data: WorkspaceData,
+        hover_data: &mut HoverData,
+    ) -> ImageSurface {
+        (self.func)(self, data, prev_data, hover_data)
     }
 }
 
 fn draw_common_horizontal(
     conf: &DrawConf,
-    data: &HyprGlobalData,
+    data: WorkspaceData,
+    prev_data: WorkspaceData,
     hover_data: &mut HoverData,
 ) -> ImageSurface {
     let item_base_length = {
-        let up = (conf.length - conf.gap * (data.max_workspace - 1)) as f64;
-        up / data.max_workspace as f64
+        let up = (conf.length - conf.gap * (data.workspace_count - 1)) as f64;
+        up / data.workspace_count as f64
     };
     let item_changable_length = item_base_length * conf.active_increase;
 
     let item_max_length = item_base_length + item_changable_length;
     let item_min_length =
-        item_base_length - item_changable_length / (data.max_workspace - 1) as f64;
+        item_base_length - item_changable_length / (data.workspace_count - 1) as f64;
 
     // let surf = new_surface((self.thickness, self.length));
     let surf = new_surface((conf.length, conf.thickness));
@@ -92,18 +98,18 @@ fn draw_common_horizontal(
 
     // let a: Vec<(f64, RGBA)> = (1..=data.max_workspace).map(|id| {
     let sorting: Box<dyn std::iter::Iterator<Item = _>> = if conf.invert_direction {
-        Box::new((1..=data.max_workspace).rev())
+        Box::new((1..=data.workspace_count).rev())
     } else {
-        Box::new(1..=data.max_workspace)
+        Box::new(1..=data.workspace_count)
     };
     sorting.enumerate().for_each(|(index, id)| {
         // size and color
-        let (length, mut color) = if id == data.current_workspace {
+        let (length, mut color) = if id - 1 == data.focus {
             (
                 item_min_length + (item_max_length - item_min_length) * y,
                 color_transition(conf.deactive_color, conf.active_color, y as f32),
             )
-        } else if id == data.prev_workspace {
+        } else if id - 1 == prev_data.focus {
             (
                 item_min_length + (item_max_length - item_min_length) * (1. - y),
                 color_transition(conf.active_color, conf.deactive_color, y as f32),
@@ -120,7 +126,7 @@ fn draw_common_horizontal(
         }
 
         // draw
-        if id == data.current_workspace {
+        if id - 1 == data.focus {
             ctx.set_source_color(&color);
             ctx.rectangle(Z, Z, length, conf.thickness as f64);
             ctx.fill().unwrap();
@@ -137,7 +143,7 @@ fn draw_common_horizontal(
             );
             ctx.fill().unwrap();
         }
-        if (index + 1) as i32 != data.max_workspace {
+        if (index + 1) as i32 != data.workspace_count {
             ctx.translate(length + conf.gap as f64, Z);
         };
 
@@ -154,18 +160,20 @@ fn draw_common_horizontal(
 
 fn draw_horizontal(
     conf: &DrawConf,
-    data: &HyprGlobalData,
+    data: WorkspaceData,
+    prev_data: WorkspaceData,
     hover_data: &mut HoverData,
 ) -> ImageSurface {
-    draw_common_horizontal(conf, data, hover_data)
+    draw_common_horizontal(conf, data, prev_data, hover_data)
 }
 
 fn draw_vertical(
     conf: &DrawConf,
-    data: &HyprGlobalData,
+    data: WorkspaceData,
+    prev_data: WorkspaceData,
     hover_data: &mut HoverData,
 ) -> ImageSurface {
-    let common = draw_common_horizontal(conf, data, hover_data);
+    let common = draw_common_horizontal(conf, data, prev_data, hover_data);
     let surf = new_surface((common.height(), common.width()));
     let ctx = Context::new(&surf).unwrap();
     ctx.rotate(90.0_f64.to_radians());

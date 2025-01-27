@@ -7,8 +7,14 @@ use crate::{
     mouse_state::{MouseEvent, MouseStateData},
     wayland::app::WidgetBuilder,
 };
-use backend::hypr_workspace::{change_to_workspace, HyprGlobalData};
-use config::{widgets::hypr_workspace::HyprWorkspaceConfig, Config};
+use backend::workspace::{
+    hypr_workspace::register_hypr_event_callback, niri_workspace::register_niri_event_callback,
+    WorkspaceData, WorkspaceHandler,
+};
+use config::{
+    widgets::workspace::{WorkspaceConfig, WorkspacePreset},
+    Config,
+};
 use draw::DrawConf;
 use event::HoverData;
 use smithay_client_toolkit::seat::pointer::BTN_LEFT;
@@ -19,7 +25,7 @@ pub fn init_widget(
     builder: &mut WidgetBuilder,
     size: (i32, i32),
     conf: &Config,
-    mut w_conf: HyprWorkspaceConfig,
+    mut w_conf: WorkspaceConfig,
 ) -> impl WidgetContext {
     w_conf.size.calculate_relative(size, conf.edge);
 
@@ -27,43 +33,52 @@ pub fn init_widget(
 
     let draw_conf = DrawConf::new(&w_conf, workspace_transition.clone(), conf.edge);
 
-    let hypr_data = Rc::new(Cell::new(HyprGlobalData::default()));
+    let workspace_data = Rc::new(Cell::new((
+        WorkspaceData::default(),
+        WorkspaceData::default(),
+    )));
     let hover_data = HoverData::new(conf.edge, w_conf.invert_direction);
 
-    let hypr_data_weak = Rc::downgrade(&hypr_data);
+    let workspace_data_weak = Rc::downgrade(&workspace_data);
     let workspace_transition_weak = workspace_transition.downgrade();
     let pop_signal_sender = builder.make_pop_channel(w_conf.pop_duration, move |_, msg| {
-        let Some(hypr_data) = hypr_data_weak.upgrade() else {
+        let Some(workspace_data) = workspace_data_weak.upgrade() else {
             return;
         };
         let Some(workspace_transition) = workspace_transition_weak.upgrade() else {
             return;
         };
-        hypr_data.set(msg);
+        let mut old = workspace_data.get();
+        old.1 = old.0;
+        old.0 = msg;
+        workspace_data.set(old);
         workspace_transition.borrow_mut().flip();
     });
-    let backend_id = backend::hypr_workspace::register_hypr_event_callback(pop_signal_sender);
 
-    HyprWorkspaceCtx {
-        backend_id,
+    let workspace_handler = match w_conf.preset {
+        WorkspacePreset::Hyprland => register_hypr_event_callback(pop_signal_sender),
+        WorkspacePreset::Niri => register_niri_event_callback(pop_signal_sender),
+    };
+
+    WorkspaceCtx {
+        workspace_handler,
         draw_conf,
-        hypr_data,
+        workspace_data,
         hover_data,
     }
 }
 
 #[derive(Debug)]
-pub struct HyprWorkspaceCtx {
-    #[allow(dead_code)]
-    backend_id: u32,
+pub struct WorkspaceCtx {
+    workspace_handler: WorkspaceHandler,
     draw_conf: DrawConf,
-    hypr_data: Rc<Cell<HyprGlobalData>>,
+    workspace_data: Rc<Cell<(WorkspaceData, WorkspaceData)>>,
     hover_data: HoverData,
 }
-impl WidgetContext for HyprWorkspaceCtx {
+impl WidgetContext for WorkspaceCtx {
     fn redraw(&mut self) -> cairo::ImageSurface {
-        self.draw_conf
-            .draw(&self.hypr_data.get(), &mut self.hover_data)
+        let d = self.workspace_data.get();
+        self.draw_conf.draw(d.0, d.1, &mut self.hover_data)
     }
 
     fn on_mouse_event(&mut self, _: &MouseStateData, event: MouseEvent) -> bool {
@@ -80,7 +95,7 @@ impl WidgetContext for HyprWorkspaceCtx {
                     should_redraw = hhh!(self.hover_data, pos);
                     let id = self.hover_data.hover_id;
                     if id > 0 {
-                        change_to_workspace(id as i32);
+                        self.workspace_handler.change_to_workspace(id as i32);
                     }
                 };
             }
