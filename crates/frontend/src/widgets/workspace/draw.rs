@@ -81,7 +81,7 @@ fn draw_common_horizontal(
 
     let item_max_length = item_base_length + item_changable_length;
     let item_min_length =
-        item_base_length - item_changable_length / (data.workspace_count - 1) as f64;
+        item_base_length - item_changable_length / (data.workspace_count - 1).max(1) as f64;
 
     // let surf = new_surface((self.thickness, self.length));
     let surf = new_surface((conf.length, conf.thickness));
