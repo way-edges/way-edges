@@ -208,6 +208,10 @@ impl Widget {
         self.try_redraw(app);
     }
     fn try_redraw(&mut self, app: &mut App) {
+        if !self.configured {
+            return;
+        }
+
         if self.frame_available {
             self.draw(app)
         } else {
