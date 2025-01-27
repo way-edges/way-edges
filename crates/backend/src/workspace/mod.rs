@@ -23,12 +23,16 @@ impl Default for WorkspaceData {
     }
 }
 
+pub struct WorkspaceCB {
+    sender: Sender<WorkspaceData>,
+    output: String,
+}
+
 type ID = u32;
 
 struct WorkspaceCtx {
     id_cache: ID,
-    cb: HashMap<ID, Sender<WorkspaceData>>,
-    current: WorkspaceData,
+    cb: HashMap<ID, WorkspaceCB>,
 }
 
 impl WorkspaceCtx {
@@ -36,12 +40,10 @@ impl WorkspaceCtx {
         Self {
             cb: HashMap::new(),
             id_cache: 0,
-            current: WorkspaceData::default(),
         }
     }
-    fn add_cb(&mut self, cb: Sender<WorkspaceData>) -> ID {
+    fn add_cb(&mut self, cb: WorkspaceCB) -> ID {
         let id = self.id_cache;
-        cb.send(self.current).unwrap();
         self.cb.insert(id, cb);
         self.id_cache += 1;
         id
@@ -49,9 +51,9 @@ impl WorkspaceCtx {
     fn remove_cb(&mut self, id: ID) {
         self.cb.remove(&id);
     }
-    fn call(&mut self) {
+    fn call(&mut self, mut data_func: impl FnMut(&str) -> WorkspaceData) {
         self.cb.values_mut().for_each(|f| {
-            f.send(self.current).unwrap();
+            f.sender.send(data_func(&f.output)).unwrap();
         })
     }
 }
@@ -62,13 +64,13 @@ pub enum WorkspaceHandler {
     Niri(NiriWorkspaceHandler),
 }
 impl WorkspaceHandler {
-    pub fn change_to_workspace(&mut self, workspace_id: i32) {
+    pub fn change_to_workspace(&mut self, output: &str, index: usize) {
         match self {
             WorkspaceHandler::Hyprland(h) => {
-                h.change_to_workspace(workspace_id);
+                h.change_to_workspace(output, index);
             }
             WorkspaceHandler::Niri(h) => {
-                h.change_to_workspace(workspace_id);
+                h.change_to_workspace(output, index);
             }
         }
     }
