@@ -5,7 +5,6 @@ use std::{
     sync::atomic::{AtomicBool, AtomicPtr},
 };
 
-use calloop::channel::Sender;
 use connection::Connection;
 use niri_ipc::Workspace;
 use tokio::io;
@@ -50,7 +49,7 @@ async fn process_event(e: niri_ipc::Event) {
     // NOTE: id start from 1
     ctx.data = match e {
         niri_ipc::Event::WorkspacesChanged { workspaces } => sort_workspaces(workspaces),
-        niri_ipc::Event::WorkspaceActivated { id, focused } => {
+        niri_ipc::Event::WorkspaceActivated { id: _, focused: _ } => {
             let data = get_workspaces().await.expect("Failed to get workspaces");
             sort_workspaces(data)
         }
@@ -114,7 +113,8 @@ impl NiriCtx {
     }
     fn add_cb(&mut self, cb: WorkspaceCB) -> ID {
         cb.sender
-            .send(Self::get_workspace_data(&self.data, &cb.output));
+            .send(Self::get_workspace_data(&self.data, &cb.output))
+            .unwrap();
         self.workspace_ctx.add_cb(cb)
     }
     fn remove_cb(&mut self, id: ID) {
@@ -182,8 +182,17 @@ impl Drop for NiriWorkspaceHandler {
     }
 }
 impl NiriWorkspaceHandler {
-    pub fn change_to_workspace(&mut self, output: &str, index: usize) {
-        let Some(id) = get_niri_ctx()
+    pub fn change_to_workspace(&mut self, index: usize) {
+        let ctx = get_niri_ctx();
+        let Some(output) = ctx
+            .workspace_ctx
+            .cb
+            .get(&self.cb_id)
+            .map(|w| w.output.as_str())
+        else {
+            return;
+        };
+        let Some(id) = ctx
             .data
             .get(output)
             .and_then(|v| v.get(index))
