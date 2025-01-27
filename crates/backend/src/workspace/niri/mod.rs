@@ -14,10 +14,16 @@ use crate::runtime::get_backend_runtime_handle;
 use super::{WorkspaceCB, WorkspaceCtx, WorkspaceData, WorkspaceHandler, ID};
 
 fn workspace_vec_to_data(v: &[Workspace]) -> WorkspaceData {
-    // TODO: FILTER OUT THE EMPTY WORKSPACE IN THE END
-
-    let workspace_count = v.len() as i32;
-    let focus = v.iter().position(|w| w.is_focused).unwrap_or(0) as i32;
+    let mut workspace_count = 0;
+    let mut focus = -1;
+    v.iter().enumerate().for_each(|(index, w)| {
+        if w.is_focused {
+            focus = index as i32;
+        }
+        if w.is_focused || w.active_window_id.is_some() {
+            workspace_count += 1;
+        }
+    });
 
     WorkspaceData {
         workspace_count,
