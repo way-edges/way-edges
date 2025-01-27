@@ -102,7 +102,7 @@ impl WidgetContext for WorkspaceCtx {
                 if key == BTN_LEFT {
                     should_redraw = hhh!(self.hover_data, pos);
                     let id = self.hover_data.hover_id;
-                    if id > 0 {
+                    if id >= 0 {
                         self.workspace_handler.change_to_workspace(id as usize);
                     }
                 };
