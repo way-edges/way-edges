@@ -19,8 +19,6 @@ fn workspace_vec_to_data(v: &[Workspace]) -> WorkspaceData {
     let workspace_count = v.len() as i32;
     let focus = v.iter().position(|w| w.is_focused).unwrap_or(0) as i32;
 
-    println!("v: {v:?}");
-
     WorkspaceData {
         workspace_count,
         focus,

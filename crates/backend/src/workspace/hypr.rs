@@ -33,8 +33,6 @@ fn workspace_vec_to_data(v: &[Workspace], focus_id: i32) -> WorkspaceData {
     let workspace_count = v.len() as i32;
     let focus = v.iter().position(|w| w.id == focus_id).unwrap_or(0) as i32;
 
-    println!("v: {v:?}");
-
     WorkspaceData {
         workspace_count,
         focus,
