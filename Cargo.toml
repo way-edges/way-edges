@@ -21,10 +21,6 @@ pango = { git = "https://github.com/ogios/gtk-rs-core.git", version = "0.20", br
   "v1_56",
 ] }
 pangocairo = { git = "https://github.com/ogios/gtk-rs-core.git", version = "0.20", branch = "0.20", package = "pangocairo" }
-# gio = "0.20"
-# cairo-rs = { version = "0.20", features = ["freetype", "freetype-rs", "png"] }
-# pangocairo = "0.20"
-# pango = { version = "0.20.7", features = ["v1_56"] }
 log = "0.4"
 env_logger = "0.11"
 lazy_static = "1.5.0"

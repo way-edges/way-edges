@@ -1,4 +1,3 @@
-// use gtk4_layer_shell::{Edge, Layer};
 use serde::Deserialize;
 use smithay_client_toolkit::shell::wlr_layer::{Anchor, Layer};
 
