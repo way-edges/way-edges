@@ -1,12 +1,12 @@
 
 https://github.com/user-attachments/assets/b41205be-5740-46bd-ab53-c9713f40e042
 
-
-
+## 🫧 Project board
+https://github.com/orgs/way-edges/projects/1/views/1
 
 ## 🔍 Doc
 
-Please refer to [https://way-edges.github.io/description]
+Please refer to https://way-edges.github.io/description
 
 ## 📥 Installation
 
