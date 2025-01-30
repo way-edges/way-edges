@@ -1,5 +1,8 @@
 
-https://github.com/user-attachments/assets/b41205be-5740-46bd-ab53-c9713f40e042
+
+
+https://github.com/user-attachments/assets/c1648c52-17e6-4cee-af67-96db585b51b2
+
 
 > [!NOTE]
 > This is written completely with smithay.
