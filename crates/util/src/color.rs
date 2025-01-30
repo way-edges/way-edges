@@ -90,16 +90,28 @@ pub fn color_transition(start: Color, end: Color, t: f32) -> Color {
 }
 
 pub fn color_mix(one: Color, two: Color) -> Color {
-    color_transition(one, two, 0.5)
-}
+    let a1 = one.a() as f64 / 255.;
+    let r1 = one.r() as f64 / 255.;
+    let g1 = one.g() as f64 / 255.;
+    let b1 = one.b() as f64 / 255.;
 
-// pub fn color_mix(one: RGBA, two: RGBA) -> RGBA {
-//     let a = 1. - (1. - one.alpha()) * (1. - two.alpha());
-//     let r = (one.red() * one.alpha() + two.red() * two.alpha() * (1. - one.alpha())) / a;
-//     let g = (one.green() * one.alpha() + two.green() * two.alpha() * (1. - one.alpha())) / a;
-//     let b = (one.blue() * one.alpha() + two.blue() * two.alpha() * (1. - one.alpha())) / a;
-//     RGBA::new(r, g, b, a)
-// }
+    let a2 = two.a() as f64 / 255.;
+    let r2 = two.r() as f64 / 255.;
+    let g2 = two.g() as f64 / 255.;
+    let b2 = two.b() as f64 / 255.;
+
+    let a = 1. - (1. - a1) * (1. - a2);
+    let r = (r1 * a1 + r2 * a2 * (1. - a1)) / a;
+    let g = (g1 * a1 + g2 * a2 * (1. - a1)) / a;
+    let b = (b1 * a1 + b2 * a2 * (1. - a1)) / a;
+
+    Color::rgba(
+        (r * 255.0).round() as u8,
+        (g * 255.0).round() as u8,
+        (b * 255.0).round() as u8,
+        (a * 255.0).round() as u8,
+    )
+}
 
 fn parse_color_inner(s: &str) -> Result<[u8; 4], ParseColorError> {
     let s = s.trim().to_lowercase();
