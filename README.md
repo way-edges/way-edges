@@ -71,6 +71,8 @@ Options:
 
 ## 💛 Thanks
 Special thanks for:
-- [JakeStanger/system-tray](https://github.com/JakeStanger/system-tray). I forked one for zbus5.0 version: https://github.com/ogios/system-tray-zbus5.
-- [Rayzeq/tryfol](https://github.com/Rayzeq/tryfol).
+- [JakeStanger/system-tray](https://github.com/JakeStanger/system-tray). I forked one for zbus5.0 version: https://github.com/ogios/system-tray-zbus5
+- [Rayzeq/tryfol](https://github.com/Rayzeq/tryfol)
 - [elkowar/eww](https://github.com/elkowar/eww)
+- [YaLTeR/niri](https://github.com/YaLTeR/niri)
+- [danieldg/rwaybar](https://github.com/danieldg/rwaybar)
