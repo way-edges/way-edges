@@ -70,13 +70,13 @@ fn load_svg(p: &PathBuf) -> Option<ImageSurface> {
     // RGBA
     let mut pixels = pixmap.take();
 
-    // TO ARGB
+    // TO BGRA(little endian of ARGB)
     for i in (0..pixels.len()).step_by(4) {
-        let alpha = pixels[i];
-        pixels[i] = pixels[i + 1];
-        pixels[i + 1] = pixels[i + 2];
-        pixels[i + 2] = pixels[i + 3];
-        pixels[i + 3] = alpha;
+        let bgra = [pixels[i + 2], pixels[i + 1], pixels[i], pixels[i + 3]];
+        pixels[i] = bgra[0];
+        pixels[i + 1] = bgra[1];
+        pixels[i + 2] = bgra[2];
+        pixels[i + 3] = bgra[3];
     }
 
     ImageSurface::create_for_data(
@@ -122,9 +122,6 @@ pub fn parse_icon_given_pixmaps(vec: &[IconPixmap], size: i32) -> Option<ImageSu
     if vec.is_empty() {
         None
     } else {
-        // we can do endian convert, but it's too hard
-        // https://stackoverflow.com/a/10588779/21873016
-
         let pixmap = vec.last().unwrap();
 
         // ARGB
@@ -132,6 +129,7 @@ pub fn parse_icon_given_pixmaps(vec: &[IconPixmap], size: i32) -> Option<ImageSu
 
         // pre multiply
         for i in (0..pixels.len()).step_by(4) {
+            // little endian (BGRA)
             let res = pre_multiply_and_to_little_endian_argb([
                 pixels[i + 1],
                 pixels[i + 2],
@@ -139,19 +137,10 @@ pub fn parse_icon_given_pixmaps(vec: &[IconPixmap], size: i32) -> Option<ImageSu
                 pixels[i],
             ]);
 
-            // little endian (BGRA)
-            // pixels[i] = res[3];
-            // pixels[i + 1] = res[0];
-            // pixels[i + 2] = res[1];
-            // pixels[i + 3] = res[2];
             pixels[i] = res[0];
             pixels[i + 1] = res[1];
             pixels[i + 2] = res[2];
             pixels[i + 3] = res[3];
-            // pixels[i] = res[0];
-            // pixels[i + 1] = res[1];
-            // pixels[i + 2] = res[2];
-            // pixels[i + 3] = res[3];
         }
 
         let img = ImageSurface::create_for_data(
