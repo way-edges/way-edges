@@ -14,7 +14,7 @@ frontend = { version = "0.1.0", path = "crates/frontend" }
 cosmic-text = { git = "https://github.com/pop-os/cosmic-text", branch = "main", features = [
   "shape-run-cache",
 ] }
-cairo = { git = "https://github.com/ogios/gtk-rs-core.git", version = "0.20", branch = "0.20", package = "cairo-rs", default-features = false, features = [
+cairo-rs = { version = "0.20", default-features = false, features = [
   "freetype",
   "freetype-rs",
   "png",

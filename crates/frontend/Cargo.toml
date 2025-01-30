@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-cairo.workspace = true
+cairo-rs.workspace = true
 educe.workspace = true
 paste.workspace = true
 lazy_static.workspace = true
