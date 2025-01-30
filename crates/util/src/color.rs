@@ -55,6 +55,52 @@ pub fn parse_color(s: &str) -> Result<Color, ParseColorError> {
     parse_color_inner(s).map(|v| Color::rgba(v[0], v[1], v[2], v[3]))
 }
 
+pub fn cairo_set_color(ctx: &cairo::Context, color: Color) {
+    ctx.set_source_rgba(
+        color.r() as f64 / 255.,
+        color.g() as f64 / 255.,
+        color.b() as f64 / 255.,
+        color.a() as f64 / 255.,
+    );
+}
+
+pub fn color_transition(start: Color, end: Color, t: f32) -> Color {
+    if t <= 0.0 {
+        return start;
+    }
+    if t >= 1.0 {
+        return end;
+    }
+
+    #[inline]
+    fn interpolate_channel(start: u8, end: u8, n: u16) -> u8 {
+        let start = start as u32;
+        let end = end as u32;
+        let n = n as u32;
+        ((start * (256 - n) + end * n + 128) >> 8) as u8
+    }
+
+    let n = (t * 256.0).round() as u16;
+    Color::rgba(
+        interpolate_channel(start.r(), end.r(), n),
+        interpolate_channel(start.g(), end.g(), n),
+        interpolate_channel(start.b(), end.b(), n),
+        interpolate_channel(start.a(), end.a(), n),
+    )
+}
+
+pub fn color_mix(one: Color, two: Color) -> Color {
+    color_transition(one, two, 0.5)
+}
+
+// pub fn color_mix(one: RGBA, two: RGBA) -> RGBA {
+//     let a = 1. - (1. - one.alpha()) * (1. - two.alpha());
+//     let r = (one.red() * one.alpha() + two.red() * two.alpha() * (1. - one.alpha())) / a;
+//     let g = (one.green() * one.alpha() + two.green() * two.alpha() * (1. - one.alpha())) / a;
+//     let b = (one.blue() * one.alpha() + two.blue() * two.alpha() * (1. - one.alpha())) / a;
+//     RGBA::new(r, g, b, a)
+// }
+
 fn parse_color_inner(s: &str) -> Result<[u8; 4], ParseColorError> {
     let s = s.trim().to_lowercase();
 
