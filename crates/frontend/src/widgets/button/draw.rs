@@ -1,11 +1,11 @@
 use super::BtnConfig;
-use gdk::prelude::GdkCairoContextExt;
+use cosmic_text::Color;
 use smithay_client_toolkit::shell::wlr_layer::Anchor;
+use util::color::cairo_set_color;
 
 use std::f64::consts::PI;
 
 use cairo::{self, Context, ImageSurface, LinearGradient};
-use gdk::RGBA;
 use util::draw::new_surface;
 use util::Z;
 
@@ -14,9 +14,9 @@ use util::Z;
 pub struct DrawConfig {
     length: i32,
     thickness: i32,
-    color: RGBA,
+    color: Color,
     border_width: i32,
-    border_color: RGBA,
+    border_color: Color,
 
     func: fn(&DrawConfig, bool) -> ImageSurface,
 }
@@ -73,7 +73,7 @@ fn draw_top(conf: &DrawConfig, pressing: bool) -> ImageSurface {
     ctx.close_path();
 
     // content
-    ctx.set_source_color(&conf.color);
+    cairo_set_color(&ctx, conf.color);
     ctx.fill_preserve().unwrap();
 
     // mask
@@ -102,7 +102,7 @@ fn draw_top(conf: &DrawConfig, pressing: bool) -> ImageSurface {
     ctx.arc(size.0 - size.1, Z, radius, 0. * PI, 0.5 * PI);
     ctx.close_path();
 
-    ctx.set_source_color(&conf.border_color);
+    cairo_set_color(&ctx, conf.border_color);
     ctx.set_line_width(border_width);
     ctx.stroke_preserve().unwrap();
 

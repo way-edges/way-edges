@@ -1,8 +1,9 @@
 use cairo::ImageSurface;
-use gdk::RGBA;
+use cosmic_text::Color;
 use smithay_client_toolkit::seat::pointer::BTN_RIGHT;
 use std::sync::Arc;
 use std::{cell::Cell, rc::Rc};
+use util::color::color_transition;
 
 use super::base::{
     draw::DrawConfig,
@@ -23,7 +24,6 @@ use config::{
     widgets::slide::{base::SlideConfig, preset::PulseAudioConfig},
     Config,
 };
-use util::draw::color_transition;
 
 #[derive(Debug)]
 pub struct PulseAudioContext {
@@ -33,8 +33,8 @@ pub struct PulseAudioContext {
     vinfo: Rc<Cell<VInfo>>,
     debounce_ctx: Option<Arc<()>>,
 
-    non_mute_color: RGBA,
-    mute_color: RGBA,
+    non_mute_color: Color,
+    mute_color: Color,
     mute_animation: ToggleAnimationRc,
     draw_conf: DrawConfig,
 

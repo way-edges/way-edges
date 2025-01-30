@@ -2,10 +2,11 @@ use cairo::{Context, ImageSurface};
 
 use backend::workspace::WorkspaceData;
 use config::widgets::workspace::WorkspaceConfig;
-use gdk::{prelude::GdkCairoContextExt, RGBA};
+use cosmic_text::Color;
 use smithay_client_toolkit::shell::wlr_layer::Anchor;
 use util::{
-    draw::{color_mix, color_transition, new_surface},
+    color::{cairo_set_color, color_mix, color_transition},
+    draw::new_surface,
     Z,
 };
 
@@ -20,9 +21,9 @@ pub struct DrawConf {
     gap: i32,
     active_increase: f64,
 
-    deactive_color: RGBA,
-    active_color: RGBA,
-    hover_color: Option<RGBA>,
+    deactive_color: Color,
+    active_color: Color,
+    hover_color: Option<Color>,
 
     workspace_transition: ToggleAnimationRc,
 
@@ -96,7 +97,7 @@ fn draw_common_horizontal(
 
     let border_width = conf.thickness as f64 / 10.;
 
-    // let a: Vec<(f64, RGBA)> = (1..=data.max_workspace).map(|id| {
+    // let a: Vec<(f64, Color)> = (1..=data.max_workspace).map(|id| {
     let sorting: Box<dyn std::iter::Iterator<Item = _>> = if conf.invert_direction {
         Box::new((1..=data.workspace_count).rev())
     } else {
@@ -127,14 +128,14 @@ fn draw_common_horizontal(
 
         // draw
         if id - 1 == data.focus {
-            ctx.set_source_color(&color);
+            cairo_set_color(&ctx, color);
             ctx.rectangle(Z, Z, length, conf.thickness as f64);
             ctx.fill().unwrap();
         } else {
-            ctx.set_source_color(&conf.active_color);
+            cairo_set_color(&ctx, conf.active_color);
             ctx.rectangle(Z, Z, length, conf.thickness as f64);
             ctx.fill().unwrap();
-            ctx.set_source_color(&color);
+            cairo_set_color(&ctx, color);
             ctx.rectangle(
                 border_width,
                 border_width,

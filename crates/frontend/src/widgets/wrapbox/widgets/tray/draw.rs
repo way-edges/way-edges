@@ -3,10 +3,9 @@ use std::f64::consts::PI;
 use cairo::{Context, ImageSurface};
 
 use config::widgets::wrapbox::tray::{HeaderDrawConfig, MenuDrawConfig};
-use gdk::prelude::GdkCairoContextExt;
 use util::{
+    color::cairo_set_color,
     draw::new_surface,
-    rgba_to_color,
     text::{draw_text, TextConfig},
     Z,
 };
@@ -21,7 +20,7 @@ impl<'a> HeaderDrawArg<'a> {
         let text_conf = TextConfig::new(
             None,
             None,
-            rgba_to_color(draw_config.text_color),
+            draw_config.text_color,
             draw_config.font_pixel_height,
         );
 
@@ -72,7 +71,7 @@ impl<'a> MenuDrawArg<'a> {
         let text_conf = TextConfig::new(
             None,
             None,
-            rgba_to_color(draw_config.text_color),
+            draw_config.text_color,
             draw_config.font_pixel_height,
         );
 
@@ -117,7 +116,7 @@ impl<'a> MenuDrawArg<'a> {
         );
         let surf = new_surface(size);
         let ctx = Context::new(&surf).unwrap();
-        ctx.set_source_color(&self.draw_config.border_color);
+        cairo_set_color(&ctx, self.draw_config.border_color);
         ctx.set_line_width(MENU_ITEM_BORDER_WIDTH as f64);
 
         // outline of the menu
@@ -134,7 +133,7 @@ impl<'a> MenuDrawArg<'a> {
         // menu item draw func
         let draw_menu_border = || {
             // draw a bottom border line
-            ctx.set_source_color(&self.draw_config.border_color);
+            cairo_set_color(&ctx, self.draw_config.border_color);
             ctx.move_to(Z, half_line);
             ctx.rel_line_to(max_width as f64, Z);
             ctx.stroke().unwrap();
@@ -172,7 +171,7 @@ impl<'a> MenuDrawArg<'a> {
             }
         };
         let draw_menu_sep = |index: usize, height: i32| {
-            ctx.set_source_color(&self.draw_config.border_color);
+            cairo_set_color(&ctx, self.draw_config.border_color);
             ctx.rectangle(Z, Z, max_width as f64, height as f64);
             ctx.fill().unwrap();
 
@@ -285,7 +284,7 @@ impl MenuDrawArg<'_> {
 
         let surf = new_surface((size, size));
         let ctx = Context::new(&surf).unwrap();
-        ctx.set_source_color(&color);
+        cairo_set_color(&ctx, color);
 
         (surf, ctx)
     }
