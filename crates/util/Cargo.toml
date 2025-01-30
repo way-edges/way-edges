@@ -8,10 +8,11 @@ log.workspace = true
 cairo.workspace = true
 paste.workspace = true
 gdk.workspace = true
+regex-lite.workspace = true
+thiserror.workspace = true
+lazy_static.workspace = true
+cosmic-text.workspace = true
 
-cosmic-text = { git = "https://github.com/pop-os/cosmic-text", branch = "main", features = [
-  "shape-run-cache",
-] }
 
 notify-rust = "4.11"
 # downcast-rs = "1.2.1"
