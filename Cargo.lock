@@ -589,7 +589,6 @@ dependencies = [
  "cosmic-text",
  "educe",
  "env_logger",
- "gdk4",
  "lazy_static",
  "log",
  "regex-lite",
