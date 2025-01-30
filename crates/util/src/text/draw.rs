@@ -1,7 +1,6 @@
 use cairo::ImageSurface;
 use cosmic_text::{
-    fontdb::Source, Attrs, Buffer, Color, Family, FontSystem, LayoutRunIter, Metrics, Shaping,
-    SwashCache,
+    Attrs, Buffer, Color, Family, FontSystem, LayoutRunIter, Metrics, Shaping, SwashCache, Weight,
 };
 
 use crate::pre_multiply_and_to_little_endian_argb;
@@ -13,8 +12,7 @@ extern crate alloc;
 static FONT_SYSTEM: std::sync::LazyLock<std::sync::Mutex<FontSystem>> =
     std::sync::LazyLock::new(|| {
         let mut f = FontSystem::new();
-        f.db_mut()
-            .load_font_source(Source::Binary(alloc::sync::Arc::new(include_slide_font!())));
+        f.db_mut().load_font_data(include_slide_font!().to_vec());
         std::sync::Mutex::new(f)
     });
 
@@ -100,13 +98,15 @@ fn measure_text_size(
 #[derive(Debug, Clone, Copy)]
 pub struct TextConfig<'a> {
     pub family: Option<Family<'a>>,
+    pub weight: Option<Weight>,
     pub color: Color,
     pub size: i32,
 }
 impl<'a> TextConfig<'a> {
-    pub fn new(family: Option<&'a str>, color: Color, size: i32) -> Self {
+    pub fn new(family: Option<&'a str>, weight: Option<u16>, color: Color, size: i32) -> Self {
         Self {
             family: family.map(Family::Name),
+            weight: weight.map(Weight),
             color,
             size,
         }
@@ -124,6 +124,9 @@ fn draw_text_inner(
     let mut buffer = Buffer::new_empty(metrics);
 
     let mut attrs = Attrs::new();
+    if let Some(weight) = config.weight {
+        attrs = attrs.weight(weight);
+    }
     if let Some(family) = config.family {
         attrs = attrs.family(family);
     }

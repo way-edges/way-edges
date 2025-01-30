@@ -38,6 +38,7 @@ impl TextDrawer {
 
         let text_conf = util::text::TextConfig::new(
             self.font_family.as_deref(),
+            None,
             rgba_to_color(self.fg_color),
             self.font_pixel_size,
         );
