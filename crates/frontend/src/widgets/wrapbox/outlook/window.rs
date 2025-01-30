@@ -1,10 +1,11 @@
 use cairo::ImageSurface;
 
 use config::widgets::wrapbox::{OutlookMargins, OutlookWindowConfig};
-use gdk::{prelude::GdkCairoContextExt, RGBA};
+use cosmic_text::Color;
 use smithay_client_toolkit::shell::wlr_layer::Anchor;
 use util::{
-    draw::{color_mix, draw_rect_path, new_surface},
+    color::{cairo_set_color, color_mix},
+    draw::{draw_rect_path, new_surface},
     Z,
 };
 use way_edges_derive::wrap_rc;
@@ -13,7 +14,7 @@ use way_edges_derive::wrap_rc;
 #[derive(Debug)]
 pub struct DrawConf {
     margins: OutlookMargins,
-    color: RGBA,
+    color: Color,
     border_radius: i32,
     border_width: i32,
 
@@ -73,14 +74,14 @@ fn draw_base(conf: &DrawConf, content_size: (i32, i32)) -> DrawBase {
     let f_total_size = (total_size.0 as f64, total_size.1 as f64);
 
     // mix color of border color and shadow(black)
-    let box_color = color_mix(RGBA::new(0., 0., 0., 0.2), conf.color);
+    let box_color = color_mix(Color::rgba(0, 0, 0, 0x22), conf.color);
 
     // bg
     let (bg_path, bg) = {
         let path = draw_rect_path(border_radius, f_total_size, corners).unwrap();
         let surf = new_surface(total_size);
         let ctx = cairo::Context::new(&surf).unwrap();
-        ctx.set_source_color(&box_color);
+        cairo_set_color(&ctx, box_color);
         ctx.append_path(&path);
         ctx.fill().unwrap();
         (path, surf)
@@ -107,14 +108,7 @@ fn draw_base(conf: &DrawConf, content_size: (i32, i32)) -> DrawBase {
         };
 
         let shadow_size = 10.0_f64.min(f_content_box_size.0 * 0.3);
-        let color = {
-            let color = RGBA::BLACK;
-            [
-                color.red() as f64,
-                color.green() as f64,
-                color.blue() as f64,
-            ]
-        };
+        let color = [Z, Z, Z];
         // left, top, right, bottom
         g([Z, Z, shadow_size, Z], color);
         g([Z, Z, Z, shadow_size], color);
@@ -143,7 +137,7 @@ fn draw_base(conf: &DrawConf, content_size: (i32, i32)) -> DrawBase {
     let border_surf = {
         let surf = new_surface(total_size);
         let ctx = cairo::Context::new(&surf).unwrap();
-        ctx.set_source_color(&conf.color);
+        cairo_set_color(&ctx, conf.color);
         ctx.append_path(&bg_path);
         ctx.fill().unwrap();
 

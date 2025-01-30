@@ -1,13 +1,13 @@
 use cairo::{Format, ImageSurface};
-use gdk::prelude::GdkCairoContextExt;
-use gdk::RGBA;
 
 use config::widgets::wrapbox::ring::RingConfig;
+use cosmic_text::Color;
+use util::color::cairo_set_color;
 use util::draw::{draw_fan, new_surface};
 use util::template::arg::{TemplateArgFloatParser, TEMPLATE_ARG_FLOAT};
 use util::template::base::Template;
 use util::text::{draw_text, TextConfig};
-use util::{rgba_to_color, Z};
+use util::Z;
 
 use crate::animation::{calculate_transition, ToggleAnimationRc};
 use crate::widgets::wrapbox::BoxTemporaryCtx;
@@ -18,8 +18,8 @@ use super::preset::RunnerResult;
 pub struct RingDrawer {
     radius: i32,
     ring_width: i32,
-    bg_color: RGBA,
-    fg_color: RGBA,
+    bg_color: Color,
+    fg_color: Color,
 
     prefix: Option<Template>,
     prefix_hide: bool,
@@ -40,11 +40,11 @@ impl RingDrawer {
 
         let surf = ImageSurface::create(Format::ARgb32, size, size).unwrap();
         let ctx = cairo::Context::new(&surf).unwrap();
-        ctx.set_source_color(&self.bg_color);
+        cairo_set_color(&ctx, self.bg_color);
         draw_fan(&ctx, (big_radius, big_radius), big_radius, 0., 2.);
         ctx.fill().unwrap();
 
-        ctx.set_source_color(&self.fg_color);
+        cairo_set_color(&ctx, self.fg_color);
         draw_fan(
             &ctx,
             (big_radius, big_radius),
@@ -69,7 +69,7 @@ impl RingDrawer {
         let text_conf = TextConfig::new(
             self.font_family.as_deref(),
             None,
-            rgba_to_color(self.fg_color),
+            self.fg_color,
             self.font_size,
         );
 

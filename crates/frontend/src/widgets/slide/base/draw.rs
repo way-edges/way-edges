@@ -1,14 +1,14 @@
 use config::widgets::slide::base::SlideConfig;
-use gdk::prelude::GdkCairoContextExt;
+use cosmic_text::Color;
 use smithay_client_toolkit::shell::wlr_layer::Anchor;
+use util::color::{cairo_set_color, COLOR_BLACK};
 use util::text::TextConfig;
 
 use std::f64::consts::PI;
 
 use cairo::{self, Context, ImageSurface, Path};
-use gdk::RGBA;
 use util::draw::new_surface;
-use util::{rgba_to_color, Z};
+use util::Z;
 
 #[derive(Debug)]
 pub struct DrawConfig {
@@ -19,9 +19,9 @@ pub struct DrawConfig {
     obtuse_angle: f64,
     radius: f64,
 
-    bg_color: RGBA,
-    pub fg_color: RGBA,
-    border_color: RGBA,
+    bg_color: Color,
+    pub fg_color: Color,
+    border_color: Color,
 
     func: fn(&DrawConfig, f64) -> ImageSurface,
 }
@@ -72,7 +72,7 @@ fn draw_text(progress: f64, progress_thickness: i32) -> ImageSurface {
         TextConfig::new(
             Some(util::text::slide_font::FAMILY_NAME),
             Some(500),
-            rgba_to_color(RGBA::BLACK),
+            COLOR_BLACK,
             height,
         ),
     )
@@ -203,7 +203,7 @@ impl DrawData {
                 .unwrap();
 
             let (mask_surf, ctx) = self.new_surface_bar();
-            ctx.set_source_color(&conf.bg_color);
+            cairo_set_color(&ctx, conf.bg_color);
             ctx.mask_surface(&self.fg_surf, Z, Z).unwrap();
 
             let (final_surf, ctx) = self.new_surface_bar();
@@ -215,7 +215,7 @@ impl DrawData {
 
         let fg_text_surf = {
             let (fg_text_surf, ctx) = self.new_surface_bar();
-            ctx.set_source_color(&conf.fg_color);
+            cairo_set_color(&ctx, conf.fg_color);
             ctx.mask_surface(normal_text_surf, text_start_pos.0, text_start_pos.1)
                 .unwrap();
 
@@ -251,7 +251,7 @@ fn make_draw_data(conf: &DrawConfig, progress: f64, is_forward: bool) -> DrawDat
     ctx.save().unwrap();
     ctx.translate(conf.border_width as f64, Z);
     ctx.append_path(&bg_path);
-    ctx.set_source_color(&conf.bg_color);
+    cairo_set_color(&ctx, conf.bg_color);
     ctx.fill().unwrap();
     ctx.restore().unwrap();
 
@@ -265,7 +265,7 @@ fn make_draw_data(conf: &DrawConfig, progress: f64, is_forward: bool) -> DrawDat
     let fg_ctx = Context::new(&fg_surf).unwrap();
     fg_ctx.translate(conf.border_width as f64 + translate_x, Z);
     fg_ctx.append_path(&bg_path);
-    fg_ctx.set_source_color(&conf.fg_color);
+    cairo_set_color(&fg_ctx, conf.fg_color);
     fg_ctx.fill().unwrap();
     ctx.save().unwrap();
     ctx.translate(conf.border_width as f64, Z);
@@ -284,7 +284,7 @@ fn make_draw_data(conf: &DrawConfig, progress: f64, is_forward: bool) -> DrawDat
     ctx.save().unwrap();
     ctx.translate(conf.border_width as f64 / 2., Z);
     ctx.append_path(&path);
-    ctx.set_source_color(&conf.border_color);
+    cairo_set_color(&ctx, conf.border_color);
     ctx.set_line_width(conf.border_width as f64);
     ctx.stroke().unwrap();
     ctx.restore().unwrap();
