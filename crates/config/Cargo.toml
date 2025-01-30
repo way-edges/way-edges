@@ -7,7 +7,6 @@ edition = "2021"
 
 cosmic-text.workspace = true
 regex-lite.workspace = true
-gdk.workspace = true
 log.workspace = true
 env_logger.workspace = true
 lazy_static.workspace = true
