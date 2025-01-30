@@ -14,7 +14,6 @@ use util::{
 use super::item::{MenuItem, MenuState, MenuType, Tray};
 
 pub struct HeaderDrawArg<'a> {
-    draw_config: &'a HeaderDrawConfig,
     text_conf: TextConfig<'a>,
 }
 impl<'a> HeaderDrawArg<'a> {
@@ -26,10 +25,7 @@ impl<'a> HeaderDrawArg<'a> {
             draw_config.font_pixel_height,
         );
 
-        Self {
-            draw_config,
-            text_conf,
-        }
+        Self { text_conf }
     }
     pub fn draw_header(&self, tray: &Tray) -> ImageSurface {
         if !tray.is_open {
