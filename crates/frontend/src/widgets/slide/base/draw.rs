@@ -1,15 +1,14 @@
 use config::widgets::slide::base::SlideConfig;
 use gdk::prelude::GdkCairoContextExt;
 use smithay_client_toolkit::shell::wlr_layer::Anchor;
+use util::text::TextConfig;
 
 use std::f64::consts::PI;
 
 use cairo::{self, Context, ImageSurface, Path};
 use gdk::RGBA;
 use util::draw::new_surface;
-use util::Z;
-
-use super::font::get_pango_context;
+use util::{rgba_to_color, Z};
 
 #[derive(Debug)]
 pub struct DrawConfig {
@@ -66,26 +65,33 @@ impl DrawConfig {
 }
 
 fn draw_text(progress: f64, progress_thickness: i32) -> ImageSurface {
-    let height = (progress_thickness as f64 * 0.9).ceil();
-    let pg_ctx = get_pango_context();
-    let mut desc = pg_ctx.font_description().unwrap();
-    desc.set_absolute_size(height * 1024.);
-    pg_ctx.set_font_description(Some(&desc));
-    let layout = pangocairo::pango::Layout::new(&pg_ctx);
-
+    let height = (progress_thickness as f64 * 0.9).ceil() as i32;
     let text = format!("{:.2}%", progress * 100.);
-    layout.set_text(&text);
+    util::text::draw_text(
+        &text,
+        TextConfig::new(None, rgba_to_color(RGBA::BLACK), height),
+    )
+    .to_image_surface()
 
-    let (_, logic) = layout.pixel_extents();
-    let scale = height / logic.height() as f64;
-
-    let size = ((logic.width() as f64 * scale).ceil() as i32, height as i32);
-    let surf = new_surface(size);
-    let ctx = cairo::Context::new(&surf).unwrap();
-    ctx.scale(scale, scale);
-    pangocairo::functions::show_layout(&ctx, &layout);
-
-    surf
+    // let pg_ctx = get_pango_context();
+    // let mut desc = pg_ctx.font_description().unwrap();
+    // desc.set_absolute_size(height * 1024.);
+    // pg_ctx.set_font_description(Some(&desc));
+    // let layout = pangocairo::pango::Layout::new(&pg_ctx);
+    //
+    // let text = format!("{:.2}%", progress * 100.);
+    // layout.set_text(&text);
+    //
+    // let (_, logic) = layout.pixel_extents();
+    // let scale = height / logic.height() as f64;
+    //
+    // let size = ((logic.width() as f64 * scale).ceil() as i32, height as i32);
+    // let surf = new_surface(size);
+    // let ctx = cairo::Context::new(&surf).unwrap();
+    // ctx.scale(scale, scale);
+    // pangocairo::functions::show_layout(&ctx, &layout);
+    //
+    // surf
 }
 
 fn draw_slide_path(

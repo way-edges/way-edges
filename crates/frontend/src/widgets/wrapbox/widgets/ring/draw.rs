@@ -4,10 +4,11 @@ use gdk::RGBA;
 use pango::Layout;
 
 use config::widgets::wrapbox::ring::RingConfig;
-use util::draw::{draw_fan, draw_text_to_size, new_surface};
+use util::draw::{draw_fan, new_surface};
 use util::template::arg::{TemplateArgFloatParser, TEMPLATE_ARG_FLOAT};
 use util::template::base::Template;
-use util::Z;
+use util::text::{draw_text, TextConfig};
+use util::{rgba_to_color, Z};
 
 use crate::animation::{calculate_transition, ToggleAnimationRc};
 use crate::widgets::wrapbox::BoxTemporaryCtx;
@@ -79,7 +80,12 @@ impl RingDrawer {
         progress: f64,
         preset_text: &str,
     ) -> (Option<ImageSurface>, Option<ImageSurface>) {
-        let layout = self.make_layout();
+        // let layout = self.make_layout();
+        let text_conf = TextConfig::new(
+            self.font_family.as_deref(),
+            rgba_to_color(self.fg_color),
+            self.font_size,
+        );
 
         let template_func = |template: &Template| {
             let text = template.parse(|parser| {
@@ -94,7 +100,8 @@ impl RingDrawer {
                 text
             });
 
-            draw_text_to_size(&layout, &self.fg_color, &text, self.font_size)
+            draw_text(&text, text_conf).to_image_surface()
+            // draw_text_to_size(&layout, &self.fg_color, &text, self.font_size)
         };
 
         let prefix = self.prefix.as_ref().map(template_func);

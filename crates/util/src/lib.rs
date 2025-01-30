@@ -52,6 +52,9 @@ pub static Z: f64 = 0.;
 use std::fmt::Debug;
 use std::fmt::Display;
 
+use cosmic_text::Color;
+use gdk::RGBA;
+
 pub fn binary_search_within_range<T: Debug + PartialOrd + Copy + Display>(
     l: &[[T; 2]],
     v: T,
@@ -158,4 +161,28 @@ impl Or {
     pub fn res(self) -> bool {
         self.0
     }
+}
+
+pub fn rgba_to_color(rgba: RGBA) -> Color {
+    Color::rgba(
+        (rgba.red() * 255.0) as u8,
+        (rgba.green() * 255.0) as u8,
+        (rgba.blue() * 255.0) as u8,
+        (rgba.alpha() * 255.0) as u8,
+    )
+}
+
+pub fn pre_multiply_and_to_little_endian_argb(rgba: [u8; 4]) -> [u8; 4] {
+    // pre-multiply
+    let red = rgba[0] as u16;
+    let green = rgba[1] as u16;
+    let blue = rgba[2] as u16;
+    let alpha = rgba[3] as u16;
+
+    let r = (red * alpha) / 255;
+    let g = (green * alpha) / 255;
+    let b = (blue * alpha) / 255;
+
+    // little-endian for ARgb32
+    [b as u8, g as u8, r as u8, rgba[3]]
 }
