@@ -50,7 +50,11 @@ lazy_static::lazy_static! {
     pub static ref COLOR_TRANSPARENT: Color = Color::rgba(0, 0, 0, 0);
 }
 
-pub fn parse_color(s: &str) -> Result<[u8; 4], ParseColorError> {
+pub fn parse_color(s: &str) -> Result<Color, ParseColorError> {
+    parse_color_inner(s).map(|v| Color::rgba(v[0], v[1], v[2], v[3]))
+}
+
+fn parse_color_inner(s: &str) -> Result<[u8; 4], ParseColorError> {
     let s = s.trim().to_lowercase();
 
     // if let Some(&color) = CSS_COLORS.get(s.as_str()) {
@@ -189,30 +193,36 @@ mod tests {
 
     #[test]
     fn test_parse_hex() {
-        assert_eq!(parse_color("#f00").unwrap(), [255, 0, 0, 255]);
-        assert_eq!(parse_color("#ff0000").unwrap(), [255, 0, 0, 255]);
-        assert_eq!(parse_color("#ff000080").unwrap(), [255, 0, 0, 128]);
-        assert_eq!(parse_color("#fff000000").unwrap(), [255, 0, 0, 255]); // 3 digits per channel
+        assert_eq!(parse_color_inner("#f00").unwrap(), [255, 0, 0, 255]);
+        assert_eq!(parse_color_inner("#ff0000").unwrap(), [255, 0, 0, 255]);
+        assert_eq!(parse_color_inner("#ff000080").unwrap(), [255, 0, 0, 128]);
+        assert_eq!(parse_color_inner("#fff000000").unwrap(), [255, 0, 0, 255]); // 3 digits per channel
     }
 
     #[test]
     fn test_parse_rgb() {
-        assert_eq!(parse_color("rgb(255, 0, 0)").unwrap(), [255, 0, 0, 255]);
         assert_eq!(
-            parse_color("rgba(255, 0, 0, 0.5)").unwrap(),
+            parse_color_inner("rgb(255, 0, 0)").unwrap(),
+            [255, 0, 0, 255]
+        );
+        assert_eq!(
+            parse_color_inner("rgba(255, 0, 0, 0.5)").unwrap(),
             [255, 0, 0, 128]
         );
         assert_eq!(
-            parse_color("rgb(100%, 50%, 0%)").unwrap(),
+            parse_color_inner("rgb(100%, 50%, 0%)").unwrap(),
             [255, 128, 0, 255]
         );
     }
 
     #[test]
     fn test_parse_hsl() {
-        assert_eq!(parse_color("hsl(0, 100%, 50%)").unwrap(), [255, 0, 0, 255]);
         assert_eq!(
-            parse_color("hsla(120, 100%, 50%, 0.5)").unwrap(),
+            parse_color_inner("hsl(0, 100%, 50%)").unwrap(),
+            [255, 0, 0, 255]
+        );
+        assert_eq!(
+            parse_color_inner("hsla(120, 100%, 50%, 0.5)").unwrap(),
             [0, 255, 0, 128]
         );
     }
