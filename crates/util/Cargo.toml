@@ -7,8 +7,11 @@ edition = "2021"
 log.workspace = true
 cairo.workspace = true
 paste.workspace = true
-pangocairo.workspace = true
 gdk.workspace = true
+
+cosmic-text = { git = "https://github.com/pop-os/cosmic-text", branch = "main", features = [
+  "shape-run-cache",
+] }
 
 notify-rust = "4.11"
 # downcast-rs = "1.2.1"

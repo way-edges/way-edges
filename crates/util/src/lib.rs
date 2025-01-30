@@ -1,5 +1,6 @@
 pub mod draw;
 pub mod template;
+pub mod text;
 
 pub mod shell {
     use std::{process::Command, thread};
