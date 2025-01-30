@@ -83,6 +83,7 @@ impl RingDrawer {
         // let layout = self.make_layout();
         let text_conf = TextConfig::new(
             self.font_family.as_deref(),
+            None,
             rgba_to_color(self.fg_color),
             self.font_size,
         );

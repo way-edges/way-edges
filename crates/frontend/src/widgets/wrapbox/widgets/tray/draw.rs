@@ -21,6 +21,7 @@ impl<'a> HeaderDrawArg<'a> {
     pub fn create_from_config(draw_config: &'a HeaderDrawConfig) -> Self {
         let text_conf = TextConfig::new(
             None,
+            None,
             rgba_to_color(draw_config.text_color),
             draw_config.font_pixel_height,
         );
@@ -73,6 +74,7 @@ pub struct MenuDrawArg<'a> {
 impl<'a> MenuDrawArg<'a> {
     pub fn create_from_config(draw_config: &'a MenuDrawConfig) -> Self {
         let text_conf = TextConfig::new(
+            None,
             None,
             rgba_to_color(draw_config.text_color),
             draw_config.font_pixel_height,

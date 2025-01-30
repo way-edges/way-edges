@@ -65,33 +65,18 @@ impl DrawConfig {
 }
 
 fn draw_text(progress: f64, progress_thickness: i32) -> ImageSurface {
-    let height = (progress_thickness as f64 * 0.9).ceil() as i32;
+    let height = (progress_thickness as f64 * 0.8).ceil() as i32;
     let text = format!("{:.2}%", progress * 100.);
     util::text::draw_text(
         &text,
-        TextConfig::new(None, rgba_to_color(RGBA::BLACK), height),
+        TextConfig::new(
+            Some(util::text::slide_font::FAMILY_NAME),
+            Some(500),
+            rgba_to_color(RGBA::BLACK),
+            height,
+        ),
     )
     .to_image_surface()
-
-    // let pg_ctx = get_pango_context();
-    // let mut desc = pg_ctx.font_description().unwrap();
-    // desc.set_absolute_size(height * 1024.);
-    // pg_ctx.set_font_description(Some(&desc));
-    // let layout = pangocairo::pango::Layout::new(&pg_ctx);
-    //
-    // let text = format!("{:.2}%", progress * 100.);
-    // layout.set_text(&text);
-    //
-    // let (_, logic) = layout.pixel_extents();
-    // let scale = height / logic.height() as f64;
-    //
-    // let size = ((logic.width() as f64 * scale).ceil() as i32, height as i32);
-    // let surf = new_surface(size);
-    // let ctx = cairo::Context::new(&surf).unwrap();
-    // ctx.scale(scale, scale);
-    // pangocairo::functions::show_layout(&ctx, &layout);
-    //
-    // surf
 }
 
 fn draw_slide_path(
