@@ -11,16 +11,18 @@ backend = { version = "0.1.0", path = "crates/backend" }
 frontend = { version = "0.1.0", path = "crates/frontend" }
 
 
+cosmic-text = { git = "https://github.com/pop-os/cosmic-text", branch = "main", features = [
+  "shape-run-cache",
+] }
 gdk = { git = "https://github.com/ogios/gtk4-rs.git", version = "0.9", branch = "0.9", package = "gdk4" }
 cairo = { git = "https://github.com/ogios/gtk-rs-core.git", version = "0.20", branch = "0.20", package = "cairo-rs", default-features = false, features = [
   "freetype",
   "freetype-rs",
   "png",
 ] }
-pango = { git = "https://github.com/ogios/gtk-rs-core.git", version = "0.20", branch = "0.20", package = "pango", features = [
-  "v1_56",
-] }
-pangocairo = { git = "https://github.com/ogios/gtk-rs-core.git", version = "0.20", branch = "0.20", package = "pangocairo" }
+
+thiserror = "2.0.11"
+regex-lite = "0.1.6"
 log = "0.4"
 env_logger = "0.11"
 lazy_static = "1.5.0"

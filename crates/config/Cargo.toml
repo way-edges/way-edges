@@ -5,6 +5,8 @@ edition = "2021"
 
 [dependencies]
 
+cosmic-text.workspace = true
+regex-lite.workspace = true
 gdk.workspace = true
 log.workspace = true
 env_logger.workspace = true
@@ -19,5 +21,3 @@ serde_jsonrc.workspace = true
 serde.workspace = true
 
 xdg = "2.5"
-
-regex = "1.10"

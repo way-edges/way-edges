@@ -1,3 +1,4 @@
+use regex_lite::Regex;
 use serde::{Deserialize, Deserializer};
 use smithay_client_toolkit::shell::wlr_layer::{Anchor, Layer};
 use std::str::FromStr;
@@ -106,7 +107,7 @@ impl<'de> Deserialize<'de> for NumOrRelative {
             {
                 // just `unwrap`, it's ok
                 lazy_static::lazy_static! {
-                    static ref re: regex::Regex = regex::Regex::new(r"^(\d+(\.\d+)?)%\s*(.*)$").unwrap();
+                    static ref re: Regex = Regex::new(r"^(\d+(\.\d+)?)%\s*(.*)$").unwrap();
                 }
 
                 if let Some(captures) = re.captures(v) {

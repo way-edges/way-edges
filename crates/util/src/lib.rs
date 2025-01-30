@@ -1,3 +1,4 @@
+pub mod color;
 pub mod draw;
 pub mod template;
 pub mod text;

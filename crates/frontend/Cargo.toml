@@ -6,12 +6,10 @@ edition = "2021"
 [dependencies]
 gdk.workspace = true
 cairo.workspace = true
-pango.workspace = true
 educe.workspace = true
 paste.workspace = true
 lazy_static.workspace = true
 async-channel.workspace = true
-pangocairo.workspace = true
 system-tray.workspace = true
 
 smithay-client-toolkit.workspace = true
