@@ -1,6 +1,7 @@
+use cosmic_text::Color;
 use educe::Educe;
-use gdk::RGBA;
 use serde::Deserialize;
+use util::color::COLOR_BLACK;
 
 use crate::widgets::common::{self};
 
@@ -27,7 +28,7 @@ fn dt_time_format() -> String {
 pub struct TextConfig {
     #[serde(default = "dt_fg_color")]
     #[serde(deserialize_with = "common::color_translate")]
-    pub fg_color: RGBA,
+    pub fg_color: Color,
     #[serde(default = "dt_font_size")]
     pub font_size: i32,
     #[serde(default)]
@@ -36,8 +37,8 @@ pub struct TextConfig {
     pub preset: TextPreset,
 }
 
-fn dt_fg_color() -> RGBA {
-    RGBA::BLACK
+fn dt_fg_color() -> Color {
+    COLOR_BLACK
 }
 fn dt_font_size() -> i32 {
     24

@@ -1,8 +1,11 @@
-use gdk::RGBA;
+use cosmic_text::Color;
 use serde::{Deserialize, Deserializer};
-use util::template::{
-    arg::TemplateArgFloatProcesser,
-    base::{Template, TemplateProcesser},
+use util::{
+    color::COLOR_BLACK,
+    template::{
+        arg::TemplateArgFloatProcesser,
+        base::{Template, TemplateProcesser},
+    },
 };
 
 use crate::widgets::common::KeyEventMap;
@@ -25,12 +28,12 @@ impl Default for Preset {
 pub struct PulseAudioConfig {
     #[serde(default = "default_mute_color")]
     #[serde(deserialize_with = "super::super::common::color_translate")]
-    pub mute_color: RGBA,
+    pub mute_color: Color,
     pub device: Option<String>,
 }
 
-fn default_mute_color() -> RGBA {
-    RGBA::BLACK
+fn default_mute_color() -> Color {
+    COLOR_BLACK
 }
 
 #[derive(Debug, Deserialize)]

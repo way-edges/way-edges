@@ -1,8 +1,7 @@
-use std::str::FromStr;
-
+use cosmic_text::Color;
 use educe::Educe;
-use gdk::RGBA;
 use serde::Deserialize;
+use util::color::parse_color;
 use way_edges_derive::GetSize;
 
 use super::{
@@ -27,16 +26,16 @@ pub struct SlideConfig {
 
     #[serde(default = "dt_bg_color")]
     #[serde(deserialize_with = "common::color_translate")]
-    pub bg_color: RGBA,
+    pub bg_color: Color,
     #[serde(default = "dt_fg_color")]
     #[serde(deserialize_with = "common::color_translate")]
-    pub fg_color: RGBA,
+    pub fg_color: Color,
     #[serde(default = "dt_border_color")]
     #[serde(deserialize_with = "common::color_translate")]
-    pub border_color: RGBA,
+    pub border_color: Color,
     #[serde(default = "dt_text_color")]
     #[serde(deserialize_with = "common::color_translate")]
-    pub text_color: RGBA,
+    pub text_color: Color,
 
     #[serde(default)]
     pub redraw_only_on_internal_update: bool,
@@ -48,17 +47,17 @@ pub struct SlideConfig {
 fn dt_border_width() -> i32 {
     3
 }
-fn dt_bg_color() -> RGBA {
-    RGBA::from_str("#808080").unwrap()
+fn dt_bg_color() -> Color {
+    parse_color("#808080").unwrap()
 }
-fn dt_fg_color() -> RGBA {
-    RGBA::from_str("#FFB847").unwrap()
+fn dt_fg_color() -> Color {
+    parse_color("#FFB847").unwrap()
 }
-fn dt_border_color() -> RGBA {
-    RGBA::from_str("#646464").unwrap()
+fn dt_border_color() -> Color {
+    parse_color("#646464").unwrap()
 }
-fn dt_text_color() -> RGBA {
-    RGBA::from_str("#000000").unwrap()
+fn dt_text_color() -> Color {
+    parse_color("#000000").unwrap()
 }
 fn dt_obtuse_angle() -> f64 {
     120.

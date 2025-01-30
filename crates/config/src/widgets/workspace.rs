@@ -1,7 +1,7 @@
 use super::common::{self, CommonSize};
-use gdk::RGBA;
+use cosmic_text::Color;
 use serde::Deserialize;
-use std::str::FromStr;
+use util::color::parse_color;
 use way_edges_derive::GetSize;
 
 #[derive(Debug, Deserialize, GetSize)]
@@ -26,13 +26,13 @@ pub struct WorkspaceConfig {
 
     #[serde(default = "dt_deactive_color")]
     #[serde(deserialize_with = "common::color_translate")]
-    pub deactive_color: RGBA,
+    pub deactive_color: Color,
     #[serde(default = "dt_active_color")]
     #[serde(deserialize_with = "common::color_translate")]
-    pub active_color: RGBA,
+    pub active_color: Color,
     #[serde(default)]
     #[serde(deserialize_with = "common::option_color_translate")]
-    pub hover_color: Option<RGBA>,
+    pub hover_color: Option<Color>,
 
     #[serde(default)]
     pub invert_direction: bool,
@@ -55,11 +55,11 @@ fn dt_pop_duration() -> u64 {
     1000
 }
 
-fn dt_deactive_color() -> RGBA {
-    RGBA::from_str("#003049").unwrap()
+fn dt_deactive_color() -> Color {
+    parse_color("#003049").unwrap()
 }
-fn dt_active_color() -> RGBA {
-    RGBA::from_str("#669bbc").unwrap()
+fn dt_active_color() -> Color {
+    parse_color("#669bbc").unwrap()
 }
 
 #[derive(Debug, Deserialize)]

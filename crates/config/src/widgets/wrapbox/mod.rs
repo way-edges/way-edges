@@ -2,13 +2,12 @@ pub mod ring;
 pub mod text;
 pub mod tray;
 
-use std::str::FromStr;
-
-use gdk::RGBA;
+use cosmic_text::Color;
 use ring::RingConfig;
 use serde::Deserialize;
 use text::TextConfig;
 use tray::TrayConfig;
+use util::color::parse_color;
 
 // =================================== OUTLOOK
 #[derive(Debug, Deserialize, Clone)]
@@ -41,7 +40,7 @@ pub struct OutlookWindowConfig {
     pub margins: OutlookMargins,
     #[serde(default = "dt_color")]
     #[serde(deserialize_with = "super::common::color_translate")]
-    pub color: RGBA,
+    pub color: Color,
     #[serde(default = "dt_radius")]
     pub border_radius: i32,
     #[serde(default = "dt_border_width")]
@@ -57,8 +56,8 @@ impl Default for OutlookWindowConfig {
         }
     }
 }
-fn dt_color() -> RGBA {
-    RGBA::from_str("#4d8080").unwrap()
+fn dt_color() -> Color {
+    parse_color("#4d8080").unwrap()
 }
 fn dt_radius() -> i32 {
     5
