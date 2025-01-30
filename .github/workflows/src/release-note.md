@@ -2,10 +2,10 @@
 
 ## Important
 
-- **Add Niri workspace support**
-- **`hypr-workspace` is moved under `workspace` as a preset**
+- Remove gdk(which depends on pango, glib, gio)
+- Use cosmic-text to replace pango
+- Doing pre-multiply and little endian convertion manually
 
 ## Less important
 
-- Fix: no ui when only one workspace
-- Separate workspace with output/monitor
+- Memory usage dropped nearly 50%
