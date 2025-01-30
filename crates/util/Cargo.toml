@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 log.workspace = true
-cairo.workspace = true
+cairo-rs.workspace = true
 paste.workspace = true
 regex-lite.workspace = true
 thiserror.workspace = true
