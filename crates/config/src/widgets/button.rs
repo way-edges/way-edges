@@ -1,8 +1,8 @@
 use super::common::{self, CommonSize, KeyEventMap};
+use cosmic_text::Color;
 use educe::Educe;
-use gdk::RGBA;
 use serde::Deserialize;
-use std::str::FromStr;
+use util::color::{parse_color, COLOR_BLACK};
 use way_edges_derive::GetSize;
 
 #[derive(Educe, Deserialize, GetSize)]
@@ -12,23 +12,23 @@ pub struct BtnConfig {
     pub size: CommonSize,
     #[serde(default = "dt_color")]
     #[serde(deserialize_with = "common::color_translate")]
-    pub color: RGBA,
+    pub color: Color,
     #[serde(default = "dt_border_width")]
     pub border_width: i32,
     #[serde(default = "dt_border_color")]
     #[serde(deserialize_with = "common::color_translate")]
-    pub border_color: RGBA,
+    pub border_color: Color,
 
     #[serde(default)]
     pub event_map: KeyEventMap,
 }
 
-fn dt_color() -> RGBA {
-    RGBA::from_str("#7B98FF").unwrap()
+fn dt_color() -> Color {
+    parse_color("#7B98FF").unwrap()
 }
 fn dt_border_width() -> i32 {
     3
 }
-fn dt_border_color() -> RGBA {
-    RGBA::BLACK
+fn dt_border_color() -> Color {
+    COLOR_BLACK
 }

@@ -1,6 +1,7 @@
+use cosmic_text::Color;
 use educe::Educe;
-use gdk::RGBA;
 use serde::Deserialize;
+use util::color::COLOR_WHITE;
 
 use super::super::common;
 use super::Align;
@@ -33,13 +34,13 @@ impl HeaderMenuAlign {
 pub struct HeaderDrawConfig {
     pub font_pixel_height: i32,
     #[serde(deserialize_with = "common::color_translate")]
-    pub text_color: RGBA,
+    pub text_color: Color,
 }
 impl Default for HeaderDrawConfig {
     fn default() -> Self {
         Self {
             font_pixel_height: 16,
-            text_color: RGBA::WHITE,
+            text_color: COLOR_WHITE,
         }
     }
 }
@@ -51,11 +52,11 @@ pub struct MenuDrawConfig {
     pub marker_size: i32,
     pub separator_height: i32,
     #[serde(deserialize_with = "common::color_translate")]
-    pub border_color: RGBA,
+    pub border_color: Color,
     #[serde(deserialize_with = "common::color_translate")]
-    pub text_color: RGBA,
+    pub text_color: Color,
     #[serde(deserialize_with = "common::option_color_translate")]
-    pub marker_color: Option<RGBA>,
+    pub marker_color: Option<Color>,
 }
 impl Default for MenuDrawConfig {
     fn default() -> Self {
@@ -64,8 +65,8 @@ impl Default for MenuDrawConfig {
             marker_size: 20,
             font_pixel_height: 24,
             separator_height: 5,
-            border_color: RGBA::WHITE,
-            text_color: RGBA::WHITE,
+            border_color: COLOR_WHITE,
+            text_color: COLOR_WHITE,
             marker_color: None,
         }
     }

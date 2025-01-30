@@ -1,8 +1,7 @@
-use std::str::FromStr;
-
 use crate::widgets::common::color_translate;
-use gdk::RGBA;
+use cosmic_text::Color;
 use serde::{Deserialize, Deserializer};
+use util::color::parse_color;
 use util::template::{
     arg::{TemplateArgFloatProcesser, TemplateArgRingPresetProcesser},
     base::{Template, TemplateProcesser},
@@ -63,10 +62,10 @@ pub struct RingConfigShadow {
     pub ring_width: i32,
     #[serde(default = "dt_bg")]
     #[serde(deserialize_with = "color_translate")]
-    pub bg_color: RGBA,
+    pub bg_color: Color,
     #[serde(default = "dt_fg")]
     #[serde(deserialize_with = "color_translate")]
-    pub fg_color: RGBA,
+    pub fg_color: Color,
 
     #[serde(default = "dt_tt")]
     pub text_transition_ms: u64,
@@ -96,11 +95,11 @@ fn dt_r() -> i32 {
 fn dt_rw() -> i32 {
     5
 }
-fn dt_bg() -> RGBA {
-    RGBA::from_str("#9F9F9F").unwrap()
+fn dt_bg() -> Color {
+    parse_color("#9F9F9F").unwrap()
 }
-fn dt_fg() -> RGBA {
-    RGBA::from_str("#F1FA8C").unwrap()
+fn dt_fg() -> Color {
+    parse_color("#F1FA8C").unwrap()
 }
 fn dt_tt() -> u64 {
     100
@@ -131,8 +130,8 @@ impl From<RingConfigShadow> for RingConfig {
 pub struct RingConfig {
     pub radius: i32,
     pub ring_width: i32,
-    pub bg_color: RGBA,
-    pub fg_color: RGBA,
+    pub bg_color: Color,
+    pub fg_color: Color,
 
     pub text_transition_ms: u64,
 

@@ -21,11 +21,11 @@ pub enum Widget {
 pub mod common {
     use std::{collections::HashMap, fmt::Display, str::FromStr};
 
-    use gdk::RGBA;
+    use cosmic_text::Color;
     use serde::{self, de, Deserialize, Deserializer};
     use serde_jsonrc::Value;
     use smithay_client_toolkit::shell::wlr_layer::Anchor;
-    use util::shell::shell_cmd_non_block;
+    use util::{color::parse_color, shell::shell_cmd_non_block};
 
     use crate::common::NumOrRelative;
 
@@ -81,13 +81,13 @@ pub mod common {
         Ok(map)
     }
 
-    pub fn option_color_translate<'de, D>(d: D) -> Result<Option<RGBA>, D::Error>
+    pub fn option_color_translate<'de, D>(d: D) -> Result<Option<Color>, D::Error>
     where
         D: Deserializer<'de>,
     {
         struct ColorVisitor;
         impl serde::de::Visitor<'_> for ColorVisitor {
-            type Value = Option<RGBA>;
+            type Value = Option<Color>;
             fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
                 formatter.write_str("A string")
             }
@@ -96,7 +96,7 @@ pub mod common {
             where
                 E: serde::de::Error,
             {
-                Ok(Some(to_color(v)?))
+                Ok(Some(parse_color(v).map_err(serde::de::Error::custom)?))
             }
 
             fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
@@ -109,40 +109,15 @@ pub mod common {
         d.deserialize_any(ColorVisitor)
     }
 
-    pub fn color_translate<'de, D>(d: D) -> Result<RGBA, D::Error>
+    pub fn color_translate<'de, D>(d: D) -> Result<Color, D::Error>
     where
         D: Deserializer<'de>,
     {
-        struct ColorVisitor;
-        impl serde::de::Visitor<'_> for ColorVisitor {
-            type Value = RGBA;
-            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-                formatter.write_str("A string")
-            }
-
-            fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-            where
-                E: serde::de::Error,
-            {
-                to_color(v)
-            }
-
-            fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
-            where
-                E: serde::de::Error,
-            {
-                self.visit_str(v.as_str())
-            }
+        if let Some(c) = option_color_translate(d)? {
+            Ok(c)
+        } else {
+            Err(serde::de::Error::missing_field("color is not optional"))
         }
-        d.deserialize_any(ColorVisitor)
-    }
-
-    pub fn to_color<T: serde::de::Error>(color: &str) -> Result<RGBA, T> {
-        match RGBA::from_str(color) {
-            Ok(c) => Ok(c),
-            Err(e) => Err(format!("invalid color {}", e)),
-        }
-        .map_err(serde::de::Error::custom)
     }
 
     pub fn from_value<T>(v: Value) -> Result<T, String>
