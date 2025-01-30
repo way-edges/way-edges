@@ -4,6 +4,8 @@ use cosmic_text::{
     SwashCache,
 };
 
+use crate::pre_multiply_and_to_little_endian_argb;
+
 use super::slide_font::include_slide_font;
 
 extern crate alloc;
@@ -44,13 +46,10 @@ impl Canvas {
         if chunk_start as usize > self.canvas_buffer.len() - 4 {
             return;
         }
-        let slice: &mut [u8] =
-            &mut self.canvas_buffer[chunk_start as usize..(chunk_start + 4) as usize];
 
-        slice[0] = color.a();
-        slice[1] = color.r();
-        slice[2] = color.g();
-        slice[3] = color.b();
+        let color = pre_multiply_and_to_little_endian_argb(color.as_rgba());
+        self.canvas_buffer[chunk_start as usize..(chunk_start + 4) as usize]
+            .copy_from_slice(&color);
     }
 
     pub fn to_image_surface(self) -> ImageSurface {
@@ -65,23 +64,53 @@ impl Canvas {
     }
 }
 
-fn measure_text_width(buffer: &Buffer) -> (i32, i32) {
+fn measure_text_size(
+    buffer: &Buffer,
+    swash_cache: &mut SwashCache,
+    font_system: &mut FontSystem,
+) -> (i32, i32) {
     // Get the layout runs
     let layout_runs: LayoutRunIter = buffer.layout_runs();
     let mut run_width: f32 = 0.;
     let mut run_height_high: f32 = f32::MIN;
+    let mut last_run = None;
 
     for run in layout_runs {
         run_width = run_width.max(run.line_w);
         run_height_high = run_height_high.max(run.line_y);
+        last_run = Some(run);
     }
-    (run_width.ceil() as i32, run_height_high as i32)
+
+    if let Some(run) = last_run {
+        let mut m = 0;
+        for g in run.glyphs {
+            let img = swash_cache
+                .get_image(font_system, g.physical((0., 0.), 1.).cache_key)
+                .as_ref()
+                .unwrap();
+            m = m.max(img.placement.height as i32 - img.placement.top);
+        }
+
+        run_height_high += m as f32;
+    }
+
+    (run_width.ceil() as i32, run_height_high.ceil() as i32)
 }
 
+#[derive(Debug, Clone, Copy)]
 pub struct TextConfig<'a> {
     pub family: Option<Family<'a>>,
     pub color: Color,
     pub size: i32,
+}
+impl<'a> TextConfig<'a> {
+    pub fn new(family: Option<&'a str>, color: Color, size: i32) -> Self {
+        Self {
+            family: family.map(Family::Name),
+            color,
+            size,
+        }
+    }
 }
 
 fn draw_text_inner(
@@ -102,7 +131,7 @@ fn draw_text_inner(
     buffer.set_text(font_system, text, attrs, Shaping::Advanced);
     buffer.shape_until_scroll(font_system, true);
 
-    let (width, height) = measure_text_width(&buffer);
+    let (width, height) = measure_text_size(&buffer, swash_cache, font_system);
     let mut canvas = Canvas::new(width, height);
 
     buffer.draw(

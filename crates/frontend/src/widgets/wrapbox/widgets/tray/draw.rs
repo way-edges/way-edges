@@ -4,9 +4,10 @@ use cairo::{Context, ImageSurface};
 
 use config::widgets::wrapbox::tray::{HeaderDrawConfig, MenuDrawConfig};
 use gdk::prelude::GdkCairoContextExt;
-use pango::Layout;
 use util::{
-    draw::{draw_text_to_size, new_surface},
+    draw::new_surface,
+    rgba_to_color,
+    text::{draw_text, TextConfig},
     Z,
 };
 
@@ -14,25 +15,19 @@ use super::item::{MenuItem, MenuState, MenuType, Tray};
 
 pub struct HeaderDrawArg<'a> {
     draw_config: &'a HeaderDrawConfig,
-    layout: Layout,
+    text_conf: TextConfig<'a>,
 }
 impl<'a> HeaderDrawArg<'a> {
     pub fn create_from_config(draw_config: &'a HeaderDrawConfig) -> Self {
-        let layout = {
-            let font_size = draw_config.font_pixel_height;
-            let pc = pangocairo::pango::Context::new();
-            let fm = pangocairo::FontMap::default();
-            pc.set_font_map(Some(&fm));
-
-            let mut desc = pc.font_description().unwrap();
-            desc.set_absolute_size(font_size as f64 * 1024.);
-            pc.set_font_description(Some(&desc));
-            pangocairo::pango::Layout::new(&pc)
-        };
+        let text_conf = TextConfig::new(
+            None,
+            rgba_to_color(draw_config.text_color),
+            draw_config.font_pixel_height,
+        );
 
         Self {
             draw_config,
-            layout,
+            text_conf,
         }
     }
     pub fn draw_header(&self, tray: &Tray) -> ImageSurface {
@@ -51,12 +46,7 @@ impl<'a> HeaderDrawArg<'a> {
         combine_horizonal_center(&[tray.icon.clone(), text_surf], Some(ICON_TEXT_GAP))
     }
     fn draw_text(&self, text: &str) -> ImageSurface {
-        draw_text_to_size(
-            &self.layout,
-            &self.draw_config.text_color,
-            text,
-            self.draw_config.font_pixel_height,
-        )
+        draw_text(text, self.text_conf).to_image_surface()
     }
 }
 
@@ -78,25 +68,19 @@ static GAP_BETWEEN_MARKER_AND_TEXT: i32 = 5;
 // TODO: ICON FOR MENU ITEM
 pub struct MenuDrawArg<'a> {
     draw_config: &'a MenuDrawConfig,
-    layout: Layout,
+    text_conf: TextConfig<'a>,
 }
 impl<'a> MenuDrawArg<'a> {
     pub fn create_from_config(draw_config: &'a MenuDrawConfig) -> Self {
-        let layout = {
-            let font_size = draw_config.font_pixel_height;
-            let pc = pangocairo::pango::Context::new();
-            let fm = pangocairo::FontMap::default();
-            pc.set_font_map(Some(&fm));
-
-            let mut desc = pc.font_description().unwrap();
-            desc.set_absolute_size(font_size as f64 * 1024.);
-            pc.set_font_description(Some(&desc));
-            pangocairo::pango::Layout::new(&pc)
-        };
+        let text_conf = TextConfig::new(
+            None,
+            rgba_to_color(draw_config.text_color),
+            draw_config.font_pixel_height,
+        );
 
         Self {
             draw_config,
-            layout,
+            text_conf,
         }
     }
 
@@ -292,12 +276,7 @@ impl<'a> MenuDrawArg<'a> {
 // supports: markers, text
 impl MenuDrawArg<'_> {
     fn draw_text(&self, text: &str) -> ImageSurface {
-        draw_text_to_size(
-            &self.layout,
-            &self.draw_config.text_color,
-            text,
-            self.draw_config.font_pixel_height,
-        )
+        draw_text(text, self.text_conf).to_image_surface()
     }
     fn get_marker_surf_context(&self) -> (ImageSurface, Context) {
         let size = self.draw_config.marker_size;
