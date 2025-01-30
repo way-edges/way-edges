@@ -1,6 +1,15 @@
 
 https://github.com/user-attachments/assets/b41205be-5740-46bd-ab53-c9713f40e042
 
+> [!NOTE]
+> This is written completely with smithay.
+> 
+> Without the usage of GUI framework, you can expect **better performance** and **lower resource usage**,  
+> and this also means litteraly every bug you encountered is made by me(or smithay)  
+> :)
+>
+> You can also see this as a project for learning how to write a rice with low-level wayland protocal.
+
 ## 🫧 Project board
 https://github.com/orgs/way-edges/projects/1/views/1
 
