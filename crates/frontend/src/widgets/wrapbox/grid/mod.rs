@@ -1,8 +1,8 @@
 pub mod builder;
 pub mod item;
 
+use cairo::{self, Format, ImageSurface};
 use config::widgets::wrapbox::{Align, AlignFunc};
-use gdk::cairo::{self, Format, ImageSurface};
 use item::{GridItemContent, GridItemMap};
 use util::binary_search_within_range;
 
