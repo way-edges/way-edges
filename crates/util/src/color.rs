@@ -42,13 +42,14 @@ lazy_static::lazy_static! {
         r"(?i)^hsla?\(\s*(\d+\.?\d*)\s*,\s*(\d+\.?\d*)%\s*,\s*(\d+\.?\d*)%\s*(?:,\s*([\d.]+%?)\s*)?\)$"
     ).unwrap();
 
-    pub static ref COLOR_BLACK: Color = Color::rgb(0, 0, 0);
-    pub static ref COLOR_RED: Color = Color::rgb(255, 0, 0);
-    pub static ref COLOR_GREEN: Color = Color::rgb(0, 255, 0);
-    pub static ref COLOR_BLUE: Color = Color::rgb(0, 0, 255);
-    pub static ref COLOR_WHITE: Color = Color::rgb(255, 255, 255);
-    pub static ref COLOR_TRANSPARENT: Color = Color::rgba(0, 0, 0, 0);
 }
+
+pub const COLOR_BLACK: Color = Color::rgb(0, 0, 0);
+pub const COLOR_RED: Color = Color::rgb(255, 0, 0);
+pub const COLOR_GREEN: Color = Color::rgb(0, 255, 0);
+pub const COLOR_BLUE: Color = Color::rgb(0, 0, 255);
+pub const COLOR_WHITE: Color = Color::rgb(255, 255, 255);
+pub const COLOR_TRANSPARENT: Color = Color::rgba(0, 0, 0, 0);
 
 pub fn parse_color(s: &str) -> Result<Color, ParseColorError> {
     parse_color_inner(s).map(|v| Color::rgba(v[0], v[1], v[2], v[3]))
