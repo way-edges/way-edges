@@ -1,7 +1,6 @@
 use cairo::{Format, ImageSurface};
 use gdk::prelude::GdkCairoContextExt;
 use gdk::RGBA;
-use pango::Layout;
 
 use config::widgets::wrapbox::ring::RingConfig;
 use util::draw::{draw_fan, new_surface};
@@ -61,20 +60,6 @@ impl RingDrawer {
 
         surf
     }
-    fn make_layout(&self) -> Layout {
-        // layout
-        let pc = pangocairo::pango::Context::new();
-        let fm = pangocairo::FontMap::default();
-        pc.set_font_map(Some(&fm));
-        let mut desc = pc.font_description().unwrap();
-        desc.set_absolute_size((self.font_size << 10) as f64);
-        if let Some(font_family) = &self.font_family {
-            desc.set_family(font_family.as_str());
-        }
-        pc.set_font_description(Some(&desc));
-
-        pangocairo::pango::Layout::new(&pc)
-    }
     fn draw_text(
         &self,
         progress: f64,
@@ -102,7 +87,6 @@ impl RingDrawer {
             });
 
             draw_text(&text, text_conf).to_image_surface()
-            // draw_text_to_size(&layout, &self.fg_color, &text, self.font_size)
         };
 
         let prefix = self.prefix.as_ref().map(template_func);

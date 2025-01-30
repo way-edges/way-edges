@@ -107,6 +107,8 @@ impl MenuLayout {
         let cols =
             MenuCol::draw_and_create_from_root_menu(&root_menu.submenus, state, &mut menu_arg);
 
+        // TODO: WHY DO I PUT THIS HERE AT THE FIRST PLACE?
+        #[allow(clippy::drop_non_drop)]
         drop(menu_arg);
 
         let mut max_height = 0;

@@ -43,9 +43,7 @@ impl TextDrawer {
             self.font_pixel_size,
         );
 
-        draw_text(&text, text_conf).to_image_surface()
-
-        // draw_text_to_size(&layout, &self.fg_color, text, self.font_pixel_size)
+        draw_text(text, text_conf).to_image_surface()
     }
 }
 
