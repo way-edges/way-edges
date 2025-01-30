@@ -161,6 +161,8 @@ impl Or {
     }
 }
 
+/// input: rgba
+/// output: bgra
 pub fn pre_multiply_and_to_little_endian_argb(rgba: [u8; 4]) -> [u8; 4] {
     // pre-multiply
     let red = rgba[0] as u16;
