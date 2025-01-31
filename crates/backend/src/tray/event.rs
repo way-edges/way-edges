@@ -64,9 +64,23 @@ pub fn match_event(e: system_tray::client::Event) -> Option<TrayEvent> {
     }
 }
 
-pub fn tray_request_event(req: ActivateRequest) {
+pub fn tray_active_request(req: ActivateRequest) {
     get_backend_runtime_handle().spawn(async move {
         if let Err(e) = get_tray_context().client.activate(req).await {
+            let msg = format!("error requesting tray activation: {e}");
+            log::error!("{msg}");
+            notify_send("Tray activation", &msg, true);
+        }
+    });
+}
+
+pub fn tray_about_to_show_menuitem(address: String, path: String, id: i32) {
+    get_backend_runtime_handle().spawn(async move {
+        if let Err(e) = get_tray_context()
+            .client
+            .about_to_show_menuitem(address, path, id)
+            .await
+        {
             let msg = format!("error requesting tray activation: {e}");
             log::error!("{msg}");
             notify_send("Tray activation", &msg, true);

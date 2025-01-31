@@ -2399,7 +2399,7 @@ dependencies = [
 [[package]]
 name = "system-tray"
 version = "0.6.0"
-source = "git+https://github.com/ogios/system-tray-zbus5.git?branch=zbus5#d199d2b8566f6b15981d4a3a987dab8358ad0049"
+source = "git+https://github.com/ogios/system-tray-zbus5.git?branch=zbus5#d300be8852085a8f2c601aa96a1190fa8b8f697b"
 dependencies = [
  "serde",
  "thiserror 2.0.11",
