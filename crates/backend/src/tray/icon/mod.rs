@@ -1,10 +1,78 @@
-use std::{io::Cursor, path::PathBuf, sync::LazyLock};
+mod custom;
+mod freedesktop;
+
+use std::{io::Cursor, path::PathBuf};
 
 use cairo::ImageSurface;
 use resvg::{tiny_skia, usvg};
 use system_tray::item::IconPixmap;
 
 use util::{pre_multiply_and_to_little_endian_argb, Z};
+
+pub fn parse_icon_given_data(vec: &Vec<u8>) -> Option<ImageSurface> {
+    ImageSurface::create_from_png(&mut Cursor::new(vec)).ok()
+}
+
+pub fn parse_icon_given_pixmaps(vec: &[IconPixmap], size: i32) -> Option<ImageSurface> {
+    if vec.is_empty() {
+        None
+    } else {
+        let pixmap = vec.last().unwrap();
+
+        // ARGB
+        let mut pixels = pixmap.pixels.clone();
+
+        // pre multiply
+        for i in (0..pixels.len()).step_by(4) {
+            // little endian (BGRA)
+            let res = pre_multiply_and_to_little_endian_argb([
+                pixels[i + 1],
+                pixels[i + 2],
+                pixels[i + 3],
+                pixels[i],
+            ]);
+
+            pixels[i] = res[0];
+            pixels[i + 1] = res[1];
+            pixels[i + 2] = res[2];
+            pixels[i + 3] = res[3];
+        }
+
+        let img = ImageSurface::create_for_data(
+            pixels,
+            cairo::Format::ARgb32,
+            pixmap.width,
+            pixmap.height,
+            pixmap.width * 4,
+        )
+        .unwrap();
+
+        Some(scale_image_to_size(img, size))
+    }
+}
+
+pub enum IconThemeNameOrPath<'a> {
+    Name(Option<&'a str>),
+    Path(&'a str),
+}
+
+pub fn parse_icon_given_name(
+    name: &str,
+    size: i32,
+    theme: IconThemeNameOrPath,
+) -> Option<ImageSurface> {
+    let f = match theme {
+        IconThemeNameOrPath::Name(n) => freedesktop::find_icon(name, size, n),
+        IconThemeNameOrPath::Path(p) => custom::find_icon(p, name),
+    }?;
+
+    draw_icon_file(f, size)
+}
+
+pub fn fallback_icon(size: i32, theme: Option<&str>) -> Option<ImageSurface> {
+    let f = freedesktop::fallback_icon(size, theme)?;
+    draw_icon_file(f, size)
+}
 
 fn scale_image_to_size(img: ImageSurface, size: i32) -> ImageSurface {
     let scale = size as f64 / img.height() as f64;
@@ -88,70 +156,4 @@ fn load_svg(p: &PathBuf) -> Option<ImageSurface> {
     )
     .inspect_err(|f| log::error!("load_svg to surface error: {f}"))
     .ok()
-}
-
-static DEFAULT_ICON_THEME: LazyLock<Option<String>> = LazyLock::new(linicon_theme::get_icon_theme);
-
-pub fn fallback_icon(size: i32, theme: Option<&str>) -> Option<ImageSurface> {
-    let mut builder = freedesktop_icons::lookup("image-missing")
-        .with_size(size as u16)
-        .with_size_scheme(freedesktop_icons::SizeScheme::LargerClosest)
-        .with_cache();
-    if let Some(t) = theme.or(DEFAULT_ICON_THEME.as_deref()) {
-        builder = builder.with_theme(t);
-    }
-    let file_path = builder.find()?;
-
-    draw_icon_file(file_path, size)
-}
-pub fn parse_icon_given_name(name: &str, size: i32, theme: Option<&str>) -> Option<ImageSurface> {
-    let mut builder = freedesktop_icons::lookup(name)
-        .with_size(size as u16)
-        .with_size_scheme(freedesktop_icons::SizeScheme::LargerClosest);
-    if let Some(t) = theme.or(DEFAULT_ICON_THEME.as_deref()) {
-        builder = builder.with_theme(t);
-    }
-    let file_path = builder.find()?;
-
-    draw_icon_file(file_path, size)
-}
-pub fn parse_icon_given_data(vec: &Vec<u8>) -> Option<ImageSurface> {
-    ImageSurface::create_from_png(&mut Cursor::new(vec)).ok()
-}
-pub fn parse_icon_given_pixmaps(vec: &[IconPixmap], size: i32) -> Option<ImageSurface> {
-    if vec.is_empty() {
-        None
-    } else {
-        let pixmap = vec.last().unwrap();
-
-        // ARGB
-        let mut pixels = pixmap.pixels.clone();
-
-        // pre multiply
-        for i in (0..pixels.len()).step_by(4) {
-            // little endian (BGRA)
-            let res = pre_multiply_and_to_little_endian_argb([
-                pixels[i + 1],
-                pixels[i + 2],
-                pixels[i + 3],
-                pixels[i],
-            ]);
-
-            pixels[i] = res[0];
-            pixels[i + 1] = res[1];
-            pixels[i + 2] = res[2];
-            pixels[i + 3] = res[3];
-        }
-
-        let img = ImageSurface::create_for_data(
-            pixels,
-            cairo::Format::ARgb32,
-            pixmap.width,
-            pixmap.height,
-            pixmap.width * 4,
-        )
-        .unwrap();
-
-        Some(scale_image_to_size(img, size))
-    }
 }

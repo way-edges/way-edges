@@ -81,9 +81,9 @@ pub fn tray_about_to_show_menuitem(address: String, path: String, id: i32) {
             .about_to_show_menuitem(address, path, id)
             .await
         {
-            let msg = format!("error requesting tray activation: {e}");
+            let msg = format!("error requesting tray about to show: {e}");
             log::error!("{msg}");
-            notify_send("Tray activation", &msg, true);
+            notify_send("Tray show", &msg, true);
         }
     });
 }
