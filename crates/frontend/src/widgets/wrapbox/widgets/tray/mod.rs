@@ -98,9 +98,12 @@ pub fn init_widget(box_temp_ctx: &mut BoxTemporaryCtx, config: TrayConfig) -> Tr
                 if let Some(tray) = m.find_tray(id) {
                     let size = m.config.icon_size;
                     let theme = m.config.icon_theme.as_deref();
-                    let surf = parse_icon_given_name(tray_icon, size, theme).unwrap_or(
-                        ImageSurface::create(cairo::Format::ARgb32, size, size).unwrap(),
-                    );
+                    let surf = parse_icon_given_name(
+                        tray_icon,
+                        size,
+                        backend::tray::icon::IconThemeNameOrPath::Name(theme),
+                    )
+                    .unwrap_or(ImageSurface::create(cairo::Format::ARgb32, size, size).unwrap());
                     tray.borrow_mut().update_icon(surf);
                 }
             }

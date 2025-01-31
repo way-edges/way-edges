@@ -5,7 +5,10 @@ use smithay_client_toolkit::seat::pointer::{BTN_LEFT, BTN_RIGHT};
 use system_tray::{client::ActivateRequest, item::StatusNotifierItem};
 
 use backend::tray::{
-    icon::{fallback_icon, parse_icon_given_data, parse_icon_given_name, parse_icon_given_pixmaps},
+    icon::{
+        fallback_icon, parse_icon_given_data, parse_icon_given_name, parse_icon_given_pixmaps,
+        IconThemeNameOrPath,
+    },
     tray_about_to_show_menuitem, tray_active_request,
 };
 use config::widgets::wrapbox::tray::TrayConfig;
@@ -175,7 +178,7 @@ impl MenuItem {
             .and_then(parse_icon_given_data)
             .or_else(|| {
                 value.icon_name.as_ref().and_then(|name| {
-                    parse_icon_given_name(name, icon_size, icon_theme)
+                    parse_icon_given_name(name, icon_size, IconThemeNameOrPath::Name(icon_theme))
                         .or_else(|| fallback_icon(icon_size, icon_theme))
                 })
             });
@@ -466,14 +469,25 @@ pub fn create_tray_item(
     let id = value.id.clone();
     let title = value.title.clone();
 
-    // NOTE: IGNORE ICON_THEME_PATH
-    // println!("THEME PATH: {:?}", value.icon_theme_path);
-
     let icon = value
         .icon_name
         .clone()
         .filter(|icon_name| !icon_name.is_empty())
-        .and_then(|name| parse_icon_given_name(&name, icon_size, icon_theme))
+        .and_then(|name| {
+            value
+                .icon_theme_path
+                .as_ref()
+                .and_then(|p| {
+                    if p.is_empty() {
+                        None
+                    } else {
+                        parse_icon_given_name(&name, icon_size, IconThemeNameOrPath::Path(p))
+                    }
+                })
+                .or_else(|| {
+                    parse_icon_given_name(&name, icon_size, IconThemeNameOrPath::Name(icon_theme))
+                })
+        })
         .or_else(|| {
             value
                 .icon_pixmap

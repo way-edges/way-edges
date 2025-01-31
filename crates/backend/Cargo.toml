@@ -35,6 +35,7 @@ resvg = { version = "0.44.0", default-features = false }
 
 niri-ipc = "25.1.0"
 
+walkdir = "2.5.0"
 freedesktop-icons = { git = "https://github.com/ogios/freedesktop-icons", branch = "main" }
 linicon-theme = { git = "https://github.com/ogios/linicon-theme.git", branch = "main" }
 
