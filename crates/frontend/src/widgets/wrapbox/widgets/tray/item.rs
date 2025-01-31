@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use cairo::ImageSurface;
 use smithay_client_toolkit::seat::pointer::{BTN_LEFT, BTN_RIGHT};
-use system_tray::{event::ActivateRequest, item::StatusNotifierItem};
+use system_tray::{client::ActivateRequest, item::StatusNotifierItem};
 
 use backend::tray::{
     icon::{fallback_icon, parse_icon_given_data, parse_icon_given_name, parse_icon_given_pixmaps},
