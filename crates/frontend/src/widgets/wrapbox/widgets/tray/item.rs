@@ -6,7 +6,7 @@ use system_tray::{client::ActivateRequest, item::StatusNotifierItem};
 
 use backend::tray::{
     icon::{fallback_icon, parse_icon_given_data, parse_icon_given_name, parse_icon_given_pixmaps},
-    tray_request_event,
+    tray_about_to_show_menuitem, tray_active_request,
 };
 use config::widgets::wrapbox::tray::TrayConfig;
 use way_edges_derive::wrap_rc;
@@ -211,7 +211,7 @@ impl MenuItem {
             }
         };
 
-        let submenu = if !value.submenu.is_empty() {
+        let submenu = if let Some("submenu") = &value.children_display.as_deref() {
             Some(
                 value
                     .submenu
@@ -246,7 +246,8 @@ pub enum MenuType {
 #[wrap_rc(rc = "pub", normal = "pub")]
 #[derive(Debug)]
 pub struct Tray {
-    pub tray_id: TrayID,
+    /// address
+    pub address: TrayID,
     pub id: String,
     pub title: Option<String>,
     pub icon: ImageSurface,
@@ -262,6 +263,7 @@ pub struct Tray {
     pub config: Rc<TrayConfig>,
 }
 
+// update
 impl Tray {
     pub fn update_title(&mut self, title: Option<String>) {
         if title != self.title {
@@ -282,34 +284,78 @@ impl Tray {
         }
         self.set_updated();
     }
+}
 
-    fn send_request(req: ActivateRequest) {
-        tray_request_event(req)
+// proxy request
+impl Tray {
+    fn send_active_request(req: ActivateRequest) {
+        tray_active_request(req)
     }
-
-    pub fn tray_clicked_req(&self) {
-        let address = String::clone(&self.tray_id);
-        Self::send_request(ActivateRequest::Default {
+    fn tray_clicked_req(&self) {
+        let address = String::clone(&self.address);
+        Self::send_active_request(ActivateRequest::Default {
             address,
             x: 0,
             y: 0,
         });
     }
-
-    pub fn menu_item_clicked_req(&self, submenu_id: i32) {
+    fn menu_item_clicked_req(&self, submenu_id: i32) {
         if let Some(menu_path) = self.menu_path.as_ref() {
-            let address = String::clone(&self.tray_id);
+            let address = String::clone(&self.address);
             let menu_path = menu_path.clone();
 
-            Self::send_request(ActivateRequest::MenuItem {
+            Self::send_active_request(ActivateRequest::MenuItem {
                 address,
                 menu_path,
                 submenu_id,
             });
         }
     }
+    fn menuitem_about_to_show(&self, menuitem_id: i32) {
+        if let Some(path) = self.menu_path.as_ref() {
+            tray_about_to_show_menuitem(self.address.to_string(), path.to_string(), menuitem_id);
+        }
+    }
 }
+
+// content
 impl Tray {
+    // recalculate id chain
+    // for menu:
+    // a:
+    //  - b
+    //  - c:
+    //    - e
+    //  - d
+    //
+    //  pressing e will produce id chain: a,c,e
+    //  but the result is e,c,a so we need to reverse it after this
+    fn recalculate_open_id_chain(&mut self, id: i32) -> bool {
+        fn calculate_id_chain(menu: &[MenuItem], id: i32, chain: &mut Vec<i32>) -> bool {
+            for i in menu.iter() {
+                // only happens for a parent menu
+                if let Some(submenu) = &i.submenu {
+                    if i.id == id || calculate_id_chain(submenu, id, chain) {
+                        chain.push(i.id);
+                        return true;
+                    }
+                }
+            }
+            false
+        }
+
+        let mut id_chain = vec![];
+        let (root, state) = self.get_menu_state().unwrap();
+        calculate_id_chain(&root.submenus, id, &mut id_chain);
+
+        if !id_chain.is_empty() {
+            id_chain.reverse();
+            state.set_open_id(id_chain);
+            true
+        } else {
+            false
+        }
+    }
     fn get_menu_state(&mut self) -> Option<&mut (RootMenu, MenuState)> {
         self.menu.as_mut()
     }
@@ -349,42 +395,25 @@ impl Tray {
 
                 if key == BTN_RIGHT {
                     // toggle state
-                    match hovering {
+                    let menuitem_id = match hovering {
                         HoveringItem::TrayIcon => {
                             self.is_open = !self.is_open;
-                            self.set_updated();
-                            redraw = true
+                            Some(0)
                         }
                         HoveringItem::MenuItem(id) => {
-                            // find id chain
-                            fn find_id_chain(
-                                menu: &[MenuItem],
-                                id: i32,
-                                chain: &mut Vec<i32>,
-                            ) -> bool {
-                                for i in menu.iter() {
-                                    // only happens for a parent menu
-                                    if let Some(submenu) = &i.submenu {
-                                        if i.id == id || find_id_chain(submenu, id, chain) {
-                                            chain.push(i.id);
-                                            return true;
-                                        }
-                                    }
-                                }
-                                false
-                            }
-
-                            let mut id_chain = vec![];
-                            let (root, state) = self.get_menu_state().unwrap();
-                            find_id_chain(&root.submenus, id, &mut id_chain);
-
-                            if !id_chain.is_empty() {
-                                id_chain.reverse();
-                                state.set_open_id(id_chain);
-                                self.set_updated();
-                                redraw = true
+                            if self.recalculate_open_id_chain(id) {
+                                Some(id)
+                            } else {
+                                None
                             }
                         }
+                    };
+
+                    // send about to show request or else some menu won't appear
+                    if let Some(id) = menuitem_id {
+                        self.set_updated();
+                        redraw = true;
+                        self.menuitem_about_to_show(id);
                     }
                 } else if key == BTN_LEFT {
                     match hovering {
@@ -457,7 +486,7 @@ pub fn create_tray_item(
     let menu_path = value.menu.clone();
 
     Tray {
-        tray_id,
+        address: tray_id,
         id,
         title,
         icon,

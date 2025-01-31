@@ -156,7 +156,7 @@ impl GridBox<TrayRc> {
             .item_map
             .items
             .iter()
-            .position(|tray| tray.borrow().tray_id.as_str() == v)
+            .position(|tray| tray.borrow().address.as_str() == v)
         {
             self.item_map.items.remove(index);
             self.rearrange();
