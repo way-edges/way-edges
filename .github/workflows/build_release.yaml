@@ -13,7 +13,7 @@ jobs:
           echo "deb http://ftp.us.debian.org/debian unstable main contrib non-free" >> /etc/apt/sources.list.d/unstable.list
 
           apt-get -y update
-          apt-get -y install -t unstable build-essential cairo curl libpulse-dev
+          apt-get -y install -t unstable build-essential libcairo2-dev curl libpulse-dev
 
       - uses: moonrepo/setup-rust@v1
 
