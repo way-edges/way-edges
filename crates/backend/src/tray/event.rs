@@ -51,6 +51,8 @@ pub fn match_event(e: system_tray::client::Event) -> Option<TrayEvent> {
             }
             system_tray::client::UpdateEvent::MenuDiff(_) => {
                 // ???
+                // I suspect this is a bug in the library
+                // which we only get None with `remove: ["visible"]`
                 log::warn!("NOT IMPLEMENTED MENU DIFF");
                 None
             }
