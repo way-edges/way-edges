@@ -1,11 +1,10 @@
-# 💻 Way-Edges 0.5.1
+# 💻 Way-Edges
 
 ## Important
 
-- Remove gdk(which depends on pango, glib, gio)
-- Use cosmic-text to replace pango
-- Doing pre-multiply and little endian convertion manually
+- **Fix: some tray menu won't show**
+- **Fix: Failed to find some tray icon(not menu icon)**
 
 ## Less important
 
-- Memory usage dropped nearly 50%
+- Remove gtk related dependencies and pipewire-pulse in CI
