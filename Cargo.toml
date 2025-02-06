@@ -11,9 +11,7 @@ backend = { version = "0.1.0", path = "crates/backend" }
 frontend = { version = "0.1.0", path = "crates/frontend" }
 
 
-cosmic-text = { git = "https://github.com/pop-os/cosmic-text", branch = "main", features = [
-  "shape-run-cache",
-] }
+cosmic-text = { git = "https://github.com/pop-os/cosmic-text", branch = "main" }
 cairo-rs = { version = "0.20", default-features = false, features = [
   "freetype",
   "freetype-rs",
