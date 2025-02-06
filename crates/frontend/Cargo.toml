@@ -8,7 +8,6 @@ cairo-rs.workspace = true
 educe.workspace = true
 paste.workspace = true
 lazy_static.workspace = true
-async-channel.workspace = true
 system-tray.workspace = true
 cosmic-text.workspace = true
 

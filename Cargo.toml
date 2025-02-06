@@ -30,7 +30,6 @@ paste = "1.0.15"
 serde_jsonrc = "0.1"
 serde = { version = "1.0", features = ["derive"] }
 tokio = { version = "1.39", features = ["net", "macros", "rt", "time", "sync"] }
-async-channel = "2.3"
 system-tray = { git = "https://github.com/ogios/system-tray-zbus5.git", branch = "zbus5-new" }
 
 # until it make calloop version 0.14
@@ -41,5 +40,5 @@ calloop = "0.14.2"
 [profile.release]
 opt-level = 3
 lto = true
-codegen-units = 4
+codegen-units = 1
 strip = true      # Strip symbols from binary*
