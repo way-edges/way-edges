@@ -13,6 +13,7 @@ use super::event::{match_event, TrayEvent};
 
 pub(super) struct TrayContext {
     pub client: Client,
+    // pub tray_items: HashMap<String, ()>,
     cbs: HashMap<i32, Sender<Rc<TrayEvent>>>,
     count: i32,
 }
@@ -103,13 +104,3 @@ pub fn register_tray(cb: Sender<Rc<TrayEvent>>) -> i32 {
 pub fn unregister_tray(id: i32) {
     get_tray_context().remove_cb(id);
 }
-
-// pub fn tray_update_item_theme_search_path(theme: String) {
-//     let icon_theme = get_tray_context().get_icon_theme();
-//     if !icon_theme
-//         .search_path()
-//         .contains(&PathBuf::from(theme.clone()))
-//     {
-//         icon_theme.add_search_path(theme);
-//     }
-// }
