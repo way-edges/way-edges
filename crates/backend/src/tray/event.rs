@@ -10,18 +10,28 @@ use super::{
     item::{Icon, RootMenu, Tray},
 };
 
+#[derive(Debug, Clone)]
+pub enum TrayEventSignal {
+    Add(Arc<String>),
+    Rm(Arc<String>),
+    Update(Arc<String>),
+}
+
 impl TrayMap {
-    pub(super) fn handle_event(&mut self, e: system_tray::client::Event) -> Option<Arc<String>> {
+    pub(super) fn handle_event(
+        &mut self,
+        e: system_tray::client::Event,
+    ) -> Option<TrayEventSignal> {
         match e {
             system_tray::client::Event::Add(dest, status_notifier_item) => {
                 let item = Tray::new(*status_notifier_item);
                 let dest = Arc::new(dest);
                 self.inner.insert(dest.clone(), item);
-                Some(dest)
+                Some(TrayEventSignal::Add(dest))
             }
             system_tray::client::Event::Remove(id) => {
                 self.inner.remove(&id);
-                Some(Arc::new(id))
+                Some(TrayEventSignal::Rm(Arc::new(id)))
             }
             system_tray::client::Event::Update(id, update_event) => {
                 let need_update = match update_event {
@@ -82,7 +92,7 @@ impl TrayMap {
                 };
 
                 if need_update {
-                    Some(Arc::new(id))
+                    Some(TrayEventSignal::Update(Arc::new(id)))
                 } else {
                     None
                 }

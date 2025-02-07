@@ -13,11 +13,12 @@ use system_tray::client::{Client, Event};
 
 use crate::runtime::get_backend_runtime_handle;
 
-use super::item::Tray;
+use super::{event::TrayEventSignal, item::Tray};
 
 /// destination
-pub type TrayMsg = Arc<String>;
+pub type TrayMsg = TrayEventSignal;
 
+#[derive(Debug)]
 pub struct TrayBackendHandle {
     tray_map: Arc<Mutex<TrayMap>>,
     id: i32,
