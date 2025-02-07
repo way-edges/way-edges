@@ -14,7 +14,12 @@ use util::shell::shell_cmd;
 use super::super::box_traits::BoxedWidget;
 use crate::widgets::wrapbox::BoxTemporaryCtx;
 
-fn time_preset(s: Sender<String>, format: String, time_zone: Option<String>) -> Runner<()> {
+fn time_preset(
+    s: Sender<String>,
+    format: String,
+    time_zone: Option<String>,
+    update_interval: u64,
+) -> Runner<()> {
     let f = move || {
         let time = time_zone
             .as_ref()
@@ -28,7 +33,7 @@ fn time_preset(s: Sender<String>, format: String, time_zone: Option<String>) -> 
     };
 
     interval_task::runner::new_runner(
-        Duration::from_millis(1000),
+        Duration::from_millis(update_interval),
         || (),
         move |_| {
             s.send(f()).unwrap();
@@ -55,7 +60,11 @@ fn custom_preset(s: Sender<String>, update_with_interval_ms: (u64, String)) -> R
 
 fn match_preset(preset: TextPreset, s: Sender<String>) -> Runner<()> {
     match preset {
-        TextPreset::Time { format, time_zone } => time_preset(s, format, time_zone),
+        TextPreset::Time {
+            format,
+            time_zone,
+            update_interval,
+        } => time_preset(s, format, time_zone, update_interval),
         TextPreset::Custom {
             update_with_interval_ms,
         } => custom_preset(s, update_with_interval_ms),
