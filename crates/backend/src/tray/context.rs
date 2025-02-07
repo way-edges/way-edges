@@ -1,20 +1,60 @@
 use std::{
+    borrow::Borrow,
     collections::HashMap,
-    rc::Rc,
-    sync::atomic::{AtomicBool, AtomicPtr},
+    hash::Hash,
+    sync::{
+        atomic::{AtomicBool, AtomicPtr},
+        Arc, Mutex, MutexGuard,
+    },
 };
 
 use calloop::channel::Sender;
-use system_tray::client::Client;
+use system_tray::client::{Client, Event};
 
 use crate::runtime::get_backend_runtime_handle;
 
-use super::event::{match_event, TrayEvent};
+use super::item::Tray;
+
+/// destination
+pub type TrayMsg = Arc<String>;
+
+pub struct TrayBackendHandle {
+    tray_map: Arc<Mutex<TrayMap>>,
+    id: i32,
+}
+impl TrayBackendHandle {
+    pub fn get_tray_map(&self) -> MutexGuard<TrayMap> {
+        self.tray_map.lock().unwrap()
+    }
+}
+impl Drop for TrayBackendHandle {
+    fn drop(&mut self) {
+        unregister_tray(self.id);
+    }
+}
+
+#[derive(Debug)]
+pub struct TrayMap {
+    pub(super) inner: HashMap<Arc<String>, Tray>,
+}
+impl TrayMap {
+    fn new() -> Arc<Mutex<Self>> {
+        Arc::new(Mutex::new(Self {
+            inner: HashMap::new(),
+        }))
+    }
+    pub fn get_tray<Q: Hash + Eq>(&self, destination: &Q) -> Option<&Tray>
+    where
+        Arc<String>: Borrow<Q>,
+    {
+        self.inner.get(destination)
+    }
+}
 
 pub(super) struct TrayContext {
     pub client: Client,
-    // pub tray_items: HashMap<String, ()>,
-    cbs: HashMap<i32, Sender<Rc<TrayEvent>>>,
+    tray_map: Arc<Mutex<TrayMap>>,
+    cbs: HashMap<i32, Sender<TrayMsg>>,
     count: i32,
 }
 impl TrayContext {
@@ -23,37 +63,27 @@ impl TrayContext {
             client,
             cbs: HashMap::new(),
             count: 0,
+            tray_map: TrayMap::new(),
         }
     }
-    pub fn call(&mut self, e: TrayEvent) {
-        let e = Rc::new(e);
-        self.cbs.iter().for_each(|(_, cb)| {
-            cb.send(e.clone()).unwrap();
-        });
+    pub fn call(&mut self, e: Event) {
+        let mut map = self.tray_map.lock().unwrap();
+        if let Some(dest) = map.handle_event(e) {
+            drop(map);
+            self.cbs.iter().for_each(|(_, cb)| {
+                cb.send(dest.clone()).unwrap();
+            });
+        }
     }
-    fn add_cb(&mut self, cb: Sender<Rc<TrayEvent>>) -> i32 {
+    fn add_cb(&mut self, cb: Sender<TrayMsg>) -> TrayBackendHandle {
         let key = self.count;
         self.count += 1;
-
-        self.client
-            .items()
-            .lock()
-            .unwrap()
-            .iter()
-            .for_each(|(id, (item, menu))| {
-                let e = (
-                    id.clone(),
-                    super::event::Event::ItemNew(item.clone().into()),
-                );
-                cb.send(Rc::new(e)).unwrap();
-                if let Some(menu) = menu {
-                    let e = (id.clone(), super::event::Event::MenuNew(menu.clone()));
-                    cb.send(Rc::new(e)).unwrap();
-                }
-            });
-
         self.cbs.insert(key, cb);
-        key
+
+        TrayBackendHandle {
+            tray_map: self.tray_map.clone(),
+            id: key,
+        }
     }
     fn remove_cb(&mut self, key: i32) {
         self.cbs.remove_entry(&key);
@@ -87,17 +117,14 @@ pub fn init_tray_client() {
 
     get_backend_runtime_handle().spawn(async move {
         while let Ok(ev) = tray_rx.recv().await {
-            let e = match_event(ev);
-            if let Some(e) = e {
-                get_tray_context().call(e);
-            }
+            get_tray_context().call(ev);
         }
     });
 
     // get_main_runtime_handle().spawn();
 }
 
-pub fn register_tray(cb: Sender<Rc<TrayEvent>>) -> i32 {
+pub fn register_tray(cb: Sender<TrayMsg>) -> TrayBackendHandle {
     get_tray_context().add_cb(cb)
 }
 
