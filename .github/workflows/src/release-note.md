@@ -2,9 +2,10 @@
 
 ## Important
 
-- **Fix: some tray menu won't show**
-- **Fix: Failed to find some tray icon(not menu icon)**
+- **Fix: text render only make memory go higher**
+- **Fix: Tray multiple instance after reloading**
+- **Add: text time-preset now provides `update_interval` setting**
 
 ## Less important
 
-- Remove gtk related dependencies and pipewire-pulse in CI
+None
