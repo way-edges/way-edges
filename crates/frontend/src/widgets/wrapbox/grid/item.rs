@@ -3,7 +3,7 @@ use core::fmt::Debug;
 use cairo::ImageSurface;
 
 pub trait GridItemContent {
-    fn draw(&mut self) -> ImageSurface;
+    fn draw<T>(&mut self, ctx: &mut T) -> ImageSurface;
 }
 
 #[derive(Debug)]
