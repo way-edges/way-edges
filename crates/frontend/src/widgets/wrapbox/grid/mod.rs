@@ -67,10 +67,17 @@ impl<T: GridItemContent> GridBox<T> {
             .as_ref()
             .and_then(|position_map| position_map.match_item(pos, &self.item_map))
     }
-    pub fn draw(&mut self) -> ImageSurface {
+    pub fn draw<C>(&mut self, ctx: &mut C) -> ImageSurface {
         if self.item_map.row_index.is_empty() {
             return ImageSurface::create(Format::ARgb32, 0, 0).unwrap();
         }
+
+        let contents: Vec<ImageSurface> = self
+            .item_map
+            .items
+            .iter_mut()
+            .map(|w| w.draw(ctx))
+            .collect();
 
         let (grid_block_size_map, widget_render_map) = {
             let mut grid_block_size_map = [
@@ -86,11 +93,10 @@ impl<T: GridItemContent> GridBox<T> {
             let mut which_row = 0;
             let mut next_row = which_row + 1;
             let max_row = self.item_map.row_index.len() - 1;
-            self.item_map
-                .items
-                .iter_mut()
+            contents
+                .into_iter()
                 .enumerate()
-                .for_each(|(widget_index, widget)| {
+                .for_each(|(widget_index, content)| {
                     // ensure in the correct row
                     if which_row != max_row {
                         // if reaches next row
@@ -103,9 +109,6 @@ impl<T: GridItemContent> GridBox<T> {
                     // calculate col index
                     let current_row_start_index = self.item_map.row_index[which_row];
                     let which_col = widget_index - current_row_start_index;
-
-                    // get content
-                    let content = widget.draw();
 
                     // calculate size
                     let widget_content_size = (content.width() as f64, content.height() as f64);

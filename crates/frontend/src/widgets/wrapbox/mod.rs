@@ -28,7 +28,8 @@ pub struct BoxContext {
 }
 impl WidgetContext for BoxContext {
     fn redraw(&mut self) -> cairo::ImageSurface {
-        let content = self.grid_box.draw();
+        // TODO: EH...
+        let content = self.grid_box.draw(&mut ());
         self.outlook_draw_conf.draw(content)
     }
 
