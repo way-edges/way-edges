@@ -6,23 +6,25 @@ use super::icon::{
     IconThemeNameOrPath,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub enum Icon {
-    Named {
-        name: String,
-        theme_path: Option<String>,
-    },
+    Named(String),
     PngData(Vec<u8>),
     Pixmap(Vec<IconPixmap>),
+    #[default]
     Empty,
 }
 impl Icon {
-    pub fn draw_icon(&self, size: i32, theme: Option<&str>) -> Option<ImageSurface> {
+    pub fn draw_icon(
+        &self,
+        size: i32,
+        theme: Option<&str>,
+        theme_path: Option<&str>,
+    ) -> Option<ImageSurface> {
         match self {
-            Icon::Named { name, theme_path } => {
+            Icon::Named(name) => {
                 let theme_or_path = theme_path
-                    .as_ref()
-                    .map(|f| IconThemeNameOrPath::Path(f))
+                    .map(IconThemeNameOrPath::Path)
                     .unwrap_or_else(|| IconThemeNameOrPath::Name(theme));
                 parse_icon_given_name(name, size, theme_or_path)
                     .or_else(|| fallback_icon(size, theme))
@@ -36,16 +38,7 @@ impl Icon {
 impl PartialEq for Icon {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
-            (
-                Self::Named {
-                    name: l_name,
-                    theme_path: l_theme_path,
-                },
-                Self::Named {
-                    name: r_name,
-                    theme_path: r_theme_path,
-                },
-            ) => l_name == r_name && l_theme_path == r_theme_path,
+            (Self::Named(l0), Self::Named(r0)) => l0 == r0,
             (Self::Empty, Self::Empty) => true,
             // THIS OPERATION IS HEAVY
             (Self::PngData(_), Self::PngData(_)) | (Self::Pixmap(_), Self::Pixmap(_)) => false,
@@ -61,12 +54,12 @@ pub struct RootMenu {
     pub submenus: Vec<MenuItem>,
 }
 impl RootMenu {
-    pub fn from_tray_menu(tray_menu: &system_tray::menu::TrayMenu) -> Self {
+    pub(super) fn from_tray_menu(tray_menu: system_tray::menu::TrayMenu) -> Self {
         Self {
             id: tray_menu.id as i32,
             submenus: tray_menu
                 .submenus
-                .iter()
+                .into_iter()
                 .map(MenuItem::from_menu_item)
                 .collect(),
         }
@@ -85,24 +78,34 @@ pub struct MenuItem {
 }
 
 impl MenuItem {
-    fn from_menu_item(value: &system_tray::menu::MenuItem) -> Self {
-        let id = value.id;
-        let label = value.label.clone();
-        let enabled = value.enabled;
+    fn from_menu_item(value: system_tray::menu::MenuItem) -> Self {
+        let system_tray::menu::MenuItem {
+            id,
+            menu_type,
+            label,
+            enabled,
+            icon_name,
+            icon_data,
+            toggle_type,
+            toggle_state,
+            children_display,
+            submenu,
+            ..
+            // shortcut,
+            // visible,
+            // disposition,
+        } = value;
 
-        let icon = value.icon_data.clone().map(Icon::PngData).or_else(|| {
-            value.icon_name.clone().map(|name| Icon::Named {
-                name,
-                theme_path: None,
-            })
-        });
+        let icon = icon_data
+            .map(Icon::PngData)
+            .or_else(|| icon_name.map(Icon::Named));
 
-        let menu_type = match value.menu_type {
+        let menu_type = match menu_type {
             system_tray::menu::MenuType::Separator => MenuType::Separator,
             system_tray::menu::MenuType::Standard => {
-                match value.toggle_type {
+                match toggle_type {
                     system_tray::menu::ToggleType::Checkmark => {
-                        MenuType::Check(match value.toggle_state {
+                        MenuType::Check(match toggle_state {
                             system_tray::menu::ToggleState::On => true,
                             system_tray::menu::ToggleState::Off => false,
                             system_tray::menu::ToggleState::Indeterminate => {
@@ -113,7 +116,7 @@ impl MenuItem {
                         })
                     }
                     system_tray::menu::ToggleType::Radio => {
-                        MenuType::Radio(match value.toggle_state {
+                        MenuType::Radio(match toggle_state {
                             system_tray::menu::ToggleState::On => true,
                             system_tray::menu::ToggleState::Off => false,
                             system_tray::menu::ToggleState::Indeterminate => {
@@ -128,8 +131,8 @@ impl MenuItem {
             }
         };
 
-        let submenu = if let Some("submenu") = &value.children_display.as_deref() {
-            Some(value.submenu.iter().map(MenuItem::from_menu_item).collect())
+        let submenu = if let Some("submenu") = children_display.as_deref() {
+            Some(submenu.into_iter().map(MenuItem::from_menu_item).collect())
         } else {
             None
         };
@@ -156,10 +159,10 @@ pub enum MenuType {
 
 #[derive(Debug)]
 pub struct Tray {
-    pub destination: String,
     pub id: String,
     pub title: Option<String>,
     pub icon: Icon,
+    pub icon_theme_path: Option<String>,
     pub menu_path: Option<String>,
     pub menu: Option<RootMenu>,
 }
@@ -175,40 +178,51 @@ macro_rules! diff_and_update {
 }
 
 impl Tray {
-    pub fn update_title(&mut self, title: Option<String>) -> bool {
+    pub(super) fn new(value: StatusNotifierItem) -> Self {
+        let StatusNotifierItem {
+            id,
+            title,
+            icon_theme_path,
+            icon_name,
+            icon_pixmap,
+            menu,
+            ..
+            // category,
+            // status,
+            // window_id,
+            // overlay_icon_name,
+            // overlay_icon_pixmap,
+            // attention_icon_name,
+            // attention_icon_pixmap,
+            // attention_movie_name,
+            // tool_tip,
+            // item_is_menu,
+        } = value;
+
+        let icon = icon_name
+            .filter(|icon_name| !icon_name.is_empty())
+            .map(Icon::Named)
+            .or_else(|| icon_pixmap.map(Icon::Pixmap))
+            .unwrap_or(Icon::Empty);
+
+        let menu_path = menu;
+
+        Tray {
+            id,
+            title,
+            icon,
+            menu_path,
+            menu: None,
+            icon_theme_path,
+        }
+    }
+    pub(super) fn update_title(&mut self, title: Option<String>) -> bool {
         diff_and_update!(self.title, title)
     }
-    pub fn update_icon(&mut self, icon: Icon) -> bool {
+    pub(super) fn update_icon(&mut self, icon: Icon) -> bool {
         diff_and_update!(self.icon, icon)
     }
-    pub fn update_menu(&mut self, new: Option<RootMenu>) {
-        self.menu = new;
-    }
-}
-
-pub fn create_tray_item(destination: String, value: &StatusNotifierItem) -> Tray {
-    let id = value.id.clone();
-    let title = value.title.clone();
-
-    let icon = value
-        .icon_name
-        .clone()
-        .filter(|icon_name| !icon_name.is_empty())
-        .map(|name| Icon::Named {
-            name,
-            theme_path: value.icon_theme_path.clone(),
-        })
-        .or_else(|| value.icon_pixmap.clone().map(Icon::Pixmap))
-        .unwrap_or(Icon::Empty);
-
-    let menu_path = value.menu.clone();
-
-    Tray {
-        destination,
-        id,
-        title,
-        icon,
-        menu_path,
-        menu: None,
+    pub(super) fn update_menu(&mut self, new: RootMenu) {
+        self.menu.replace(new);
     }
 }
