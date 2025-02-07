@@ -9,8 +9,10 @@ use system_tray::item::IconPixmap;
 
 use util::{pre_multiply_and_to_little_endian_argb, Z};
 
-pub fn parse_icon_given_data(vec: &Vec<u8>) -> Option<ImageSurface> {
-    ImageSurface::create_from_png(&mut Cursor::new(vec)).ok()
+pub fn parse_icon_given_data(vec: &Vec<u8>, size: i32) -> Option<ImageSurface> {
+    ImageSurface::create_from_png(&mut Cursor::new(vec))
+        .ok()
+        .map(|img| scale_image_to_size(img, size))
 }
 
 pub fn parse_icon_given_pixmaps(vec: &[IconPixmap], size: i32) -> Option<ImageSurface> {
