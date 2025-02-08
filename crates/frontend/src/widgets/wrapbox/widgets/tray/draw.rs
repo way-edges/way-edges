@@ -3,7 +3,7 @@ use std::f64::consts::PI;
 use backend::tray::item::{MenuItem, MenuType, Tray};
 use cairo::{Context, ImageSurface};
 
-use config::widgets::wrapbox::tray::{HeaderDrawConfig, MenuDrawConfig, TrayConfig};
+use config::widgets::wrapbox::tray::{MenuDrawConfig, TrayConfig};
 use util::{
     color::cairo_set_color,
     draw::new_surface,
@@ -17,9 +17,10 @@ pub struct HeaderDrawArg<'a> {
     text_conf: TextConfig<'a>,
 }
 impl<'a> HeaderDrawArg<'a> {
-    pub fn create_from_config(draw_config: &'a HeaderDrawConfig) -> Self {
+    pub fn create_from_config(conf: &'a TrayConfig) -> Self {
+        let draw_config = &conf.header_draw_config;
         let text_conf = TextConfig::new(
-            None,
+            conf.font_family.as_deref(),
             None,
             draw_config.text_color,
             draw_config.font_pixel_height,
@@ -80,9 +81,10 @@ pub struct MenuDrawArg<'a> {
     text_conf: TextConfig<'a>,
 }
 impl<'a> MenuDrawArg<'a> {
-    pub fn create_from_config(draw_config: &'a MenuDrawConfig) -> Self {
+    pub fn create_from_config(conf: &'a TrayConfig) -> Self {
+        let draw_config = &conf.menu_draw_config;
         let text_conf = TextConfig::new(
-            None,
+            conf.font_family.as_deref(),
             None,
             draw_config.text_color,
             draw_config.font_pixel_height,

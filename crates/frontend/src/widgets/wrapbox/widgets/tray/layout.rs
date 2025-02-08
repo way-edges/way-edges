@@ -22,7 +22,7 @@ struct TrayHeadLayout {
 }
 impl TrayHeadLayout {
     fn draw_and_create(state: &TrayState, tray: &Tray, conf: &TrayConfig) -> (ImageSurface, Self) {
-        let draw_arg = HeaderDrawArg::create_from_config(&conf.header_draw_config);
+        let draw_arg = HeaderDrawArg::create_from_config(conf);
 
         let img = draw_arg.draw_header(state, tray, conf);
         // let content_size = (img.width(), img.height());
@@ -102,7 +102,7 @@ impl MenuLayout {
         state: &MenuState,
         conf: &TrayConfig,
     ) -> (ImageSurface, Self) {
-        let mut menu_arg = MenuDrawArg::create_from_config(&conf.menu_draw_config);
+        let mut menu_arg = MenuDrawArg::create_from_config(conf);
 
         let cols = MenuCol::draw_and_create_from_root_menu(
             &root_menu.submenus,

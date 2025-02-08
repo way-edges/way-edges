@@ -115,6 +115,8 @@ fn dt_menu_text_color() -> Color {
 #[educe(Debug)]
 pub struct TrayConfig {
     #[serde(default)]
+    pub font_family: Option<String>,
+    #[serde(default)]
     pub icon_theme: Option<String>,
     #[serde(default = "dt_icon_size")]
     pub icon_size: i32,
