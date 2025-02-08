@@ -1,18 +1,12 @@
 use core::fmt::Debug;
 
-use cairo::ImageSurface;
-
-pub trait GridItemContent {
-    fn draw<T>(&mut self, ctx: &mut T) -> ImageSurface;
-}
-
 #[derive(Debug)]
-pub struct GridItemMap<T: GridItemContent> {
+pub struct GridItemMap<T> {
     pub items: Vec<T>,
     // record each row start index in `items`
     pub row_index: Vec<usize>,
 }
-impl<T: GridItemContent> Default for GridItemMap<T> {
+impl<T> Default for GridItemMap<T> {
     fn default() -> Self {
         Self {
             items: Vec::default(),

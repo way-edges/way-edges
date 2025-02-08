@@ -3,7 +3,7 @@ pub mod item;
 
 use cairo::{self, Format, ImageSurface};
 use config::widgets::wrapbox::{Align, AlignFunc};
-use item::{GridItemContent, GridItemMap};
+use item::GridItemMap;
 use util::binary_search_within_range;
 
 #[derive(Debug)]
@@ -14,7 +14,7 @@ pub struct GridPositionMap {
     widget_start_point_list: Vec<(f64, f64)>,
 }
 impl GridPositionMap {
-    pub fn match_item<'a, T: GridItemContent>(
+    pub fn match_item<'a, T>(
         &self,
         pos: (f64, f64),
         item_map: &'a item::GridItemMap<T>,
@@ -45,14 +45,14 @@ impl GridPositionMap {
 }
 
 #[derive(Debug)]
-pub struct GridBox<T: GridItemContent> {
+pub struct GridBox<T> {
     pub position_map: Option<GridPositionMap>,
     pub item_map: GridItemMap<T>,
     pub row_col_num: (usize, usize),
     pub gap: f64,
     pub align_func: AlignFunc,
 }
-impl<T: GridItemContent> GridBox<T> {
+impl<T> GridBox<T> {
     pub fn new(gap: f64, align: Align) -> Self {
         Self {
             item_map: GridItemMap::default(),
@@ -67,17 +67,12 @@ impl<T: GridItemContent> GridBox<T> {
             .as_ref()
             .and_then(|position_map| position_map.match_item(pos, &self.item_map))
     }
-    pub fn draw<C>(&mut self, ctx: &mut C) -> ImageSurface {
+    pub fn draw<F: FnMut(&mut T) -> ImageSurface>(&mut self, draw_func: F) -> ImageSurface {
         if self.item_map.row_index.is_empty() {
             return ImageSurface::create(Format::ARgb32, 0, 0).unwrap();
         }
 
-        let contents: Vec<ImageSurface> = self
-            .item_map
-            .items
-            .iter_mut()
-            .map(|w| w.draw(ctx))
-            .collect();
+        let contents: Vec<ImageSurface> = self.item_map.items.iter_mut().map(draw_func).collect();
 
         let (grid_block_size_map, widget_render_map) = {
             let mut grid_block_size_map = [
