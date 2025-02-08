@@ -2359,7 +2359,7 @@ dependencies = [
 [[package]]
 name = "system-tray"
 version = "0.7.0"
-source = "git+https://github.com/ogios/system-tray.git?branch=custom#3ddc3a879e2a367712037a3a4eee48e4d876338f"
+source = "git+https://github.com/ogios/system-tray.git?branch=custom#af7bb134c96acd68f98a8c7bac6d4c4fcb835d8f"
 dependencies = [
  "futures-lite",
  "serde",
