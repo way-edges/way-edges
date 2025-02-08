@@ -49,10 +49,15 @@ impl TrayMap {
                     // TODO: why icon update can only have name update
                     system_tray::client::UpdateEvent::Icon(icon_path) => {
                         let icon = icon_path.filter(|name| !name.is_empty()).map(Icon::Named);
-                        self.inner
-                            .get_mut(&id)
-                            .map(|tray| tray.update_icon(icon))
-                            .unwrap_or_default()
+                        // NOTE: WE IGNORE EMPTY ICON
+                        if icon.is_some() {
+                            self.inner
+                                .get_mut(&id)
+                                .map(|tray| tray.update_icon(icon))
+                                .unwrap_or_default()
+                        } else {
+                            false
+                        }
                     }
 
                     // not implemented
