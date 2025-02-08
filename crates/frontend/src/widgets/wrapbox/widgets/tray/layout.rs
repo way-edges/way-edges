@@ -1,13 +1,12 @@
+use backend::tray::item::{MenuItem, RootMenu, Tray};
 use cairo::{Context, ImageSurface};
 
-use config::widgets::wrapbox::tray::{
-    HeaderDrawConfig, HeaderMenuAlign, HeaderMenuStack, MenuDrawConfig,
-};
+use config::widgets::wrapbox::tray::{HeaderMenuAlign, HeaderMenuStack, TrayConfig};
 use util::{binary_search_end, draw::new_surface, Z};
 
 use super::{
     draw::{HeaderDrawArg, MenuDrawArg},
-    item::{MenuItem, MenuState, RootMenu, Tray},
+    item::{MenuState, TrayState},
 };
 
 #[derive(Debug)]
@@ -22,10 +21,10 @@ struct TrayHeadLayout {
     header_height: i32,
 }
 impl TrayHeadLayout {
-    fn draw_and_create(tray: &Tray, header_draw_config: &HeaderDrawConfig) -> (ImageSurface, Self) {
-        let draw_arg = HeaderDrawArg::create_from_config(header_draw_config);
+    fn draw_and_create(state: &TrayState, tray: &Tray, conf: &TrayConfig) -> (ImageSurface, Self) {
+        let draw_arg = HeaderDrawArg::create_from_config(&conf.header_draw_config);
 
-        let img = draw_arg.draw_header(tray);
+        let img = draw_arg.draw_header(state, tray, conf);
         // let content_size = (img.width(), img.height());
         let header_height = img.height();
 
@@ -42,9 +41,10 @@ impl MenuCol {
     fn draw_and_create_from_root_menu(
         menu_items: &[MenuItem],
         state: &MenuState,
+        conf: &TrayConfig,
         menu_arg: &mut MenuDrawArg,
     ) -> Vec<(ImageSurface, Self)> {
-        let (surf, height_range) = menu_arg.draw_menu(menu_items, state);
+        let (surf, height_range) = menu_arg.draw_menu(menu_items, state, conf);
 
         let mut next_col = None;
 
@@ -71,7 +71,7 @@ impl MenuCol {
         )];
 
         if let Some(next_col) = next_col {
-            let next_col = Self::draw_and_create_from_root_menu(next_col, state, menu_arg);
+            let next_col = Self::draw_and_create_from_root_menu(next_col, state, conf, menu_arg);
             res.extend(next_col);
         }
 
@@ -100,12 +100,16 @@ impl MenuLayout {
     fn draw_and_create(
         root_menu: &RootMenu,
         state: &MenuState,
-        menu_draw_config: &MenuDrawConfig,
+        conf: &TrayConfig,
     ) -> (ImageSurface, Self) {
-        let mut menu_arg = MenuDrawArg::create_from_config(menu_draw_config);
+        let mut menu_arg = MenuDrawArg::create_from_config(&conf.menu_draw_config);
 
-        let cols =
-            MenuCol::draw_and_create_from_root_menu(&root_menu.submenus, state, &mut menu_arg);
+        let cols = MenuCol::draw_and_create_from_root_menu(
+            &root_menu.submenus,
+            state,
+            conf,
+            &mut menu_arg,
+        );
 
         // TODO: WHY DO I PUT THIS HERE AT THE FIRST PLACE?
         #[allow(clippy::drop_non_drop)]
@@ -175,11 +179,12 @@ pub struct TrayLayout {
     menu_layout: Option<MenuLayout>,
 }
 impl TrayLayout {
-    pub fn draw_and_create(tray: &Tray) -> (ImageSurface, TrayLayout) {
-        let tray_config = &tray.config;
-
-        let (header_img, header_layout) =
-            TrayHeadLayout::draw_and_create(tray, &tray_config.header_draw_config);
+    pub fn draw_and_create(
+        tray_state: &TrayState,
+        tray: &Tray,
+        conf: &TrayConfig,
+    ) -> (ImageSurface, TrayLayout) {
+        let (header_img, header_layout) = TrayHeadLayout::draw_and_create(tray_state, tray, conf);
 
         macro_rules! done_with_only_header {
             ($tray:expr, $tray_config:expr, $header_img:expr, $header_layout:expr) => {{
@@ -200,30 +205,32 @@ impl TrayLayout {
             }};
         }
 
-        if !tray.is_open {
-            return done_with_only_header!(tray, tray_config, header_img, header_layout);
+        if !tray_state.is_open {
+            return done_with_only_header!(tray, conf, header_img, header_layout);
         }
 
-        let Some((menu_img, menu_layout)) = tray.menu.as_ref().map(|(root_menu, menu_state)| {
-            MenuLayout::draw_and_create(root_menu, menu_state, &tray_config.menu_draw_config)
-        }) else {
-            return done_with_only_header!(tray, tray_config, header_img, header_layout);
+        let Some((menu_img, menu_layout)) = tray
+            .menu
+            .as_ref()
+            .map(|root_menu| MenuLayout::draw_and_create(root_menu, &tray_state.menu_state, conf))
+        else {
+            return done_with_only_header!(tray, conf, header_img, header_layout);
         };
 
         // combine header and menu
-        let imgs = match tray_config.header_menu_stack {
+        let imgs = match conf.header_menu_stack {
             HeaderMenuStack::HeaderTop => [header_img, menu_img],
             HeaderMenuStack::MenuTop => [menu_img, header_img],
         };
         let combined = combine_vertcal(
             &imgs,
             Some(GAP_HEADER_MENU),
-            tray_config.header_menu_align.is_left(),
+            conf.header_menu_align.is_left(),
         );
 
         let total_size = (combined.width(), combined.height());
-        let header_menu_stack = tray_config.header_menu_stack.clone();
-        let header_menu_align = tray_config.header_menu_align.clone();
+        let header_menu_stack = conf.header_menu_stack.clone();
+        let header_menu_align = conf.header_menu_align.clone();
 
         let content = combined;
         let layout = TrayLayout {

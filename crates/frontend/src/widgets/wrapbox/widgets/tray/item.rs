@@ -1,26 +1,18 @@
-use std::rc::Rc;
+use std::sync::Arc;
 
 use cairo::ImageSurface;
 use smithay_client_toolkit::seat::pointer::{BTN_LEFT, BTN_RIGHT};
-use system_tray::{client::ActivateRequest, item::StatusNotifierItem};
+use system_tray::client::ActivateRequest;
 
 use backend::tray::{
-    icon::{
-        fallback_icon, parse_icon_given_data, parse_icon_given_name, parse_icon_given_pixmaps,
-        IconThemeNameOrPath,
-    },
+    item::{MenuItem, RootMenu, Tray},
     tray_about_to_show_menuitem, tray_active_request,
 };
 use config::widgets::wrapbox::tray::TrayConfig;
-use way_edges_derive::wrap_rc;
 
-use crate::{
-    buffer::Buffer, mouse_state::MouseEvent, widgets::wrapbox::grid::item::GridItemContent,
-};
+use crate::{buffer::Buffer, mouse_state::MouseEvent};
 
-use super::{layout::TrayLayout, module::TrayModule};
-
-pub type TrayID = Rc<String>;
+use super::layout::TrayLayout;
 
 #[derive(Default, Debug)]
 pub struct MenuState {
@@ -123,179 +115,78 @@ impl MenuState {
 }
 
 #[derive(Debug)]
-pub struct RootMenu {
-    #[allow(dead_code)]
-    pub id: i32,
-    pub submenus: Vec<MenuItem>,
+struct MenuIDTreeNode {
+    id: i32,
+    sub: Option<Vec<MenuIDTreeNode>>,
 }
-impl RootMenu {
-    pub fn from_tray_menu(
-        tray_menu: &system_tray::menu::TrayMenu,
-        icon_size: i32,
-        icon_theme: Option<&str>,
-    ) -> Self {
+impl MenuIDTreeNode {
+    fn from_root_menu(root: &RootMenu) -> Self {
         Self {
-            id: tray_menu.id as i32,
-            submenus: tray_menu.submenus.vec_into_menu(icon_size, icon_theme),
+            id: root.id,
+            sub: Some(Self::from_menu(&root.submenus)),
         }
     }
-}
-trait VecTrayMenuIntoVecLocalMenuItem {
-    fn vec_into_menu(&self, icon_size: i32, icon_theme: Option<&str>) -> Vec<MenuItem>;
-}
-impl VecTrayMenuIntoVecLocalMenuItem for Vec<system_tray::menu::MenuItem> {
-    fn vec_into_menu(&self, icon_size: i32, icon_theme: Option<&str>) -> Vec<MenuItem> {
-        self.iter()
-            .map(|item| MenuItem::from_menu_item(item, icon_size, icon_theme))
+    fn from_menu(menu: &[MenuItem]) -> Vec<Self> {
+        menu.iter()
+            .map(|m| Self {
+                id: m.id,
+                sub: m.submenu.as_deref().map(Self::from_menu),
+            })
             .collect()
     }
 }
 
 #[derive(Debug)]
-pub struct MenuItem {
-    pub id: i32,
-    pub label: Option<String>,
-    pub enabled: bool,
-    pub icon: Option<ImageSurface>,
-    pub menu_type: MenuType,
-
-    pub submenu: Option<Vec<MenuItem>>,
-}
-
-impl MenuItem {
-    fn from_menu_item(
-        value: &system_tray::menu::MenuItem,
-        icon_size: i32,
-        icon_theme: Option<&str>,
-    ) -> Self {
-        let id = value.id;
-        let label = value.label.clone();
-        let enabled = value.enabled;
-
-        let icon = value
-            .icon_data
-            .as_ref()
-            .and_then(parse_icon_given_data)
-            .or_else(|| {
-                value.icon_name.as_ref().and_then(|name| {
-                    parse_icon_given_name(name, icon_size, IconThemeNameOrPath::Name(icon_theme))
-                        .or_else(|| fallback_icon(icon_size, icon_theme))
-                })
-            });
-
-        let menu_type = match value.menu_type {
-            system_tray::menu::MenuType::Separator => MenuType::Separator,
-            system_tray::menu::MenuType::Standard => {
-                match value.toggle_type {
-                    system_tray::menu::ToggleType::Checkmark => {
-                        MenuType::Check(match value.toggle_state {
-                            system_tray::menu::ToggleState::On => true,
-                            system_tray::menu::ToggleState::Off => false,
-                            system_tray::menu::ToggleState::Indeterminate => {
-                                log::error!("THIS SHOULD NOT HAPPEN. menu item has toggle but not toggle state");
-                                // ???
-                                false
-                            }
-                        })
-                    }
-                    system_tray::menu::ToggleType::Radio => {
-                        MenuType::Radio(match value.toggle_state {
-                            system_tray::menu::ToggleState::On => true,
-                            system_tray::menu::ToggleState::Off => false,
-                            system_tray::menu::ToggleState::Indeterminate => {
-                                log::error!("THIS SHOULD NOT HAPPEN. menu item has toggle but not toggle state");
-                                // ???
-                                false
-                            }
-                        })
-                    }
-                    system_tray::menu::ToggleType::CannotBeToggled => MenuType::Normal,
-                }
-            }
-        };
-
-        let submenu = if let Some("submenu") = &value.children_display.as_deref() {
-            Some(
-                value
-                    .submenu
-                    .iter()
-                    .map(|item| MenuItem::from_menu_item(item, icon_size, icon_theme))
-                    .collect(),
-            )
-        } else {
-            None
-        };
-
-        Self {
-            id,
-            label,
-            enabled,
-            icon,
-            menu_type,
-            submenu,
-        }
-    }
+struct TrayCacheData {
+    dest: Arc<String>,
+    menu_path: Option<String>,
+    menu_id_tree: Option<MenuIDTreeNode>,
 }
 
 #[derive(Debug)]
-pub enum MenuType {
-    Radio(bool),
-    Check(bool),
-    // should the menu wtih submenus have toggle states?
-    Separator,
-    Normal,
-}
-
-#[wrap_rc(rc = "pub", normal = "pub")]
-#[derive(Debug)]
-pub struct Tray {
-    /// address
-    pub address: TrayID,
-    pub id: String,
-    pub title: Option<String>,
-    pub icon: ImageSurface,
-    pub menu_path: Option<String>,
-    pub menu: Option<(RootMenu, MenuState)>,
-
+pub struct TrayState {
+    tray_cache_data: TrayCacheData,
+    pub menu_state: MenuState,
     pub is_open: bool,
-
     pub updated: bool,
-    pub layout: TrayLayout,
-    pub buffer: Buffer,
 
-    pub config: Rc<TrayConfig>,
+    layout: TrayLayout,
+    buffer: Buffer,
 }
 
 // update
-impl Tray {
-    pub fn update_title(&mut self, title: Option<String>) {
-        if title != self.title {
-            self.title = title;
-            self.set_updated();
+impl TrayState {
+    pub fn new(dest: Arc<String>, tray: &Tray) -> Self {
+        Self {
+            tray_cache_data: TrayCacheData {
+                dest,
+                menu_path: tray.menu_path.clone(),
+                menu_id_tree: tray.menu.as_ref().map(MenuIDTreeNode::from_root_menu),
+            },
+            menu_state: MenuState::default(),
+
+            is_open: false,
+            updated: true,
+            layout: TrayLayout::default(),
+            buffer: Buffer::default(),
         }
     }
-    pub fn update_icon(&mut self, icon: ImageSurface) {
-        self.icon = icon;
-        self.set_updated();
-    }
-    pub fn update_menu(&mut self, new: RootMenu) {
-        if let Some((old, state)) = &mut self.menu {
-            state.filter_state_with_new_menu(&new);
-            *old = new;
-        } else {
-            self.menu = Some((new, MenuState::default()));
-        }
-        self.set_updated();
+    pub fn update_tray(&mut self, tray: &Tray) {
+        self.updated = true;
+        tray.menu.as_ref().inspect(|f| {
+            self.tray_cache_data.menu_id_tree = Some(MenuIDTreeNode::from_root_menu(f));
+            self.menu_state.filter_state_with_new_menu(f);
+        });
     }
 }
 
 // proxy request
-impl Tray {
+impl TrayState {
     fn send_active_request(req: ActivateRequest) {
         tray_active_request(req)
     }
     fn tray_clicked_req(&self) {
-        let address = String::clone(&self.address);
+        let address = String::clone(&self.tray_cache_data.dest);
         Self::send_active_request(ActivateRequest::Default {
             address,
             x: 0,
@@ -303,8 +194,8 @@ impl Tray {
         });
     }
     fn menu_item_clicked_req(&self, submenu_id: i32) {
-        if let Some(menu_path) = self.menu_path.as_ref() {
-            let address = String::clone(&self.address);
+        if let Some(menu_path) = self.tray_cache_data.menu_path.as_ref() {
+            let address = String::clone(&self.tray_cache_data.dest);
             let menu_path = menu_path.clone();
 
             Self::send_active_request(ActivateRequest::MenuItem {
@@ -315,14 +206,18 @@ impl Tray {
         }
     }
     fn menuitem_about_to_show(&self, menuitem_id: i32) {
-        if let Some(path) = self.menu_path.as_ref() {
-            tray_about_to_show_menuitem(self.address.to_string(), path.to_string(), menuitem_id);
+        if let Some(path) = self.tray_cache_data.menu_path.as_ref() {
+            tray_about_to_show_menuitem(
+                self.tray_cache_data.dest.to_string(),
+                path.to_string(),
+                menuitem_id,
+            );
         }
     }
 }
 
 // content
-impl Tray {
+impl TrayState {
     // recalculate id chain
     // for menu:
     // a:
@@ -334,10 +229,10 @@ impl Tray {
     //  pressing e will produce id chain: a,c,e
     //  but the result is e,c,a so we need to reverse it after this
     fn recalculate_open_id_chain(&mut self, id: i32) -> bool {
-        fn calculate_id_chain(menu: &[MenuItem], id: i32, chain: &mut Vec<i32>) -> bool {
+        fn calculate_id_chain(menu: &[MenuIDTreeNode], id: i32, chain: &mut Vec<i32>) -> bool {
             for i in menu.iter() {
                 // only happens for a parent menu
-                if let Some(submenu) = &i.submenu {
+                if let Some(submenu) = &i.sub {
                     if i.id == id || calculate_id_chain(submenu, id, chain) {
                         chain.push(i.id);
                         return true;
@@ -348,44 +243,46 @@ impl Tray {
         }
 
         let mut id_chain = vec![];
-        let (root, state) = self.get_menu_state().unwrap();
-        calculate_id_chain(&root.submenus, id, &mut id_chain);
+        calculate_id_chain(
+            self.tray_cache_data
+                .menu_id_tree
+                .as_ref()
+                .unwrap()
+                .sub
+                .as_ref()
+                .unwrap(),
+            id,
+            &mut id_chain,
+        );
+        id_chain.reverse();
 
         if !id_chain.is_empty() {
             id_chain.reverse();
-            state.set_open_id(id_chain);
+            self.menu_state.set_open_id(id_chain);
             true
         } else {
             false
         }
     }
-    fn get_menu_state(&mut self) -> Option<&mut (RootMenu, MenuState)> {
-        self.menu.as_mut()
-    }
     fn set_updated(&mut self) {
         self.updated = true;
     }
-    fn redraw_if_updated(&mut self) {
+    fn redraw_if_updated(&mut self, tray: &Tray, conf: &TrayConfig) {
         if self.updated {
-            self.draw();
             self.updated = false;
+
+            let (buf, ly) = TrayLayout::draw_and_create(self, tray, conf);
+            self.buffer.update_buffer(buf);
+            self.layout = ly;
         }
     }
-    fn draw(&mut self) {
-        let (buf, ly) = TrayLayout::draw_and_create(self);
-        self.buffer.update_buffer(buf);
-        self.layout = ly
+    pub fn draw(&mut self, tray: &Tray, conf: &TrayConfig) -> ImageSurface {
+        self.redraw_if_updated(tray, conf);
+        self.buffer.get_buffer()
     }
 }
 
-impl GridItemContent for TrayRc {
-    fn draw(&mut self) -> ImageSurface {
-        let mut s = self.borrow_mut();
-        s.redraw_if_updated();
-        s.buffer.get_buffer()
-    }
-}
-impl Tray {
+impl TrayState {
     pub fn on_mouse_event(&mut self, e: MouseEvent) -> bool {
         use super::layout::HoveringItem;
         let mut redraw = false;
@@ -432,17 +329,15 @@ impl Tray {
                     hover_id = id;
                 }
 
-                if self.get_menu_state().unwrap().1.set_hovering(hover_id) {
+                if self.menu_state.set_hovering(hover_id) {
                     self.set_updated();
                     redraw = true
                 }
             }
             MouseEvent::Leave => {
-                if let Some((_, state)) = self.get_menu_state() {
-                    if state.set_hovering(-1) {
-                        self.set_updated();
-                        redraw = true
-                    }
+                if self.menu_state.set_hovering(-1) {
+                    self.set_updated();
+                    redraw = true
                 }
             }
             // ignore press
@@ -450,68 +345,4 @@ impl Tray {
         }
         redraw
     }
-}
-
-impl Eq for TrayRc {}
-impl PartialEq for TrayRc {
-    fn eq(&self, other: &Self) -> bool {
-        Rc::ptr_eq(&self.0, &other.0)
-    }
-}
-
-pub fn create_tray_item(
-    module: &TrayModule,
-    tray_id: TrayID,
-    value: &StatusNotifierItem,
-    icon_size: i32,
-    icon_theme: Option<&str>,
-) -> TrayRc {
-    let id = value.id.clone();
-    let title = value.title.clone();
-
-    let icon = value
-        .icon_name
-        .clone()
-        .filter(|icon_name| !icon_name.is_empty())
-        .and_then(|name| {
-            value
-                .icon_theme_path
-                .as_ref()
-                .and_then(|p| {
-                    if p.is_empty() {
-                        None
-                    } else {
-                        parse_icon_given_name(&name, icon_size, IconThemeNameOrPath::Path(p))
-                    }
-                })
-                .or_else(|| {
-                    parse_icon_given_name(&name, icon_size, IconThemeNameOrPath::Name(icon_theme))
-                })
-        })
-        .or_else(|| {
-            value
-                .icon_pixmap
-                .as_ref()
-                .and_then(|icon_pix_map| parse_icon_given_pixmaps(icon_pix_map, icon_size))
-        })
-        .or_else(|| fallback_icon(icon_size, icon_theme))
-        .unwrap_or(ImageSurface::create(cairo::Format::ARgb32, icon_size, icon_size).unwrap());
-
-    let menu_path = value.menu.clone();
-
-    Tray {
-        address: tray_id,
-        id,
-        title,
-        icon,
-        menu_path,
-        menu: None,
-        updated: true,
-
-        is_open: false,
-        layout: TrayLayout::default(),
-        buffer: Buffer::default(),
-        config: module.config.clone(),
-    }
-    .make_rc()
 }

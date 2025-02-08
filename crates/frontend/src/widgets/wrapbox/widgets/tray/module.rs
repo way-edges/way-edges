@@ -1,96 +1,109 @@
-use std::{collections::HashMap, rc::Rc};
+use std::{collections::HashMap, sync::Arc};
 
+use backend::tray::{item::Tray, TrayMap};
 use cairo::ImageSurface;
-use system_tray::item::StatusNotifierItem;
 
 use config::widgets::wrapbox::tray::TrayConfig;
-use way_edges_derive::wrap_rc;
 
 use crate::{mouse_state::MouseEvent, widgets::wrapbox::grid::GridBox};
 
-use super::item::{create_tray_item, TrayID, TrayRc};
+use super::item::TrayState;
 
 #[derive(Debug)]
-pub struct TrayModuleState {
-    current_mouse_in: Option<TrayRc>,
+pub struct ModuleState {
+    current_mouse_in: Option<Destination>,
 }
-impl TrayModuleState {
+impl ModuleState {
     fn new() -> Self {
         Self {
             current_mouse_in: None,
         }
     }
-    pub fn set_current_tary(&mut self, tray: TrayRc) -> Option<TrayRc> {
+    pub fn set_current_tary(&mut self, dest: Destination) -> Option<Destination> {
         self.current_mouse_in
             .as_mut()
-            .filter(|old| *old != &tray)
+            .filter(|old| *old != &dest)
             .map(|old| {
                 let ret = old.clone();
-                *old = tray;
+                *old = dest;
                 ret
             })
     }
 }
 
-#[wrap_rc(rc = "pub", normal = "pub")]
+type Destination = Arc<String>;
+
 #[derive(Debug)]
 pub struct TrayModule {
     // id
-    pub grid: GridBox<TrayRc>,
-    pub id_tray_map: HashMap<TrayID, TrayRc>,
-    pub module_state: TrayModuleState,
-    pub config: Rc<TrayConfig>,
+    pub grid: GridBox<Destination>,
+    pub id_tray_map: HashMap<Destination, TrayState>,
+    pub module_state: ModuleState,
+    pub config: TrayConfig,
 }
 impl TrayModule {
-    pub fn draw_content(&mut self) -> ImageSurface {
-        self.grid.draw()
+    pub fn draw_content(&mut self, tray_map: &TrayMap) -> ImageSurface {
+        self.grid.draw(|dest| {
+            let tray_state = self.id_tray_map.get_mut(dest).unwrap();
+            let tray = tray_map.get_tray(dest).unwrap();
+            tray_state.draw(tray, &self.config)
+        })
     }
-    pub fn add_tray(&mut self, id: String, tray_item: &StatusNotifierItem) {
-        let id = Rc::new(id);
-
-        if self.id_tray_map.contains_key(&id) {
+    pub fn add_tray(&mut self, dest: Arc<String>, tray: &Tray) {
+        if self.id_tray_map.contains_key(&dest) {
             return;
         }
 
-        let tray = create_tray_item(
-            self,
-            id.clone(),
-            tray_item,
-            self.config.icon_size,
-            self.config.icon_theme.as_deref(),
-        );
-        self.grid.add(tray.clone());
-        self.id_tray_map.insert(id, tray);
+        let state = TrayState::new(dest.clone(), tray);
+
+        self.grid.add(dest.clone());
+        self.id_tray_map.insert(dest, state);
     }
     pub fn remove_tray(&mut self, id: &String) {
         self.grid.rm(id);
         self.id_tray_map.remove(id);
     }
 
-    pub fn find_tray(&mut self, id: &String) -> Option<TrayRc> {
-        self.id_tray_map.get(id).cloned()
+    pub fn update_tray(&mut self, dest: &String, tray: &Tray) {
+        if let Some(state) = self.find_tray(dest) {
+            state.update_tray(tray)
+        }
     }
 
-    pub fn match_tray_id_from_pos(&self, pos: (f64, f64)) -> Option<(TrayRc, (f64, f64))> {
-        self.grid
+    pub fn find_tray(&mut self, id: &String) -> Option<&mut TrayState> {
+        self.id_tray_map.get_mut(id)
+    }
+
+    pub fn match_tray_id_from_pos(
+        &mut self,
+        pos: (f64, f64),
+    ) -> Option<(Arc<String>, &mut TrayState, (f64, f64))> {
+        let (dest, pos) = self
+            .grid
             .position_map
             .as_ref()
             .unwrap()
-            .match_item(pos, &self.grid.item_map)
-            .map(|(rc, pos)| (rc.clone(), pos))
+            .match_item(pos, &self.grid.item_map)?;
+
+        let dest = dest.clone();
+        self.find_tray(&dest).map(|state| (dest, state, pos))
     }
 
     pub fn leave_last_tray(&mut self) -> bool {
         if let Some(f) = self.module_state.current_mouse_in.take() {
-            f.borrow_mut().on_mouse_event(MouseEvent::Leave)
+            self.find_tray(&f)
+                .map(|state| state.on_mouse_event(MouseEvent::Leave))
+                .unwrap_or_default()
         } else {
             false
         }
     }
 
-    pub fn replace_current_tray(&mut self, tray: TrayRc) -> bool {
-        if let Some(f) = self.module_state.set_current_tary(tray) {
-            f.borrow_mut().on_mouse_event(MouseEvent::Leave)
+    pub fn replace_current_tray(&mut self, dest: Destination) -> bool {
+        if let Some(f) = self.module_state.set_current_tary(dest) {
+            self.find_tray(&f)
+                .map(|state| state.on_mouse_event(MouseEvent::Leave))
+                .unwrap_or_default()
         } else {
             false
         }
@@ -102,13 +115,13 @@ pub fn new_tray_module(config: TrayConfig) -> TrayModule {
 
     TrayModule {
         grid,
-        config: Rc::new(config),
+        config,
         id_tray_map: HashMap::new(),
-        module_state: TrayModuleState::new(),
+        module_state: ModuleState::new(),
     }
 }
 
-impl GridBox<TrayRc> {
+impl GridBox<Destination> {
     fn arrangement(num_icons: usize) -> (usize, usize) {
         let num_icons = num_icons as f64;
         let mut best_cols = 1.;
@@ -146,7 +159,7 @@ impl GridBox<TrayRc> {
         }
     }
 
-    fn add(&mut self, v: TrayRc) {
+    fn add(&mut self, v: Arc<String>) {
         self.item_map.items.push(v);
         self.rearrange();
     }
@@ -156,7 +169,7 @@ impl GridBox<TrayRc> {
             .item_map
             .items
             .iter()
-            .position(|tray| tray.borrow().address.as_str() == v)
+            .position(|tray| tray.as_str() == v)
         {
             self.item_map.items.remove(index);
             self.rearrange();

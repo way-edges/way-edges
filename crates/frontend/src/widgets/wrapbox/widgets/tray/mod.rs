@@ -3,16 +3,14 @@ mod item;
 mod layout;
 mod module;
 
-use std::rc::Rc;
-
-use cairo::ImageSurface;
-
-use backend::tray::{
-    icon::parse_icon_given_name, init_tray_client, register_tray, unregister_tray, Event,
+use std::{
+    cell::RefCell,
+    rc::{Rc, Weak},
 };
+
+use backend::tray::{init_tray_client, register_tray, TrayBackendHandle, TrayMsg};
 use config::widgets::wrapbox::tray::TrayConfig;
-use item::RootMenu;
-use module::{new_tray_module, TrayModuleRc};
+use module::{new_tray_module, TrayModule};
 use util::Or;
 
 use crate::{
@@ -22,18 +20,14 @@ use crate::{
 
 #[derive(Debug)]
 pub struct TrayCtx {
-    module: TrayModuleRc,
-    backend_cb_id: i32,
-}
-impl Drop for TrayCtx {
-    fn drop(&mut self) {
-        unregister_tray(self.backend_cb_id);
-    }
+    module: TrayModule,
+    backend_handle: TrayBackendHandle,
 }
 
-impl BoxedWidget for TrayCtx {
+impl TrayCtx {
     fn content(&mut self) -> cairo::ImageSurface {
-        self.module.borrow_mut().draw_content()
+        self.module
+            .draw_content(&self.backend_handle.get_tray_map().lock().unwrap())
     }
 
     fn on_mouse_event(&mut self, e: MouseEvent) -> bool {
@@ -41,25 +35,19 @@ impl BoxedWidget for TrayCtx {
 
         match e {
             MouseEvent::Release(pos, key) => {
-                let mut m = self.module.borrow_mut();
-
-                if let Some((tray, pos)) = m.match_tray_id_from_pos(pos) {
-                    redraw.or(m.replace_current_tray(tray.clone()));
-                    redraw.or(tray
-                        .borrow_mut()
-                        .on_mouse_event(MouseEvent::Release(pos, key)));
+                if let Some((dest, tray, pos)) = self.module.match_tray_id_from_pos(pos) {
+                    redraw.or(tray.on_mouse_event(MouseEvent::Release(pos, key)));
+                    redraw.or(self.module.replace_current_tray(dest));
                 }
             }
             MouseEvent::Enter(pos) | MouseEvent::Motion(pos) => {
-                let mut m = self.module.borrow_mut();
-
-                if let Some((tray, pos)) = m.match_tray_id_from_pos(pos) {
-                    redraw.or(m.replace_current_tray(tray.clone()));
-                    redraw.or(tray.borrow_mut().on_mouse_event(MouseEvent::Motion(pos)));
+                if let Some((dest, tray, pos)) = self.module.match_tray_id_from_pos(pos) {
+                    redraw.or(tray.on_mouse_event(MouseEvent::Motion(pos)));
+                    redraw.or(self.module.replace_current_tray(dest));
                 }
             }
             MouseEvent::Leave => {
-                redraw.or(self.module.borrow_mut().leave_last_tray());
+                redraw.or(self.module.leave_last_tray());
             }
             _ => {}
         }
@@ -68,60 +56,55 @@ impl BoxedWidget for TrayCtx {
     }
 }
 
-pub fn init_widget(box_temp_ctx: &mut BoxTemporaryCtx, config: TrayConfig) -> TrayCtx {
+#[derive(Debug)]
+pub struct TrayCtxRc(Rc<RefCell<TrayCtx>>);
+impl BoxedWidget for TrayCtxRc {
+    fn content(&mut self) -> cairo::ImageSurface {
+        self.0.borrow_mut().content()
+    }
+
+    fn on_mouse_event(&mut self, e: MouseEvent) -> bool {
+        self.0.borrow_mut().on_mouse_event(e)
+    }
+}
+
+pub fn init_widget(box_temp_ctx: &mut BoxTemporaryCtx, config: TrayConfig) -> TrayCtxRc {
     init_tray_client();
 
-    let module = new_tray_module(config).make_rc();
+    let rc = Rc::new_cyclic(|weak: &Weak<RefCell<TrayCtx>>| {
+        let weak = weak.clone();
+        let s = box_temp_ctx.make_redraw_channel(move |_, dest: TrayMsg| {
+            let Some(module) = weak.upgrade() else {
+                return;
+            };
 
-    let module_weak = module.downgrade();
-    let s = box_temp_ctx.make_redraw_channel(move |_, msg: Rc<(String, Event)>| {
-        let Some(module) = module_weak.upgrade() else {
-            return;
-        };
-        let id = &msg.0;
-        let e = &msg.1;
+            let mut m = module.borrow_mut();
 
-        let mut m = module.borrow_mut();
-        match e {
-            Event::ItemNew(tray_item) => {
-                m.add_tray(id.clone(), tray_item.as_ref());
-            }
-            Event::ItemRemove => {
-                m.remove_tray(id);
-            }
-            Event::TitleUpdate(title) => {
-                if let Some(tray) = m.find_tray(id) {
-                    tray.borrow_mut().update_title(title.clone());
+            use backend::tray::TrayEventSignal::*;
+            match dest {
+                Add(dest) => {
+                    let tray_map_ptr = m.backend_handle.get_tray_map();
+                    let tray_map = tray_map_ptr.lock().unwrap();
+                    let tray = tray_map.get_tray(&dest).unwrap();
+                    m.module.add_tray(dest, tray);
                 }
-            }
-            Event::IconUpdate(tray_icon) => {
-                if let Some(tray) = m.find_tray(id) {
-                    let size = m.config.icon_size;
-                    let theme = m.config.icon_theme.as_deref();
-                    let surf = parse_icon_given_name(
-                        tray_icon,
-                        size,
-                        backend::tray::icon::IconThemeNameOrPath::Name(theme),
-                    )
-                    .unwrap_or(ImageSurface::create(cairo::Format::ARgb32, size, size).unwrap());
-                    tray.borrow_mut().update_icon(surf);
+                Rm(dest) => {
+                    m.module.remove_tray(&dest);
                 }
-            }
-            Event::MenuNew(tray_menu) => {
-                if let Some(tray) = m.find_tray(id) {
-                    let size = m.config.icon_size;
-                    let theme = m.config.icon_theme.as_deref();
-                    let root_menu = RootMenu::from_tray_menu(tray_menu, size, theme);
-                    tray.borrow_mut().update_menu(root_menu);
+                Update(dest) => {
+                    let tray_map_ptr = m.backend_handle.get_tray_map();
+                    let tray_map = tray_map_ptr.lock().unwrap();
+                    let tray = tray_map.get_tray(&dest).unwrap();
+                    m.module.update_tray(&dest, tray)
                 }
-            }
-        }
+            };
+        });
+
+        RefCell::new(TrayCtx {
+            module: new_tray_module(config),
+            backend_handle: register_tray(s),
+        })
     });
 
-    let backend_cb_id = register_tray(s);
-
-    TrayCtx {
-        module,
-        backend_cb_id,
-    }
+    TrayCtxRc(rc)
 }
