@@ -24,8 +24,8 @@ pub struct TrayBackendHandle {
     id: i32,
 }
 impl TrayBackendHandle {
-    pub fn get_tray_map(&self) -> MutexGuard<TrayMap> {
-        self.tray_map.lock().unwrap()
+    pub fn get_tray_map(&self) -> Arc<Mutex<TrayMap>> {
+        self.tray_map.clone()
     }
 }
 impl Drop for TrayBackendHandle {
