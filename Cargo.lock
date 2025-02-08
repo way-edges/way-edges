@@ -412,7 +412,6 @@ checksum = "ae50b5510d86cf96ac2370e66d8dc960882f3df179d6a5a1e52bd94a1416c0f7"
 dependencies = [
  "bitflags 2.8.0",
  "cairo-sys-rs",
- "freetype-rs",
  "libc",
 ]
 
@@ -1004,28 +1003,6 @@ checksum = "db9c27b72f19a99a895f8ca89e2d26e4ef31013376e56fdafef697627306c3e4"
 dependencies = [
  "nom",
  "thiserror 1.0.69",
-]
-
-[[package]]
-name = "freetype-rs"
-version = "0.37.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d1d1f81b925f09d7040682dbc91eb1b6ad43232f4bc6ee080f518001c05b5415"
-dependencies = [
- "bitflags 2.8.0",
- "freetype-sys",
- "libc",
-]
-
-[[package]]
-name = "freetype-sys"
-version = "0.21.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ddb84abd9992afaa8eb9b8bef907a94553504d0a890924e1bf1f1ab1249455af"
-dependencies = [
- "cc",
- "libc",
- "pkg-config",
 ]
 
 [[package]]
@@ -2382,7 +2359,7 @@ dependencies = [
 [[package]]
 name = "system-tray"
 version = "0.7.0"
-source = "git+https://github.com/ogios/system-tray.git?branch=custom#3ddc3a879e2a367712037a3a4eee48e4d876338f"
+source = "git+https://github.com/ogios/system-tray.git?branch=custom#af7bb134c96acd68f98a8c7bac6d4c4fcb835d8f"
 dependencies = [
  "futures-lite",
  "serde",
