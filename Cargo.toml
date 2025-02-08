@@ -28,7 +28,7 @@ paste = "1.0.15"
 serde_jsonrc = "0.1"
 serde = { version = "1.0", features = ["derive"] }
 tokio = { version = "1.39", features = ["net", "macros", "rt", "time", "sync"] }
-system-tray = { git = "https://github.com/ogios/system-tray-zbus5.git", branch = "zbus5-new" }
+system-tray = { git = "https://github.com/ogios/system-tray.git", branch = "custom" }
 
 # until it make calloop version 0.14
 smithay-client-toolkit = { git = "https://github.com/Smithay/client-toolkit.git" }
