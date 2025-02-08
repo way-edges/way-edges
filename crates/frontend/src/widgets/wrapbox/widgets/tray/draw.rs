@@ -255,7 +255,11 @@ impl<'a> MenuDrawArg<'a> {
         // icon
         if let Some(icon) = item.icon.as_ref() {
             // NOTE: SHOULD THEME PATH BE USED?
-            imgs.push(icon.draw_icon(conf.icon_size, conf.icon_theme.as_deref(), None));
+            imgs.push(icon.draw_icon(
+                conf.menu_draw_config.icon_size,
+                conf.icon_theme.as_deref(),
+                None,
+            ));
         }
 
         // text

@@ -4,7 +4,7 @@ use std::{
     hash::Hash,
     sync::{
         atomic::{AtomicBool, AtomicPtr},
-        Arc, Mutex, MutexGuard,
+        Arc, Mutex,
     },
 };
 

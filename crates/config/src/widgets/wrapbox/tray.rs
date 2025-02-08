@@ -32,44 +32,83 @@ impl HeaderMenuAlign {
 
 #[derive(Debug, Deserialize)]
 pub struct HeaderDrawConfig {
+    #[serde(default = "dt_header_font_pixel_height")]
     pub font_pixel_height: i32,
+    #[serde(default = "dt_header_text_color")]
     #[serde(deserialize_with = "common::color_translate")]
     pub text_color: Color,
 }
 impl Default for HeaderDrawConfig {
     fn default() -> Self {
         Self {
-            font_pixel_height: 16,
-            text_color: COLOR_WHITE,
+            font_pixel_height: dt_header_font_pixel_height(),
+            text_color: dt_header_text_color(),
         }
     }
+}
+fn dt_header_font_pixel_height() -> i32 {
+    20
+}
+fn dt_header_text_color() -> Color {
+    COLOR_WHITE
 }
 
 #[derive(Debug, Deserialize)]
 pub struct MenuDrawConfig {
+    #[serde(default = "dt_menu_margin")]
     pub margin: [i32; 2],
+    #[serde(default = "dt_font_pixel_height")]
     pub font_pixel_height: i32,
+    #[serde(default = "dt_menu_icon_size")]
+    pub icon_size: i32,
+    #[serde(default = "dt_menu_marker_size")]
     pub marker_size: i32,
+    #[serde(default = "dt_menu_separator_height")]
     pub separator_height: i32,
+    #[serde(default = "dt_menu_border_color")]
     #[serde(deserialize_with = "common::color_translate")]
     pub border_color: Color,
+    #[serde(default = "dt_menu_text_color")]
     #[serde(deserialize_with = "common::color_translate")]
     pub text_color: Color,
+    #[serde(default)]
     #[serde(deserialize_with = "common::option_color_translate")]
     pub marker_color: Option<Color>,
 }
 impl Default for MenuDrawConfig {
     fn default() -> Self {
         Self {
-            margin: [12, 12],
-            marker_size: 20,
-            font_pixel_height: 24,
-            separator_height: 5,
-            border_color: COLOR_WHITE,
-            text_color: COLOR_WHITE,
+            margin: dt_menu_margin(),
+            marker_size: dt_menu_marker_size(),
+            font_pixel_height: dt_font_pixel_height(),
+            separator_height: dt_menu_separator_height(),
+            border_color: dt_menu_border_color(),
+            text_color: dt_menu_text_color(),
+            icon_size: dt_menu_icon_size(),
             marker_color: None,
         }
     }
+}
+fn dt_menu_margin() -> [i32; 2] {
+    [12, 12]
+}
+fn dt_font_pixel_height() -> i32 {
+    22
+}
+fn dt_menu_icon_size() -> i32 {
+    20
+}
+fn dt_menu_marker_size() -> i32 {
+    20
+}
+fn dt_menu_separator_height() -> i32 {
+    5
+}
+fn dt_menu_border_color() -> Color {
+    COLOR_WHITE
+}
+fn dt_menu_text_color() -> Color {
+    COLOR_WHITE
 }
 
 #[derive(Educe, Deserialize)]
