@@ -1,3 +1,5 @@
+use std::{cell::RefCell, collections::HashMap};
+
 use cairo::ImageSurface;
 use system_tray::item::{IconPixmap, StatusNotifierItem};
 
@@ -6,13 +8,77 @@ use super::icon::{
     IconThemeNameOrPath,
 };
 
-#[derive(Debug, Default)]
+#[derive(Debug, Hash, PartialEq, Eq)]
+struct IconCacheKey {
+    size: i32,
+    t: IconCacheType,
+}
+
+#[derive(Debug, Hash, PartialEq, Eq)]
+enum IconCacheType {
+    Name {
+        name: String,
+        theme: Option<String>,
+        theme_path: Option<String>,
+    },
+    PngData,
+    Pixmap,
+}
+
+#[derive(Debug)]
+pub struct IconHandle {
+    cache: RefCell<HashMap<IconCacheKey, ImageSurface>>,
+    icon: Option<Icon>,
+}
+impl IconHandle {
+    fn new(icon: Option<Icon>) -> Self {
+        Self {
+            cache: RefCell::new(HashMap::new()),
+            icon,
+        }
+    }
+    pub fn draw_icon(
+        &self,
+        size: i32,
+        theme: Option<&str>,
+        theme_path: Option<&str>,
+    ) -> ImageSurface {
+        let Some(icon) = self.icon.as_ref() else {
+            return ImageSurface::create(cairo::Format::ARgb32, size, size).unwrap();
+        };
+
+        // cache
+        let cache_key = IconCacheKey {
+            size,
+            t: match icon {
+                Icon::Named(name) => IconCacheType::Name {
+                    name: name.clone(),
+                    theme: theme.map(ToString::to_string),
+                    theme_path: theme_path.map(ToString::to_string),
+                },
+                Icon::PngData(_) => IconCacheType::PngData,
+                Icon::Pixmap(_) => IconCacheType::Pixmap,
+            },
+        };
+        if let Some(cache) = self.cache.borrow().get(&cache_key).cloned() {
+            return cache;
+        }
+
+        if let Some(content) = icon.draw_icon(size, theme, theme_path) {
+            self.cache.borrow_mut().insert(cache_key, content.clone());
+            return content;
+        }
+
+        fallback_icon(size, theme)
+            .unwrap_or(ImageSurface::create(cairo::Format::ARgb32, size, size).unwrap())
+    }
+}
+
+#[derive(Debug)]
 pub enum Icon {
     Named(String),
     PngData(Vec<u8>),
     Pixmap(Vec<IconPixmap>),
-    #[default]
-    Empty,
 }
 impl Icon {
     pub fn draw_icon(
@@ -20,7 +86,7 @@ impl Icon {
         size: i32,
         theme: Option<&str>,
         theme_path: Option<&str>,
-    ) -> ImageSurface {
+    ) -> Option<ImageSurface> {
         match self {
             Icon::Named(name) => {
                 let theme_or_path = theme_path
@@ -28,20 +94,16 @@ impl Icon {
                     .map(IconThemeNameOrPath::Path)
                     .unwrap_or_else(|| IconThemeNameOrPath::Name(theme));
                 parse_icon_given_name(name, size, theme_or_path)
-                    .or_else(|| fallback_icon(size, theme))
             }
             Icon::PngData(items) => parse_icon_given_data(items, size),
             Icon::Pixmap(icon_pixmap) => parse_icon_given_pixmaps(icon_pixmap, size),
-            Icon::Empty => None,
         }
-        .unwrap_or(ImageSurface::create(cairo::Format::ARgb32, size, size).unwrap())
     }
 }
 impl PartialEq for Icon {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
             (Self::Named(l0), Self::Named(r0)) => l0 == r0,
-            (Self::Empty, Self::Empty) => true,
             // THIS OPERATION IS HEAVY
             (Self::PngData(_), Self::PngData(_)) | (Self::Pixmap(_), Self::Pixmap(_)) => false,
             _ => core::mem::discriminant(self) == core::mem::discriminant(other),
@@ -73,7 +135,7 @@ pub struct MenuItem {
     pub id: i32,
     pub enabled: bool,
     pub label: Option<String>,
-    pub icon: Option<Icon>,
+    pub icon: Option<IconHandle>,
     pub menu_type: MenuType,
 
     pub submenu: Option<Vec<MenuItem>>,
@@ -100,7 +162,9 @@ impl MenuItem {
 
         let icon = icon_data
             .map(Icon::PngData)
-            .or_else(|| icon_name.map(Icon::Named));
+            .or_else(|| icon_name.map(Icon::Named))
+            .map(Some)
+            .map(IconHandle::new);
 
         let menu_type = match menu_type {
             system_tray::menu::MenuType::Separator => MenuType::Separator,
@@ -163,20 +227,10 @@ pub enum MenuType {
 pub struct Tray {
     pub id: String,
     pub title: Option<String>,
-    pub icon: Icon,
+    pub icon: IconHandle,
     pub icon_theme_path: Option<String>,
     pub menu_path: Option<String>,
     pub menu: Option<RootMenu>,
-}
-
-macro_rules! diff_and_update {
-    ($old:expr, $new:expr) => {{
-        let diff = $new != $old;
-        if diff {
-            $old = $new;
-        }
-        diff
-    }};
 }
 
 impl Tray {
@@ -204,8 +258,9 @@ impl Tray {
         let icon = icon_name
             .filter(|icon_name| !icon_name.is_empty())
             .map(Icon::Named)
-            .or_else(|| icon_pixmap.map(Icon::Pixmap))
-            .unwrap_or(Icon::Empty);
+            .or_else(|| icon_pixmap.map(Icon::Pixmap));
+
+        let icon = IconHandle::new(icon);
 
         let menu_path = menu;
 
@@ -219,10 +274,20 @@ impl Tray {
         }
     }
     pub(super) fn update_title(&mut self, title: Option<String>) -> bool {
-        diff_and_update!(self.title, title)
+        if self.title != title {
+            self.title = title;
+            true
+        } else {
+            false
+        }
     }
-    pub(super) fn update_icon(&mut self, icon: Icon) -> bool {
-        diff_and_update!(self.icon, icon)
+    pub(super) fn update_icon(&mut self, icon: Option<Icon>) -> bool {
+        if self.icon.icon != icon {
+            self.icon = IconHandle::new(icon);
+            true
+        } else {
+            false
+        }
     }
     pub(super) fn update_menu(&mut self, new: RootMenu) {
         self.menu.replace(new);
