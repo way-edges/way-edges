@@ -118,11 +118,10 @@ pub fn init_tray_client() {
 
     get_backend_runtime_handle().spawn(async move {
         while let Ok(ev) = tray_rx.recv().await {
+            // log::debug!("tray event: {ev:?}");
             get_tray_context().call(ev);
         }
     });
-
-    // get_main_runtime_handle().spawn();
 }
 
 pub fn register_tray(cb: Sender<TrayMsg>) -> TrayBackendHandle {
