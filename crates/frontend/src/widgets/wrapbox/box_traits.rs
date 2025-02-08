@@ -5,7 +5,7 @@ use way_edges_derive::wrap_rc;
 
 use crate::{animation::AnimationList, buffer::Buffer, mouse_state::MouseEvent};
 
-use super::grid::{item::GridItemContent, GridBox};
+use super::grid::GridBox;
 
 pub type BoxedWidgetGrid = GridBox<BoxedWidgetCtxRc>;
 
@@ -45,7 +45,7 @@ impl BoxedWidgetCtx {
     fn get_buffer(&self) -> ImageSurface {
         self.buffer.get_buffer()
     }
-    fn draw(&mut self) -> ImageSurface {
+    pub fn draw(&mut self) -> ImageSurface {
         let mut call_redraw = false;
         if self.animation_list.has_in_progress() {
             if self.did_last_frame {
@@ -73,12 +73,6 @@ impl BoxedWidgetCtx {
             self.has_update.set(true);
         }
         should_update
-    }
-}
-
-impl GridItemContent for BoxedWidgetCtxRc {
-    fn draw(&mut self) -> ImageSurface {
-        self.borrow_mut().draw()
     }
 }
 

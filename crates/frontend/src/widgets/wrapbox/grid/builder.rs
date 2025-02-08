@@ -1,15 +1,12 @@
 use config::widgets::wrapbox::{Align, AlignFunc};
 
-use super::{
-    item::{GridItemContent, GridItemMap},
-    GridBox,
-};
+use super::{item::GridItemMap, GridBox};
 
 pub struct GrideBoxBuilder<T> {
     ws: Vec<Vec<Option<T>>>,
     row_col_num: (usize, usize),
 }
-impl<T: GridItemContent> GrideBoxBuilder<T> {
+impl<T> GrideBoxBuilder<T> {
     pub fn new() -> Self {
         Self {
             ws: vec![],
