@@ -48,6 +48,7 @@ use super::{draw::DrawCore, window_pop_state::WindowPopState};
 
 pub struct App {
     pub exit: bool,
+    pub show_mouse_key: bool,
     pub groups: HashMap<String, Option<Group>>,
 
     pub queue_handle: QueueHandle<App>,

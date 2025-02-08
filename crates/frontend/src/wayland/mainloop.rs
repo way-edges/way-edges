@@ -18,7 +18,7 @@ use wayland_client::{globals::registry_queue_init, Connection};
 
 use super::app::App;
 
-pub fn run_app() {
+pub fn run_app(show_mouse_key: bool) {
     let conn = Connection::connect_to_env().unwrap();
 
     let (globals, event_queue) = registry_queue_init(&conn).unwrap();
@@ -45,6 +45,7 @@ pub fn run_app() {
 
     let mut app = App {
         exit: false,
+        show_mouse_key,
         queue_handle: qh,
         event_loop_handle: event_loop.handle(),
         signal,

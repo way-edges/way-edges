@@ -204,6 +204,24 @@ impl PointerHandler for App {
     ) {
         // as for keys: [https://github.com/torvalds/linux/blob/fda5e3f284002ea55dac1c98c1498d6dd684046e/include/uapi/linux/input-event-codes.h#L355]
         for event in events {
+            if self.show_mouse_key {
+                use smithay_client_toolkit::seat::pointer::PointerEventKind::*;
+                match event.kind {
+                    Press {
+                        time: _,
+                        button,
+                        serial: _,
+                    }
+                    | Release {
+                        time: _,
+                        button,
+                        serial: _,
+                    } => {
+                        println!("MOUSE DEBUG KEY PRESSED OR RELEASED: {button}");
+                    }
+                    _ => {}
+                }
+            }
             let Some(w) = SurfaceData::from_wl(&event.surface).get_widget() else {
                 continue;
             };

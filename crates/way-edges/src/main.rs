@@ -16,7 +16,7 @@ fn main() {
 
     match &cmd.command {
         args::Command::Daemon => {
-            run_app();
+            run_app(cmd.mouse_debug);
         }
         _ => {
             cmd.command.send_ipc();
