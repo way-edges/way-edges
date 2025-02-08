@@ -20,7 +20,7 @@ impl Icon {
         size: i32,
         theme: Option<&str>,
         theme_path: Option<&str>,
-    ) -> Option<ImageSurface> {
+    ) -> ImageSurface {
         match self {
             Icon::Named(name) => {
                 let theme_or_path = theme_path
@@ -33,6 +33,7 @@ impl Icon {
             Icon::Pixmap(icon_pixmap) => parse_icon_given_pixmaps(icon_pixmap, size),
             Icon::Empty => None,
         }
+        .unwrap_or(ImageSurface::create(cairo::Format::ARgb32, size, size).unwrap())
     }
 }
 impl PartialEq for Icon {
