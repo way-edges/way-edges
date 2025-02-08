@@ -24,6 +24,7 @@ impl Icon {
         match self {
             Icon::Named(name) => {
                 let theme_or_path = theme_path
+                    .filter(|path| !path.is_empty())
                     .map(IconThemeNameOrPath::Path)
                     .unwrap_or_else(|| IconThemeNameOrPath::Name(theme));
                 parse_icon_given_name(name, size, theme_or_path)
