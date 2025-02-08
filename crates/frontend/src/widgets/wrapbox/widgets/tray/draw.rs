@@ -1,8 +1,9 @@
 use std::f64::consts::PI;
 
+use backend::tray::item::{MenuItem, MenuType, Tray};
 use cairo::{Context, ImageSurface};
 
-use config::widgets::wrapbox::tray::{HeaderDrawConfig, MenuDrawConfig};
+use config::widgets::wrapbox::tray::{HeaderDrawConfig, MenuDrawConfig, TrayConfig};
 use util::{
     color::cairo_set_color,
     draw::new_surface,
@@ -10,7 +11,7 @@ use util::{
     Z,
 };
 
-use super::item::{MenuItem, MenuState, MenuType, Tray};
+use super::item::{MenuState, TrayState};
 
 pub struct HeaderDrawArg<'a> {
     text_conf: TextConfig<'a>,
@@ -26,20 +27,32 @@ impl<'a> HeaderDrawArg<'a> {
 
         Self { text_conf }
     }
-    pub fn draw_header(&self, tray: &Tray) -> ImageSurface {
-        if !tray.is_open {
-            return tray.icon.clone();
+    pub fn draw_header(
+        &self,
+        tray_state: &TrayState,
+        tray: &Tray,
+        conf: &TrayConfig,
+    ) -> ImageSurface {
+        let draw_icon = || {
+            tray.icon.draw_icon(
+                conf.icon_size,
+                conf.icon_theme.as_deref(),
+                tray.icon_theme_path.as_deref(),
+            )
+        };
+        if !tray_state.is_open {
+            return draw_icon();
         }
 
         let Some(title) = tray.title.as_ref().filter(|title| !title.is_empty()) else {
-            return tray.icon.clone();
+            return draw_icon();
         };
 
         let text_surf = self.draw_text(title);
 
         static ICON_TEXT_GAP: i32 = 4;
 
-        combine_horizonal_center(&[tray.icon.clone(), text_surf], Some(ICON_TEXT_GAP))
+        combine_horizonal_center(&[draw_icon(), text_surf], Some(ICON_TEXT_GAP))
     }
     fn draw_text(&self, text: &str) -> ImageSurface {
         draw_text(text, self.text_conf).to_image_surface()
@@ -81,7 +94,12 @@ impl<'a> MenuDrawArg<'a> {
         }
     }
 
-    pub fn draw_menu(&self, menu: &[MenuItem], menu_state: &MenuState) -> (ImageSurface, Vec<f64>) {
+    pub fn draw_menu(
+        &self,
+        menu: &[MenuItem],
+        menu_state: &MenuState,
+        conf: &TrayConfig,
+    ) -> (ImageSurface, Vec<f64>) {
         // this should be in config, or?
         static MENU_ITEM_BORDER_WIDTH: i32 = 4;
 
@@ -93,7 +111,7 @@ impl<'a> MenuDrawArg<'a> {
             .enumerate()
             .map(|(index, item)| {
                 // current_item
-                let menu_res = self.draw_menu_item(item);
+                let menu_res = self.draw_menu_item(item, conf);
 
                 // count size
                 let size = menu_res.get_size();
@@ -216,7 +234,7 @@ impl<'a> MenuDrawArg<'a> {
         (surf, y_map)
     }
 
-    fn draw_menu_item(&self, item: &MenuItem) -> MenuItemDrawResult {
+    fn draw_menu_item(&self, item: &MenuItem, conf: &TrayConfig) -> MenuItemDrawResult {
         let mut imgs = Vec::with_capacity(4);
 
         // marker
@@ -236,7 +254,8 @@ impl<'a> MenuDrawArg<'a> {
 
         // icon
         if let Some(icon) = item.icon.as_ref() {
-            imgs.push(icon.clone());
+            // NOTE: SHOULD THEME PATH BE USED?
+            imgs.push(icon.draw_icon(conf.icon_size, conf.icon_theme.as_deref(), None));
         }
 
         // text
