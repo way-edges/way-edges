@@ -16,12 +16,13 @@ use super::{WorkspaceCB, WorkspaceCtx, WorkspaceData, WorkspaceHandler, ID};
 fn workspace_vec_to_data(v: &[Workspace]) -> WorkspaceData {
     let mut workspace_count = 0;
     let mut focus = -1;
-    v.iter().enumerate().for_each(|(index, w)| {
-        if w.is_focused {
-            focus = index as i32;
-        }
+    v.iter().for_each(|w| {
         if w.is_focused || w.active_window_id.is_some() {
             workspace_count += 1;
+        }
+
+        if w.is_focused {
+            focus = workspace_count - 1;
         }
     });
 
