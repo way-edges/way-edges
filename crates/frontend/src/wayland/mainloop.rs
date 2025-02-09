@@ -94,6 +94,10 @@ pub fn run_app(show_mouse_key: bool) {
         })
         .unwrap();
 
+    event_loop.handle().insert_idle(|app| {
+        app.reload();
+    });
+
     while !app.exit {
         event_loop.dispatch(None, &mut app).unwrap();
     }

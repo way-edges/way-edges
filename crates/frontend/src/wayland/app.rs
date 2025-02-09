@@ -80,8 +80,11 @@ impl App {
         if self.groups.contains_key(name) {
             return;
         }
-        let group = self.init_group(name);
-        self.groups.insert(name.to_string(), group);
+
+        if let Some(group) = config::get_config_by_group(name) {
+            let group = self.init_group(group);
+            self.groups.insert(name.to_string(), group);
+        }
     }
     fn rm_group(&mut self, name: &str) {
         drop(self.groups.remove(name));
@@ -96,28 +99,39 @@ impl App {
     }
 
     pub fn reload(&mut self) {
+        let mut conf = match config::get_config_root() {
+            Ok(c) => c,
+            Err(e) => {
+                log::error!("Failed to load config: {e}");
+                return;
+            }
+        };
+
+        // ensure load_groups are loaded
+        conf.ensure_load_group.iter().for_each(|key| {
+            self.groups.entry(key.clone()).or_insert(None);
+        });
+
         // FIX: HOW CAN WE DO THIS???
         let ptr = self as *const App;
         for (k, widget_map) in self.groups.iter_mut() {
             drop(widget_map.take());
-            *widget_map = unsafe { ptr.as_ref().unwrap() }.init_group(k.as_str());
+
+            if let Some(g) = conf.groups.iter().position(|g| &g.name == k) {
+                let group = conf.groups.swap_remove(g);
+                *widget_map = unsafe { ptr.as_ref().unwrap() }.init_group(group);
+            };
         }
     }
 
-    fn init_group(&self, name: &str) -> Option<Group> {
-        let conf = config::get_config_by_group(Some(name));
-        let res = conf.and_then(|vc| {
-            let Some(vc) = vc else {
-                return Err(format!("Not found config by group: {name}"));
-            };
-            log::debug!("group config:\n{vc:?}");
-            Group::init_group(vc.widgets, self)
-        });
-        res.inspect_err(|e| {
-            log::error!("{e}");
-            util::notify_send("Way-edges app error", e, true);
-        })
-        .ok()
+    fn init_group(&self, conf: config::Group) -> Option<Group> {
+        log::debug!("group config:\n{conf:?}");
+        Group::init_group(conf.widgets, self)
+            .inspect_err(|e| {
+                log::error!("{e}");
+                util::notify_send("Way-edges app error", e, true);
+            })
+            .ok()
     }
 }
 
