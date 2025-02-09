@@ -1,5 +1,4 @@
 use std::{
-    cell::UnsafeCell,
     collections::HashMap,
     rc::Rc,
     sync::{atomic::AtomicPtr, Arc, Mutex, Weak},
@@ -38,7 +37,7 @@ use wayland_client::{
 };
 
 use crate::{
-    animation::{AnimationList, ToggleAnimation, ToggleAnimationRc, ToggleAnimationRcWeak},
+    animation::{AnimationList, ToggleAnimation, ToggleAnimationRc},
     buffer::Buffer,
     mouse_state::{MouseEvent, MouseState},
     widgets::{init_widget, WidgetContext},
@@ -507,60 +506,57 @@ impl Drop for Scale {
     }
 }
 
+macro_rules! widget_from_layer {
+    ($w:ident, $layer:expr) => {
+        let Some($w) = SurfaceData::from_wl($layer.wl_surface()).get_widget() else {
+            return;
+        };
+    };
+    ($w:ident, $layer:expr, $ret:expr) => {
+        let Some($w) = SurfaceData::from_wl($layer.wl_surface()).get_widget() else {
+            return $ret;
+        };
+    };
+}
+
 struct PopEssential {
-    pop_animation: ToggleAnimationRcWeak,
-    pop_state: std::rc::Weak<UnsafeCell<Option<Rc<()>>>>,
     pop_duration: Duration,
     layer: LayerSurface,
 }
 impl PopEssential {
-    fn signal_pop_redraw(layer: &LayerSurface, app: &mut App) {
-        let Some(w) = SurfaceData::from_wl(layer.wl_surface()).get_widget() else {
-            return;
-        };
-        w.lock().unwrap().try_redraw(app);
-    }
     fn pop(&self, app: &mut App) {
         // pop up
         let guard_weak = {
-            let Some(pop_animation) = self.pop_animation.upgrade() else {
-                return;
-            };
-            let Some(pop_state) = self.pop_state.upgrade() else {
-                return;
-            };
+            widget_from_layer!(w, self.layer);
+
+            let mut wg = w.lock().unwrap();
+            let state = &mut wg.window_pop_state;
+            state.enter();
 
             let guard = Rc::new(());
             let guard_weak = Rc::downgrade(&guard);
-            unsafe { pop_state.get().as_mut().unwrap().replace(guard) };
+            state.pop_state.replace(guard);
 
-            pop_animation
-                .borrow_mut()
-                .set_direction(crate::animation::ToggleDirection::Forward);
-            Self::signal_pop_redraw(&self.layer, app);
+            wg.try_redraw(app);
 
             guard_weak
         };
 
         // hide
         let layer = self.layer.clone();
-        let pop_animation = self.pop_animation.clone();
-        let pop_duration = self.pop_duration;
         app.event_loop_handle
             .insert_source(
-                calloop::timer::Timer::from_duration(pop_duration),
+                calloop::timer::Timer::from_duration(self.pop_duration),
                 move |_, _, app| {
-                    let Some(pop_animation) = pop_animation.upgrade() else {
-                        return calloop::timer::TimeoutAction::Drop;
-                    };
                     if guard_weak.upgrade().is_none() {
                         return calloop::timer::TimeoutAction::Drop;
                     }
 
-                    pop_animation
-                        .borrow_mut()
-                        .set_direction(crate::animation::ToggleDirection::Backward);
-                    Self::signal_pop_redraw(&layer, app);
+                    widget_from_layer!(w, layer, calloop::timer::TimeoutAction::Drop);
+
+                    let mut wg = w.lock().unwrap();
+                    wg.window_pop_state.leave();
+                    wg.try_redraw(app);
 
                     calloop::timer::TimeoutAction::Drop
                 },
@@ -591,9 +587,8 @@ pub struct WidgetBuilder<'a> {
     pub layer: LayerSurface,
     pub scale: Scale,
 
-    pub pop_animation: ToggleAnimationRc,
     pub animation_list: AnimationList,
-    pub pop_state: Rc<UnsafeCell<Option<Rc<()>>>>,
+    pub window_pop_state: WindowPopState,
 }
 impl WidgetBuilder<'_> {
     pub fn new_animation(&mut self, time_cost: u64) -> ToggleAnimationRc {
@@ -604,12 +599,8 @@ impl WidgetBuilder<'_> {
     }
     fn make_pop_essential(&self, pop_duration: u64) -> PopEssential {
         let layer = self.layer.clone();
-        let pop_animation = self.pop_animation.downgrade();
-        let pop_state = Rc::downgrade(&self.pop_state);
         let pop_duration = Duration::from_millis(pop_duration);
         PopEssential {
-            pop_animation,
-            pop_state,
             pop_duration,
             layer,
         }
@@ -795,20 +786,19 @@ impl<'a> WidgetBuilder<'a> {
             crate::animation::Curve::Linear,
         )
         .make_rc();
-        let pop_state = Rc::new(UnsafeCell::new(None));
         let animation_list = AnimationList::new();
+        let window_pop_state = WindowPopState::new(pop_animation);
 
         Ok(Self {
             monitor: conf.monitor.clone(),
             output,
             app,
             layer,
-            pop_animation,
             animation_list,
-            pop_state,
             scale,
             margins,
             output_size,
+            window_pop_state,
         })
     }
     pub fn build(self, conf: config::Config, w: Box<dyn WidgetContext>) -> Widget {
@@ -818,16 +808,14 @@ impl<'a> WidgetBuilder<'a> {
             app: _,
             layer,
             scale,
-            pop_animation,
             animation_list,
-            pop_state,
             margins,
             output_size,
+            window_pop_state,
         } = self;
 
         let start_pos = (0, 0);
         let mouse_state = MouseState::new();
-        let window_pop_state = WindowPopState::new(pop_animation.clone(), pop_state);
         let buffer = Buffer::default();
         let draw_core = DrawCore::new(&conf);
 
@@ -837,7 +825,7 @@ impl<'a> WidgetBuilder<'a> {
             output,
             layer,
             scale,
-            pop_animation,
+            pop_animation: window_pop_state.pop_animation.clone(),
             animation_list,
             mouse_state,
             window_pop_state,

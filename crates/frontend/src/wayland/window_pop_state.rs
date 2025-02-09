@@ -1,4 +1,4 @@
-use std::{cell::UnsafeCell, rc::Rc, time::Duration};
+use std::{rc::Rc, time::Duration};
 
 use smithay_client_toolkit::seat::pointer::BTN_MIDDLE;
 
@@ -7,23 +7,23 @@ use crate::animation::{ToggleAnimationRc, ToggleDirection};
 #[derive(Debug)]
 pub struct WindowPopState {
     pub pin_state: bool,
-    pub pop_state: Rc<UnsafeCell<Option<Rc<()>>>>,
+    pub pop_state: Option<Rc<()>>,
     pub pop_animation: ToggleAnimationRc,
     pub pin_key: u32,
     pub pop_duration: Duration,
 }
 impl WindowPopState {
-    pub fn new(ani: ToggleAnimationRc, pop_state: Rc<UnsafeCell<Option<Rc<()>>>>) -> Self {
+    pub fn new(ani: ToggleAnimationRc) -> Self {
         Self {
             pin_state: false,
-            pop_state,
+            pop_state: None,
             pop_animation: ani,
             pin_key: BTN_MIDDLE,
             pop_duration: Duration::from_secs(1),
         }
     }
     pub fn invalidate_pop(&mut self) {
-        unsafe { drop(self.pop_state.get().as_mut().unwrap().take()) };
+        drop(self.pop_state.take());
     }
     pub fn toggle_pin(&mut self, is_hovering: bool) {
         self.invalidate_pop();
