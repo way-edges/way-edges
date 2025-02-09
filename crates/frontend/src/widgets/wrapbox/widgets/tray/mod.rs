@@ -73,6 +73,9 @@ pub fn init_widget(box_temp_ctx: &mut BoxTemporaryCtx, config: TrayConfig) -> Tr
 
     let rc = Rc::new_cyclic(|weak: &Weak<RefCell<TrayCtx>>| {
         let weak = weak.clone();
+
+        let mut module = new_tray_module(config);
+
         let s = box_temp_ctx.make_redraw_channel(move |_, dest: TrayMsg| {
             let Some(module) = weak.upgrade() else {
                 return;
@@ -99,10 +102,21 @@ pub fn init_widget(box_temp_ctx: &mut BoxTemporaryCtx, config: TrayConfig) -> Tr
                 }
             };
         });
+        let backend_handle = register_tray(s);
+
+        let map_ptr = backend_handle.get_tray_map();
+        map_ptr
+            .lock()
+            .unwrap()
+            .list_tray()
+            .into_iter()
+            .for_each(|(k, v)| {
+                module.add_tray(k, v);
+            });
 
         RefCell::new(TrayCtx {
-            module: new_tray_module(config),
-            backend_handle: register_tray(s),
+            module,
+            backend_handle,
         })
     });
 

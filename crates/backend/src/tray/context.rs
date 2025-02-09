@@ -44,6 +44,9 @@ impl TrayMap {
             inner: HashMap::new(),
         }))
     }
+    pub fn list_tray(&self) -> Vec<(Arc<String>, &Tray)> {
+        self.inner.iter().map(|(k, v)| (k.clone(), v)).collect()
+    }
     pub fn get_tray<Q: Hash + Eq>(&self, destination: &Q) -> Option<&Tray>
     where
         Arc<String>: Borrow<Q>,
