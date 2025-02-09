@@ -15,6 +15,8 @@ pub struct Group {
 pub struct Root {
     #[serde(default)]
     pub groups: Vec<Group>,
+    #[serde(default)]
+    pub load_groups: Vec<String>,
 }
 
 impl Root {

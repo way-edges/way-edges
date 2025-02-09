@@ -55,12 +55,12 @@ pub fn get_config_root() -> Result<Root, String> {
     root::parse_config(&s)
 }
 
-pub fn get_config_by_group(group_name: Option<&str>) -> Result<Option<Group>, String> {
-    let mut root = get_config_root()?;
+pub fn get_config_by_group(group_name: &str) -> Option<Group> {
+    let mut root = get_config_root()
+        .inspect_err(|e| {
+            log::error!("Failed to load config: {e}");
+        })
+        .ok()?;
 
-    if let Some(group_name) = group_name {
-        Ok(root.take_group(group_name))
-    } else {
-        Ok(root.take_first())
-    }
+    root.take_group(group_name)
 }
