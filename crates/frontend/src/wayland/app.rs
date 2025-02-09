@@ -108,7 +108,7 @@ impl App {
         };
 
         // ensure load_groups are loaded
-        conf.load_groups.iter().for_each(|key| {
+        conf.ensure_load_group.iter().for_each(|key| {
             self.groups.entry(key.clone()).or_insert(None);
         });
 
