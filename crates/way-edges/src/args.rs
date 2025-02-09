@@ -19,7 +19,7 @@ pub struct Cli {
     pub mouse_debug: bool,
 
     #[command(subcommand)]
-    pub command: Command,
+    pub command: Option<Command>,
 }
 
 fn complete_only_group(current: &std::ffi::OsStr) -> Vec<CompletionCandidate> {

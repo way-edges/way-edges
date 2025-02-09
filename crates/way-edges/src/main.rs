@@ -12,14 +12,19 @@ fn main() {
     }
     env_logger::init();
 
-    let cmd = args::get_args();
+    let cli = args::get_args();
 
-    match &cmd.command {
-        args::Command::Daemon => {
-            run_app(cmd.mouse_debug);
-        }
-        _ => {
-            cmd.command.send_ipc();
+    if let Some(cmd) = cli.command.as_ref() {
+        match &cmd {
+            args::Command::Daemon => {
+                log::warn!("daemon command is deprecated, please just run `way-edges`");
+            }
+            _ => {
+                cmd.send_ipc();
+                return;
+            }
         }
     }
+
+    run_app(cli.mouse_debug);
 }
