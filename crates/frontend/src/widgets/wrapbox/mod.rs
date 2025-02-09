@@ -112,7 +112,7 @@ impl<'a, 'b> BoxTemporaryCtx<'a, 'b> {
         Self {
             builder,
             animation_list: AnimationList::new(),
-            has_update: Rc::new(Cell::new(false)),
+            has_update: Rc::new(Cell::new(true)),
         }
     }
     fn new_animation(&mut self, time_cost: u64) -> ToggleAnimationRc {
