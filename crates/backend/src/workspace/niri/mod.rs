@@ -53,7 +53,6 @@ async fn process_event(e: niri_ipc::Event) {
     let ctx = get_niri_ctx();
     // NOTE: id start from 1
     ctx.data = match e {
-        niri_ipc::Event::WorkspacesChanged { workspaces } => sort_workspaces(workspaces),
         niri_ipc::Event::WorkspaceActivated { id: _, focused: _ } => {
             let data = get_workspaces().await.expect("Failed to get workspaces");
             sort_workspaces(data)
