@@ -13,22 +13,47 @@ use crate::runtime::get_backend_runtime_handle;
 
 use super::{WorkspaceCB, WorkspaceCtx, WorkspaceData, WorkspaceHandler, ID};
 
-fn workspace_vec_to_data(v: &[Workspace]) -> WorkspaceData {
-    let mut workspace_count = 0;
-    let mut focus = -1;
-    v.iter().for_each(|w| {
-        if w.is_focused || w.active_window_id.is_some() {
-            workspace_count += 1;
-        }
+fn filter_empty_workspace(v: &[Workspace]) -> Vec<&Workspace> {
+    v.iter()
+        .filter(|w| w.is_focused || w.active_window_id.is_some())
+        .collect()
+}
 
-        if w.is_focused {
-            focus = workspace_count - 1;
-        }
-    });
+#[derive(Default)]
+struct DataCache {
+    inner: HashMap<String, Vec<Workspace>>,
+}
+impl DataCache {
+    fn new(map: HashMap<String, Vec<Workspace>>) -> Self {
+        Self { inner: map }
+    }
+    fn get_workspace_data(&self, output: &str) -> WorkspaceData {
+        let Some(wps) = self.inner.get(output) else {
+            return WorkspaceData::default();
+        };
 
-    WorkspaceData {
-        workspace_count,
-        focus,
+        let v = filter_empty_workspace(wps);
+        let focus = v
+            .iter()
+            .position(|w| w.is_focused)
+            .map(|i| i as i32)
+            .unwrap_or(-1);
+        let workspace_count = v.len() as i32;
+
+        WorkspaceData {
+            workspace_count,
+            focus,
+        }
+    }
+    fn get_workspace(&self, output: &str, index: usize) -> Option<&Workspace> {
+        let wps = self.inner.get(output)?;
+
+        let v = filter_empty_workspace(wps);
+        if v.len() > index {
+            Some(v[index])
+        } else {
+            None
+        }
     }
 }
 
@@ -55,7 +80,7 @@ async fn process_event(e: niri_ipc::Event) {
     ctx.data = match e {
         niri_ipc::Event::WorkspaceActivated { id: _, focused: _ } => {
             let data = get_workspaces().await.expect("Failed to get workspaces");
-            sort_workspaces(data)
+            DataCache::new(sort_workspaces(data))
         }
         _ => {
             return;
@@ -96,28 +121,22 @@ fn get_niri_ctx() -> &'static mut NiriCtx {
 
 struct NiriCtx {
     workspace_ctx: WorkspaceCtx,
-    data: HashMap<String, Vec<Workspace>>,
+    data: DataCache,
 }
 impl NiriCtx {
     fn new() -> Self {
         Self {
             workspace_ctx: WorkspaceCtx::new(),
-            data: HashMap::new(),
+            data: DataCache::default(),
         }
-    }
-    fn get_workspace_data(data: &HashMap<String, Vec<Workspace>>, output: &str) -> WorkspaceData {
-        let Some(wps) = data.get(output) else {
-            return WorkspaceData::default();
-        };
-        workspace_vec_to_data(wps)
     }
     fn call(&mut self) {
         self.workspace_ctx
-            .call(|output| Self::get_workspace_data(&self.data, output));
+            .call(|output| self.data.get_workspace_data(output));
     }
     fn add_cb(&mut self, cb: WorkspaceCB) -> ID {
         cb.sender
-            .send(Self::get_workspace_data(&self.data, &cb.output))
+            .send(self.data.get_workspace_data(&cb.output))
             .unwrap();
         self.workspace_ctx.add_cb(cb)
     }
@@ -139,7 +158,7 @@ fn start_listener() {
     get_backend_runtime_handle().spawn(async {
         let wp = get_workspaces().await.expect("Failed to get workspaces");
         let ctx = get_niri_ctx();
-        ctx.data = sort_workspaces(wp);
+        ctx.data = DataCache::new(sort_workspaces(wp));
         ctx.call();
     });
 
@@ -187,25 +206,18 @@ impl Drop for NiriWorkspaceHandler {
 }
 impl NiriWorkspaceHandler {
     pub fn change_to_workspace(&mut self, index: usize) {
-        let ctx = get_niri_ctx();
-        let Some(output) = ctx
-            .workspace_ctx
-            .cb
-            .get(&self.cb_id)
-            .map(|w| w.output.as_str())
-        else {
-            return;
-        };
-        let Some(id) = ctx
-            .data
-            .get(output)
-            .and_then(|v| v.get(index))
-            .map(|w| w.id)
-        else {
-            return;
-        };
-
+        let cb_id = self.cb_id;
         get_backend_runtime_handle().spawn(async move {
+            let ctx = get_niri_ctx();
+
+            let Some(output) = ctx.workspace_ctx.cb.get(&cb_id).map(|w| w.output.as_str()) else {
+                return;
+            };
+
+            let Some(id) = ctx.data.get_workspace(output, index).map(|w| w.id) else {
+                return;
+            };
+
             connection::Connection::make_connection()
                 .await
                 .expect("Failed to connect to niri socket")
