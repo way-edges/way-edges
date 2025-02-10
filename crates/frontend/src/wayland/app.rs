@@ -569,8 +569,10 @@ impl PopEssential {
                     widget_from_layer!(w, layer, calloop::timer::TimeoutAction::Drop);
 
                     let mut wg = w.lock().unwrap();
-                    wg.window_pop_state.leave();
-                    wg.try_redraw(app);
+                    if !wg.mouse_state.data.hovering {
+                        wg.window_pop_state.leave();
+                        wg.try_redraw(app);
+                    }
 
                     calloop::timer::TimeoutAction::Drop
                 },
