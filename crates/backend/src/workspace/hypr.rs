@@ -76,8 +76,11 @@ fn get_hypr_ctx() -> &'static mut HyprCtx {
     }
 }
 
+// TODO: Hyprland specific config
+pub struct HyprConf;
+
 struct HyprCtx {
-    workspace_ctx: WorkspaceCtx,
+    workspace_ctx: WorkspaceCtx<HyprConf>,
     data: HashMap<String, Vec<Workspace>>,
     focus: i32,
 }
@@ -101,9 +104,9 @@ impl HyprCtx {
     }
     fn call(&mut self) {
         self.workspace_ctx
-            .call(|output| Self::get_workspace_data(&self.data, output, self.focus));
+            .call(|output, _| Self::get_workspace_data(&self.data, output, self.focus));
     }
-    fn add_cb(&mut self, cb: WorkspaceCB) -> ID {
+    fn add_cb(&mut self, cb: WorkspaceCB<HyprConf>) -> ID {
         cb.sender
             .send(Self::get_workspace_data(&self.data, &cb.output, self.focus))
             .unwrap();
@@ -203,7 +206,7 @@ fn init_hyprland_listener() {
     });
 }
 
-pub fn register_hypr_event_callback(cb: WorkspaceCB) -> WorkspaceHandler {
+pub fn register_hypr_event_callback(cb: WorkspaceCB<HyprConf>) -> WorkspaceHandler {
     init_hyprland_listener();
     let cb_id = get_hypr_ctx().add_cb(cb);
     WorkspaceHandler::Hyprland(HyprWorkspaceHandler { cb_id })

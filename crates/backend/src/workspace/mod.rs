@@ -7,7 +7,7 @@ use niri::NiriWorkspaceHandler;
 pub mod hypr;
 pub mod niri;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct WorkspaceData {
     /// workspace len, start from 1
     pub workspace_count: i32,
@@ -23,26 +23,27 @@ impl Default for WorkspaceData {
     }
 }
 
-pub struct WorkspaceCB {
+pub struct WorkspaceCB<T> {
     pub sender: Sender<WorkspaceData>,
     pub output: String,
+    pub data: T,
 }
 
 type ID = u32;
 
-struct WorkspaceCtx {
+struct WorkspaceCtx<T> {
     id_cache: ID,
-    cb: HashMap<ID, WorkspaceCB>,
+    cb: HashMap<ID, WorkspaceCB<T>>,
 }
 
-impl WorkspaceCtx {
+impl<T> WorkspaceCtx<T> {
     fn new() -> Self {
         Self {
             cb: HashMap::new(),
             id_cache: 0,
         }
     }
-    fn add_cb(&mut self, cb: WorkspaceCB) -> ID {
+    fn add_cb(&mut self, cb: WorkspaceCB<T>) -> ID {
         let id = self.id_cache;
         self.cb.insert(id, cb);
         self.id_cache += 1;
@@ -51,9 +52,9 @@ impl WorkspaceCtx {
     fn remove_cb(&mut self, id: ID) {
         self.cb.remove(&id);
     }
-    fn call(&mut self, mut data_func: impl FnMut(&str) -> WorkspaceData) {
+    fn call(&mut self, mut data_func: impl FnMut(&str, &T) -> WorkspaceData) {
         self.cb.values_mut().for_each(|f| {
-            f.sender.send(data_func(&f.output)).unwrap();
+            f.sender.send(data_func(&f.output, &f.data)).unwrap();
         })
     }
 }

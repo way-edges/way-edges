@@ -5,6 +5,7 @@ use std::{
     sync::atomic::{AtomicBool, AtomicPtr},
 };
 
+use config::widgets::workspace::NiriConf;
 use connection::Connection;
 use niri_ipc::Workspace;
 use tokio::io;
@@ -27,12 +28,16 @@ impl DataCache {
     fn new(map: HashMap<String, Vec<Workspace>>) -> Self {
         Self { inner: map }
     }
-    fn get_workspace_data(&self, output: &str) -> WorkspaceData {
+    fn get_workspace_data(&self, output: &str, filter_empty: bool) -> WorkspaceData {
         let Some(wps) = self.inner.get(output) else {
             return WorkspaceData::default();
         };
 
-        let v = filter_empty_workspace(wps);
+        let v = if filter_empty {
+            filter_empty_workspace(wps)
+        } else {
+            wps.iter().collect()
+        };
         let focus = v
             .iter()
             .position(|w| w.is_focused)
@@ -45,10 +50,14 @@ impl DataCache {
             focus,
         }
     }
-    fn get_workspace(&self, output: &str, index: usize) -> Option<&Workspace> {
+    fn get_workspace(&self, output: &str, filter_empty: bool, index: usize) -> Option<&Workspace> {
         let wps = self.inner.get(output)?;
 
-        let v = filter_empty_workspace(wps);
+        let v = if filter_empty {
+            filter_empty_workspace(wps)
+        } else {
+            wps.iter().collect()
+        };
         if v.len() > index {
             Some(v[index])
         } else {
@@ -81,6 +90,9 @@ async fn process_event(e: niri_ipc::Event) {
         niri_ipc::Event::WorkspaceActivated { id: _, focused: _ } => {
             let data = get_workspaces().await.expect("Failed to get workspaces");
             DataCache::new(sort_workspaces(data))
+        }
+        niri_ipc::Event::WorkspacesChanged { workspaces } => {
+            DataCache::new(sort_workspaces(workspaces))
         }
         _ => {
             return;
@@ -120,7 +132,7 @@ fn get_niri_ctx() -> &'static mut NiriCtx {
 }
 
 struct NiriCtx {
-    workspace_ctx: WorkspaceCtx,
+    workspace_ctx: WorkspaceCtx<NiriConf>,
     data: DataCache,
 }
 impl NiriCtx {
@@ -132,11 +144,14 @@ impl NiriCtx {
     }
     fn call(&mut self) {
         self.workspace_ctx
-            .call(|output| self.data.get_workspace_data(output));
+            .call(|output, conf| self.data.get_workspace_data(output, conf.filter_empty));
     }
-    fn add_cb(&mut self, cb: WorkspaceCB) -> ID {
+    fn add_cb(&mut self, cb: WorkspaceCB<NiriConf>) -> ID {
         cb.sender
-            .send(self.data.get_workspace_data(&cb.output))
+            .send(
+                self.data
+                    .get_workspace_data(&cb.output, cb.data.filter_empty),
+            )
             .unwrap();
         self.workspace_ctx.add_cb(cb)
     }
@@ -185,7 +200,7 @@ fn start_listener() {
     });
 }
 
-pub fn register_niri_event_callback(cb: WorkspaceCB) -> WorkspaceHandler {
+pub fn register_niri_event_callback(cb: WorkspaceCB<NiriConf>) -> WorkspaceHandler {
     start_listener();
     let cb_id = get_niri_ctx().add_cb(cb);
     WorkspaceHandler::Niri(NiriWorkspaceHandler { cb_id })
@@ -210,11 +225,20 @@ impl NiriWorkspaceHandler {
         get_backend_runtime_handle().spawn(async move {
             let ctx = get_niri_ctx();
 
-            let Some(output) = ctx.workspace_ctx.cb.get(&cb_id).map(|w| w.output.as_str()) else {
+            let Some((output, filter_empty)) = ctx
+                .workspace_ctx
+                .cb
+                .get(&cb_id)
+                .map(|w| (w.output.as_str(), w.data.filter_empty))
+            else {
                 return;
             };
 
-            let Some(id) = ctx.data.get_workspace(output, index).map(|w| w.id) else {
+            let Some(id) = ctx
+                .data
+                .get_workspace(output, filter_empty, index)
+                .map(|w| w.id)
+            else {
                 return;
             };
 

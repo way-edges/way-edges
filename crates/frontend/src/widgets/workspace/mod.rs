@@ -8,8 +8,9 @@ use crate::{
     wayland::app::WidgetBuilder,
 };
 use backend::workspace::{
-    hypr::register_hypr_event_callback, niri::register_niri_event_callback, WorkspaceCB,
-    WorkspaceData, WorkspaceHandler,
+    hypr::{register_hypr_event_callback, HyprConf},
+    niri::register_niri_event_callback,
+    WorkspaceCB, WorkspaceData, WorkspaceHandler,
 };
 use config::{
     widgets::workspace::{WorkspaceConfig, WorkspacePreset},
@@ -53,19 +54,31 @@ pub fn init_widget(
             return;
         };
         let mut old = workspace_data.get();
-        old.1 = old.0;
-        old.0 = msg;
-        workspace_data.set(old);
-        workspace_transition.borrow_mut().flip();
+        if old.0 != msg {
+            old.1 = old.0;
+            old.0 = msg;
+            workspace_data.set(old);
+            workspace_transition.borrow_mut().flip();
+        }
     });
 
-    let cb = WorkspaceCB {
-        sender: pop_signal_sender,
-        output: w_conf.output_name.take().unwrap(),
-    };
+    macro_rules! wp_cb {
+        ($s:expr, $c:expr, $d:expr) => {
+            WorkspaceCB {
+                sender: $s,
+                output: $c.output_name.take().unwrap(),
+                data: $d,
+            }
+        };
+    }
+
     let workspace_handler = match w_conf.preset {
-        WorkspacePreset::Hyprland => register_hypr_event_callback(cb),
-        WorkspacePreset::Niri => register_niri_event_callback(cb),
+        WorkspacePreset::Hyprland => {
+            register_hypr_event_callback(wp_cb!(pop_signal_sender, w_conf, HyprConf))
+        }
+        WorkspacePreset::Niri(niri_conf) => {
+            register_niri_event_callback(wp_cb!(pop_signal_sender, w_conf, niri_conf))
+        }
     };
 
     WorkspaceCtx {
