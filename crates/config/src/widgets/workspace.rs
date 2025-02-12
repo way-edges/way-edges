@@ -192,7 +192,7 @@ mod tests {
         let config: serde_jsonrc::Value = serde_jsonrc::from_str(yaml_str).unwrap();
         let result = serde_jsonrc::from_value::<WorkspacePreset>(config["preset"].clone());
         assert!(result.is_err());
-        println!("Expected error: {}", result.unwrap_err()); // 打印预期的错误信息
+        println!("Expected error: {}", result.unwrap_err());
     }
 
     #[test]
@@ -201,6 +201,6 @@ mod tests {
         let config: serde_jsonrc::Value = serde_jsonrc::from_str(yaml_str).unwrap();
         let result = serde_jsonrc::from_value::<WorkspacePreset>(config["preset"].clone());
         assert!(result.is_err());
-        println!("Expected error: {}", result.unwrap_err()); // 打印预期的错误信息
+        println!("Expected error: {}", result.unwrap_err());
     }
 }

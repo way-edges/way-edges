@@ -8,7 +8,7 @@ use std::{
 
 use hyprland::{
     async_closure,
-    data::Workspace,
+    data::{Monitor, Workspace},
     event_listener::{self},
     shared::{HyprData, HyprDataActive, WorkspaceType},
 };
@@ -17,26 +17,42 @@ use crate::{runtime::get_backend_runtime_handle, workspace::WorkspaceData};
 
 use super::{WorkspaceCB, WorkspaceCtx, WorkspaceHandler, ID};
 
-fn sort_workspaces(v: Vec<Workspace>) -> HashMap<String, Vec<Workspace>> {
-    let mut a = HashMap::new();
+fn sort_workspaces(v: Vec<Workspace>, m: Vec<Monitor>) -> HashMap<String, (Vec<Workspace>, i32)> {
+    let mut map = HashMap::new();
 
     v.into_iter().for_each(|f| {
-        a.entry(f.monitor.clone()).or_insert(vec![]).push(f);
+        map.entry(f.monitor.clone())
+            .or_insert((vec![], 0))
+            .0
+            .push(f);
     });
 
-    a.values_mut().for_each(|v| v.sort_by_key(|w| w.id));
+    map.iter_mut().for_each(|(k, (v, active))| {
+        v.sort_by_key(|w| w.id);
+        let min_id = v[0].id;
 
-    a
+        *active = m
+            .iter()
+            .find(|m| &m.name == k)
+            .map(|m| m.active_workspace.id - min_id)
+            .unwrap();
+    });
+
+    map
 }
 
-fn workspace_vec_to_data(v: &[Workspace], focus_id: i32) -> WorkspaceData {
-    let workspace_count = v.len() as i32;
-    let focus = v.iter().position(|w| w.id == focus_id).unwrap_or(0) as i32;
+fn workspace_vec_to_data(v: &[Workspace], focus_id: i32, active: i32) -> WorkspaceData {
+    let min_id = v[0].id;
+    let max_id = v[v.len() - 1].id;
+
+    let workspace_count = max_id - min_id + 1;
+    let focus_index = focus_id - min_id;
+    let focus = if focus_index > -1 { focus_index } else { -1 };
 
     WorkspaceData {
         workspace_count,
         focus,
-        active: todo!(),
+        active,
     }
 }
 
@@ -47,19 +63,21 @@ fn get_workspace() -> Vec<Workspace> {
         .collect()
 }
 
+fn get_monitors() -> Vec<Monitor> {
+    hyprland::data::Monitors::get()
+        .unwrap()
+        .into_iter()
+        .collect()
+}
+
 fn get_focus() -> i32 {
     hyprland::data::Workspace::get_active().unwrap().id
 }
 
-fn on_signal(s: Signal) {
+fn on_signal() {
     let ctx = get_hypr_ctx();
-
-    match s {
-        Signal::Change => {
-            ctx.data = sort_workspaces(get_workspace());
-        }
-        Signal::Focus(id) => ctx.focus = id,
-    }
+    ctx.data.map = sort_workspaces(get_workspace(), get_monitors());
+    ctx.data.focus = get_focus();
     ctx.call();
 }
 
@@ -77,39 +95,48 @@ fn get_hypr_ctx() -> &'static mut HyprCtx {
     }
 }
 
+#[derive(Debug)]
+struct CacheData {
+    // workspace and active id
+    map: HashMap<String, (Vec<Workspace>, i32)>,
+    focus: i32,
+}
+impl CacheData {
+    fn new() -> Self {
+        Self {
+            map: HashMap::new(),
+            focus: -1,
+        }
+    }
+    fn get_workspace_data(&self, output: &str) -> WorkspaceData {
+        let Some((wps, active)) = self.map.get(output) else {
+            return WorkspaceData::default();
+        };
+        workspace_vec_to_data(wps, self.focus, *active)
+    }
+}
+
 // TODO: Hyprland specific config
 pub struct HyprConf;
 
 struct HyprCtx {
     workspace_ctx: WorkspaceCtx<HyprConf>,
-    data: HashMap<String, Vec<Workspace>>,
-    focus: i32,
+    data: CacheData,
 }
 impl HyprCtx {
     fn new() -> Self {
         Self {
             workspace_ctx: WorkspaceCtx::new(),
-            data: HashMap::new(),
-            focus: -1,
+            data: CacheData::new(),
         }
-    }
-    fn get_workspace_data(
-        data: &HashMap<String, Vec<Workspace>>,
-        output: &str,
-        focus_id: i32,
-    ) -> WorkspaceData {
-        let Some(wps) = data.get(output) else {
-            return WorkspaceData::default();
-        };
-        workspace_vec_to_data(wps, focus_id)
     }
     fn call(&mut self) {
         self.workspace_ctx
-            .call(|output, _| Self::get_workspace_data(&self.data, output, self.focus));
+            .call(|output, _| self.data.get_workspace_data(output));
     }
     fn add_cb(&mut self, cb: WorkspaceCB<HyprConf>) -> ID {
         cb.sender
-            .send(Self::get_workspace_data(&self.data, &cb.output, self.focus))
+            .send(self.data.get_workspace_data(&cb.output))
             .unwrap();
         self.workspace_ctx.add_cb(cb)
     }
@@ -130,11 +157,6 @@ impl WorkspaceIDToInt for WorkspaceType {
     }
 }
 
-enum Signal {
-    Change,
-    Focus(i32),
-}
-
 fn init_hyprland_listener() {
     if is_ctx_inited() {
         return;
@@ -153,8 +175,8 @@ fn init_hyprland_listener() {
         log::debug!("received workspace change: {workspace_type}");
         if let Some(id) = workspace_type.regular_to_i32() {
             match id {
-                Ok(int) => {
-                    on_signal(Signal::Focus(int));
+                Ok(_) => {
+                    on_signal();
                 }
                 Err(e) => {
                     log::error!("Fail to parse workspace id: {e}");
@@ -167,13 +189,13 @@ fn init_hyprland_listener() {
         let workspace_type = data.name;
         log::debug!("received workspace add: {workspace_type}");
         if let WorkspaceType::Regular(_) = workspace_type {
-            on_signal(Signal::Change);
+            on_signal();
         }
     }));
 
     listener.add_workspace_deleted_handler(async_closure!(move |e| {
         log::debug!("received workspace destroy: {e:?}");
-        on_signal(Signal::Change);
+        on_signal();
     }));
 
     listener.add_active_monitor_changed_handler(async_closure!(|e| {
@@ -181,8 +203,8 @@ fn init_hyprland_listener() {
         if let Some(workspace_name) = e.workspace_name {
             if let Some(id) = workspace_name.regular_to_i32() {
                 match id {
-                    Ok(int) => {
-                        on_signal(Signal::Focus(int));
+                    Ok(_) => {
+                        on_signal();
                     }
                     Err(e) => log::error!("Fail to parse workspace id: {e}"),
                 }
@@ -202,8 +224,7 @@ fn init_hyprland_listener() {
     });
 
     get_backend_runtime_handle().spawn(async {
-        on_signal(Signal::Change);
-        on_signal(Signal::Focus(get_focus()));
+        on_signal();
     });
 }
 
@@ -244,9 +265,9 @@ impl HyprWorkspaceHandler {
 
         let Some(id) = ctx
             .data
+            .map
             .get(output)
-            .and_then(|v| v.get(index))
-            .map(|w| w.id)
+            .map(|(v, _)| v[0].id + index as i32)
         else {
             return;
         };
