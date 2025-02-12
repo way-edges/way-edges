@@ -36,6 +36,7 @@ fn workspace_vec_to_data(v: &[Workspace], focus_id: i32) -> WorkspaceData {
     WorkspaceData {
         workspace_count,
         focus,
+        active: todo!(),
     }
 }
 

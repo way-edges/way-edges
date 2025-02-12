@@ -21,9 +21,10 @@ pub struct DrawConf {
     gap: i32,
     active_increase: f64,
 
-    deactive_color: Color,
-    active_color: Color,
-    hover_color: Option<Color>,
+    pub default_color: Color,
+    pub focus_color: Color,
+    pub active_color: Color,
+    pub hover_color: Option<Color>,
 
     workspace_transition: ToggleAnimationRc,
 
@@ -50,7 +51,8 @@ impl DrawConf {
             length: length.ceil() as i32,
             gap: w_conf.gap,
             active_increase: w_conf.active_increase,
-            deactive_color: w_conf.deactive_color,
+            default_color: w_conf.default_color,
+            focus_color: w_conf.focus_color,
             active_color: w_conf.active_color,
             hover_color: w_conf.hover_color,
             invert_direction: w_conf.invert_direction,
@@ -84,7 +86,6 @@ fn draw_common_horizontal(
     let item_min_length =
         item_base_length - item_changable_length / (data.workspace_count - 1).max(1) as f64;
 
-    // let surf = new_surface((self.thickness, self.length));
     let surf = new_surface((conf.length, conf.thickness));
     let ctx = Context::new(&surf).unwrap();
 
@@ -97,7 +98,20 @@ fn draw_common_horizontal(
 
     let border_width = conf.thickness as f64 / 10.;
 
-    // let a: Vec<(f64, Color)> = (1..=data.max_workspace).map(|id| {
+    macro_rules! get_target {
+        ($d:expr, $c:expr) => {
+            if $d.focus > -1 {
+                ($d.focus, $c.focus_color)
+            } else {
+                ($d.active, $c.active_color)
+            }
+        };
+    }
+
+    let (target, target_color) = get_target!(data, conf);
+    let (prev_target, _) = get_target!(prev_data, conf);
+    let default_color = conf.default_color;
+
     let sorting: Box<dyn std::iter::Iterator<Item = _>> = if conf.invert_direction {
         Box::new((1..=data.workspace_count).rev())
     } else {
@@ -105,18 +119,18 @@ fn draw_common_horizontal(
     };
     sorting.enumerate().for_each(|(index, id)| {
         // size and color
-        let (length, mut color) = if id - 1 == data.focus {
+        let (length, mut color) = if id - 1 == target {
             (
                 item_min_length + (item_max_length - item_min_length) * y,
-                color_transition(conf.deactive_color, conf.active_color, y as f32),
+                color_transition(default_color, target_color, y as f32),
             )
-        } else if id - 1 == prev_data.focus {
+        } else if id - 1 == prev_target {
             (
                 item_min_length + (item_max_length - item_min_length) * (1. - y),
-                color_transition(conf.active_color, conf.deactive_color, y as f32),
+                color_transition(target_color, default_color, y as f32),
             )
         } else {
-            (item_min_length, conf.deactive_color)
+            (item_min_length, default_color)
         };
 
         // mouse hover color
@@ -127,12 +141,12 @@ fn draw_common_horizontal(
         }
 
         // draw
-        if id - 1 == data.focus {
+        if id - 1 == target {
             cairo_set_color(&ctx, color);
             ctx.rectangle(Z, Z, length, conf.thickness as f64);
             ctx.fill().unwrap();
         } else {
-            cairo_set_color(&ctx, conf.active_color);
+            cairo_set_color(&ctx, target_color);
             ctx.rectangle(Z, Z, length, conf.thickness as f64);
             ctx.fill().unwrap();
             cairo_set_color(&ctx, color);

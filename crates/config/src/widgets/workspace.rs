@@ -25,9 +25,12 @@ pub struct WorkspaceConfig {
     #[serde(default = "dt_pop_duration")]
     pub pop_duration: u64,
 
-    #[serde(default = "dt_deactive_color")]
+    #[serde(default = "dt_default_color")]
     #[serde(deserialize_with = "common::color_translate")]
-    pub deactive_color: Color,
+    pub default_color: Color,
+    #[serde(default = "dt_focus_color")]
+    #[serde(deserialize_with = "common::color_translate")]
+    pub focus_color: Color,
     #[serde(default = "dt_active_color")]
     #[serde(deserialize_with = "common::color_translate")]
     pub active_color: Color,
@@ -57,11 +60,14 @@ fn dt_pop_duration() -> u64 {
     1000
 }
 
-fn dt_deactive_color() -> Color {
+fn dt_default_color() -> Color {
     parse_color("#003049").unwrap()
 }
-fn dt_active_color() -> Color {
+fn dt_focus_color() -> Color {
     parse_color("#669bbc").unwrap()
+}
+fn dt_active_color() -> Color {
+    parse_color("#aaa").unwrap()
 }
 
 #[derive(Debug)]

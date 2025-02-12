@@ -13,12 +13,15 @@ pub struct WorkspaceData {
     pub workspace_count: i32,
     /// index, start from 0
     pub focus: i32,
+    /// index, start from 0
+    pub active: i32,
 }
 impl Default for WorkspaceData {
     fn default() -> Self {
         WorkspaceData {
             workspace_count: 1,
             focus: 0,
+            active: 0,
         }
     }
 }
@@ -54,7 +57,12 @@ impl<T> WorkspaceCtx<T> {
     }
     fn call(&mut self, mut data_func: impl FnMut(&str, &T) -> WorkspaceData) {
         self.cb.values_mut().for_each(|f| {
-            f.sender.send(data_func(&f.output, &f.data)).unwrap();
+            let data = data_func(&f.output, &f.data);
+            // one output should always have a active workspace
+            assert!(data.active >= -1);
+            // the focus and active workspace should always be the same
+            assert!(data.focus < 0 || (data.focus == data.active));
+            f.sender.send(data).unwrap();
         })
     }
 }

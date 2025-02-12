@@ -43,11 +43,17 @@ impl DataCache {
             .position(|w| w.is_focused)
             .map(|i| i as i32)
             .unwrap_or(-1);
+        let active = v
+            .iter()
+            .position(|w| w.is_active)
+            .map(|i| i as i32)
+            .unwrap_or(-1);
         let workspace_count = v.len() as i32;
 
         WorkspaceData {
             workspace_count,
             focus,
+            active,
         }
     }
     fn get_workspace(&self, output: &str, filter_empty: bool, index: usize) -> Option<&Workspace> {
