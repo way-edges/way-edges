@@ -44,6 +44,7 @@ impl Animation {
             -(1.0 - y).ln() / (10.0 * 2.0f64.ln())
         }
 
+        #[allow(clippy::type_complexity)]
         let (get_y, get_x): (fn(f64) -> f64, fn(f64) -> f64) = match curve {
             Curve::Linear => (linear, linear),
             Curve::EaseQuad => (quad_y, quad_x),
