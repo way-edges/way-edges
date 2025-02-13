@@ -2,9 +2,9 @@ use std::time::{Duration, Instant};
 
 pub enum Curve {
     Linear,
-    EaseOutQuad,
-    EaseOutCubic,
-    EaseOutExpo,
+    EaseQuad,
+    EaseCubic,
+    EaseExpo,
 }
 
 #[derive(Debug)]
@@ -12,7 +12,8 @@ pub(super) struct Animation {
     pub start_time: Instant,
     pub animation_costs: Duration,
 
-    calculate_func: fn(f64) -> f64,
+    get_y: fn(f64) -> f64,
+    get_x: fn(f64) -> f64,
     cache_y: f64,
 }
 impl Animation {
@@ -20,27 +21,41 @@ impl Animation {
         fn linear(x: f64) -> f64 {
             x
         }
-        fn quad(x: f64) -> f64 {
+
+        fn quad_y(x: f64) -> f64 {
             x * (2.0 - x)
         }
-        fn cubic(x: f64) -> f64 {
+        fn quad_x(y: f64) -> f64 {
+            1.0 - (1.0 - y).sqrt()
+        }
+
+        fn cubic_y(x: f64) -> f64 {
             let x_minus_one = x - 1.0;
             1.0 + x_minus_one * x_minus_one * x_minus_one
         }
-        fn expo(x: f64) -> f64 {
+        fn cubic_x(y: f64) -> f64 {
+            1.0 + (y - 1.0).cbrt()
+        }
+
+        fn expo_x(x: f64) -> f64 {
             1. - 2f64.powf(-10. * x)
         }
-        let calculate_func: fn(f64) -> f64 = match curve {
-            Curve::Linear => linear,
-            Curve::EaseOutQuad => quad,
-            Curve::EaseOutCubic => cubic,
-            Curve::EaseOutExpo => expo,
+        fn expo_y(y: f64) -> f64 {
+            -(1.0 - y).ln() / (10.0 * 2.0f64.ln())
+        }
+
+        let (get_y, get_x): (fn(f64) -> f64, fn(f64) -> f64) = match curve {
+            Curve::Linear => (linear, linear),
+            Curve::EaseQuad => (quad_y, quad_x),
+            Curve::EaseCubic => (cubic_y, cubic_x),
+            Curve::EaseExpo => (expo_y, expo_x),
         };
 
         Self {
             start_time: Instant::now(),
             animation_costs: time_cost,
-            calculate_func,
+            get_y,
+            get_x,
             cache_y: 0.,
         }
     }
@@ -52,18 +67,17 @@ impl Animation {
         } else if x <= 0. {
             0.
         } else {
-            (self.calculate_func)(x)
+            (self.get_y)(x)
         };
     }
-    // pub(super) fn reset(&mut self) {
-    //     self.start_time = Instant::now();
-    //     self.cache_y = 0.;
-    // }
     pub(super) fn flip(&mut self) {
         let passed = self.start_time.elapsed();
         if passed < self.animation_costs {
             self.start_time = Instant::now()
-                .checked_sub(self.animation_costs - passed)
+                .checked_sub(
+                    self.animation_costs
+                        .mul_f64((self.get_x)(1.0 - self.progress())),
+                )
                 .unwrap();
         } else {
             self.start_time = Instant::now();
