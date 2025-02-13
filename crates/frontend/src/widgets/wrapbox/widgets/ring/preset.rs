@@ -118,9 +118,9 @@ fn cpu(s: Sender<RunnerResult>, update_interval: u64, core: Option<usize>) -> Ru
 
 fn battery(s: Sender<RunnerResult>, update_interval: u64) -> Runner<()> {
     let f = || {
-        let progress = get_battery_info();
+        let (progress, state) = get_battery_info();
 
-        let preset_text = format!("{:.2}%", progress * 100.);
+        let preset_text = format!("{:.2}% {state:?}", progress * 100.);
         RunnerResult {
             progress,
             preset_text,

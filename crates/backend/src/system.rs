@@ -1,6 +1,6 @@
 use std::sync::{Arc, LazyLock, Mutex, MutexGuard};
 
-use starship_battery::Battery;
+use starship_battery::{Battery, State};
 use sysinfo::{Disks, MemoryRefreshKind, System};
 
 static SYSTEM: LazyLock<Arc<Mutex<System>>> = LazyLock::new(|| Arc::new(Mutex::new(System::new())));
@@ -55,11 +55,14 @@ fn get_battery() -> MutexGuard<'static, Battery> {
     Mutex::lock(&BATTERY).unwrap()
 }
 
-pub fn get_battery_info() -> f64 {
+pub fn get_battery_info() -> (f64, State) {
     let mut battery = get_battery();
     battery.refresh().unwrap();
     use starship_battery::units::ratio::ratio;
-    battery.state_of_charge().get::<ratio>() as f64
+    (
+        battery.state_of_charge().get::<ratio>() as f64,
+        battery.state(),
+    )
 }
 
 static DISK: LazyLock<Arc<Mutex<Disks>>> = LazyLock::new(|| Arc::new(Mutex::new(Disks::new())));
