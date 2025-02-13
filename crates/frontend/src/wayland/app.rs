@@ -73,6 +73,7 @@ impl App {
             IPCCommand::RemoveGroup(s) => self.rm_group(&s),
             IPCCommand::TogglePin(gn, wn) => self.toggle_pin(&gn, &wn),
             IPCCommand::Exit => self.exit = true,
+            IPCCommand::Reload => self.reload(),
         };
     }
 

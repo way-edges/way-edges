@@ -1,3 +1,4 @@
+use crate::ipc::IPC_COMMAND_RELOAD;
 use crate::runtime::get_backend_runtime_handle;
 
 use super::{CommandBody, IPCCommand};
@@ -56,6 +57,7 @@ fn deal_stream_in_background(stream: UnixStream, sender: Sender<IPCCommand>) {
                 command_body.args.get(1).ok_or("No widget name")?.clone(),
             ),
             IPC_COMMAND_QUIT => IPCCommand::Exit,
+            IPC_COMMAND_RELOAD => IPCCommand::Reload,
             _ => return Err("unknown command".to_string()),
         };
         log::info!("Receive ipc message: {ipc:?}");

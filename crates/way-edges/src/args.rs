@@ -114,6 +114,9 @@ pub enum Command {
         group_and_widget_name: String,
     },
 
+    #[command(name = "reload")]
+    Reload,
+
     /// close daemon
     #[command(name = "quit", alias = "q")]
     Exit,
@@ -136,6 +139,7 @@ impl Command {
                     vec![group_name.to_string(), widget_name.to_string()],
                 )
             }
+            Self::Reload => (ipc::IPC_COMMAND_RELOAD, vec![]),
             _ => {
                 return;
             }

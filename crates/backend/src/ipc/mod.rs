@@ -15,6 +15,7 @@ pub struct CommandBody {
 
 pub const IPC_COMMAND_ADD: &str = "add";
 pub const IPC_COMMAND_REMOVE: &str = "rm";
+pub const IPC_COMMAND_RELOAD: &str = "reload";
 pub const IPC_COMMAND_QUIT: &str = "q";
 pub const IPC_COMMAND_TOGGLE_PIN: &str = "togglepin";
 
@@ -31,5 +32,6 @@ pub enum IPCCommand {
     AddGroup(String),
     RemoveGroup(String),
     TogglePin(String, String),
+    Reload,
     Exit,
 }
