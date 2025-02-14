@@ -7,6 +7,11 @@
       "type": ["number", "string"],
       "default": 0
     },
+    "curve": {
+      "$id": "#common.curve",
+      "type": ["string"],
+      "enum": ["linear", "ease-quad", "ease-cubic", "ease-expo"]
+    },
     "color": {
       "$id": "#common.color",
       "type": "string"
@@ -30,6 +35,9 @@
       "$id": "#common.pulseaudio",
       "properties": {
         "mute_color": { "$ref": "#common.color", "default": "#000000" },
+        "animation_curve": {
+          "$ref": "#common.curve"
+        },
         "device": {
           "type": ["string", "null"]
         }
@@ -230,6 +238,9 @@
           "default": 100,
           "type": "integer",
           "minimum": 0
+        },
+        "animation_curve": {
+          "$ref": "#common.curve"
         },
         "prefix": {
           "type": ["null", "string"]
@@ -458,6 +469,9 @@
           "type": "integer",
           "default": 300
         },
+        "animation_curve": {
+          "$ref": "#common.curve"
+        },
         "pop_duration": {
           "type": "integer",
           "default": 1000
@@ -468,7 +482,21 @@
         "hover_color": { "$ref": "#common.color", "default": "" },
         "intert_direction": { "type": "boolean" },
         "output_name": { "type": ["string", "null"] },
-        "preset": { "type": "string", "enum": ["hyprland", "niri"] }
+        "preset": {
+          "oneOf": [
+            { "type": "string", "enum": ["hyprland", "niri"] },
+            {
+              "type": "object",
+              "properties": {
+                "type": { "type": "string", "const": "niri" },
+                "filter_empty": {
+                  "type": "boolean",
+                  "default": true
+                }
+              }
+            }
+          ]
+        }
       }
     }
   },

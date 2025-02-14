@@ -1,6 +1,9 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "definitions": {
+    "animationCurve": {
+      "$ref": "https://raw.githubusercontent.com/way-edges/way-edges/master/config/defs.schema.json#common.curve"
+    },
     "numOrPercentage": {
       "$ref": "https://raw.githubusercontent.com/way-edges/way-edges/master/config/defs.schema.json#NumOrPercentage"
     },
@@ -77,6 +80,9 @@
                   "default": 100,
                   "type": "integer",
                   "minimum": 0
+                },
+                "animation_curve": {
+                  "$ref": "#/definitions/animationCurve"
                 },
                 "preview_size": {
                   "$ref": "#/definitions/numOrPercentage",
