@@ -1,3 +1,4 @@
+use crate::common::Curve;
 use crate::widgets::common::color_translate;
 use cosmic_text::Color;
 use serde::{Deserialize, Deserializer};
@@ -69,6 +70,8 @@ pub struct RingConfigShadow {
 
     #[serde(default = "dt_tt")]
     pub text_transition_ms: u64,
+    #[serde(default)]
+    pub animation_curve: Curve,
 
     #[serde(default)]
     #[serde(deserialize_with = "ring_text_template")]
@@ -102,7 +105,7 @@ fn dt_fg() -> Color {
     parse_color("#F1FA8C").unwrap()
 }
 fn dt_tt() -> u64 {
-    100
+    300
 }
 
 impl From<RingConfigShadow> for RingConfig {
@@ -121,6 +124,7 @@ impl From<RingConfigShadow> for RingConfig {
             font_family: value.font_family,
             font_size,
             preset: value.preset,
+            animation_curve: value.animation_curve,
         }
     }
 }
@@ -134,6 +138,7 @@ pub struct RingConfig {
     pub fg_color: Color,
 
     pub text_transition_ms: u64,
+    pub animation_curve: Curve,
 
     pub prefix: Option<Template>,
     pub prefix_hide: bool,

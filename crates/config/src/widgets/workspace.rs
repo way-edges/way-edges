@@ -1,3 +1,5 @@
+use crate::common::Curve;
+
 use super::common::{self, CommonSize};
 use cosmic_text::Color;
 use serde::{Deserialize, Deserializer};
@@ -21,6 +23,8 @@ pub struct WorkspaceConfig {
 
     #[serde(default = "dt_workspace_transition_duration")]
     pub workspace_transition_duration: u64,
+    #[serde(default)]
+    pub animation_curve: Curve,
 
     #[serde(default = "dt_pop_duration")]
     pub pop_duration: u64,
@@ -54,7 +58,7 @@ fn dt_active_increase() -> f64 {
     0.5
 }
 fn dt_workspace_transition_duration() -> u64 {
-    100
+    300
 }
 fn dt_pop_duration() -> u64 {
     1000

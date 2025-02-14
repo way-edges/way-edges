@@ -84,7 +84,7 @@ fn common(
     device: PulseAudioDevice,
 ) -> impl WidgetContext {
     // TODO: PUT TIME COST INTO CONFIG?
-    let mute_animation = builder.new_animation(200);
+    let mute_animation = builder.new_animation(200, preset_conf.animation_curve);
     let non_mute_color = w_conf.fg_color;
     let mute_color = preset_conf.mute_color;
     let vinfo = Rc::new(Cell::new(VInfo::default()));

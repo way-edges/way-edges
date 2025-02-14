@@ -1,11 +1,6 @@
 use std::time::{Duration, Instant};
 
-pub enum Curve {
-    Linear,
-    EaseQuad,
-    EaseCubic,
-    EaseExpo,
-}
+use config::common::Curve;
 
 #[derive(Debug)]
 pub(super) struct Animation {

@@ -11,7 +11,7 @@ use crate::{
     wayland::app::{App, WidgetBuilder},
 };
 use box_traits::{BoxedWidgetCtx, BoxedWidgetCtxRc, BoxedWidgetGrid};
-use config::{widgets::wrapbox::BoxConfig, Config};
+use config::{common::Curve, widgets::wrapbox::BoxConfig, Config};
 use event::LastWidget;
 use grid::{builder::GrideBoxBuilder, GridBox};
 use outlook::{init_outlook, OutlookDrawConf};
@@ -115,8 +115,8 @@ impl<'a, 'b> BoxTemporaryCtx<'a, 'b> {
             has_update: Rc::new(Cell::new(true)),
         }
     }
-    fn new_animation(&mut self, time_cost: u64) -> ToggleAnimationRc {
-        self.animation_list.new_transition(time_cost)
+    fn new_animation(&mut self, time_cost: u64, curve: Curve) -> ToggleAnimationRc {
+        self.animation_list.new_transition(time_cost, curve)
     }
     fn redraw_essential(&self) -> impl Fn() + 'static {
         let has_update = Rc::downgrade(&self.has_update);

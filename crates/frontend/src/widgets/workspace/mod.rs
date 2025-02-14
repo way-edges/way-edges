@@ -34,7 +34,8 @@ pub fn init_widget(
         w_conf.output_name = output.name.clone();
     }
 
-    let workspace_transition = builder.new_animation(w_conf.workspace_transition_duration);
+    let workspace_transition =
+        builder.new_animation(w_conf.workspace_transition_duration, w_conf.animation_curve);
 
     let draw_conf = DrawConf::new(&w_conf, workspace_transition.clone(), conf.edge);
 

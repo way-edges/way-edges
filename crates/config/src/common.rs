@@ -3,6 +3,16 @@ use serde::{Deserialize, Deserializer};
 use smithay_client_toolkit::shell::wlr_layer::{Anchor, Layer};
 use std::str::FromStr;
 
+#[derive(Debug, Clone, Copy, Deserialize, Default)]
+#[serde(rename_all = "kebab-case")]
+pub enum Curve {
+    Linear,
+    EaseQuad,
+    #[default]
+    EaseCubic,
+    EaseExpo,
+}
+
 #[derive(Debug, Clone, Copy)]
 pub enum NumOrRelative {
     Num(f64),

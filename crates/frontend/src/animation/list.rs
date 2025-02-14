@@ -1,6 +1,8 @@
 use std::{collections::HashSet, time::Duration};
 
-use super::{base::Curve, ToggleAnimation, ToggleAnimationRc};
+use config::common::Curve;
+
+use super::{ToggleAnimation, ToggleAnimationRc};
 
 // use way_edges_derive::wrap_rc;
 
@@ -21,12 +23,10 @@ impl AnimationList {
         self.inner.iter().any(|f| f.borrow().is_in_progress())
     }
 
-    // TODO: HHH
-    // pub fn new_transition(&mut self, time_cost: u64, curve: Curve) -> ToggleAnimationRc {
-    pub fn new_transition(&mut self, time_cost: u64) -> ToggleAnimationRc {
+    pub fn new_transition(&mut self, time_cost: u64, curve: Curve) -> ToggleAnimationRc {
         let item = ToggleAnimationRc::new(ToggleAnimation::new(
             Duration::from_millis(time_cost),
-            Curve::Linear,
+            curve,
         ));
         self.inner.insert(item.clone());
         item

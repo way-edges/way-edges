@@ -3,10 +3,10 @@ mod list;
 
 use std::{hash::Hash, ops::Not, rc::Rc, time::Duration};
 
+use config::common::Curve;
 use way_edges_derive::wrap_rc;
 
 use base::Animation;
-pub use base::Curve;
 pub use list::AnimationList;
 // pub use list::{AnimationList, AnimationListRc};
 

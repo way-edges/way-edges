@@ -11,7 +11,7 @@ use calloop::{
     ping::{make_ping, Ping},
     LoopHandle, LoopSignal,
 };
-use config::MonitorSpecifier;
+use config::{common::Curve, MonitorSpecifier};
 use smithay_client_toolkit::{
     compositor::{CompositorState, SurfaceData as SctkSurfaceData, SurfaceDataExt},
     output::OutputState,
@@ -608,8 +608,8 @@ pub struct WidgetBuilder<'a> {
     pub window_pop_state: WindowPopState,
 }
 impl WidgetBuilder<'_> {
-    pub fn new_animation(&mut self, time_cost: u64) -> ToggleAnimationRc {
-        self.animation_list.new_transition(time_cost)
+    pub fn new_animation(&mut self, time_cost: u64, curve: Curve) -> ToggleAnimationRc {
+        self.animation_list.new_transition(time_cost, curve)
     }
     pub fn extend_animation_list(&mut self, list: &AnimationList) {
         self.animation_list.extend_list(list);
@@ -800,7 +800,7 @@ impl<'a> WidgetBuilder<'a> {
 
         let pop_animation = ToggleAnimation::new(
             Duration::from_millis(conf.transition_duration),
-            crate::animation::Curve::Linear,
+            conf.animation_curve,
         )
         .make_rc();
         let animation_list = AnimationList::new();

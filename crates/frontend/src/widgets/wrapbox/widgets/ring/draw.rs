@@ -184,7 +184,8 @@ impl RingDrawer {
         let prefix_hide = config.prefix_hide;
         let suffix_hide = config.suffix_hide;
 
-        let animation = box_temp_ctx.new_animation(config.text_transition_ms);
+        let animation =
+            box_temp_ctx.new_animation(config.text_transition_ms, config.animation_curve);
 
         Self {
             radius,

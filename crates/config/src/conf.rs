@@ -1,7 +1,7 @@
 use serde::Deserialize;
 use smithay_client_toolkit::shell::wlr_layer::{Anchor, Layer};
 
-use crate::widgets::Widget;
+use crate::{common::Curve, widgets::Widget};
 
 use super::common::{
     deserialize_edge, deserialize_layer, deserialize_optional_edge, NumOrRelative,
@@ -59,6 +59,8 @@ struct ConfigShadow {
 
     #[serde(default = "dt_transition_duration")]
     pub transition_duration: u64,
+    #[serde(default)]
+    pub animation_curve: Curve,
     #[serde(default = "dt_extra_trigger_size")]
     pub extra_trigger_size: NumOrRelative,
 
@@ -88,6 +90,7 @@ impl From<ConfigShadow> for Config {
             transition_duration: value.transition_duration,
             extra_trigger_size: value.extra_trigger_size,
             preview_size: value.preview_size,
+            animation_curve: value.animation_curve,
         }
     }
 }
@@ -103,6 +106,7 @@ pub struct Config {
     pub name: Option<String>,
     pub ignore_exclusive: bool,
     pub transition_duration: u64,
+    pub animation_curve: Curve,
     pub extra_trigger_size: NumOrRelative,
     pub preview_size: NumOrRelative,
     pub widget: Option<Widget>,
@@ -141,7 +145,7 @@ fn dt_layer() -> Layer {
     Layer::Top
 }
 fn dt_transition_duration() -> u64 {
-    100
+    300
 }
 fn dt_extra_trigger_size() -> NumOrRelative {
     NumOrRelative::Num(1.0)

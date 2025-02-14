@@ -8,7 +8,7 @@ use util::{
     },
 };
 
-use crate::widgets::common::KeyEventMap;
+use crate::{common::Curve, widgets::common::KeyEventMap};
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "snake_case", tag = "type")]
@@ -29,6 +29,8 @@ pub struct PulseAudioConfig {
     #[serde(default = "default_mute_color")]
     #[serde(deserialize_with = "super::super::common::color_translate")]
     pub mute_color: Color,
+    #[serde(default)]
+    pub animation_curve: Curve,
     pub device: Option<String>,
 }
 
