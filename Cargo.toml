@@ -34,5 +34,5 @@ calloop = "0.14.2"
 [profile.release]
 opt-level = 3
 lto = true
-# codegen-units = 1
-strip = true # Strip symbols from binary*
+codegen-units = 1
+strip = true
