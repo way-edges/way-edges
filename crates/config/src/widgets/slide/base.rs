@@ -33,9 +33,9 @@ pub struct SlideConfig {
     #[serde(default = "dt_border_color")]
     #[serde(deserialize_with = "common::color_translate")]
     pub border_color: Color,
-    #[serde(default = "dt_text_color")]
-    #[serde(deserialize_with = "common::color_translate")]
-    pub text_color: Color,
+    #[serde(default)]
+    #[serde(deserialize_with = "common::option_color_translate")]
+    pub text_color: Option<Color>,
 
     #[serde(default)]
     pub redraw_only_on_internal_update: bool,
@@ -55,9 +55,6 @@ fn dt_fg_color() -> Color {
 }
 fn dt_border_color() -> Color {
     parse_color("#646464").unwrap()
-}
-fn dt_text_color() -> Color {
-    parse_color("#000000").unwrap()
 }
 fn dt_obtuse_angle() -> f64 {
     120.
