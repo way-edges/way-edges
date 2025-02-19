@@ -35,6 +35,8 @@ pub struct PulseAudioContext {
 
     non_mute_color: Color,
     mute_color: Color,
+    non_mute_text_color: Color,
+    mute_text_color: Option<Color>,
     mute_animation: ToggleAnimationRc,
     draw_conf: DrawConfig,
 
@@ -46,6 +48,11 @@ impl WidgetContext for PulseAudioContext {
         let mute_y = self.mute_animation.borrow_mut().progress();
         let fg_color = color_transition(self.non_mute_color, self.mute_color, mute_y as f32);
         self.draw_conf.fg_color = fg_color;
+
+        if let Some(mute_text_color) = self.mute_text_color {
+            let bg_text_color = color_transition(self.non_mute_text_color, mute_text_color, mute_y as f32);
+            self.draw_conf.bg_text_color = Some(bg_text_color);
+        }
 
         let p = self.vinfo.get().vol;
         self.draw_conf.draw(p)
@@ -87,6 +94,8 @@ fn common(
     let mute_animation = builder.new_animation(200, preset_conf.animation_curve);
     let non_mute_color = w_conf.fg_color;
     let mute_color = preset_conf.mute_color;
+    let non_mute_text_color = w_conf.bg_text_color.unwrap_or(w_conf.fg_color);
+    let mute_text_color = preset_conf.mute_text_color;
     let vinfo = Rc::new(Cell::new(VInfo::default()));
 
     let vinfo_weak = Rc::downgrade(&vinfo);
@@ -114,6 +123,8 @@ fn common(
         vinfo,
         non_mute_color,
         mute_color,
+        non_mute_text_color,
+        mute_text_color,
         mute_animation,
         draw_conf: DrawConfig::new(&w_conf, conf.edge),
         progress_state: setup_event(conf, &mut w_conf),

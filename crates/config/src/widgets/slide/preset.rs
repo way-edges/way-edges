@@ -30,6 +30,10 @@ pub struct PulseAudioConfig {
     #[serde(deserialize_with = "super::super::common::color_translate")]
     pub mute_color: Color,
     #[serde(default)]
+    #[serde(deserialize_with = "super::super::common::option_color_translate")]
+    pub mute_text_color: Option<Color>,
+    
+    #[serde(default)]
     pub animation_curve: Curve,
     pub device: Option<String>,
 }
