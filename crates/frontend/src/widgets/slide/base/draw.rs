@@ -22,7 +22,8 @@ pub struct DrawConfig {
     bg_color: Color,
     pub fg_color: Color,
     // if None we want to use half fg and bg and split at the seam
-    pub text_color: Option<Color>, 
+    pub fg_text_color: Option<Color>,
+    pub bg_text_color: Option<Color>, 
     border_color: Color,
 
     func: fn(&DrawConfig, f64) -> ImageSurface,
@@ -48,7 +49,8 @@ impl DrawConfig {
             bg_color: slide_conf.bg_color,
             fg_color: slide_conf.fg_color,
             border_color: slide_conf.border_color,
-            text_color: slide_conf.text_color,
+            fg_text_color: slide_conf.fg_text_color,
+            bg_text_color: slide_conf.bg_text_color,
             func,
         }
     }
@@ -207,8 +209,8 @@ impl DrawData {
 
             let (mask_surf, ctx) = self.new_surface_bar();
 
-            if let Some(col) = conf.text_color {
-                cairo_set_color(&ctx, col);
+            if let Some(fg_text_color) = conf.fg_text_color {
+                cairo_set_color(&ctx, fg_text_color);
             } else {
                 cairo_set_color(&ctx, conf.bg_color);
             }
@@ -225,8 +227,8 @@ impl DrawData {
         let fg_text_surf = {
             let (fg_text_surf, ctx) = self.new_surface_bar();
 
-            if let Some(col) = conf.text_color {
-                cairo_set_color(&ctx, col);
+            if let Some(bg_text_color) = conf.bg_text_color {
+                cairo_set_color(&ctx, bg_text_color);
             } else {
                 cairo_set_color(&ctx, conf.fg_color);
             }
