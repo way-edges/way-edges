@@ -35,7 +35,10 @@ pub struct SlideConfig {
     pub border_color: Color,
     #[serde(default)]
     #[serde(deserialize_with = "common::option_color_translate")]
-    pub text_color: Option<Color>,
+    pub fg_text_color: Option<Color>,
+    #[serde(default)]
+    #[serde(deserialize_with = "common::option_color_translate")]
+    pub bg_text_color: Option<Color>,
 
     #[serde(default)]
     pub redraw_only_on_internal_update: bool,
