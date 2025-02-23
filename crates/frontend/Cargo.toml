@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 cairo-rs.workspace = true
+tiny-skia.workspace = true
 educe.workspace = true
 paste.workspace = true
 lazy_static.workspace = true
