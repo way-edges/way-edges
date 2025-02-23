@@ -30,7 +30,6 @@ use smithay_client_toolkit::{
     },
     shm::{slot::SlotPool, Shm},
 };
-use util::Z;
 use wayland_client::{
     protocol::{wl_output::WlOutput, wl_pointer, wl_surface::WlSurface},
     Proxy, QueueHandle,
