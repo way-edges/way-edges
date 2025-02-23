@@ -302,9 +302,7 @@ impl Widget {
             .attach_to(self.layer.wl_surface())
             .expect("buffer attach");
         // clear old buffer*
-        canvas.iter_mut().for_each(|i| {
-            *i = 0;
-        });
+        canvas.fill(0);
 
         // copy with transition
         let buffer = self.buffer.get_buffer();
