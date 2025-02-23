@@ -306,21 +306,23 @@ impl Widget {
         canvas.iter_mut().for_each(|i| {
             *i = 0;
         });
-        let surf = unsafe {
-            cairo::ImageSurface::create_for_data_unsafe(
-                canvas.as_mut_ptr(),
-                cairo::Format::ARgb32,
-                width,
-                height,
-                width * 4,
-            )
-            .unwrap()
-        };
-        let ctx = cairo::Context::new(&surf).unwrap();
-        ctx.translate(coordinate[0] as f64, coordinate[1] as f64);
-        ctx.set_source_surface(self.buffer.get_buffer(), Z, Z)
+
+        // copy with transition
+        let buffer = self.buffer.get_buffer();
+        buffer
+            .with_data(|data| {
+                util::draw::copy_pixmap(
+                    data,
+                    buffer.width() as usize,
+                    buffer.height() as usize,
+                    canvas,
+                    width as usize,
+                    height as usize,
+                    coordinate[0] as isize,
+                    coordinate[1] as isize,
+                );
+            })
             .unwrap();
-        ctx.paint().unwrap();
 
         // attach content
         self.layer
