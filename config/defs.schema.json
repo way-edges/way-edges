@@ -35,6 +35,7 @@
       "$id": "#common.pulseaudio",
       "properties": {
         "mute_color": { "$ref": "#common.color", "default": "#000000" },
+        "mute_text_color": { "$ref": "#common.color" },
         "animation_curve": {
           "$ref": "#common.curve"
         },
@@ -106,7 +107,8 @@
         "bg_color": { "$ref": "#common.color", "default": "#808080" },
         "fg_color": { "$ref": "#common.color", "default": "#FFB847" },
         "border_color": { "$ref": "#common.color", "default": "#646464" },
-        "text_color": { "$ref": "#common.color", "default": "#000000" },
+        "fg_text_color": { "$ref": "#common.color" },
+        "bg_text_color": { "$ref": "#common.color" },
         "obtuse_angle": {
           "type": "number",
           "default": 120
