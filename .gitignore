@@ -1,2 +1,5 @@
 /target
 /result
+.direnv/bin
+.envrc
+.direnv

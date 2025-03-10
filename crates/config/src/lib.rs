@@ -35,7 +35,7 @@ pub fn get_config_file_content() -> Result<String, String> {
     let p = get_config_path();
     let mut f = match OpenOptions::new()
         // .create(true)
-        .append(true)
+        //.append(true)
         .read(true)
         .open(p)
     {
