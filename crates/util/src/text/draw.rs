@@ -131,7 +131,7 @@ fn draw_text_inner(
         attrs = attrs.family(family);
     }
 
-    buffer.set_text(font_system, text, attrs, Shaping::Advanced);
+    buffer.set_text(font_system, text, &attrs, Shaping::Advanced);
     buffer.shape_until_scroll(font_system, true);
 
     let (width, height) = measure_text_size(&buffer, swash_cache, font_system);
