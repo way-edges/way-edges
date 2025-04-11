@@ -1,15 +1,4 @@
-
-
-
-
 https://github.com/user-attachments/assets/366e506a-a476-4c4a-be17-678a8f1cd759
-
-
-
-> i need to get my hands cured from [TFCC](https://www.physio-pedia.com/Triangular_Fibrocartilage_Complex_Injuries) injury,  
-> there won't be much commit from me for the next few month
-
-
 
 ## 🫧 Project board
 https://github.com/orgs/way-edges/projects/1/views/1
