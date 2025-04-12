@@ -67,6 +67,13 @@ struct ConfigShadow {
     #[serde(default = "dt_preview_size")]
     pub preview_size: NumOrRelative,
 
+    #[serde(default = "dt_pinnable")]
+    pub pinnable: bool,
+    #[serde(default = "dt_pin_with_key")]
+    pub pin_with_key: bool,
+    #[serde(default = "dt_pin_key")]
+    pub pin_key: u32,
+
     pub widget: Widget,
 }
 
@@ -91,6 +98,9 @@ impl From<ConfigShadow> for Config {
             extra_trigger_size: value.extra_trigger_size,
             preview_size: value.preview_size,
             animation_curve: value.animation_curve,
+            pinnable: value.pinnable,
+            pin_with_key: value.pin_with_key,
+            pin_key: value.pin_key,
         }
     }
 }
@@ -110,6 +120,10 @@ pub struct Config {
     pub extra_trigger_size: NumOrRelative,
     pub preview_size: NumOrRelative,
     pub widget: Option<Widget>,
+
+    pub pin_with_key: bool,
+    pub pin_key: u32,
+    pub pinnable: bool,
 }
 impl Config {
     pub fn resolve_relative(&mut self, size: (i32, i32)) {
@@ -152,4 +166,13 @@ fn dt_extra_trigger_size() -> NumOrRelative {
 }
 fn dt_preview_size() -> NumOrRelative {
     NumOrRelative::Num(0.0)
+}
+fn dt_pinnable() -> bool {
+    true
+}
+fn dt_pin_with_key() -> bool {
+    true
+}
+fn dt_pin_key() -> u32 {
+    smithay_client_toolkit::seat::pointer::BTN_MIDDLE
 }

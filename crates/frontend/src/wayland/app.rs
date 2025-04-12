@@ -389,10 +389,12 @@ impl Widget {
 
         match event {
             MouseEvent::Release(_, key) => {
-                if key == self.window_pop_state.pin_key {
-                    self.window_pop_state.toggle_pin(data.hovering);
+                if self
+                    .window_pop_state
+                    .toggle_pin_with_key(key, data.hovering)
+                {
                     do_redraw()
-                };
+                }
             }
             MouseEvent::Enter(_) => {
                 self.window_pop_state.enter();
@@ -803,7 +805,12 @@ impl<'a> WidgetBuilder<'a> {
         )
         .make_rc();
         let animation_list = AnimationList::new();
-        let window_pop_state = WindowPopState::new(pop_animation);
+        let window_pop_state = WindowPopState::new(
+            pop_animation,
+            conf.pinnable,
+            conf.pin_with_key,
+            conf.pin_key,
+        );
 
         Ok(Self {
             monitor: conf.monitor.clone(),
