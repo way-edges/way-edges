@@ -4,13 +4,14 @@ pub mod tray;
 
 use cosmic_text::Color;
 use ring::RingConfig;
+use schemars::JsonSchema;
 use serde::Deserialize;
 use text::TextConfig;
 use tray::TrayConfig;
 use util::color::parse_color;
 
 // =================================== OUTLOOK
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Clone, JsonSchema)]
 pub struct OutlookMargins {
     #[serde(default = "dt_margin")]
     pub left: i32,
@@ -34,12 +35,13 @@ impl Default for OutlookMargins {
         }
     }
 }
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, JsonSchema)]
 pub struct OutlookWindowConfig {
     #[serde(default)]
     pub margins: OutlookMargins,
     #[serde(default = "dt_color")]
     #[serde(deserialize_with = "super::common::color_translate")]
+    #[schemars(schema_with = "super::common::schema_color")]
     pub color: Color,
     #[serde(default = "dt_radius")]
     pub border_radius: i32,
@@ -66,7 +68,7 @@ fn dt_border_width() -> i32 {
     15
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, JsonSchema)]
 #[serde(rename_all = "snake_case", tag = "type")]
 pub enum Outlook {
     Window(OutlookWindowConfig),
@@ -78,7 +80,7 @@ impl Default for Outlook {
 }
 
 // =================================== GRID
-#[derive(Deserialize, Debug, Default, Clone, Copy)]
+#[derive(Deserialize, Debug, Default, Clone, Copy, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum Align {
     #[default]
@@ -152,7 +154,7 @@ impl Align {
 }
 
 // =================================== WIDGETS
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, JsonSchema)]
 #[serde(rename_all = "lowercase", tag = "type")]
 pub enum BoxedWidget {
     Ring(RingConfig),
@@ -160,14 +162,14 @@ pub enum BoxedWidget {
     Tray(TrayConfig),
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, JsonSchema)]
 pub struct BoxedWidgetConfig {
     pub index: [isize; 2],
     pub widget: BoxedWidget,
 }
 
 // =================================== FINAL
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, JsonSchema)]
 pub struct BoxConfig {
     #[serde(default)]
     pub outlook: Outlook,

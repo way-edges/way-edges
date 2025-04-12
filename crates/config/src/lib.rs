@@ -5,6 +5,7 @@ pub mod widgets;
 
 pub use conf::*;
 pub use root::*;
+use schemars::schema_for;
 
 use std::{
     fs::OpenOptions,
@@ -63,4 +64,9 @@ pub fn get_config_by_group(group_name: &str) -> Option<Group> {
         .ok()?;
 
     root.take_group(group_name)
+}
+
+pub fn output_json_schema() {
+    let schema = schema_for!(Root);
+    println!("{}", serde_jsonrc::to_string_pretty(&schema).unwrap());
 }

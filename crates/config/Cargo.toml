@@ -18,5 +18,6 @@ util.workspace = true
 
 serde_jsonrc.workspace = true
 serde.workspace = true
+schemars.workspace = true
 
 xdg = "2.5"

@@ -85,6 +85,9 @@ fn complete_group_and_widget(current: &std::ffi::OsStr) -> Vec<CompletionCandida
 
 #[derive(Subcommand, Debug, PartialEq, Clone)]
 pub enum Command {
+    #[command(name = "schema")]
+    Schema,
+
     /// run daemon. There can only be one daemon at a time.
     #[command(name = "daemon", alias = "d")]
     Daemon,

@@ -1,9 +1,10 @@
 use regex_lite::Regex;
+use schemars::{json_schema, JsonSchema};
 use serde::{Deserialize, Deserializer};
 use smithay_client_toolkit::shell::wlr_layer::{Anchor, Layer};
 use std::str::FromStr;
 
-#[derive(Debug, Clone, Copy, Deserialize, Default)]
+#[derive(Debug, Clone, Copy, Deserialize, Default, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub enum Curve {
     Linear,
@@ -13,7 +14,7 @@ pub enum Curve {
     EaseExpo,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, JsonSchema)]
 pub enum NumOrRelative {
     Num(f64),
     Relative(f64),
@@ -234,4 +235,23 @@ where
     }
 
     d.deserialize_any(EventMapVisitor)
+}
+
+pub fn schema_edge(_: &mut schemars::SchemaGenerator) -> schemars::Schema {
+    json_schema!({
+        "type": "string",
+        "enum": ["top", "bottom", "left", "right"]
+    })
+}
+pub fn schema_optional_edge(_: &mut schemars::SchemaGenerator) -> schemars::Schema {
+    json_schema!({
+        "type": ["string", "null"],
+        "enum": ["top", "bottom", "left", "right"]
+    })
+}
+pub fn schema_layer(_: &mut schemars::SchemaGenerator) -> schemars::Schema {
+    json_schema!({
+        "type": "string",
+        "enum": ["top", "bottom", "background", "overlay"]
+    })
 }

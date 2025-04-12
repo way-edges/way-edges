@@ -1,11 +1,12 @@
 use cosmic_text::Color;
 use educe::Educe;
+use schemars::JsonSchema;
 use serde::Deserialize;
 use util::color::COLOR_BLACK;
 
 use crate::widgets::common::{self};
 
-#[derive(Educe, Deserialize)]
+#[derive(Educe, Deserialize, JsonSchema)]
 #[educe(Debug)]
 #[serde(rename_all = "snake_case", tag = "type")]
 pub enum TextPreset {
@@ -28,11 +29,12 @@ fn dt_time_update_interval() -> u64 {
     1000
 }
 
-#[derive(Educe, Deserialize)]
+#[derive(Educe, Deserialize, JsonSchema)]
 #[educe(Debug)]
 pub struct TextConfig {
     #[serde(default = "dt_fg_color")]
     #[serde(deserialize_with = "common::color_translate")]
+    #[schemars(schema_with = "common::schema_color")]
     pub fg_color: Color,
     #[serde(default = "dt_font_size")]
     pub font_size: i32,

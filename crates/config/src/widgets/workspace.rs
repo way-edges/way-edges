@@ -2,12 +2,13 @@ use crate::common::Curve;
 
 use super::common::{self, CommonSize};
 use cosmic_text::Color;
+use schemars::JsonSchema;
 use serde::{Deserialize, Deserializer};
 use serde_jsonrc::Value;
 use util::color::parse_color;
 use way_edges_derive::GetSize;
 
-#[derive(Debug, Deserialize, GetSize)]
+#[derive(Debug, Deserialize, GetSize, JsonSchema)]
 pub struct WorkspaceConfig {
     #[serde(flatten)]
     // flatten does not support `default` yet.
@@ -31,15 +32,19 @@ pub struct WorkspaceConfig {
 
     #[serde(default = "dt_default_color")]
     #[serde(deserialize_with = "common::color_translate")]
+    #[schemars(schema_with = "common::schema_color")]
     pub default_color: Color,
     #[serde(default = "dt_focus_color")]
     #[serde(deserialize_with = "common::color_translate")]
+    #[schemars(schema_with = "common::schema_color")]
     pub focus_color: Color,
     #[serde(default = "dt_active_color")]
     #[serde(deserialize_with = "common::color_translate")]
+    #[schemars(schema_with = "common::schema_color")]
     pub active_color: Color,
     #[serde(default)]
     #[serde(deserialize_with = "common::option_color_translate")]
+    #[schemars(schema_with = "common::schema_optional_color")]
     pub hover_color: Option<Color>,
 
     #[serde(default)]
@@ -74,7 +79,7 @@ fn dt_active_color() -> Color {
     parse_color("#aaa").unwrap()
 }
 
-#[derive(Debug)]
+#[derive(Debug, JsonSchema)]
 pub enum WorkspacePreset {
     Hyprland,
     Niri(NiriConf),
@@ -115,7 +120,7 @@ impl<'de> Deserialize<'de> for WorkspacePreset {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, JsonSchema)]
 pub struct NiriConf {
     #[serde(default = "dt_filter_empty")]
     pub filter_empty: bool,

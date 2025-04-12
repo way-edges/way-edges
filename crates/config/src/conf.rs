@@ -1,13 +1,15 @@
+use schemars::JsonSchema;
 use serde::Deserialize;
 use smithay_client_toolkit::shell::wlr_layer::{Anchor, Layer};
 
 use crate::{common::Curve, widgets::Widget};
 
 use super::common::{
-    deserialize_edge, deserialize_layer, deserialize_optional_edge, NumOrRelative,
+    deserialize_edge, deserialize_layer, deserialize_optional_edge, schema_edge, schema_layer,
+    schema_optional_edge, NumOrRelative,
 };
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, JsonSchema)]
 #[serde(untagged)]
 pub enum MonitorSpecifier {
     ID(usize),
@@ -19,7 +21,7 @@ impl Default for MonitorSpecifier {
     }
 }
 
-#[derive(Debug, Deserialize, Clone, Default)]
+#[derive(Debug, Deserialize, Clone, Default, JsonSchema)]
 pub struct Margins {
     #[serde(default)]
     pub left: NumOrRelative,
@@ -32,7 +34,7 @@ pub struct Margins {
 }
 
 #[derive(Debug, Deserialize)]
-struct ConfigShadow {
+pub(crate) struct ConfigShadow {
     #[serde(default = "dt_edge")]
     #[serde(deserialize_with = "deserialize_edge")]
     pub edge: Anchor,
@@ -105,11 +107,14 @@ impl From<ConfigShadow> for Config {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, JsonSchema)]
 #[serde(from = "ConfigShadow")]
 pub struct Config {
+    #[schemars(schema_with = "schema_edge")]
     pub edge: Anchor,
+    #[schemars(schema_with = "schema_optional_edge")]
     pub position: Anchor,
+    #[schemars(schema_with = "schema_layer")]
     pub layer: Layer,
     pub margins: Margins,
     pub monitor: MonitorSpecifier,

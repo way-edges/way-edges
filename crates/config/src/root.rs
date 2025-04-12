@@ -1,17 +1,18 @@
+use schemars::JsonSchema;
 use serde::Deserialize;
 
 use super::Config;
 
 pub type GroupConfig = Vec<Config>;
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, JsonSchema)]
 pub struct Group {
     #[serde(default)]
     pub name: String,
     #[serde(default)]
     pub widgets: Vec<Config>,
 }
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, JsonSchema)]
 pub struct Root {
     #[serde(default)]
     pub groups: Vec<Group>,

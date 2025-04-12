@@ -1,5 +1,6 @@
 use cosmic_text::Color;
 use educe::Educe;
+use schemars::JsonSchema;
 use serde::Deserialize;
 use util::color::parse_color;
 use way_edges_derive::GetSize;
@@ -10,7 +11,7 @@ use super::{
 };
 
 // TODO: serde_valid
-#[derive(Educe, Deserialize, GetSize)]
+#[derive(Educe, Deserialize, GetSize, JsonSchema)]
 #[educe(Debug)]
 pub struct SlideConfig {
     // draw related
@@ -26,18 +27,23 @@ pub struct SlideConfig {
 
     #[serde(default = "dt_bg_color")]
     #[serde(deserialize_with = "common::color_translate")]
+    #[schemars(schema_with = "common::schema_color")]
     pub bg_color: Color,
     #[serde(default = "dt_fg_color")]
     #[serde(deserialize_with = "common::color_translate")]
+    #[schemars(schema_with = "common::schema_color")]
     pub fg_color: Color,
     #[serde(default = "dt_border_color")]
     #[serde(deserialize_with = "common::color_translate")]
+    #[schemars(schema_with = "common::schema_color")]
     pub border_color: Color,
     #[serde(default)]
     #[serde(deserialize_with = "common::option_color_translate")]
+    #[schemars(schema_with = "common::schema_optional_color")]
     pub fg_text_color: Option<Color>,
     #[serde(default)]
     #[serde(deserialize_with = "common::option_color_translate")]
+    #[schemars(schema_with = "common::schema_optional_color")]
     pub bg_text_color: Option<Color>,
 
     #[serde(default)]

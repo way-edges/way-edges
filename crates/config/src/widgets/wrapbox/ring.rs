@@ -1,6 +1,7 @@
 use crate::common::Curve;
-use crate::widgets::common::color_translate;
+use crate::widgets::common::{color_translate, schema_color, schema_optional_template};
 use cosmic_text::Color;
+use schemars::JsonSchema;
 use serde::{Deserialize, Deserializer};
 use util::color::parse_color;
 use util::template::{
@@ -8,7 +9,7 @@ use util::template::{
     base::{Template, TemplateProcesser},
 };
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, JsonSchema)]
 #[serde(rename_all = "lowercase", tag = "type")]
 pub enum RingPreset {
     Ram {
@@ -129,19 +130,23 @@ impl From<RingConfigShadow> for RingConfig {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, JsonSchema)]
 #[serde(from = "RingConfigShadow")]
 pub struct RingConfig {
     pub radius: i32,
     pub ring_width: i32,
+    #[schemars(schema_with = "schema_color")]
     pub bg_color: Color,
+    #[schemars(schema_with = "schema_color")]
     pub fg_color: Color,
 
     pub text_transition_ms: u64,
     pub animation_curve: Curve,
 
+    #[schemars(schema_with = "schema_optional_template")]
     pub prefix: Option<Template>,
     pub prefix_hide: bool,
+    #[schemars(schema_with = "schema_optional_template")]
     pub suffix: Option<Template>,
     pub suffix_hide: bool,
 

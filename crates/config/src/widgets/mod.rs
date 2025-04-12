@@ -1,4 +1,5 @@
 use button::BtnConfig;
+use schemars::JsonSchema;
 use serde::Deserialize;
 use slide::base::SlideConfig;
 use workspace::WorkspaceConfig;
@@ -9,7 +10,7 @@ pub mod slide;
 pub mod workspace;
 pub mod wrapbox;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case", tag = "type")]
 pub enum Widget {
     Btn(BtnConfig),
@@ -22,6 +23,7 @@ pub mod common {
     use std::{collections::HashMap, fmt::Display, str::FromStr};
 
     use cosmic_text::Color;
+    use schemars::JsonSchema;
     use serde::{self, de, Deserialize, Deserializer};
     use serde_jsonrc::Value;
     use smithay_client_toolkit::shell::wlr_layer::Anchor;
@@ -29,7 +31,7 @@ pub mod common {
 
     use crate::common::NumOrRelative;
 
-    #[derive(Debug, Deserialize)]
+    #[derive(Debug, Deserialize, JsonSchema)]
     pub struct CommonSize {
         pub thickness: NumOrRelative,
         pub length: NumOrRelative,
@@ -46,7 +48,7 @@ pub mod common {
         }
     }
 
-    #[derive(Debug, Default)]
+    #[derive(Debug, Default, JsonSchema)]
     pub struct KeyEventMap(HashMap<u32, String>);
     impl KeyEventMap {
         pub fn call(&self, k: u32) {
@@ -125,5 +127,30 @@ pub mod common {
         T: serde::de::DeserializeOwned,
     {
         serde_jsonrc::from_value::<T>(v).map_err(|e| format!("Fail to parse config: {e}"))
+    }
+
+    pub fn schema_color(_: &mut schemars::SchemaGenerator) -> schemars::Schema {
+        schemars::json_schema!({
+            "type": "string",
+            "default": "#00000000",
+        })
+    }
+    pub fn schema_optional_color(_: &mut schemars::SchemaGenerator) -> schemars::Schema {
+        schemars::json_schema!({
+            "type": ["string", "null"],
+            "default": "#00000000",
+        })
+    }
+    pub fn schema_template(_: &mut schemars::SchemaGenerator) -> schemars::Schema {
+        schemars::json_schema!({
+            "type": "string",
+            "default": "{float:2,100}",
+        })
+    }
+    pub fn schema_optional_template(_: &mut schemars::SchemaGenerator) -> schemars::Schema {
+        schemars::json_schema!({
+            "type": ["string", "null"],
+            "default": "{float:2,100}",
+        })
     }
 }
