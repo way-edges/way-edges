@@ -14,14 +14,14 @@ use box_traits::{BoxedWidgetCtx, BoxedWidgetCtxRc, BoxedWidgetGrid};
 use config::{common::Curve, widgets::wrapbox::BoxConfig, Config};
 use event::LastWidget;
 use grid::{builder::GrideBoxBuilder, GridBox};
-use outlook::{init_outlook, OutlookDrawConf};
+use outlook::{init_outlook, OutlookDraw};
 
 use super::WidgetContext;
 
 #[derive(Debug)]
 pub struct BoxContext {
     grid_box: GridBox<BoxedWidgetCtxRc>,
-    outlook_draw_conf: OutlookDrawConf,
+    outlook_draw_conf: Box<dyn OutlookDraw>,
 
     last_widget: LastWidget,
     leave_box_state: bool,

@@ -2,7 +2,7 @@ use util::Or;
 
 use super::{
     box_traits::{BoxedWidgetCtxRc, BoxedWidgetCtxRcWeak, BoxedWidgetGrid},
-    outlook::OutlookDrawConf,
+    outlook::OutlookDraw,
     BoxContext,
 };
 use crate::mouse_state::MouseEvent;
@@ -77,7 +77,7 @@ impl LastWidget {
 
 fn match_item(
     grid_box: &BoxedWidgetGrid,
-    outlook_mouse_pos: &OutlookDrawConf,
+    outlook_mouse_pos: &dyn OutlookDraw,
     pos: (f64, f64),
 ) -> Option<(BoxedWidgetCtxRc, (f64, f64))> {
     let pos = outlook_mouse_pos.translate_mouse_position(pos);
@@ -92,7 +92,7 @@ pub fn on_mouse_event(event: MouseEvent, ctx: &mut BoxContext) -> bool {
 
     match event {
         MouseEvent::Enter(pos) | MouseEvent::Motion(pos) => {
-            let matched = match_item(&ctx.grid_box, &ctx.outlook_draw_conf, pos);
+            let matched = match_item(&ctx.grid_box, ctx.outlook_draw_conf.as_ref(), pos);
 
             if let Some((widget, pos)) = matched {
                 redraw.or(ctx.last_widget.set_current(widget, pos));
@@ -107,7 +107,7 @@ pub fn on_mouse_event(event: MouseEvent, ctx: &mut BoxContext) -> bool {
             ctx.leave_box_state = true;
         }
         MouseEvent::Press(pos, k) => {
-            let matched = match_item(&ctx.grid_box, &ctx.outlook_draw_conf, pos);
+            let matched = match_item(&ctx.grid_box, ctx.outlook_draw_conf.as_ref(), pos);
             if let Some((widget, pos)) = matched {
                 ctx.last_widget.lock_press();
                 redraw.or(widget
@@ -118,7 +118,7 @@ pub fn on_mouse_event(event: MouseEvent, ctx: &mut BoxContext) -> bool {
         MouseEvent::Release(pos, k) => {
             ctx.last_widget.release_press();
 
-            let matched = match_item(&ctx.grid_box, &ctx.outlook_draw_conf, pos);
+            let matched = match_item(&ctx.grid_box, ctx.outlook_draw_conf.as_ref(), pos);
             if let Some((widget, pos)) = matched {
                 redraw.or(widget
                     .borrow_mut()

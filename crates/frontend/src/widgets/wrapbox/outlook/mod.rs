@@ -1,30 +1,23 @@
+use std::fmt::Debug;
+
 use cairo::ImageSurface;
 use config::{widgets::wrapbox::Outlook, Config};
 
-pub mod window;
+mod board;
+mod window;
 
-pub fn init_outlook(outlook: Outlook, conf: &Config) -> OutlookDrawConf {
+pub fn init_outlook(outlook: Outlook, conf: &Config) -> Box<dyn OutlookDraw> {
     match outlook {
         Outlook::Window(outlook_window_config) => {
-            OutlookDrawConf::Window(window::DrawConf::new(outlook_window_config, conf.edge))
+            Box::new(window::DrawConf::new(outlook_window_config, conf.edge))
+        }
+        Outlook::Board(outlook_board_config) => {
+            Box::new(board::DrawConf::new(outlook_board_config, conf.edge))
         }
     }
 }
 
-#[derive(Debug)]
-pub enum OutlookDrawConf {
-    Window(window::DrawConf),
-}
-
-impl OutlookDrawConf {
-    pub fn draw(&mut self, content: ImageSurface) -> ImageSurface {
-        match self {
-            OutlookDrawConf::Window(draw_conf) => draw_conf.draw(content),
-        }
-    }
-    pub fn translate_mouse_position(&self, pos: (f64, f64)) -> (f64, f64) {
-        match self {
-            OutlookDrawConf::Window(draw_conf) => draw_conf.translate_mouse_position(pos),
-        }
-    }
+pub trait OutlookDraw: Debug {
+    fn draw(&mut self, content: ImageSurface) -> ImageSurface;
+    fn translate_mouse_position(&self, pos: (f64, f64)) -> (f64, f64);
 }

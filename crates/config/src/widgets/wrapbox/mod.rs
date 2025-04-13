@@ -67,9 +67,21 @@ fn dt_border_width() -> i32 {
 }
 
 #[derive(Debug, Deserialize)]
+pub struct OutlookBoardConfig {
+    #[serde(default)]
+    pub margins: OutlookMargins,
+    #[serde(default = "dt_color")]
+    #[serde(deserialize_with = "super::common::color_translate")]
+    pub color: Color,
+    #[serde(default = "dt_radius")]
+    pub border_radius: i32,
+}
+
+#[derive(Debug, Deserialize)]
 #[serde(rename_all = "snake_case", tag = "type")]
 pub enum Outlook {
     Window(OutlookWindowConfig),
+    Board(OutlookBoardConfig),
 }
 impl Default for Outlook {
     fn default() -> Self {

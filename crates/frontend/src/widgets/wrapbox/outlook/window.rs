@@ -9,6 +9,8 @@ use util::{
     Z,
 };
 
+use super::OutlookDraw;
+
 #[derive(Debug)]
 pub struct DrawConf {
     margins: OutlookMargins,
@@ -36,7 +38,10 @@ impl DrawConf {
             corners,
         }
     }
-    pub fn draw(&mut self, content: ImageSurface) -> ImageSurface {
+}
+
+impl OutlookDraw for DrawConf {
+    fn draw(&mut self, content: ImageSurface) -> ImageSurface {
         let base = draw_base(self, (content.width(), content.height()));
 
         let surf = new_surface((base.bg.width(), base.bg.height()));
@@ -60,7 +65,7 @@ impl DrawConf {
 
         surf
     }
-    pub fn translate_mouse_position(&self, pos: (f64, f64)) -> (f64, f64) {
+    fn translate_mouse_position(&self, pos: (f64, f64)) -> (f64, f64) {
         // pos - border - margin
         (
             pos.0 - self.border_width as f64 - self.margins.left as f64,
