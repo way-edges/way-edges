@@ -6,7 +6,6 @@ use smithay_client_toolkit::shell::wlr_layer::Anchor;
 use util::{
     color::{cairo_set_color, color_mix},
     draw::{draw_rect_path, new_surface},
-    Z,
 };
 
 use super::OutlookDraw;
