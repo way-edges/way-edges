@@ -14,10 +14,27 @@ pub enum Curve {
     EaseExpo,
 }
 
-#[derive(Debug, Clone, Copy, JsonSchema)]
+#[derive(Debug, Clone, Copy)]
 pub enum NumOrRelative {
     Num(f64),
     Relative(f64),
+}
+impl JsonSchema for Anchor {
+    fn always_inline_schema() -> bool {
+        false
+    }
+
+    fn schema_id() -> std::borrow::Cow<'static, str> {
+        Self::schema_name()
+    }
+
+    fn schema_name() -> std::borrow::Cow<'static, str> {
+        std::borrow::Cow::Borrowed("NumOrRelative")
+    }
+
+    fn json_schema(generator: &mut schemars::SchemaGenerator) -> schemars::Schema {
+        todo!()
+    }
 }
 impl Default for NumOrRelative {
     fn default() -> Self {
