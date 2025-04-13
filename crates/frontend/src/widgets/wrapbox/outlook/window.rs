@@ -8,9 +8,7 @@ use util::{
     draw::{draw_rect_path, new_surface},
     Z,
 };
-use way_edges_derive::wrap_rc;
 
-#[wrap_rc(rc = "pub")]
 #[derive(Debug)]
 pub struct DrawConf {
     margins: OutlookMargins,
@@ -39,7 +37,28 @@ impl DrawConf {
         }
     }
     pub fn draw(&mut self, content: ImageSurface) -> ImageSurface {
-        draw_combine(self, content)
+        let base = draw_base(self, (content.width(), content.height()));
+
+        let surf = new_surface((base.bg.width(), base.bg.height()));
+        let ctx = cairo::Context::new(&surf).unwrap();
+
+        ctx.set_source_surface(base.bg, Z, Z).unwrap();
+        ctx.paint().unwrap();
+
+        ctx.save().unwrap();
+        ctx.translate(
+            (self.border_width + self.margins.left) as f64,
+            (self.border_width + self.margins.top) as f64,
+        );
+        ctx.set_source_surface(&content, Z, Z).unwrap();
+        ctx.paint().unwrap();
+        ctx.restore().unwrap();
+
+        ctx.set_source_surface(base.border_with_shadow, Z, Z)
+            .unwrap();
+        ctx.paint().unwrap();
+
+        surf
     }
     pub fn translate_mouse_position(&self, pos: (f64, f64)) -> (f64, f64) {
         // pos - border - margin
@@ -171,29 +190,4 @@ fn draw_base(conf: &DrawConf, content_size: (i32, i32)) -> DrawBase {
         bg,
         border_with_shadow,
     }
-}
-
-fn draw_combine(conf: &DrawConf, content: ImageSurface) -> ImageSurface {
-    let base = draw_base(conf, (content.width(), content.height()));
-
-    let surf = new_surface((base.bg.width(), base.bg.height()));
-    let ctx = cairo::Context::new(&surf).unwrap();
-
-    ctx.set_source_surface(base.bg, Z, Z).unwrap();
-    ctx.paint().unwrap();
-
-    ctx.save().unwrap();
-    ctx.translate(
-        (conf.border_width + conf.margins.left) as f64,
-        (conf.border_width + conf.margins.top) as f64,
-    );
-    ctx.set_source_surface(&content, Z, Z).unwrap();
-    ctx.paint().unwrap();
-    ctx.restore().unwrap();
-
-    ctx.set_source_surface(base.border_with_shadow, Z, Z)
-        .unwrap();
-    ctx.paint().unwrap();
-
-    surf
 }
