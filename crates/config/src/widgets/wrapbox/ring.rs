@@ -8,7 +8,7 @@ use util::template::{
     base::{Template, TemplateProcesser},
 };
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 #[serde(rename_all = "lowercase", tag = "type")]
 pub enum RingPreset {
     Ram {
@@ -129,7 +129,7 @@ impl From<RingConfigShadow> for RingConfig {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 #[serde(from = "RingConfigShadow")]
 pub struct RingConfig {
     pub radius: i32,

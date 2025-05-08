@@ -5,7 +5,7 @@ use util::color::COLOR_BLACK;
 
 use crate::widgets::common::{self};
 
-#[derive(Educe, Deserialize)]
+#[derive(Educe, Deserialize, Clone)]
 #[educe(Debug)]
 #[serde(rename_all = "snake_case", tag = "type")]
 pub enum TextPreset {
@@ -28,7 +28,7 @@ fn dt_time_update_interval() -> u64 {
     1000
 }
 
-#[derive(Educe, Deserialize)]
+#[derive(Educe, Deserialize, Clone)]
 #[educe(Debug)]
 pub struct TextConfig {
     #[serde(default = "dt_fg_color")]

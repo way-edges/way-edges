@@ -30,7 +30,7 @@ impl HeaderMenuAlign {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct HeaderDrawConfig {
     #[serde(default = "dt_header_font_pixel_height")]
     pub font_pixel_height: i32,
@@ -53,7 +53,7 @@ fn dt_header_text_color() -> Color {
     COLOR_WHITE
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct MenuDrawConfig {
     #[serde(default = "dt_menu_margin")]
     pub margin: [i32; 2],
@@ -111,7 +111,7 @@ fn dt_menu_text_color() -> Color {
     COLOR_WHITE
 }
 
-#[derive(Educe, Deserialize)]
+#[derive(Educe, Deserialize, Clone)]
 #[educe(Debug)]
 pub struct TrayConfig {
     #[serde(default)]

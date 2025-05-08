@@ -5,7 +5,7 @@ use serde::Deserialize;
 use util::color::{parse_color, COLOR_BLACK};
 use way_edges_derive::GetSize;
 
-#[derive(Educe, Deserialize, GetSize)]
+#[derive(Educe, Deserialize, GetSize, Clone)]
 #[educe(Debug)]
 pub struct BtnConfig {
     #[serde(flatten)]

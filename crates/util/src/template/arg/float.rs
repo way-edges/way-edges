@@ -4,7 +4,7 @@ use crate::template::base::{TemplateArgParser, TemplateArgProcesser};
 
 pub const TEMPLATE_ARG_FLOAT: &str = "float";
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct TemplateArgFloatParser {
     precision: usize,
     multiply: Option<f64>,

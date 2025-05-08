@@ -9,7 +9,7 @@ pub mod slide;
 pub mod workspace;
 pub mod wrapbox;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 #[serde(rename_all = "kebab-case", tag = "type")]
 pub enum Widget {
     Btn(BtnConfig),
@@ -29,7 +29,7 @@ pub mod common {
 
     use crate::common::NumOrRelative;
 
-    #[derive(Debug, Deserialize)]
+    #[derive(Debug, Deserialize, Clone)]
     pub struct CommonSize {
         pub thickness: NumOrRelative,
         pub length: NumOrRelative,
@@ -46,7 +46,7 @@ pub mod common {
         }
     }
 
-    #[derive(Debug, Default)]
+    #[derive(Debug, Default, Clone)]
     pub struct KeyEventMap(HashMap<u32, String>);
     impl KeyEventMap {
         pub fn call(&self, k: u32) {

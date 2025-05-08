@@ -10,7 +10,7 @@ use util::{
 
 use crate::{common::Curve, widgets::common::KeyEventMap};
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 #[serde(rename_all = "snake_case", tag = "type")]
 pub enum Preset {
     Speaker(PulseAudioConfig),
@@ -24,7 +24,7 @@ impl Default for Preset {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct PulseAudioConfig {
     #[serde(default = "default_mute_color")]
     #[serde(deserialize_with = "super::super::common::color_translate")]
@@ -32,7 +32,7 @@ pub struct PulseAudioConfig {
     #[serde(default)]
     #[serde(deserialize_with = "super::super::common::option_color_translate")]
     pub mute_text_color: Option<Color>,
-    
+
     #[serde(default)]
     pub animation_curve: Curve,
     pub device: Option<String>,
@@ -42,13 +42,13 @@ fn default_mute_color() -> Color {
     COLOR_BLACK
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct BacklightConfig {
     #[serde(default)]
     pub device: Option<String>,
 }
 
-#[derive(Debug, Deserialize, Default)]
+#[derive(Debug, Deserialize, Default, Clone)]
 pub struct CustomConfig {
     #[serde(default)]
     pub interval_update: (u64, String),

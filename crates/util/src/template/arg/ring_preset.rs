@@ -2,7 +2,7 @@ use crate::template::base::{TemplateArgParser, TemplateArgProcesser};
 
 pub const TEMPLATE_ARG_RING_PRESET: &str = "preset";
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct TemplateArgRingPresetParser;
 impl TemplateArgRingPresetParser {
     pub fn parse(&self, arg: String) -> String {

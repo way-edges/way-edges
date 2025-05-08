@@ -7,7 +7,7 @@ use serde_jsonrc::Value;
 use util::color::parse_color;
 use way_edges_derive::GetSize;
 
-#[derive(Debug, Deserialize, GetSize)]
+#[derive(Debug, Deserialize, GetSize, Clone)]
 pub struct WorkspaceConfig {
     #[serde(flatten)]
     // flatten does not support `default` yet.
@@ -74,7 +74,7 @@ fn dt_active_color() -> Color {
     parse_color("#aaa").unwrap()
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum WorkspacePreset {
     Hyprland,
     Niri(NiriConf),
@@ -115,7 +115,7 @@ impl<'de> Deserialize<'de> for WorkspacePreset {
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct NiriConf {
     #[serde(default = "dt_filter_empty")]
     pub filter_empty: bool,

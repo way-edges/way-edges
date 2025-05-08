@@ -10,7 +10,7 @@ use super::{
 };
 
 // TODO: serde_valid
-#[derive(Educe, Deserialize, GetSize)]
+#[derive(Educe, Deserialize, GetSize, Clone)]
 #[educe(Debug)]
 pub struct SlideConfig {
     // draw related

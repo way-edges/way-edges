@@ -34,7 +34,7 @@ impl Default for OutlookMargins {
         }
     }
 }
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct OutlookWindowConfig {
     #[serde(default)]
     pub margins: OutlookMargins,
@@ -66,7 +66,7 @@ fn dt_border_width() -> i32 {
     15
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct OutlookBoardConfig {
     #[serde(default)]
     pub margins: OutlookMargins,
@@ -77,7 +77,7 @@ pub struct OutlookBoardConfig {
     pub border_radius: i32,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 #[serde(rename_all = "snake_case", tag = "type")]
 pub enum Outlook {
     Window(OutlookWindowConfig),
@@ -164,7 +164,7 @@ impl Align {
 }
 
 // =================================== WIDGETS
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 #[serde(rename_all = "lowercase", tag = "type")]
 pub enum BoxedWidget {
     Ring(RingConfig),
@@ -172,14 +172,14 @@ pub enum BoxedWidget {
     Tray(TrayConfig),
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct BoxedWidgetConfig {
     pub index: [isize; 2],
     pub widget: BoxedWidget,
 }
 
 // =================================== FINAL
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct BoxConfig {
     #[serde(default)]
     pub outlook: Outlook,
