@@ -4,10 +4,16 @@ use educe::Educe;
 use schemars::JsonSchema;
 use serde::Deserialize;
 use util::color::{parse_color, COLOR_BLACK};
-use way_edges_derive::GetSize;
+use way_edges_derive::{const_property, GetSize};
+
+use schemars::Schema;
+use serde_json::Value;
 
 #[derive(Educe, Deserialize, GetSize, JsonSchema)]
 #[educe(Debug)]
+#[schemars(transform = BtnConfig_generate_defs)]
+// FIXME: THIS DOES NOT WORK IDK WHY. so i have to add `transform` manually
+#[const_property("type", "btn")]
 pub struct BtnConfig {
     #[serde(flatten)]
     pub size: CommonSize,

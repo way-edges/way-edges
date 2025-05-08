@@ -19,7 +19,7 @@ pub enum NumOrRelative {
     Num(f64),
     Relative(f64),
 }
-impl JsonSchema for Anchor {
+impl JsonSchema for NumOrRelative {
     fn always_inline_schema() -> bool {
         false
     }
@@ -33,7 +33,20 @@ impl JsonSchema for Anchor {
     }
 
     fn json_schema(generator: &mut schemars::SchemaGenerator) -> schemars::Schema {
-        todo!()
+        json_schema!({
+            "type": ["number", "string"],
+            "anyOf": [
+                {
+                    "type": "number",
+                    "description": "absolute number"
+                },
+                {
+                    "type": "string",
+                    "pattern": r"^(\d+(\.\d+)?)%\s*(.*)$",
+                    "description": "relative number"
+                }
+            ]
+        })
     }
 }
 impl Default for NumOrRelative {

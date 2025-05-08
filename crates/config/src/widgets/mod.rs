@@ -1,6 +1,7 @@
 use button::BtnConfig;
-use schemars::JsonSchema;
+use schemars::{JsonSchema, Schema};
 use serde::Deserialize;
+use serde_json::Value;
 use slide::base::SlideConfig;
 use workspace::WorkspaceConfig;
 use wrapbox::BoxConfig;
@@ -12,19 +13,35 @@ pub mod wrapbox;
 
 #[derive(Debug, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case", tag = "type")]
+#[schemars(transform = generate_defs)]
 pub enum Widget {
     Btn(BtnConfig),
     Slider(SlideConfig),
     WrapBox(BoxConfig),
     Workspace(WorkspaceConfig),
 }
+fn generate_defs(schema: &mut Schema) {
+    println!("222");
+    let root = schema.ensure_object();
+
+    match root.get_mut("oneOf") {
+        Some(Value::Array(arr)) => arr,
+        _ => return,
+    }
+    .iter_mut()
+    .for_each(|v| {
+        if let Some(obj) = v.as_object_mut() {
+            obj.retain(|k, _| k == "$ref")
+        }
+    });
+}
 
 pub mod common {
-    use std::{collections::HashMap, fmt::Display, str::FromStr};
+    use std::collections::HashMap;
 
     use cosmic_text::Color;
     use schemars::JsonSchema;
-    use serde::{self, de, Deserialize, Deserializer};
+    use serde::{self, Deserialize, Deserializer};
     use serde_jsonrc::Value;
     use smithay_client_toolkit::shell::wlr_layer::Anchor;
     use util::{color::parse_color, shell::shell_cmd_non_block};
@@ -48,7 +65,7 @@ pub mod common {
         }
     }
 
-    #[derive(Debug, Default, JsonSchema)]
+    #[derive(Debug, Default, JsonSchema, Deserialize)]
     pub struct KeyEventMap(HashMap<u32, String>);
     impl KeyEventMap {
         pub fn call(&self, k: u32) {
@@ -57,30 +74,6 @@ pub mod common {
                 shell_cmd_non_block(cmd.clone());
             }
         }
-    }
-    impl<'de> Deserialize<'de> for KeyEventMap {
-        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where
-            D: Deserializer<'de>,
-        {
-            let map: HashMap<u32, String> = de_int_key(deserializer)?;
-            Ok(KeyEventMap(map))
-        }
-    }
-    fn de_int_key<'de, D, K, V>(deserializer: D) -> Result<HashMap<K, V>, D::Error>
-    where
-        D: Deserializer<'de>,
-        K: Eq + std::hash::Hash + FromStr,
-        K::Err: Display,
-        V: Deserialize<'de>,
-    {
-        let string_map = <HashMap<String, V>>::deserialize(deserializer)?;
-        let mut map = HashMap::with_capacity(string_map.len());
-        for (s, v) in string_map {
-            let k = K::from_str(&s).map_err(de::Error::custom)?;
-            map.insert(k, v);
-        }
-        Ok(map)
     }
 
     pub fn option_color_translate<'de, D>(d: D) -> Result<Option<Color>, D::Error>

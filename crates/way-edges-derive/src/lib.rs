@@ -1,6 +1,9 @@
 use proc_macro::{self, TokenStream};
-use quote::quote;
-use syn::{parse_macro_input, punctuated::Punctuated, DeriveInput, Meta, MetaNameValue, Token};
+use quote::{format_ident, quote};
+use syn::{
+    parse_macro_input, punctuated::Punctuated, DeriveInput, ItemStruct, LitStr, Meta,
+    MetaNameValue, Token,
+};
 
 #[proc_macro_derive(GetSize)]
 pub fn derive_size(input: TokenStream) -> TokenStream {
@@ -94,4 +97,144 @@ pub fn wrap_rc(attr: TokenStream, item: TokenStream) -> TokenStream {
         }
     }
     .into()
+}
+
+use syn::{
+    parse::{Parse, ParseStream},
+    Attribute,
+};
+
+struct PropertyPair {
+    name: LitStr,
+    value: LitStr,
+}
+
+impl Parse for PropertyPair {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        let name: LitStr = input.parse()?;
+        input.parse::<Token![,]>()?;
+        let value: LitStr = input.parse()?;
+        Ok(PropertyPair { name, value })
+    }
+}
+
+/// Parse the attributes to find the const_property attributes
+fn extract_const_properties(attrs: &[Attribute]) -> Vec<PropertyPair> {
+    let mut properties = Vec::new();
+
+    for attr in attrs {
+        if attr.path().is_ident("const_property") {
+            if let Ok(meta) = attr.parse_args::<PropertyPair>() {
+                properties.push(meta);
+            }
+        }
+    }
+
+    properties
+}
+
+#[proc_macro_attribute]
+pub fn const_property(args: TokenStream, input: TokenStream) -> TokenStream {
+    let args = parse_macro_input!(args as PropertyPair);
+    let mut input_ast = parse_macro_input!(input as DeriveInput);
+
+    let struct_name = &input_ast.ident;
+    let property_name = &args.name;
+    let property_value = &args.value;
+
+    // Generate the function name for the schema transformation
+    let function_name = format_ident!("{}_generate_defs", struct_name);
+
+    // Add the schemars transform attribute to the struct
+    let schemars_path: syn::Path = syn::parse_str("schemars").unwrap();
+    let transform_meta = syn::parse_quote! {
+        #schemars_path(transform = #function_name)
+    };
+
+    // Add the schemars attribute
+    input_ast.attrs.insert(
+        0,
+        syn::Attribute {
+            pound_token: syn::token::Pound::default(),
+            style: syn::AttrStyle::Outer,
+            bracket_token: syn::token::Bracket::default(),
+            meta: transform_meta,
+        },
+    );
+
+    // Create the output with the transformed struct and the schema function
+    let output = quote! {
+        #input_ast
+
+        #[allow(non_snake_case)]
+        fn #function_name(schema: &mut Schema) {
+            let root = schema.ensure_object();
+
+            match root.get_mut("properties") {
+                Some(Value::Object(map)) => map,
+                _ => return,
+            }
+            .insert(
+                #property_name.to_string(),
+                Value::Object(serde_json::Map::from_iter(
+                    vec![("const".to_string(), Value::String(#property_value.to_string()))].into_iter(),
+                )),
+            );
+        }
+    };
+
+    output.into()
+}
+
+#[proc_macro_derive(ConstProperties, attributes(const_property))]
+pub fn derive_const_properties(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as DeriveInput);
+
+    let struct_name = &input.ident;
+    let properties = extract_const_properties(&input.attrs);
+
+    if properties.is_empty() {
+        return quote! {
+            #input
+        }
+        .into();
+    }
+
+    // Generate the function name for the schema transformation
+    let function_name = format_ident!("{}_generate_defs", struct_name);
+
+    // Generate property insertions
+    let property_insertions = properties.iter().map(|prop| {
+        let name = &prop.name;
+        let value = &prop.value;
+
+        quote! {
+            .insert(
+                #name.to_string(),
+                Value::Object(serde_json::Map::from_iter(
+                    vec![("const".to_string(), Value::String(#value.to_string()))].into_iter(),
+                )),
+            )
+        }
+    });
+
+    // Create the output with the transformed struct and the schema function
+    let output = quote! {
+        #[schemars(transform = #function_name)]
+        #input
+
+        #[allow(non_snake_case)]
+        fn #function_name(schema: &mut Schema) {
+            let root = schema.ensure_object();
+
+            let props = match root.get_mut("properties") {
+                Some(Value::Object(map)) => map,
+                _ => return,
+            };
+
+            #(props #property_insertions;)*
+        }
+    };
+
+    output.into()
 }

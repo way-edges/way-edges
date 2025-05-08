@@ -3,16 +3,21 @@ use educe::Educe;
 use schemars::JsonSchema;
 use serde::Deserialize;
 use util::color::parse_color;
-use way_edges_derive::GetSize;
+use way_edges_derive::{const_property, GetSize};
 
 use super::{
     super::common::{self, CommonSize},
     preset::Preset,
 };
 
+use schemars::Schema;
+use serde_json::Value;
+
 // TODO: serde_valid
 #[derive(Educe, Deserialize, GetSize, JsonSchema)]
 #[educe(Debug)]
+#[schemars(transform = SlideConfig_generate_defs)]
+#[const_property("type", "slide")]
 pub struct SlideConfig {
     // draw related
     #[serde(flatten)]

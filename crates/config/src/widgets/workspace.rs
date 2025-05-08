@@ -2,13 +2,17 @@ use crate::common::Curve;
 
 use super::common::{self, CommonSize};
 use cosmic_text::Color;
-use schemars::JsonSchema;
+use schemars::{json_schema, JsonSchema};
 use serde::{Deserialize, Deserializer};
-use serde_jsonrc::Value;
+use serde_json::Value;
 use util::color::parse_color;
-use way_edges_derive::GetSize;
+use way_edges_derive::{const_property, GetSize};
+
+use schemars::Schema;
 
 #[derive(Debug, Deserialize, GetSize, JsonSchema)]
+#[schemars(transform = WorkspaceConfig_generate_defs)]
+#[const_property("type", "workspace")]
 pub struct WorkspaceConfig {
     #[serde(flatten)]
     // flatten does not support `default` yet.
@@ -79,7 +83,7 @@ fn dt_active_color() -> Color {
     parse_color("#aaa").unwrap()
 }
 
-#[derive(Debug, JsonSchema)]
+#[derive(Debug)]
 pub enum WorkspacePreset {
     Hyprland,
     Niri(NiriConf),
@@ -121,6 +125,8 @@ impl<'de> Deserialize<'de> for WorkspacePreset {
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
+// #[schemars(transform = NiriConf_generate_defs)]
+// #[const_property("type", "niri")]
 pub struct NiriConf {
     #[serde(default = "dt_filter_empty")]
     pub filter_empty: bool,
@@ -135,6 +141,27 @@ impl Default for NiriConf {
 
 fn dt_filter_empty() -> bool {
     true
+}
+
+impl JsonSchema for WorkspacePreset {
+    fn schema_name() -> std::borrow::Cow<'static, str> {
+        std::borrow::Cow::Borrowed("WorkspacePreset")
+    }
+
+    fn json_schema(_: &mut schemars::SchemaGenerator) -> Schema {
+        json_schema!({
+          "oneOf": [
+          {
+              "type": "string",
+              "enum": ["hyprland", "niri"]
+          },
+          {
+            "type": "object",
+            "$ref": "#/$defs/NiriConf",
+          }
+          ]
+        })
+    }
 }
 
 #[cfg(test)]

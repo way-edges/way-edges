@@ -9,6 +9,7 @@ use serde::Deserialize;
 use text::TextConfig;
 use tray::TrayConfig;
 use util::color::parse_color;
+use way_edges_derive::const_property;
 
 // =================================== OUTLOOK
 #[derive(Debug, Deserialize, Clone, JsonSchema)]
@@ -168,8 +169,13 @@ pub struct BoxedWidgetConfig {
     pub widget: BoxedWidget,
 }
 
+use schemars::Schema;
+use serde_json::Value;
+
 // =================================== FINAL
 #[derive(Debug, Deserialize, JsonSchema)]
+#[schemars(transform = BoxConfig_generate_defs)]
+#[const_property("type", "wrap-box")]
 pub struct BoxConfig {
     #[serde(default)]
     pub outlook: Outlook,
