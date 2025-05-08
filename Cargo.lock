@@ -608,6 +608,7 @@ dependencies = [
  "regex-lite",
  "schemars",
  "serde",
+ "serde_json",
  "serde_jsonrc",
  "smithay-client-toolkit",
  "util",
