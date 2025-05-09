@@ -1,8 +1,7 @@
 use proc_macro::{self, TokenStream};
 use quote::{format_ident, quote};
 use syn::{
-    parse_macro_input, punctuated::Punctuated, DeriveInput, ItemStruct, LitStr, Meta,
-    MetaNameValue, Token,
+    parse_macro_input, punctuated::Punctuated, DeriveInput, LitStr, Meta, MetaNameValue, Token,
 };
 
 #[proc_macro_derive(GetSize)]

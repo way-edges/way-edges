@@ -26,6 +26,7 @@ impl Default for Preset {
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
+#[schemars(deny_unknown_fields)]
 pub struct PulseAudioConfig {
     #[serde(default = "default_mute_color")]
     #[serde(deserialize_with = "super::super::common::color_translate")]
@@ -46,12 +47,14 @@ fn default_mute_color() -> Color {
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
+#[schemars(deny_unknown_fields)]
 pub struct BacklightConfig {
     #[serde(default)]
     pub device: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Default, JsonSchema)]
+#[schemars(deny_unknown_fields)]
 pub struct CustomConfig {
     #[serde(default)]
     pub interval_update: (u64, String),

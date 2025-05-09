@@ -32,6 +32,7 @@ impl HeaderMenuAlign {
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
+#[schemars(deny_unknown_fields)]
 pub struct HeaderDrawConfig {
     #[serde(default = "dt_header_font_pixel_height")]
     pub font_pixel_height: i32,
@@ -56,6 +57,7 @@ fn dt_header_text_color() -> Color {
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
+#[schemars(deny_unknown_fields)]
 pub struct MenuDrawConfig {
     #[serde(default = "dt_menu_margin")]
     pub margin: [i32; 2],
@@ -118,6 +120,7 @@ fn dt_menu_text_color() -> Color {
 
 #[derive(Educe, Deserialize, JsonSchema)]
 #[educe(Debug)]
+#[schemars(deny_unknown_fields)]
 pub struct TrayConfig {
     #[serde(default)]
     pub font_family: Option<String>,

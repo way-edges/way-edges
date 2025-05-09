@@ -9,6 +9,7 @@ use crate::widgets::common::{self};
 #[derive(Educe, Deserialize, JsonSchema)]
 #[educe(Debug)]
 #[serde(rename_all = "snake_case", tag = "type")]
+#[schemars(deny_unknown_fields)]
 pub enum TextPreset {
     Time {
         #[serde(default = "dt_time_format")]
@@ -31,6 +32,7 @@ fn dt_time_update_interval() -> u64 {
 
 #[derive(Educe, Deserialize, JsonSchema)]
 #[educe(Debug)]
+#[schemars(deny_unknown_fields)]
 pub struct TextConfig {
     #[serde(default = "dt_fg_color")]
     #[serde(deserialize_with = "common::color_translate")]

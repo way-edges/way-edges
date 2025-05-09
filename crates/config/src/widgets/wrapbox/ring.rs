@@ -11,6 +11,7 @@ use util::template::{
 
 #[derive(Debug, Deserialize, JsonSchema)]
 #[serde(rename_all = "lowercase", tag = "type")]
+#[schemars(deny_unknown_fields)]
 pub enum RingPreset {
     Ram {
         #[serde(default = "dt_update_interval")]
@@ -132,6 +133,7 @@ impl From<RingConfigShadow> for RingConfig {
 
 #[derive(Debug, Deserialize, JsonSchema)]
 #[serde(from = "RingConfigShadow")]
+#[schemars(deny_unknown_fields)]
 pub struct RingConfig {
     pub radius: i32,
     pub ring_width: i32,

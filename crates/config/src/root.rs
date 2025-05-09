@@ -6,6 +6,7 @@ use super::Config;
 pub type GroupConfig = Vec<Config>;
 
 #[derive(Deserialize, Debug, JsonSchema)]
+#[schemars(deny_unknown_fields)]
 pub struct Group {
     #[serde(default)]
     pub name: String,
@@ -13,6 +14,7 @@ pub struct Group {
     pub widgets: Vec<Config>,
 }
 #[derive(Deserialize, Debug, JsonSchema)]
+#[schemars(extend("allowTrailingCommas" = true))]
 pub struct Root {
     #[serde(default)]
     pub groups: Vec<Group>,

@@ -12,6 +12,7 @@ use serde_json::Value;
 #[derive(Educe, Deserialize, GetSize, JsonSchema)]
 #[educe(Debug)]
 #[schemars(transform = BtnConfig_generate_defs)]
+#[schemars(deny_unknown_fields)]
 // FIXME: THIS DOES NOT WORK IDK WHY. so i have to add `transform` manually
 #[const_property("type", "btn")]
 pub struct BtnConfig {

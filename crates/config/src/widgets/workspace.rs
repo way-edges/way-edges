@@ -11,6 +11,7 @@ use way_edges_derive::{const_property, GetSize};
 use schemars::Schema;
 
 #[derive(Debug, Deserialize, GetSize, JsonSchema)]
+#[schemars(deny_unknown_fields)]
 #[schemars(transform = WorkspaceConfig_generate_defs)]
 #[const_property("type", "workspace")]
 pub struct WorkspaceConfig {
@@ -83,7 +84,8 @@ fn dt_active_color() -> Color {
     parse_color("#aaa").unwrap()
 }
 
-#[derive(Debug)]
+#[derive(Debug, JsonSchema)]
+#[schemars(transform = WorkspacePreset_generate_defs)]
 pub enum WorkspacePreset {
     Hyprland,
     Niri(NiriConf),
@@ -125,8 +127,9 @@ impl<'de> Deserialize<'de> for WorkspacePreset {
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
-// #[schemars(transform = NiriConf_generate_defs)]
-// #[const_property("type", "niri")]
+#[schemars(deny_unknown_fields)]
+#[schemars(transform = NiriConf_generate_defs)]
+#[const_property("type", "niri")]
 pub struct NiriConf {
     #[serde(default = "dt_filter_empty")]
     pub filter_empty: bool,
@@ -143,25 +146,20 @@ fn dt_filter_empty() -> bool {
     true
 }
 
-impl JsonSchema for WorkspacePreset {
-    fn schema_name() -> std::borrow::Cow<'static, str> {
-        std::borrow::Cow::Borrowed("WorkspacePreset")
-    }
-
-    fn json_schema(_: &mut schemars::SchemaGenerator) -> Schema {
-        json_schema!({
-          "oneOf": [
-          {
-              "type": "string",
-              "enum": ["hyprland", "niri"]
-          },
-          {
-            "type": "object",
-            "$ref": "#/$defs/NiriConf",
-          }
-          ]
-        })
-    }
+#[allow(non_snake_case)]
+fn WorkspacePreset_generate_defs(s: &mut Schema) {
+    *s = json_schema!({
+      "oneOf": [
+      {
+          "type": "string",
+          "enum": ["hyprland", "niri"]
+      },
+      {
+        "type": "object",
+        "$ref": "#/$defs/NiriConf",
+      }
+      ]
+    })
 }
 
 #[cfg(test)]

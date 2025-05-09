@@ -22,6 +22,7 @@ impl Default for MonitorSpecifier {
 }
 
 #[derive(Debug, Deserialize, Clone, Default, JsonSchema)]
+#[schemars(deny_unknown_fields)]
 pub struct Margins {
     #[serde(default)]
     pub left: NumOrRelative,
@@ -109,6 +110,7 @@ impl From<ConfigShadow> for Config {
 
 #[derive(Debug, Deserialize, JsonSchema)]
 #[serde(from = "ConfigShadow")]
+#[schemars(deny_unknown_fields)]
 pub struct Config {
     #[schemars(schema_with = "schema_edge")]
     pub edge: Anchor,

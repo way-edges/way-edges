@@ -37,6 +37,7 @@ impl Default for OutlookMargins {
     }
 }
 #[derive(Debug, Deserialize, JsonSchema)]
+#[schemars(deny_unknown_fields)]
 pub struct OutlookWindowConfig {
     #[serde(default)]
     pub margins: OutlookMargins,
@@ -164,6 +165,7 @@ pub enum BoxedWidget {
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
+#[schemars(deny_unknown_fields)]
 pub struct BoxedWidgetConfig {
     pub index: [isize; 2],
     pub widget: BoxedWidget,
@@ -174,6 +176,7 @@ use serde_json::Value;
 
 // =================================== FINAL
 #[derive(Debug, Deserialize, JsonSchema)]
+#[schemars(deny_unknown_fields)]
 #[schemars(transform = BoxConfig_generate_defs)]
 #[const_property("type", "wrap-box")]
 pub struct BoxConfig {

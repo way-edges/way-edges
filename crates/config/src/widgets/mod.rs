@@ -1,7 +1,6 @@
 use button::BtnConfig;
-use schemars::{JsonSchema, Schema};
+use schemars::JsonSchema;
 use serde::Deserialize;
-use serde_json::Value;
 use slide::base::SlideConfig;
 use workspace::WorkspaceConfig;
 use wrapbox::BoxConfig;
@@ -13,27 +12,11 @@ pub mod wrapbox;
 
 #[derive(Debug, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case", tag = "type")]
-#[schemars(transform = generate_defs)]
 pub enum Widget {
     Btn(BtnConfig),
     Slider(SlideConfig),
     WrapBox(BoxConfig),
     Workspace(WorkspaceConfig),
-}
-fn generate_defs(schema: &mut Schema) {
-    println!("222");
-    let root = schema.ensure_object();
-
-    match root.get_mut("oneOf") {
-        Some(Value::Array(arr)) => arr,
-        _ => return,
-    }
-    .iter_mut()
-    .for_each(|v| {
-        if let Some(obj) = v.as_object_mut() {
-            obj.retain(|k, _| k == "$ref")
-        }
-    });
 }
 
 pub mod common {

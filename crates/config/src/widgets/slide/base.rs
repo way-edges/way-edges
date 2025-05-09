@@ -16,6 +16,7 @@ use serde_json::Value;
 // TODO: serde_valid
 #[derive(Educe, Deserialize, GetSize, JsonSchema)]
 #[educe(Debug)]
+#[schemars(deny_unknown_fields)]
 #[schemars(transform = SlideConfig_generate_defs)]
 #[const_property("type", "slide")]
 pub struct SlideConfig {

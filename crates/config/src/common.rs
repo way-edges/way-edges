@@ -32,7 +32,7 @@ impl JsonSchema for NumOrRelative {
         std::borrow::Cow::Borrowed("NumOrRelative")
     }
 
-    fn json_schema(generator: &mut schemars::SchemaGenerator) -> schemars::Schema {
+    fn json_schema(_: &mut schemars::SchemaGenerator) -> schemars::Schema {
         json_schema!({
             "type": ["number", "string"],
             "anyOf": [
