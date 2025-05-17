@@ -32,7 +32,7 @@ futures-util = "0.3.31"
 
 resvg = { version = "0.45.0", default-features = false }
 
-niri-ipc = "25.1.0"
+niri-ipc = "25.5.0"
 
 walkdir = "2.5.0"
 freedesktop-icons = { git = "https://github.com/ogios/freedesktop-icons", branch = "main" }
