@@ -54,20 +54,14 @@
               "default": "#00000000"
             },
             "font_family": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": ["string", "null"]
             },
             "font_size": {
               "type": "integer",
               "format": "int32"
             },
             "prefix": {
-              "type": [
-                "string",
-                "null"
-              ],
+              "type": ["string", "null"],
               "default": "{float:2,100}"
             },
             "prefix_hide": {
@@ -85,10 +79,7 @@
               "format": "int32"
             },
             "suffix": {
-              "type": [
-                "string",
-                "null"
-              ],
+              "type": ["string", "null"],
               "default": "{float:2,100}"
             },
             "suffix_hide": {
@@ -129,10 +120,7 @@
               "default": "#00000000"
             },
             "font_family": {
-              "type": [
-                "string",
-                "null"
-              ],
+              "type": ["string", "null"],
               "default": null
             },
             "font_size": {
@@ -145,10 +133,7 @@
             }
           },
           "additionalProperties": false,
-          "required": [
-            "type",
-            "preset"
-          ]
+          "required": ["type", "preset"]
         },
         {
           "type": "object",
@@ -158,10 +143,7 @@
               "const": "tray"
             },
             "font_family": {
-              "type": [
-                "string",
-                "null"
-              ],
+              "type": ["string", "null"],
               "default": null
             },
             "grid_align": {
@@ -182,10 +164,7 @@
               "default": 20
             },
             "icon_theme": {
-              "type": [
-                "string",
-                "null"
-              ],
+              "type": ["string", "null"],
               "default": null
             },
             "menu_draw_config": {
@@ -198,9 +177,7 @@
             }
           },
           "additionalProperties": false,
-          "required": [
-            "type"
-          ]
+          "required": ["type"]
         }
       ]
     },
@@ -221,10 +198,7 @@
         }
       },
       "additionalProperties": false,
-      "required": [
-        "index",
-        "widget"
-      ]
+      "required": ["index", "widget"]
     },
     "Config": {
       "type": "object",
@@ -234,12 +208,7 @@
         },
         "edge": {
           "type": "string",
-          "enum": [
-            "top",
-            "bottom",
-            "left",
-            "right"
-          ]
+          "enum": ["top", "bottom", "left", "right"]
         },
         "extra_trigger_size": {
           "$ref": "#/$defs/NumOrRelative"
@@ -249,12 +218,7 @@
         },
         "layer": {
           "type": "string",
-          "enum": [
-            "top",
-            "bottom",
-            "background",
-            "overlay"
-          ]
+          "enum": ["top", "bottom", "background", "overlay"]
         },
         "margins": {
           "$ref": "#/$defs/Margins"
@@ -263,10 +227,7 @@
           "$ref": "#/$defs/MonitorSpecifier"
         },
         "name": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "pin_key": {
           "type": "integer",
@@ -280,16 +241,8 @@
           "type": "boolean"
         },
         "position": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "enum": [
-            "top",
-            "bottom",
-            "left",
-            "right"
-          ]
+          "type": ["string", "null"],
+          "enum": ["top", "bottom", "left", "right"]
         },
         "preview_size": {
           "$ref": "#/$defs/NumOrRelative"
@@ -329,12 +282,7 @@
     },
     "Curve": {
       "type": "string",
-      "enum": [
-        "linear",
-        "ease-quad",
-        "ease-cubic",
-        "ease-expo"
-      ]
+      "enum": ["linear", "ease-quad", "ease-cubic", "ease-expo"]
     },
     "Group": {
       "type": "object",
@@ -369,17 +317,11 @@
     },
     "HeaderMenuAlign": {
       "type": "string",
-      "enum": [
-        "left",
-        "right"
-      ]
+      "enum": ["left", "right"]
     },
     "HeaderMenuStack": {
       "type": "string",
-      "enum": [
-        "header_top",
-        "menu_top"
-      ]
+      "enum": ["header_top", "menu_top"]
     },
     "KeyEventMap": {
       "type": "object",
@@ -424,10 +366,7 @@
         },
         "margin": {
           "type": "array",
-          "default": [
-            12,
-            12
-          ],
+          "default": [12, 12],
           "items": {
             "type": "integer",
             "format": "int32"
@@ -436,10 +375,7 @@
           "minItems": 2
         },
         "marker_color": {
-          "type": [
-            "string",
-            "null"
-          ],
+          "type": ["string", "null"],
           "default": "#00000000"
         },
         "marker_size": {
@@ -485,10 +421,7 @@
       "additionalProperties": false
     },
     "NumOrRelative": {
-      "type": [
-        "number",
-        "string"
-      ],
+      "type": ["number", "string"],
       "anyOf": [
         {
           "description": "absolute number",
@@ -529,9 +462,7 @@
             }
           },
           "additionalProperties": false,
-          "required": [
-            "type"
-          ]
+          "required": ["type"]
         }
       ]
     },
@@ -573,27 +504,19 @@
               "$ref": "#/$defs/Curve"
             },
             "device": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": ["string", "null"]
             },
             "mute_color": {
               "type": "string",
               "default": "#00000000"
             },
             "mute_text_color": {
-              "type": [
-                "string",
-                "null"
-              ],
+              "type": ["string", "null"],
               "default": "#00000000"
             }
           },
           "additionalProperties": false,
-          "required": [
-            "type"
-          ]
+          "required": ["type"]
         },
         {
           "type": "object",
@@ -606,27 +529,19 @@
               "$ref": "#/$defs/Curve"
             },
             "device": {
-              "type": [
-                "string",
-                "null"
-              ]
+              "type": ["string", "null"]
             },
             "mute_color": {
               "type": "string",
               "default": "#00000000"
             },
             "mute_text_color": {
-              "type": [
-                "string",
-                "null"
-              ],
+              "type": ["string", "null"],
               "default": "#00000000"
             }
           },
           "additionalProperties": false,
-          "required": [
-            "type"
-          ]
+          "required": ["type"]
         },
         {
           "type": "object",
@@ -636,17 +551,12 @@
               "const": "backlight"
             },
             "device": {
-              "type": [
-                "string",
-                "null"
-              ],
+              "type": ["string", "null"],
               "default": null
             }
           },
           "additionalProperties": false,
-          "required": [
-            "type"
-          ]
+          "required": ["type"]
         },
         {
           "type": "object",
@@ -660,10 +570,7 @@
             },
             "interval_update": {
               "type": "array",
-              "default": [
-                0,
-                ""
-              ],
+              "default": [0, ""],
               "maxItems": 2,
               "minItems": 2,
               "prefixItems": [
@@ -678,17 +585,12 @@
               ]
             },
             "on_change": {
-              "type": [
-                "string",
-                "null"
-              ],
+              "type": ["string", "null"],
               "default": "{float:2,100}"
             }
           },
           "additionalProperties": false,
-          "required": [
-            "type"
-          ]
+          "required": ["type"]
         }
       ]
     },
@@ -709,9 +611,7 @@
             }
           },
           "additionalProperties": false,
-          "required": [
-            "type"
-          ]
+          "required": ["type"]
         },
         {
           "type": "object",
@@ -728,9 +628,7 @@
             }
           },
           "additionalProperties": false,
-          "required": [
-            "type"
-          ]
+          "required": ["type"]
         },
         {
           "type": "object",
@@ -740,10 +638,7 @@
               "const": "cpu"
             },
             "core": {
-              "type": [
-                "integer",
-                "null"
-              ],
+              "type": ["integer", "null"],
               "format": "uint",
               "default": null,
               "minimum": 0
@@ -756,9 +651,7 @@
             }
           },
           "additionalProperties": false,
-          "required": [
-            "type"
-          ]
+          "required": ["type"]
         },
         {
           "type": "object",
@@ -775,9 +668,7 @@
             }
           },
           "additionalProperties": false,
-          "required": [
-            "type"
-          ]
+          "required": ["type"]
         },
         {
           "type": "object",
@@ -798,9 +689,7 @@
             }
           },
           "additionalProperties": false,
-          "required": [
-            "type"
-          ]
+          "required": ["type"]
         },
         {
           "type": "object",
@@ -819,11 +708,7 @@
             }
           },
           "additionalProperties": false,
-          "required": [
-            "type",
-            "update_interval",
-            "cmd"
-          ]
+          "required": ["type", "update_interval", "cmd"]
         }
       ]
     },
@@ -841,10 +726,7 @@
               "default": "%Y-%m-%d %H:%M:%S"
             },
             "time_zone": {
-              "type": [
-                "string",
-                "null"
-              ],
+              "type": ["string", "null"],
               "default": null
             },
             "update_interval": {
@@ -855,9 +737,7 @@
             }
           },
           "additionalProperties": false,
-          "required": [
-            "type"
-          ]
+          "required": ["type"]
         },
         {
           "type": "object",
@@ -883,10 +763,7 @@
             }
           },
           "additionalProperties": false,
-          "required": [
-            "type",
-            "update_with_interval_ms"
-          ]
+          "required": ["type", "update_with_interval_ms"]
         }
       ]
     },
@@ -897,7 +774,7 @@
           "properties": {
             "type": {
               "type": "string",
-              "const": "btn"
+              "enum": ["btn"]
             },
             "border_color": {
               "type": "string",
@@ -923,28 +800,21 @@
             }
           },
           "additionalProperties": false,
-          "required": [
-            "type",
-            "thickness",
-            "length"
-          ]
+          "required": ["type", "thickness", "length"]
         },
         {
           "type": "object",
           "properties": {
             "type": {
               "type": "string",
-              "const": "slider"
+              "enum": ["slider"]
             },
             "bg_color": {
               "type": "string",
               "default": "#00000000"
             },
             "bg_text_color": {
-              "type": [
-                "string",
-                "null"
-              ],
+              "type": ["string", "null"],
               "default": "#00000000"
             },
             "border_color": {
@@ -961,10 +831,7 @@
               "default": "#00000000"
             },
             "fg_text_color": {
-              "type": [
-                "string",
-                "null"
-              ],
+              "type": ["string", "null"],
               "default": "#00000000"
             },
             "length": {
@@ -992,18 +859,14 @@
             }
           },
           "additionalProperties": false,
-          "required": [
-            "type",
-            "thickness",
-            "length"
-          ]
+          "required": ["type", "thickness", "length"]
         },
         {
           "type": "object",
           "properties": {
             "type": {
               "type": "string",
-              "const": "wrap-box"
+              "enum": ["wrap-box"]
             },
             "align": {
               "$ref": "#/$defs/Align"
@@ -1024,16 +887,14 @@
             }
           },
           "additionalProperties": false,
-          "required": [
-            "type"
-          ]
+          "required": ["type"]
         },
         {
           "type": "object",
           "properties": {
             "type": {
               "type": "string",
-              "const": "workspace"
+              "enum": ["workspace"]
             },
             "active_color": {
               "type": "string",
@@ -1061,10 +922,7 @@
               "default": 5
             },
             "hover_color": {
-              "type": [
-                "string",
-                "null"
-              ],
+              "type": ["string", "null"],
               "default": "#00000000"
             },
             "invert_direction": {
@@ -1075,10 +933,7 @@
               "$ref": "#/$defs/NumOrRelative"
             },
             "output_name": {
-              "type": [
-                "string",
-                "null"
-              ],
+              "type": ["string", "null"],
               "default": null
             },
             "pop_duration": {
@@ -1101,12 +956,7 @@
             }
           },
           "additionalProperties": false,
-          "required": [
-            "type",
-            "thickness",
-            "length",
-            "preset"
-          ]
+          "required": ["type", "thickness", "length", "preset"]
         }
       ]
     },
@@ -1114,10 +964,7 @@
       "oneOf": [
         {
           "type": "string",
-          "enum": [
-            "hyprland",
-            "niri"
-          ]
+          "enum": ["hyprland", "niri"]
         },
         {
           "type": "object",

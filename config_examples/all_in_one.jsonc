@@ -1,0 +1,41 @@
+{
+  "$schema": "./schema.json",
+  "ensure_load_group": ["group_example_1", "g2"],
+  "groups": [
+    {
+      "name": "group_example_1",
+      "widgets": [
+        {
+          "name": "widget_base_example",
+          "edge": "top",
+          "position": "left",
+          "layer": "overlay",
+          "monitor": 0, // or "eDP-1", or "*", or ["eDP-1", "HDMI-A-1"]
+          "extra_trigger_size": 1, // or "10%"
+          "preview_size": 20, // or "100%"
+          "animation_curve": "ease-expo",
+          "transition_duration": 300,
+          "margins": {
+            "top": 0,
+            "left": 0,
+            "bottom": 0,
+            "right": 0,
+          },
+          "ignore_exclusive": false,
+          "pinnable": true,
+          "pin_with_key": true,
+          "pin_key": 274, // run `way-edges` with `--mouse-debug`, then click on any widget to get the key printed in log
+          "widget": {
+            // this can be `btn`, `slider`, `wrap-box`, `workspace`.
+            // the lsp completion might not show them all, but once you write it, the rest property completion should work
+            "type": "btn",
+          },
+        },
+      ],
+    },
+    {
+      "name": "g2",
+      "widgets": [],
+    },
+  ],
+}

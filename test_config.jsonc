@@ -1,0 +1,15 @@
+{
+  "$schema": "./test_schema.json",
+  "fff": "a",
+  "groups": [
+    {
+      "widgets": [
+        {
+          "widget": {
+            "type": "",
+          },
+        },
+      ],
+    },
+  ],
+}

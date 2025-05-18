@@ -1,0 +1,14 @@
+{
+  "$schema": "./schema.json",
+  "ensure_load_group": ["g1", "g2"],
+  "groups": [
+    {
+      "name": "g1",
+      "widgets": []
+    },
+    {
+      "name": "g2",
+      "widgets": []
+    }
+  ]
+}
