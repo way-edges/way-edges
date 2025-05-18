@@ -1,9 +1,9 @@
-use cosmic_text::Color;
+use cosmic_text::{Color, FamilyOwned};
 use educe::Educe;
 use serde::Deserialize;
 use util::color::COLOR_WHITE;
 
-use super::super::common;
+use super::super::common::{self, dt_family_owned, FamilyOwnedRef};
 use super::Align;
 
 #[derive(Debug, Deserialize, Default, Clone)]
@@ -114,8 +114,9 @@ fn dt_menu_text_color() -> Color {
 #[derive(Educe, Deserialize, Clone)]
 #[educe(Debug)]
 pub struct TrayConfig {
-    #[serde(default)]
-    pub font_family: Option<String>,
+    #[serde(default = "dt_family_owned")]
+    #[serde(with = "FamilyOwnedRef")]
+    pub font_family: FamilyOwned,
     #[serde(default)]
     pub icon_theme: Option<String>,
     #[serde(default = "dt_icon_size")]

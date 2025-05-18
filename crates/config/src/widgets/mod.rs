@@ -126,4 +126,32 @@ pub mod common {
     {
         serde_jsonrc::from_value::<T>(v).map_err(|e| format!("Fail to parse config: {e}"))
     }
+
+    use cosmic_text::FamilyOwned;
+
+    #[derive(Deserialize)]
+    #[serde(remote = "FamilyOwned")]
+    #[serde(rename_all = "kebab-case")]
+    pub enum FamilyOwnedRef {
+        Serif,
+        SansSerif,
+        Cursive,
+        Fantasy,
+        Monospace,
+        #[serde(untagged)]
+        Name(#[serde(deserialize_with = "deserialize_smol_str")] smol_str::SmolStr),
+    }
+
+    pub fn dt_family_owned() -> FamilyOwned {
+        FamilyOwned::Monospace
+    }
+
+    // deserialize SmolStr
+    fn deserialize_smol_str<'de, D>(d: D) -> Result<smol_str::SmolStr, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(d)?;
+        Ok(s.into())
+    }
 }

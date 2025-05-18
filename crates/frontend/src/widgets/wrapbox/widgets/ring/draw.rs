@@ -1,7 +1,7 @@
 use cairo::{Format, ImageSurface};
 
 use config::widgets::wrapbox::ring::RingConfig;
-use cosmic_text::Color;
+use cosmic_text::{Color, FamilyOwned};
 use util::color::cairo_set_color;
 use util::draw::{draw_fan, new_surface};
 use util::template::arg::{TemplateArgFloatParser, TEMPLATE_ARG_FLOAT};
@@ -26,7 +26,7 @@ pub struct RingDrawer {
     suffix: Option<Template>,
     suffix_hide: bool,
 
-    font_family: Option<String>,
+    font_family: FamilyOwned,
     font_size: i32,
 
     pub animation: ToggleAnimationRc,
@@ -67,7 +67,7 @@ impl RingDrawer {
     ) -> (Option<ImageSurface>, Option<ImageSurface>) {
         // let layout = self.make_layout();
         let text_conf = TextConfig::new(
-            self.font_family.as_deref(),
+            self.font_family.as_family(),
             None,
             self.fg_color,
             self.font_size,

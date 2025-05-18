@@ -20,7 +20,7 @@ impl<'a> HeaderDrawArg<'a> {
     pub fn create_from_config(conf: &'a TrayConfig) -> Self {
         let draw_config = &conf.header_draw_config;
         let text_conf = TextConfig::new(
-            conf.font_family.as_deref(),
+            conf.font_family.as_family(),
             None,
             draw_config.text_color,
             draw_config.font_pixel_height,
@@ -84,7 +84,7 @@ impl<'a> MenuDrawArg<'a> {
     pub fn create_from_config(conf: &'a TrayConfig) -> Self {
         let draw_config = &conf.menu_draw_config;
         let text_conf = TextConfig::new(
-            conf.font_family.as_deref(),
+            conf.font_family.as_family(),
             None,
             draw_config.text_color,
             draw_config.font_pixel_height,

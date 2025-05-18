@@ -20,3 +20,5 @@ serde_jsonrc.workspace = true
 serde.workspace = true
 
 xdg = "2.5"
+
+smol_str = "0.2.2"

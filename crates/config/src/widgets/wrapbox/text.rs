@@ -1,9 +1,9 @@
-use cosmic_text::Color;
+use cosmic_text::{Color, FamilyOwned};
 use educe::Educe;
 use serde::Deserialize;
 use util::color::COLOR_BLACK;
 
-use crate::widgets::common::{self};
+use crate::widgets::common::{self, dt_family_owned, FamilyOwnedRef};
 
 #[derive(Educe, Deserialize, Clone)]
 #[educe(Debug)]
@@ -36,8 +36,9 @@ pub struct TextConfig {
     pub fg_color: Color,
     #[serde(default = "dt_font_size")]
     pub font_size: i32,
-    #[serde(default)]
-    pub font_family: Option<String>,
+    #[serde(default = "dt_family_owned")]
+    #[serde(with = "FamilyOwnedRef")]
+    pub font_family: FamilyOwned,
 
     pub preset: TextPreset,
 }

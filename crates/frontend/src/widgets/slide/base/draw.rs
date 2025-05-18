@@ -75,7 +75,7 @@ fn draw_text(progress: f64, progress_thickness: i32) -> ImageSurface {
     util::text::draw_text(
         &text,
         TextConfig::new(
-            Some(util::text::slide_font::FAMILY_NAME),
+            cosmic_text::Family::Name(util::text::slide_font::FAMILY_NAME),
             Some(500),
             COLOR_BLACK,
             height,

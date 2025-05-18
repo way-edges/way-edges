@@ -1,6 +1,6 @@
 use crate::common::Curve;
-use crate::widgets::common::color_translate;
-use cosmic_text::Color;
+use crate::widgets::common::{color_translate, dt_family_owned, FamilyOwnedRef};
+use cosmic_text::{Color, FamilyOwned};
 use serde::{Deserialize, Deserializer};
 use util::color::parse_color;
 use util::template::{
@@ -84,8 +84,9 @@ pub struct RingConfigShadow {
     #[serde(default)]
     pub suffix_hide: bool,
 
-    #[serde(default)]
-    pub font_family: Option<String>,
+    #[serde(default = "dt_family_owned")]
+    #[serde(with = "FamilyOwnedRef")]
+    pub font_family: FamilyOwned,
     #[serde(default)]
     pub font_size: Option<i32>,
 
@@ -145,7 +146,7 @@ pub struct RingConfig {
     pub suffix: Option<Template>,
     pub suffix_hide: bool,
 
-    pub font_family: Option<String>,
+    pub font_family: FamilyOwned,
     pub font_size: i32,
 
     pub preset: RingPreset,

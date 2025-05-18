@@ -1,7 +1,7 @@
 use cairo::ImageSurface;
 
 use config::widgets::wrapbox::text::TextConfig;
-use cosmic_text::Color;
+use cosmic_text::{Color, FamilyOwned};
 use util::text::draw_text;
 
 use super::TextCtx;
@@ -10,7 +10,7 @@ use crate::widgets::wrapbox::box_traits::BoxedWidget;
 #[derive(Debug)]
 pub struct TextDrawer {
     pub fg_color: Color,
-    pub font_family: Option<String>,
+    pub font_family: FamilyOwned,
     pub font_pixel_size: i32,
 }
 impl TextDrawer {
@@ -23,7 +23,7 @@ impl TextDrawer {
     }
     fn draw_text(&self, text: &str) -> ImageSurface {
         let text_conf = util::text::TextConfig::new(
-            self.font_family.as_deref(),
+            self.font_family.as_family(),
             None,
             self.fg_color,
             self.font_pixel_size,
