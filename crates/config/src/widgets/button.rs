@@ -9,7 +9,7 @@ use way_edges_derive::{const_property, GetSize};
 use schemars::Schema;
 use serde_json::Value;
 
-#[derive(Educe, Deserialize, GetSize, JsonSchema)]
+#[derive(Educe, Deserialize, GetSize, JsonSchema, Clone)]
 #[educe(Debug)]
 #[schemars(transform = BtnConfig_generate_defs)]
 #[schemars(deny_unknown_fields)]

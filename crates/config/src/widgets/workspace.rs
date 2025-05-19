@@ -2,15 +2,14 @@ use crate::common::Curve;
 
 use super::common::{self, CommonSize};
 use cosmic_text::Color;
+use schemars::Schema;
 use schemars::{json_schema, JsonSchema};
 use serde::{Deserialize, Deserializer};
 use serde_json::Value;
 use util::color::parse_color;
 use way_edges_derive::{const_property, GetSize};
 
-use schemars::Schema;
-
-#[derive(Debug, Deserialize, GetSize, JsonSchema)]
+#[derive(Debug, Deserialize, GetSize, JsonSchema, Clone)]
 #[schemars(deny_unknown_fields)]
 #[schemars(transform = WorkspaceConfig_generate_defs)]
 #[const_property("type", "workspace")]
@@ -84,7 +83,7 @@ fn dt_active_color() -> Color {
     parse_color("#aaa").unwrap()
 }
 
-#[derive(Debug, JsonSchema)]
+#[derive(Debug, JsonSchema, Clone)]
 #[schemars(transform = WorkspacePreset_generate_defs)]
 pub enum WorkspacePreset {
     Hyprland,
@@ -126,7 +125,7 @@ impl<'de> Deserialize<'de> for WorkspacePreset {
     }
 }
 
-#[derive(Debug, Deserialize, JsonSchema)]
+#[derive(Debug, Deserialize, JsonSchema, Clone)]
 #[schemars(deny_unknown_fields)]
 #[schemars(transform = NiriConf_generate_defs)]
 #[const_property("type", "niri")]

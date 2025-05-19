@@ -1,6 +1,8 @@
 use crate::common::Curve;
-use crate::widgets::common::{color_translate, schema_color, schema_optional_template};
-use cosmic_text::Color;
+use crate::widgets::common::{
+    color_translate, dt_family_owned, schema_color, schema_optional_template, FamilyOwnedRef,
+};
+use cosmic_text::{Color, FamilyOwned};
 use schemars::JsonSchema;
 use serde::{Deserialize, Deserializer};
 use util::color::parse_color;
@@ -9,7 +11,7 @@ use util::template::{
     base::{Template, TemplateProcesser},
 };
 
-#[derive(Debug, Deserialize, JsonSchema)]
+#[derive(Debug, Deserialize, JsonSchema, Clone)]
 #[serde(rename_all = "lowercase", tag = "type")]
 #[schemars(deny_unknown_fields)]
 pub enum RingPreset {
@@ -86,8 +88,9 @@ pub struct RingConfigShadow {
     #[serde(default)]
     pub suffix_hide: bool,
 
-    #[serde(default)]
-    pub font_family: Option<String>,
+    #[serde(default = "dt_family_owned")]
+    #[serde(with = "FamilyOwnedRef")]
+    pub font_family: FamilyOwned,
     #[serde(default)]
     pub font_size: Option<i32>,
 
@@ -131,7 +134,7 @@ impl From<RingConfigShadow> for RingConfig {
     }
 }
 
-#[derive(Debug, Deserialize, JsonSchema)]
+#[derive(Debug, Deserialize, JsonSchema, Clone)]
 #[serde(from = "RingConfigShadow")]
 #[schemars(deny_unknown_fields)]
 pub struct RingConfig {
@@ -152,7 +155,9 @@ pub struct RingConfig {
     pub suffix: Option<Template>,
     pub suffix_hide: bool,
 
-    pub font_family: Option<String>,
+    #[serde(default = "dt_family_owned")]
+    #[serde(with = "FamilyOwnedRef")]
+    pub font_family: FamilyOwned,
     pub font_size: i32,
 
     pub preset: RingPreset,

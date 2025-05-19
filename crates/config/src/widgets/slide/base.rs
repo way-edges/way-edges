@@ -14,7 +14,7 @@ use schemars::Schema;
 use serde_json::Value;
 
 // TODO: serde_valid
-#[derive(Educe, Deserialize, GetSize, JsonSchema)]
+#[derive(Educe, Deserialize, GetSize, JsonSchema, Clone)]
 #[educe(Debug)]
 #[schemars(deny_unknown_fields)]
 #[schemars(transform = SlideConfig_generate_defs)]

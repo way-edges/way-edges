@@ -1,4 +1,4 @@
-use std::{borrow::Cow, collections::HashMap, fmt::Debug};
+use std::{borrow::Cow, collections::HashMap, fmt::Debug, rc::Rc};
 
 use downcast_rs::Downcast;
 
@@ -32,13 +32,13 @@ impl Default for TemplateProcesser {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum TemplateContent {
     String(String),
-    Template(Box<dyn TemplateArgParser>),
+    Template(Rc<dyn TemplateArgParser>),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Template {
     pub contents: Vec<TemplateContent>,
 }
@@ -80,7 +80,8 @@ impl Template {
                 continue;
             };
 
-            contents.push(TemplateContent::Template(parser));
+            // NOTE: INTO RC
+            contents.push(TemplateContent::Template(parser.into()));
         }
 
         if record_index < raw.len() {
@@ -215,7 +216,7 @@ mod test {
     use std::str::FromStr;
 
     template_parser!(, Preset, "preset");
-    #[derive(Debug)]
+    #[derive(Debug, Clone)]
     pub struct PresetParser;
     impl FromStr for PresetParser {
         type Err = String;

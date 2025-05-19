@@ -10,7 +10,7 @@ pub mod slide;
 pub mod workspace;
 pub mod wrapbox;
 
-#[derive(Debug, Deserialize, JsonSchema)]
+#[derive(Debug, Deserialize, JsonSchema, Clone)]
 #[serde(rename_all = "kebab-case", tag = "type")]
 pub enum Widget {
     Btn(BtnConfig),
@@ -24,14 +24,14 @@ pub mod common {
 
     use cosmic_text::Color;
     use schemars::JsonSchema;
-    use serde::{self, Deserialize, Deserializer};
+    use serde::{self, Deserialize, Deserializer, Serialize};
     use serde_jsonrc::Value;
     use smithay_client_toolkit::shell::wlr_layer::Anchor;
     use util::{color::parse_color, shell::shell_cmd_non_block};
 
     use crate::common::NumOrRelative;
 
-    #[derive(Debug, Deserialize, JsonSchema)]
+    #[derive(Debug, Deserialize, JsonSchema, Clone)]
     pub struct CommonSize {
         pub thickness: NumOrRelative,
         pub length: NumOrRelative,
@@ -48,7 +48,7 @@ pub mod common {
         }
     }
 
-    #[derive(Debug, Default, JsonSchema, Deserialize)]
+    #[derive(Debug, Default, JsonSchema, Deserialize, Clone)]
     pub struct KeyEventMap(HashMap<u32, String>);
     impl KeyEventMap {
         pub fn call(&self, k: u32) {
@@ -128,5 +128,45 @@ pub mod common {
             "type": ["string", "null"],
             "default": "{float:2,100}",
         })
+    }
+
+    use cosmic_text::FamilyOwned;
+
+    #[derive(Serialize, Deserialize, JsonSchema)]
+    #[serde(remote = "FamilyOwned")]
+    #[serde(rename_all = "kebab-case")]
+    pub enum FamilyOwnedRef {
+        Serif,
+        SansSerif,
+        Cursive,
+        Fantasy,
+        Monospace,
+        #[serde(untagged)]
+        Name(
+            #[serde(deserialize_with = "deserialize_smol_str")]
+            #[serde(serialize_with = "serialize_smol_str")]
+            #[schemars(with = "String")]
+            smol_str::SmolStr,
+        ),
+    }
+
+    pub fn dt_family_owned() -> FamilyOwned {
+        FamilyOwned::Monospace
+    }
+
+    // deserialize SmolStr
+    fn deserialize_smol_str<'de, D>(d: D) -> Result<smol_str::SmolStr, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(d)?;
+        Ok(s.into())
+    }
+
+    fn serialize_smol_str<S>(s: &smol_str::SmolStr, d: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        String::serialize(&s.to_string(), d)
     }
 }

@@ -36,7 +36,7 @@ impl Default for OutlookMargins {
         }
     }
 }
-#[derive(Debug, Deserialize, JsonSchema)]
+#[derive(Debug, Deserialize, JsonSchema, Clone)]
 #[schemars(deny_unknown_fields)]
 pub struct OutlookWindowConfig {
     #[serde(default)]
@@ -70,10 +70,23 @@ fn dt_border_width() -> i32 {
     15
 }
 
-#[derive(Debug, Deserialize, JsonSchema)]
+#[derive(Debug, Deserialize, JsonSchema, Clone)]
+pub struct OutlookBoardConfig {
+    #[serde(default)]
+    pub margins: OutlookMargins,
+    #[serde(default = "dt_color")]
+    #[serde(deserialize_with = "super::common::color_translate")]
+    #[schemars(schema_with = "super::common::schema_color")]
+    pub color: Color,
+    #[serde(default = "dt_radius")]
+    pub border_radius: i32,
+}
+
+#[derive(Debug, Deserialize, Clone, JsonSchema)]
 #[serde(rename_all = "snake_case", tag = "type")]
 pub enum Outlook {
     Window(OutlookWindowConfig),
+    Board(OutlookBoardConfig),
 }
 impl Default for Outlook {
     fn default() -> Self {
@@ -156,7 +169,7 @@ impl Align {
 }
 
 // =================================== WIDGETS
-#[derive(Debug, Deserialize, JsonSchema)]
+#[derive(Debug, Deserialize, JsonSchema, Clone)]
 #[serde(rename_all = "lowercase", tag = "type")]
 pub enum BoxedWidget {
     Ring(RingConfig),
@@ -164,7 +177,7 @@ pub enum BoxedWidget {
     Tray(TrayConfig),
 }
 
-#[derive(Debug, Deserialize, JsonSchema)]
+#[derive(Debug, Deserialize, JsonSchema, Clone)]
 #[schemars(deny_unknown_fields)]
 pub struct BoxedWidgetConfig {
     pub index: [isize; 2],
@@ -175,7 +188,7 @@ use schemars::Schema;
 use serde_json::Value;
 
 // =================================== FINAL
-#[derive(Debug, Deserialize, JsonSchema)]
+#[derive(Debug, Deserialize, JsonSchema, Clone)]
 #[schemars(deny_unknown_fields)]
 #[schemars(transform = BoxConfig_generate_defs)]
 #[const_property("type", "wrap-box")]

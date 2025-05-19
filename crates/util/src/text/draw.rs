@@ -97,15 +97,15 @@ fn measure_text_size(
 
 #[derive(Debug, Clone, Copy)]
 pub struct TextConfig<'a> {
-    pub family: Option<Family<'a>>,
+    pub family: Family<'a>,
     pub weight: Option<Weight>,
     pub color: Color,
     pub size: i32,
 }
 impl<'a> TextConfig<'a> {
-    pub fn new(family: Option<&'a str>, weight: Option<u16>, color: Color, size: i32) -> Self {
+    pub fn new(family: Family<'a>, weight: Option<u16>, color: Color, size: i32) -> Self {
         Self {
-            family: family.map(Family::Name),
+            family,
             weight: weight.map(Weight),
             color,
             size,
@@ -127,9 +127,7 @@ fn draw_text_inner(
     if let Some(weight) = config.weight {
         attrs = attrs.weight(weight);
     }
-    if let Some(family) = config.family {
-        attrs = attrs.family(family);
-    }
+    attrs = attrs.family(config.family);
 
     buffer.set_text(font_system, text, &attrs, Shaping::Advanced);
     buffer.shape_until_scroll(font_system, true);

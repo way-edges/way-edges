@@ -93,8 +93,9 @@ impl App {
         let Some(Some(group)) = self.groups.get_mut(gn) else {
             return;
         };
-        if let Some(w) = group.get_widget(wn) {
-            w.lock().unwrap().toggle_pin(self)
+        if let Some(ws) = group.get_widget(wn) {
+            ws.into_iter()
+                .for_each(|w| w.lock().unwrap().toggle_pin(self));
         }
     }
 
@@ -136,36 +137,53 @@ impl App {
 }
 
 pub struct Group {
-    named_widgets: HashMap<String, Arc<Mutex<Widget>>>,
-    #[allow(dead_code)]
-    unnamed_widgets: Box<[Arc<Mutex<Widget>>]>,
+    // the `None` is for unnamed widgets
+    map: HashMap<Option<String>, Vec<Arc<Mutex<Widget>>>>,
 }
 impl Group {
     fn init_group(widgets_config: Vec<config::Config>, app: &App) -> Result<Self, String> {
-        let mut named = HashMap::new();
-        let mut unnamed = Vec::new();
+        let mut map: HashMap<Option<String>, Vec<Arc<Mutex<Widget>>>> = HashMap::new();
 
         for conf in widgets_config.into_iter() {
             let name = conf.name.clone();
-            let ctx = Widget::init_widget(conf, app)?;
-
-            if let Some(name) = name {
-                named.insert(name, ctx);
-            } else {
-                unnamed.push(ctx);
+            let confs: Vec<(config::Config, WlOutput)> = match conf.monitor.clone() {
+                MonitorSpecifier::ID(index) => app
+                    .output_state
+                    .outputs()
+                    .nth(index)
+                    .map(|output| vec![(conf, output)])
+                    .unwrap_or(vec![]),
+                MonitorSpecifier::Names(items) => app
+                    .output_state
+                    .outputs()
+                    .filter_map(|out| {
+                        app.output_state
+                            .info(&out)
+                            .and_then(|info| info.name)
+                            .filter(|output_name| items.contains(output_name))
+                            .is_some()
+                            .then(|| (conf.clone(), out))
+                    })
+                    .collect(),
+                MonitorSpecifier::All => app
+                    .output_state
+                    .outputs()
+                    .map(|out| (conf.clone(), out))
+                    .collect(),
+                _ => unreachable!(),
             };
+
+            for (conf, output) in confs.into_iter() {
+                let ctx = Widget::init_widget(conf, output, app)?;
+                // TODO: CLONE
+                map.entry(name.clone()).or_default().push(ctx.clone());
+            }
         }
 
-        named.shrink_to_fit();
-        let unnamed = unnamed.into_boxed_slice();
-
-        Ok(Self {
-            named_widgets: named,
-            unnamed_widgets: unnamed,
-        })
+        Ok(Self { map })
     }
-    fn get_widget(&self, name: &str) -> Option<Arc<Mutex<Widget>>> {
-        self.named_widgets.get(name).cloned()
+    fn get_widget(&self, name: &str) -> Option<Vec<Arc<Mutex<Widget>>>> {
+        self.map.get(&Some(name.to_string())).cloned()
     }
 }
 
@@ -417,8 +435,12 @@ impl Widget {
         }
     }
 
-    fn init_widget(mut conf: config::Config, app: &App) -> Result<Arc<Mutex<Self>>, String> {
-        let mut builder = WidgetBuilder::new(&mut conf, app)?;
+    fn init_widget(
+        mut conf: config::Config,
+        wl_output: WlOutput,
+        app: &App,
+    ) -> Result<Arc<Mutex<Self>>, String> {
+        let mut builder = WidgetBuilder::new(&mut conf, wl_output, app)?;
         let w = init_widget(&mut conf, &mut builder);
         let s = builder.build(conf, w);
 
@@ -726,18 +748,23 @@ impl WidgetBuilder<'_> {
     }
 }
 impl<'a> WidgetBuilder<'a> {
-    fn new(conf: &mut config::Config, app: &'a App) -> Result<WidgetBuilder<'a>, String> {
-        let output = match &conf.monitor {
-            MonitorSpecifier::ID(index) => app.output_state.outputs().nth(*index),
-            MonitorSpecifier::Name(name) => app.output_state.outputs().find(|out| {
-                app.output_state
-                    .info(out)
-                    .and_then(|info| info.name)
-                    .filter(|output_name| output_name == name)
-                    .is_some()
-            }),
-        }
-        .ok_or(format!("output not found: {:?}", conf.monitor))?;
+    fn new(
+        conf: &mut config::Config,
+        output: WlOutput,
+        app: &'a App,
+    ) -> Result<WidgetBuilder<'a>, String> {
+        // let output = match &conf.monitor {
+        //     MonitorSpecifier::ID(index) => app.output_state.outputs().nth(*index),
+        //     MonitorSpecifier::Name(name) => app.output_state.outputs().find(|out| {
+        //         app.output_state
+        //             .info(out)
+        //             .and_then(|info| info.name)
+        //             .filter(|output_name| output_name == name)
+        //             .is_some()
+        //     }),
+        //     _ => unreachable!(),
+        // }
+        // .ok_or(format!("output not found: {:?}", conf.monitor))?;
         let monitor = app.output_state.info(&output).unwrap();
         let output_size = monitor.modes[0].dimensions;
         conf.resolve_relative(output_size);

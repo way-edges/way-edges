@@ -1,10 +1,10 @@
-use cosmic_text::Color;
+use cosmic_text::{Color, FamilyOwned};
 use educe::Educe;
 use schemars::JsonSchema;
 use serde::Deserialize;
 use util::color::COLOR_WHITE;
 
-use super::super::common;
+use super::super::common::{self, dt_family_owned, FamilyOwnedRef};
 use super::Align;
 
 #[derive(Debug, Deserialize, Default, Clone, JsonSchema)]
@@ -31,7 +31,7 @@ impl HeaderMenuAlign {
     }
 }
 
-#[derive(Debug, Deserialize, JsonSchema)]
+#[derive(Debug, Deserialize, JsonSchema, Clone)]
 #[schemars(deny_unknown_fields)]
 pub struct HeaderDrawConfig {
     #[serde(default = "dt_header_font_pixel_height")]
@@ -56,7 +56,7 @@ fn dt_header_text_color() -> Color {
     COLOR_WHITE
 }
 
-#[derive(Debug, Deserialize, JsonSchema)]
+#[derive(Debug, Deserialize, JsonSchema, Clone)]
 #[schemars(deny_unknown_fields)]
 pub struct MenuDrawConfig {
     #[serde(default = "dt_menu_margin")]
@@ -118,12 +118,13 @@ fn dt_menu_text_color() -> Color {
     COLOR_WHITE
 }
 
-#[derive(Educe, Deserialize, JsonSchema)]
+#[derive(Educe, Deserialize, JsonSchema, Clone)]
 #[educe(Debug)]
 #[schemars(deny_unknown_fields)]
 pub struct TrayConfig {
-    #[serde(default)]
-    pub font_family: Option<String>,
+    #[serde(default = "dt_family_owned")]
+    #[serde(with = "FamilyOwnedRef")]
+    pub font_family: FamilyOwned,
     #[serde(default)]
     pub icon_theme: Option<String>,
     #[serde(default = "dt_icon_size")]

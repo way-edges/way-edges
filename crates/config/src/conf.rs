@@ -1,4 +1,6 @@
-use schemars::JsonSchema;
+use schemars::{json_schema, JsonSchema};
+use std::collections::HashSet;
+
 use serde::Deserialize;
 use smithay_client_toolkit::shell::wlr_layer::{Anchor, Layer};
 
@@ -9,15 +11,130 @@ use super::common::{
     schema_optional_edge, NumOrRelative,
 };
 
-#[derive(Debug, Clone, Deserialize, JsonSchema)]
-#[serde(untagged)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum MonitorSpecifier {
     ID(usize),
+    Names(HashSet<String>),
+    All,
+
+    // this shall not be used for deserialization
     Name(String),
+}
+impl JsonSchema for MonitorSpecifier {
+    fn schema_name() -> std::borrow::Cow<'static, str> {
+        "MonitorSpecifier".into()
+    }
+
+    fn json_schema(_: &mut schemars::SchemaGenerator) -> schemars::Schema {
+        json_schema!({
+            "oneOf": [
+                {
+                    "type": "string",
+                    "enum": ["*"],
+                },
+                {
+                    "type": "number",
+                    "minimum": 0,
+                },
+                {
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                    },
+                }
+            ],
+        })
+    }
 }
 impl Default for MonitorSpecifier {
     fn default() -> Self {
         Self::ID(0)
+    }
+}
+impl<'de> Deserialize<'de> for MonitorSpecifier {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        struct MonitorSpecifierVisitor;
+        impl<'ae> serde::de::Visitor<'ae> for MonitorSpecifierVisitor {
+            type Value = MonitorSpecifier;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("a monitor ID or a list of monitor names")
+            }
+
+            fn visit_u64<E>(self, value: u64) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                Ok(MonitorSpecifier::ID(value as usize))
+            }
+
+            fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                if value == "*" {
+                    Ok(MonitorSpecifier::All)
+                } else {
+                    let mut hashset = HashSet::new();
+                    hashset.insert(value.to_string());
+                    Ok(MonitorSpecifier::Names(hashset))
+                }
+            }
+
+            fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+            where
+                A: serde::de::SeqAccess<'ae>,
+            {
+                let mut names = HashSet::new();
+                while let Some(value) = seq.next_element::<String>()? {
+                    names.insert(value);
+                }
+                Ok(MonitorSpecifier::Names(names))
+            }
+        }
+
+        deserializer.deserialize_any(MonitorSpecifierVisitor)
+    }
+}
+
+mod tests {
+
+    #[test]
+    fn test_monitor_specifier() {
+        use super::*;
+        use serde_jsonrc::json;
+
+        #[derive(Debug, Deserialize)]
+        struct TestConfig {
+            monitor: MonitorSpecifier,
+        }
+
+        let json_data = json!({
+            "monitor": 1,
+        });
+        let config: TestConfig = serde_jsonrc::from_value(json_data).unwrap();
+        assert_eq!(config.monitor, MonitorSpecifier::ID(1));
+
+        let json_data = json!({
+            "monitor": "*",
+        });
+        let config: TestConfig = serde_jsonrc::from_value(json_data).unwrap();
+        assert_eq!(config.monitor, MonitorSpecifier::All);
+
+        let json_data = json!({
+            "monitor": ["Monitor1", "Monitor2"],
+        });
+        let config: TestConfig = serde_jsonrc::from_value(json_data).unwrap();
+        assert_eq!(
+            config.monitor,
+            MonitorSpecifier::Names(HashSet::from_iter(vec![
+                "Monitor1".to_string(),
+                "Monitor2".to_string()
+            ]))
+        );
     }
 }
 
@@ -108,7 +225,7 @@ impl From<ConfigShadow> for Config {
     }
 }
 
-#[derive(Debug, Deserialize, JsonSchema)]
+#[derive(Debug, Deserialize, JsonSchema, Clone)]
 #[serde(from = "ConfigShadow")]
 #[schemars(deny_unknown_fields)]
 pub struct Config {

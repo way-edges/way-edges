@@ -11,7 +11,7 @@ use util::{
 
 use crate::{common::Curve, widgets::common::KeyEventMap};
 
-#[derive(Debug, Deserialize, JsonSchema)]
+#[derive(Debug, Deserialize, JsonSchema, Clone)]
 #[serde(rename_all = "snake_case", tag = "type")]
 pub enum Preset {
     Speaker(PulseAudioConfig),
@@ -25,7 +25,7 @@ impl Default for Preset {
     }
 }
 
-#[derive(Debug, Deserialize, JsonSchema)]
+#[derive(Debug, Deserialize, JsonSchema, Clone)]
 #[schemars(deny_unknown_fields)]
 pub struct PulseAudioConfig {
     #[serde(default = "default_mute_color")]
@@ -46,14 +46,14 @@ fn default_mute_color() -> Color {
     COLOR_BLACK
 }
 
-#[derive(Debug, Deserialize, JsonSchema)]
+#[derive(Debug, Deserialize, JsonSchema, Clone)]
 #[schemars(deny_unknown_fields)]
 pub struct BacklightConfig {
     #[serde(default)]
     pub device: Option<String>,
 }
 
-#[derive(Debug, Deserialize, Default, JsonSchema)]
+#[derive(Debug, Deserialize, Default, JsonSchema, Clone)]
 #[schemars(deny_unknown_fields)]
 pub struct CustomConfig {
     #[serde(default)]
