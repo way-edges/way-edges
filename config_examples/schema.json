@@ -54,7 +54,8 @@
               "default": "#00000000"
             },
             "font_family": {
-              "type": ["string", "null"]
+              "$ref": "#/$defs/FamilyOwned",
+              "default": "monospace"
             },
             "font_size": {
               "type": "integer",
@@ -120,8 +121,8 @@
               "default": "#00000000"
             },
             "font_family": {
-              "type": ["string", "null"],
-              "default": null
+              "$ref": "#/$defs/FamilyOwned",
+              "default": "monospace"
             },
             "font_size": {
               "type": "integer",
@@ -143,8 +144,8 @@
               "const": "tray"
             },
             "font_family": {
-              "type": ["string", "null"],
-              "default": null
+              "$ref": "#/$defs/FamilyOwned",
+              "default": "monospace"
             },
             "grid_align": {
               "$ref": "#/$defs/Align"
@@ -284,6 +285,16 @@
       "type": "string",
       "enum": ["linear", "ease-quad", "ease-cubic", "ease-expo"]
     },
+    "FamilyOwned": {
+      "oneOf": [
+        {
+          "enum": ["serif", "sans-serif", "cursive", "fantasy", "monospace"]
+        },
+        {
+          "type": "string"
+        }
+      ]
+    },
     "Group": {
       "type": "object",
       "properties": {
@@ -396,14 +407,22 @@
       "additionalProperties": false
     },
     "MonitorSpecifier": {
-      "anyOf": [
+      "oneOf": [
         {
-          "type": "integer",
-          "format": "uint",
+          "type": "string"
+        },
+        {
+          "enum": ["*"]
+        },
+        {
+          "type": "number",
           "minimum": 0
         },
         {
-          "type": "string"
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       ]
     },
@@ -463,8 +482,36 @@
           },
           "additionalProperties": false,
           "required": ["type"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "board"
+            }
+          },
+          "$ref": "#/$defs/OutlookBoardConfig",
+          "required": ["type"]
         }
       ]
+    },
+    "OutlookBoardConfig": {
+      "type": "object",
+      "properties": {
+        "border_radius": {
+          "type": "integer",
+          "format": "int32",
+          "default": 5
+        },
+        "color": {
+          "type": "string",
+          "default": "#00000000"
+        },
+        "margins": {
+          "$ref": "#/$defs/OutlookMargins"
+        }
+      }
     },
     "OutlookMargins": {
       "type": "object",
@@ -774,7 +821,7 @@
           "properties": {
             "type": {
               "type": "string",
-              "enum": ["btn"]
+              "const": "btn"
             },
             "border_color": {
               "type": "string",
@@ -807,7 +854,7 @@
           "properties": {
             "type": {
               "type": "string",
-              "enum": ["slider"]
+              "const": "slider"
             },
             "bg_color": {
               "type": "string",
@@ -866,7 +913,7 @@
           "properties": {
             "type": {
               "type": "string",
-              "enum": ["wrap-box"]
+              "const": "wrap-box"
             },
             "align": {
               "$ref": "#/$defs/Align"
@@ -894,7 +941,7 @@
           "properties": {
             "type": {
               "type": "string",
-              "enum": ["workspace"]
+              "const": "workspace"
             },
             "active_color": {
               "type": "string",
