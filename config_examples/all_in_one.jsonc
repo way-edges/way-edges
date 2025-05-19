@@ -84,6 +84,7 @@
           },
         },
         {
+          // ... other basic configs omitted here for brevity
           "widget": {
             "type": "workspace",
             "thickness": 20,
@@ -113,6 +114,7 @@
       "name": "g2",
       "widgets": [
         {
+          // ... other basic configs omitted here for brevity
           "widget": {
             "type": "wrap-box",
             "align": "center_left", // 9 positions: center_left, center_right, top_left, top_right, bottom_left, bottom_right, left_top, left_bottom, right_top, right_bottom
@@ -179,6 +181,72 @@
                     "type": "custom",
                     "cmd": "echo -n 0.5", // this is the command to run. The command should output a number between 0 and 1.
                     "update_interval": 1000, // ms
+                  },
+                },
+              },
+            ],
+          },
+        },
+        {
+          // ... other basic configs omitted here for brevity
+          "widget": {
+            "type": "wrap-box",
+            // ... other wrap-box configs omitted here for brevity
+            "widgets": [
+              {
+                "index": [-1, -1], // position in the grid layout. -1 means next available position.
+                "widget": {
+                  "type": "text",
+                  "fg_color": "#00000000",
+                  "font_family": "monospace",
+                  "font_size": 24,
+                  // "preset": {
+                  //   "type": "time",
+                  //   "format": "%Y-%m-%d %H:%M:%S",
+                  //   "time_zone": "uk", // null for local time
+                  //   "update_interval": 1000, // ms
+                  // },
+                  "preset": {
+                    "type": "custom",
+                    "update_with_interval_ms": [1000, "echo -n aaa"], // this is the command to run. The command should output a string.
+                  },
+                },
+              },
+            ],
+          },
+        },
+        {
+          // ... other basic configs omitted here for brevity
+          "widget": {
+            "type": "wrap-box",
+            // ... other wrap-box configs omitted here for brevity
+            "widgets": [
+              {
+                "index": [-1, -1], // position in the grid layout. -1 means next available position.
+                "widget": {
+                  "type": "tray",
+                  "font_family": "monospace",
+                  "grid_align": "bottom_center", // 9 positions: center_left, center_right, top_left, top_right, bottom_left, bottom_right, left_top, left_bottom, right_top, right_bottom
+                  "icon_theme": "breeze", // null will fetch the default icon theme
+                  "icon_size": 20,
+                  "tray_gap": 2,
+                  "header_draw_config": {
+                    "text_color": "#00000000",
+                    "font_pixel_height": 20,
+                  },
+                  // "header_menu_align": "left"
+                  "header_menu_align": "right",
+                  // "header_menu_stack": "header_top",
+                  "header_menu_stack": "menu_top",
+                  "menu_draw_config": {
+                    "border_color": "#00000000",
+                    "text_color": "#00000000",
+                    "marker_color": "#00000000",
+                    "font_pixel_height": 22,
+                    "icon_size": 20,
+                    "marker_size": 20,
+                    "separator_height": 5,
+                    "margin": [12, 12], // horizontal, vertical
                   },
                 },
               },
