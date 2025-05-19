@@ -132,7 +132,7 @@ pub mod common {
 
     use cosmic_text::FamilyOwned;
 
-    #[derive(Serialize, Deserialize, JsonSchema)]
+    #[derive(Serialize, Deserialize)]
     #[serde(remote = "FamilyOwned")]
     #[serde(rename_all = "kebab-case")]
     pub enum FamilyOwnedRef {
@@ -145,9 +145,33 @@ pub mod common {
         Name(
             #[serde(deserialize_with = "deserialize_smol_str")]
             #[serde(serialize_with = "serialize_smol_str")]
-            #[schemars(with = "String")]
             smol_str::SmolStr,
         ),
+    }
+
+    impl JsonSchema for FamilyOwnedRef {
+        fn schema_name() -> std::borrow::Cow<'static, str> {
+            "FamilyOwned".into()
+        }
+
+        fn json_schema(_: &mut schemars::SchemaGenerator) -> schemars::Schema {
+            schemars::json_schema!({
+                "oneOf": [
+                    {
+                        "enum": [
+                            "serif",
+                            "sans-serif",
+                            "cursive",
+                            "fantasy",
+                            "monospace",
+                        ],
+                    },
+                    {
+                        "type": "string",
+                    }
+                ],
+            })
+        }
     }
 
     pub fn dt_family_owned() -> FamilyOwned {

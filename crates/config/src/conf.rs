@@ -30,6 +30,8 @@ impl JsonSchema for MonitorSpecifier {
             "oneOf": [
                 {
                     "type": "string",
+                },
+                {
                     "enum": ["*"],
                 },
                 {
