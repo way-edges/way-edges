@@ -29,6 +29,47 @@
             // this can be `btn`, `slider`, `wrap-box`, `workspace`.
             // the lsp completion might not show them all, but once you write it, the rest property completion should work
             "type": "btn",
+            "thickness": 20,
+            "length": "25%",
+            "border_width": 5,
+            "border_color": "#112233aa",
+            "color": "#ffeeddaa",
+            "event_map": {
+              "272": "sh -c pkill nwg-drawer || nwg-drawer", // left click
+              "273": "niri msg action maximize-column", // right click
+              "274": "niri msg action close-window", // middle click
+              "275": "niri msg action toggle-overview", // side click 1
+              "276": "niri msg action toggle-column-tabbed-display", // side click 2
+            },
+          },
+        },
+        {
+          // ... other basic configs omitted here for brevity
+          "widget": {
+            "type": "slider",
+            "thickness": 20,
+            "length": "25%",
+            "border_width": 3,
+            "border_color": "#112233aa",
+            "fg_color": "#ffeeddaa",
+            "bg_color": "#112233aa",
+            "bg_text_color": "#124123aa",
+            "fg_text_color": "#124123aa",
+            "redraw_only_on_internal_update": true, // This is when you want to reduce the cpu usage. The progress update by manually dragging the slider is sent, but it won't be redrawn until the value is changed by other means.
+            "radius": 20, // corner radius
+            "obtuse_angle": 120, // in degrees(90~180). controls how much curve the widget has
+            // "preset": {
+            //   "type": "custom",
+            //   "interval_update": [100, "echo -n 0.1"], // update the progress. The first value is the interval in ms, and the second value is the command to run. The command should output a number between 0 and 1.
+            //   "on_change": "notify-send {float:2,100}%", // this is the command to run when the value changes. The value is passed as a parameter. You can use {float:2,100} to format the value as a float with 2 decimal places multiplied by 100.
+            //   "event_map": {
+            //     // same as btn
+            //   },
+            // },
+            "preset": {
+              "type": "speaker",
+              },
+            },
           },
         },
       ],
