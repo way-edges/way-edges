@@ -48,7 +48,7 @@ pub mod common {
         }
     }
 
-    #[derive(Debug, Default, JsonSchema, Deserialize, Clone)]
+    #[derive(Debug, Default, JsonSchema, Clone)]
     pub struct KeyEventMap(HashMap<u32, String>);
     impl KeyEventMap {
         pub fn call(&self, k: u32) {
@@ -56,6 +56,33 @@ pub mod common {
                 // PERF: SHOULE THIS BE USE OF CLONING???
                 shell_cmd_non_block(cmd.clone());
             }
+        }
+    }
+    impl<'de> Deserialize<'de> for KeyEventMap {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            struct EventMapVisitor;
+            impl<'a> serde::de::Visitor<'a> for EventMapVisitor {
+                type Value = KeyEventMap;
+
+                fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                    formatter.write_str("vec of tuples: (key: number, command: string)")
+                }
+
+                fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
+                where
+                    A: serde::de::MapAccess<'a>,
+                {
+                    let mut event_map = HashMap::new();
+                    while let Some((key, value)) = map.next_entry::<String, String>()? {
+                        event_map.insert(key.parse().map_err(serde::de::Error::custom)?, value);
+                    }
+                    Ok(KeyEventMap(event_map))
+                }
+            }
+            deserializer.deserialize_any(EventMapVisitor)
         }
     }
 
