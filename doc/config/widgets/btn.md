@@ -21,6 +21,7 @@
 | ------------ | ------------------------------------------------------------------------------------------------------------------- |
 | type         | const `btn`                                                                                                         |
 | thickness    | can be relative(`xx%`) or a int number                                                                              |
+| length       | can be relative(`xx%`) or a int number                                                                              |
 | border_width | int                                                                                                                 |
 | color        | hex only, but with alpha channel supported                                                                          |
 | border_color | hex only, but with alpha channel supported                                                                          |

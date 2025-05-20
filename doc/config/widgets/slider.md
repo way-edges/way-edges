@@ -44,6 +44,7 @@
 | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | type                           | const `slider`                                                                                                                                                                 |
 | thickness                      | can be relative(`xx%`) or a int number                                                                                                                                         |
+| length                         | can be relative(`xx%`) or a int number                                                                                                                                         |
 | border_width                   | int                                                                                                                                                                            |
 | fg_color                       | hex only, but with alpha channel supported                                                                                                                                     |
 | bg_color                       | hex only, but with alpha channel supported                                                                                                                                     |
