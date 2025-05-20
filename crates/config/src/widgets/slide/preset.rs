@@ -1,4 +1,5 @@
 use cosmic_text::Color;
+use schemars::JsonSchema;
 use serde::{Deserialize, Deserializer};
 use util::{
     color::COLOR_BLACK,
@@ -10,7 +11,7 @@ use util::{
 
 use crate::{common::Curve, widgets::common::KeyEventMap};
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, JsonSchema, Clone)]
 #[serde(rename_all = "snake_case", tag = "type")]
 pub enum Preset {
     Speaker(PulseAudioConfig),
@@ -24,13 +25,16 @@ impl Default for Preset {
     }
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, JsonSchema, Clone)]
+#[schemars(deny_unknown_fields)]
 pub struct PulseAudioConfig {
     #[serde(default = "default_mute_color")]
     #[serde(deserialize_with = "super::super::common::color_translate")]
+    #[schemars(schema_with = "super::super::common::schema_color")]
     pub mute_color: Color,
     #[serde(default)]
     #[serde(deserialize_with = "super::super::common::option_color_translate")]
+    #[schemars(schema_with = "super::super::common::schema_optional_color")]
     pub mute_text_color: Option<Color>,
 
     #[serde(default)]
@@ -42,19 +46,22 @@ fn default_mute_color() -> Color {
     COLOR_BLACK
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, JsonSchema, Clone)]
+#[schemars(deny_unknown_fields)]
 pub struct BacklightConfig {
     #[serde(default)]
     pub device: Option<String>,
 }
 
-#[derive(Debug, Deserialize, Default, Clone)]
+#[derive(Debug, Deserialize, Default, JsonSchema, Clone)]
+#[schemars(deny_unknown_fields)]
 pub struct CustomConfig {
     #[serde(default)]
     pub interval_update: (u64, String),
 
     #[serde(default)]
     #[serde(deserialize_with = "slide_change_template")]
+    #[schemars(schema_with = "super::super::common::schema_optional_template")]
     pub on_change: Option<Template>,
 
     #[serde(default)]

@@ -1,12 +1,13 @@
 use cosmic_text::{Color, FamilyOwned};
 use educe::Educe;
+use schemars::JsonSchema;
 use serde::Deserialize;
 use util::color::COLOR_WHITE;
 
 use super::super::common::{self, dt_family_owned, FamilyOwnedRef};
 use super::Align;
 
-#[derive(Debug, Deserialize, Default, Clone)]
+#[derive(Debug, Deserialize, Default, Clone, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum HeaderMenuStack {
     #[default]
@@ -14,7 +15,7 @@ pub enum HeaderMenuStack {
     MenuTop,
 }
 
-#[derive(Debug, Deserialize, Default, Clone)]
+#[derive(Debug, Deserialize, Default, Clone, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum HeaderMenuAlign {
     #[default]
@@ -30,12 +31,14 @@ impl HeaderMenuAlign {
     }
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, JsonSchema, Clone)]
+#[schemars(deny_unknown_fields)]
 pub struct HeaderDrawConfig {
     #[serde(default = "dt_header_font_pixel_height")]
     pub font_pixel_height: i32,
     #[serde(default = "dt_header_text_color")]
     #[serde(deserialize_with = "common::color_translate")]
+    #[schemars(schema_with = "common::schema_color")]
     pub text_color: Color,
 }
 impl Default for HeaderDrawConfig {
@@ -53,7 +56,8 @@ fn dt_header_text_color() -> Color {
     COLOR_WHITE
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, JsonSchema, Clone)]
+#[schemars(deny_unknown_fields)]
 pub struct MenuDrawConfig {
     #[serde(default = "dt_menu_margin")]
     pub margin: [i32; 2],
@@ -67,12 +71,15 @@ pub struct MenuDrawConfig {
     pub separator_height: i32,
     #[serde(default = "dt_menu_border_color")]
     #[serde(deserialize_with = "common::color_translate")]
+    #[schemars(schema_with = "common::schema_color")]
     pub border_color: Color,
     #[serde(default = "dt_menu_text_color")]
     #[serde(deserialize_with = "common::color_translate")]
+    #[schemars(schema_with = "common::schema_color")]
     pub text_color: Color,
     #[serde(default)]
     #[serde(deserialize_with = "common::option_color_translate")]
+    #[schemars(schema_with = "common::schema_optional_color")]
     pub marker_color: Option<Color>,
 }
 impl Default for MenuDrawConfig {
@@ -111,8 +118,9 @@ fn dt_menu_text_color() -> Color {
     COLOR_WHITE
 }
 
-#[derive(Educe, Deserialize, Clone)]
+#[derive(Educe, Deserialize, JsonSchema, Clone)]
 #[educe(Debug)]
+#[schemars(deny_unknown_fields)]
 pub struct TrayConfig {
     #[serde(default = "dt_family_owned")]
     #[serde(with = "FamilyOwnedRef")]

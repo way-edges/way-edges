@@ -2,12 +2,17 @@ use crate::common::Curve;
 
 use super::common::{self, CommonSize};
 use cosmic_text::Color;
+use schemars::Schema;
+use schemars::{json_schema, JsonSchema};
 use serde::{Deserialize, Deserializer};
-use serde_jsonrc::Value;
+use serde_json::Value;
 use util::color::parse_color;
-use way_edges_derive::GetSize;
+use way_edges_derive::{const_property, GetSize};
 
-#[derive(Debug, Deserialize, GetSize, Clone)]
+#[derive(Debug, Deserialize, GetSize, JsonSchema, Clone)]
+#[schemars(deny_unknown_fields)]
+#[schemars(transform = WorkspaceConfig_generate_defs)]
+#[const_property("type", "workspace")]
 pub struct WorkspaceConfig {
     #[serde(flatten)]
     // flatten does not support `default` yet.
@@ -31,15 +36,19 @@ pub struct WorkspaceConfig {
 
     #[serde(default = "dt_default_color")]
     #[serde(deserialize_with = "common::color_translate")]
+    #[schemars(schema_with = "common::schema_color")]
     pub default_color: Color,
     #[serde(default = "dt_focus_color")]
     #[serde(deserialize_with = "common::color_translate")]
+    #[schemars(schema_with = "common::schema_color")]
     pub focus_color: Color,
     #[serde(default = "dt_active_color")]
     #[serde(deserialize_with = "common::color_translate")]
+    #[schemars(schema_with = "common::schema_color")]
     pub active_color: Color,
     #[serde(default)]
     #[serde(deserialize_with = "common::option_color_translate")]
+    #[schemars(schema_with = "common::schema_optional_color")]
     pub hover_color: Option<Color>,
 
     #[serde(default)]
@@ -74,7 +83,8 @@ fn dt_active_color() -> Color {
     parse_color("#aaa").unwrap()
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, JsonSchema, Clone)]
+#[schemars(transform = WorkspacePreset_generate_defs)]
 pub enum WorkspacePreset {
     Hyprland,
     Niri(NiriConf),
@@ -115,7 +125,10 @@ impl<'de> Deserialize<'de> for WorkspacePreset {
     }
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, JsonSchema, Clone)]
+#[schemars(deny_unknown_fields)]
+#[schemars(transform = NiriConf_generate_defs)]
+#[const_property("type", "niri")]
 pub struct NiriConf {
     #[serde(default = "dt_filter_empty")]
     pub filter_empty: bool,
@@ -130,6 +143,22 @@ impl Default for NiriConf {
 
 fn dt_filter_empty() -> bool {
     true
+}
+
+#[allow(non_snake_case)]
+fn WorkspacePreset_generate_defs(s: &mut Schema) {
+    *s = json_schema!({
+      "oneOf": [
+      {
+          "type": "string",
+          "enum": ["hyprland", "niri"]
+      },
+      {
+        "type": "object",
+        "$ref": "#/$defs/NiriConf",
+      }
+      ]
+    })
 }
 
 #[cfg(test)]

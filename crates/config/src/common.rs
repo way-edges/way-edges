@@ -1,9 +1,10 @@
 use regex_lite::Regex;
+use schemars::{json_schema, JsonSchema};
 use serde::{Deserialize, Deserializer};
 use smithay_client_toolkit::shell::wlr_layer::{Anchor, Layer};
 use std::str::FromStr;
 
-#[derive(Debug, Clone, Copy, Deserialize, Default)]
+#[derive(Debug, Clone, Copy, Deserialize, Default, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub enum Curve {
     Linear,
@@ -17,6 +18,36 @@ pub enum Curve {
 pub enum NumOrRelative {
     Num(f64),
     Relative(f64),
+}
+impl JsonSchema for NumOrRelative {
+    fn always_inline_schema() -> bool {
+        false
+    }
+
+    fn schema_id() -> std::borrow::Cow<'static, str> {
+        Self::schema_name()
+    }
+
+    fn schema_name() -> std::borrow::Cow<'static, str> {
+        std::borrow::Cow::Borrowed("NumOrRelative")
+    }
+
+    fn json_schema(_: &mut schemars::SchemaGenerator) -> schemars::Schema {
+        json_schema!({
+            "type": ["number", "string"],
+            "anyOf": [
+                {
+                    "type": "number",
+                    "description": "absolute number"
+                },
+                {
+                    "type": "string",
+                    "pattern": r"^(\d+(\.\d+)?)%\s*(.*)$",
+                    "description": "relative number"
+                }
+            ]
+        })
+    }
 }
 impl Default for NumOrRelative {
     fn default() -> Self {
@@ -234,4 +265,23 @@ where
     }
 
     d.deserialize_any(EventMapVisitor)
+}
+
+pub fn schema_edge(_: &mut schemars::SchemaGenerator) -> schemars::Schema {
+    json_schema!({
+        "type": "string",
+        "enum": ["top", "bottom", "left", "right"]
+    })
+}
+pub fn schema_optional_edge(_: &mut schemars::SchemaGenerator) -> schemars::Schema {
+    json_schema!({
+        "type": ["string", "null"],
+        "enum": ["top", "bottom", "left", "right"]
+    })
+}
+pub fn schema_layer(_: &mut schemars::SchemaGenerator) -> schemars::Schema {
+    json_schema!({
+        "type": "string",
+        "enum": ["top", "bottom", "background", "overlay"]
+    })
 }

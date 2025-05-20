@@ -14,7 +14,7 @@ use clap_complete::{
 #[command(version = "pre")]
 #[command(about = "Hidden widget on the screen edges", long_about = None)]
 pub struct Cli {
-    /// whether enable mouse click output, shoule be used width daemon command.
+    /// print the mouse button key to the log when press and release.
     #[arg(short = 'd', long)]
     pub mouse_debug: bool,
 
@@ -85,7 +85,11 @@ fn complete_group_and_widget(current: &std::ffi::OsStr) -> Vec<CompletionCandida
 
 #[derive(Subcommand, Debug, PartialEq, Clone)]
 pub enum Command {
-    /// run daemon. There can only be one daemon at a time.
+    /// print json schema of the configurations to the stdout
+    #[command(name = "schema")]
+    Schema,
+
+    /// (deprecated) run daemon. There can only be one daemon at a time.
     #[command(name = "daemon", alias = "d")]
     Daemon,
 
@@ -114,6 +118,7 @@ pub enum Command {
         group_and_widget_name: String,
     },
 
+    /// reload widget configuration
     #[command(name = "reload")]
     Reload,
 

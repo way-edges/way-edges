@@ -19,6 +19,10 @@ fn main() {
             args::Command::Daemon => {
                 log::warn!("daemon command is deprecated, please just run `way-edges`");
             }
+            args::Command::Schema => {
+                config::output_json_schema();
+                return;
+            }
             _ => {
                 cmd.send_ipc();
                 return;

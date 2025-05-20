@@ -1,3 +1,4 @@
+use schemars::{json_schema, JsonSchema};
 use std::collections::HashSet;
 
 use serde::Deserialize;
@@ -6,7 +7,8 @@ use smithay_client_toolkit::shell::wlr_layer::{Anchor, Layer};
 use crate::{common::Curve, widgets::Widget};
 
 use super::common::{
-    deserialize_edge, deserialize_layer, deserialize_optional_edge, NumOrRelative,
+    deserialize_edge, deserialize_layer, deserialize_optional_edge, schema_edge, schema_layer,
+    schema_optional_edge, NumOrRelative,
 };
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -17,6 +19,34 @@ pub enum MonitorSpecifier {
 
     // this shall not be used for deserialization
     Name(String),
+}
+impl JsonSchema for MonitorSpecifier {
+    fn schema_name() -> std::borrow::Cow<'static, str> {
+        "MonitorSpecifier".into()
+    }
+
+    fn json_schema(_: &mut schemars::SchemaGenerator) -> schemars::Schema {
+        json_schema!({
+            "oneOf": [
+                {
+                    "type": "string",
+                },
+                {
+                    "enum": ["*"],
+                },
+                {
+                    "type": "number",
+                    "minimum": 0,
+                },
+                {
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                    },
+                }
+            ],
+        })
+    }
 }
 impl Default for MonitorSpecifier {
     fn default() -> Self {
@@ -110,7 +140,8 @@ mod tests {
     }
 }
 
-#[derive(Debug, Deserialize, Clone, Default)]
+#[derive(Debug, Deserialize, Clone, Default, JsonSchema)]
+#[schemars(deny_unknown_fields)]
 pub struct Margins {
     #[serde(default)]
     pub left: NumOrRelative,
@@ -123,7 +154,7 @@ pub struct Margins {
 }
 
 #[derive(Debug, Deserialize)]
-struct ConfigShadow {
+pub(crate) struct ConfigShadow {
     #[serde(default = "dt_edge")]
     #[serde(deserialize_with = "deserialize_edge")]
     pub edge: Anchor,
@@ -196,11 +227,15 @@ impl From<ConfigShadow> for Config {
     }
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, JsonSchema, Clone)]
 #[serde(from = "ConfigShadow")]
+#[schemars(deny_unknown_fields)]
 pub struct Config {
+    #[schemars(schema_with = "schema_edge")]
     pub edge: Anchor,
+    #[schemars(schema_with = "schema_optional_edge")]
     pub position: Anchor,
+    #[schemars(schema_with = "schema_layer")]
     pub layer: Layer,
     pub margins: Margins,
     pub monitor: MonitorSpecifier,

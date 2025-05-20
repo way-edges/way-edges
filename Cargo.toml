@@ -32,6 +32,8 @@ smithay-client-toolkit = { git = "https://github.com/Smithay/client-toolkit.git"
 wayland-client = "0.31.7"
 calloop = "0.14.2"
 
+schemars = { version = "1.0.0-alpha.17" }
+
 [profile.release]
 opt-level = 3
 lto = true
