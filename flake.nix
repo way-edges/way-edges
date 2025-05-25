@@ -49,6 +49,14 @@
           src = pkgs.lib.cleanSource ./.;
                 
           RUSTFLAGS = "--cfg tokio_unstable";
+
+          meta = {
+            description = "Lightweight wayland client focusing on widgets hidden in your screen edge.";
+            homepage = "https://github.com/way-edges/way-edges";
+            platforms = nixpkgs.lib.platforms.linux;
+            license = nixpkgs.lib.licenses.mit;
+            mainProgram = "way-edges";
+          };
         };
       
       # Function to build dev shell
