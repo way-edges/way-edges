@@ -1,7 +1,6 @@
 # to build use nix build -f default.nix
 
-with import <nixpkgs>
-{
+with import <nixpkgs> {
   overlays = [
     (import (fetchTarball "https://github.com/oxalica/rust-overlay/archive/master.tar.gz"))
   ];
@@ -27,7 +26,7 @@ rustPlatform.buildRustPackage {
   nativeBuildInputs = with pkgs; [
     pkg-config
   ];
-    
+
   cargoLock = {
     lockFile = ./Cargo.lock;
     allowBuiltinFetchGit = true;
@@ -35,6 +34,5 @@ rustPlatform.buildRustPackage {
 
   src = pkgs.lib.cleanSource ./.;
 
-        
   RUSTFLAGS = "--cfg tokio_unstable";
 }

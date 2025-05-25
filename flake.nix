@@ -6,25 +6,34 @@
     rust-overlay.url = "github:oxalica/rust-overlay";
   };
 
-  outputs = { self, nixpkgs, rust-overlay }:
+  outputs =
+    {
+      self,
+      nixpkgs,
+      rust-overlay,
+    }:
     let
       # Systems supported
-      supportedSystems = [ "x86_64-linux" "aarch64-linux" ];
-      
+      supportedSystems = [
+        "x86_64-linux"
+        "aarch64-linux"
+      ];
+
       # Helper function to generate packages for each system
       forAllSystems = nixpkgs.lib.genAttrs supportedSystems;
-      
+
       # Function to get package for a system
-      packageFor = system:
+      packageFor =
+        system:
         let
           overlays = [ (import rust-overlay) ];
           pkgs = import nixpkgs { inherit system overlays; };
-          
+
           rustPlatform = pkgs.makeRustPlatform {
             cargo = pkgs.rust-bin.selectLatestNightlyWith (toolchain: toolchain.default);
             rustc = pkgs.rust-bin.selectLatestNightlyWith (toolchain: toolchain.default);
           };
-          
+
           manifest = (pkgs.lib.importTOML ./crates/way-edges/Cargo.toml).package;
         in
         rustPlatform.buildRustPackage {
@@ -40,22 +49,31 @@
           nativeBuildInputs = with pkgs; [
             pkg-config
           ];
-          
+
           cargoLock = {
             lockFile = ./Cargo.lock;
             allowBuiltinFetchGit = true;
           };
 
           src = pkgs.lib.cleanSource ./.;
-                
+
           RUSTFLAGS = "--cfg tokio_unstable";
+
+          meta = {
+            description = "Lightweight wayland client focusing on widgets hidden in your screen edge.";
+            homepage = "https://github.com/way-edges/way-edges";
+            platforms = nixpkgs.lib.platforms.linux;
+            license = nixpkgs.lib.licenses.mit;
+            mainProgram = "way-edges";
+          };
         };
-      
+
       # Function to build dev shell
-      devShellFor = system:
+      devShellFor =
+        system:
         let
-          pkgs = import nixpkgs { 
-            inherit system; 
+          pkgs = import nixpkgs {
+            inherit system;
             overlays = [ (import rust-overlay) ];
           };
         in
@@ -85,24 +103,33 @@
         default = devShellFor system;
       });
 
+      formatter = forAllSystems (system: nixpkgs.legacyPackages.${system}.nixfmt-tree);
+
       # Home manager module that doesn't depend on system-specific logic
-      homeManagerModules.default = { lib, pkgs, config, ... }:
+      homeManagerModules.default =
+        {
+          lib,
+          pkgs,
+          config,
+          ...
+        }:
         let
           cfg = config.programs.way-edges;
         in
-        with lib; {
+        with lib;
+        {
           options.programs.way-edges = {
             enable = mkEnableOption "way-edges";
-            
+
             package = mkOption {
               type = types.package;
               description = "The way-edges package to use.";
               default = self.packages.${pkgs.system}.way-edges;
             };
-            
+
             settings = mkOption {
               type = types.attrs;
-              default = {};
+              default = { };
               description = "way-edges configuration.";
               example = literalExpression ''
                 {
@@ -132,10 +159,10 @@
               '';
             };
           };
-          
+
           config = mkIf cfg.enable {
             home.packages = [ cfg.package ];
-            
+
             xdg.configFile."way-edges/config.jsonc" = {
               text = builtins.toJSON cfg.settings;
             };
