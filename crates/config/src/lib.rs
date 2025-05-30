@@ -18,11 +18,7 @@ use std::{
 static CONFIG_PATH: OnceLock<PathBuf> = OnceLock::new();
 pub fn get_config_path() -> &'static Path {
     let pb = CONFIG_PATH.get_or_init(|| {
-        let bd = match xdg::BaseDirectories::new() {
-            Ok(bd) => bd,
-            Err(e) => panic!("no xdg base directories: {e}"),
-        };
-
+        let bd = xdg::BaseDirectories::new();
         match bd.place_config_file("way-edges/config.jsonc") {
             Ok(p) => p,
             Err(e) => panic!("failed to create config file: {e}"),
