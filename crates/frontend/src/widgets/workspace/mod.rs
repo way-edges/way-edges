@@ -69,6 +69,7 @@ pub fn init_widget(
                 sender: $s,
                 output: $c.output_name.take().unwrap(),
                 data: $d,
+                focused_only: $c.focused_only,
             }
         };
     }

@@ -29,25 +29,44 @@ fn sort_workspaces(v: Vec<Workspace>, m: Vec<Monitor>) -> HashMap<String, (Vec<W
 
     map.iter_mut().for_each(|(k, (v, active))| {
         v.sort_by_key(|w| w.id);
-        let min_id = v[0].id;
 
         *active = m
             .iter()
             .find(|m| &m.name == k)
-            .map(|m| m.active_workspace.id - min_id)
-            .unwrap();
+            .and_then(|monitor| {
+                // Find the position of the active workspace in this monitor's workspace list
+                v.iter()
+                    .position(|w| w.id == monitor.active_workspace.id)
+                    .map(|pos| pos as i32)
+            })
+            .unwrap_or(-1);
     });
 
     map
 }
 
-fn workspace_vec_to_data(v: &[Workspace], focus_id: i32, active: i32) -> WorkspaceData {
-    let min_id = v[0].id;
-    let max_id = v[v.len() - 1].id;
-
-    let workspace_count = max_id - min_id + 1;
-    let focus_index = focus_id - min_id;
-    let focus = if focus_index > -1 { focus_index } else { -1 };
+fn workspace_vec_to_data(v: &[Workspace], focus_id: i32, active: i32, monitor_name: &str, focused_monitor: &Option<String>) -> WorkspaceData {
+    // Count actual workspaces on this monitor, not assuming contiguous IDs
+    let workspace_count = v.len() as i32;
+    
+    // Find the position of the focused workspace within this monitor's workspaces
+    let focus = if let Some(ref focused_mon) = focused_monitor {
+        if monitor_name == focused_mon {
+            // Find the position of the currently focused workspace in this monitor's workspace list
+            v.iter()
+                .position(|w| w.id == focus_id)
+                .map(|pos| pos as i32)
+                .unwrap_or(-1)
+        } else {
+            -1 // No focus on non-focused monitors
+        }
+    } else {
+        // If we don't know which monitor is focused yet, check if the global focus is on this monitor
+        v.iter()
+            .position(|w| w.id == focus_id)
+            .map(|pos| pos as i32)
+            .unwrap_or(-1)
+    };
 
     WorkspaceData {
         workspace_count,
@@ -74,10 +93,29 @@ fn get_focus() -> i32 {
     hyprland::data::Workspace::get_active().unwrap().id
 }
 
+fn get_focused_monitor() -> Option<String> {
+    hyprland::data::Monitors::get()
+        .ok()?
+        .into_iter()
+        .find(|m| m.focused)
+        .map(|m| m.name)
+}
+
 fn on_signal() {
     let ctx = get_hypr_ctx();
     ctx.data.map = sort_workspaces(get_workspace(), get_monitors());
     ctx.data.focus = get_focus();
+    // Update focused monitor if not set or has changed
+    if ctx.data.focused_monitor.is_none() {
+        ctx.data.focused_monitor = get_focused_monitor();
+    }
+    ctx.call();
+}
+
+fn on_monitor_focus_change(monitor_name: &str) {
+    let ctx = get_hypr_ctx();
+    ctx.data.focused_monitor = Some(monitor_name.to_string());
+    log::debug!("Monitor focus changed to: {}", monitor_name);
     ctx.call();
 }
 
@@ -100,19 +138,22 @@ struct CacheData {
     // workspace and active id
     map: HashMap<String, (Vec<Workspace>, i32)>,
     focus: i32,
+    // Track the currently focused monitor for focused_only feature
+    focused_monitor: Option<String>,
 }
 impl CacheData {
     fn new() -> Self {
         Self {
             map: HashMap::new(),
             focus: -1,
+            focused_monitor: None,
         }
     }
     fn get_workspace_data(&self, output: &str) -> WorkspaceData {
         let Some((wps, active)) = self.map.get(output) else {
             return WorkspaceData::default();
         };
-        workspace_vec_to_data(wps, self.focus, *active)
+        workspace_vec_to_data(wps, self.focus, *active, output, &self.focused_monitor)
     }
 }
 
@@ -132,7 +173,19 @@ impl HyprCtx {
     }
     fn call(&mut self) {
         self.workspace_ctx
-            .call(|output, _| self.data.get_workspace_data(output));
+            .call(|output, _, focused_only| {
+                if focused_only {
+                    // Only send updates to the currently focused monitor
+                    if let Some(ref focused_monitor) = self.data.focused_monitor {
+                        if output != focused_monitor {
+                            return None; // Skip non-focused monitors
+                        }
+                    } else {
+                        return None; // No focused monitor known yet
+                    }
+                }
+                Some(self.data.get_workspace_data(output))
+            });
     }
     fn add_cb(&mut self, cb: WorkspaceCB<HyprConf>) -> ID {
         cb.sender
@@ -200,6 +253,10 @@ fn init_hyprland_listener() {
 
     listener.add_active_monitor_changed_handler(async_closure!(|e| {
         log::debug!("received monitor change: {e:?}");
+        
+        // Update focused monitor for focused_only feature
+        on_monitor_focus_change(&e.monitor_name);
+        
         if let Some(workspace_name) = e.workspace_name {
             if let Some(id) = workspace_name.regular_to_i32() {
                 match id {
@@ -267,7 +324,10 @@ impl HyprWorkspaceHandler {
             .data
             .map
             .get(output)
-            .map(|(v, _)| v[0].id + index as i32)
+            .and_then(|(v, _)| {
+                // Use the actual workspace ID at the given index
+                v.get(index).map(|workspace| workspace.id)
+            })
         else {
             return;
         };
