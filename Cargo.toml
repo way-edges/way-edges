@@ -35,7 +35,10 @@ calloop = "0.14.2"
 schemars = { version = "1.0.0-alpha.17" }
 
 [profile.release]
-opt-level = 3
-lto = true
-codegen-units = 1
+opt-level = "z"
 strip = true
+
+# Uncomment the following lines to enable more aggressive optimizations
+# opt-level = 3
+# lto = true
+# codegen-units = 1
