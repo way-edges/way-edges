@@ -1,4 +1,4 @@
-use std::{cell::RefCell, collections::HashMap};
+use std::{collections::HashMap, sync::Mutex};
 
 use cairo::ImageSurface;
 use system_tray::item::{IconPixmap, StatusNotifierItem};
@@ -26,14 +26,17 @@ enum IconCacheType {
 }
 
 #[derive(Debug)]
+// Using Mutex instead of RefCell for thread safety to be consistent with Arc<Mutex<TrayMap>>
+// sharing pattern and to satisfy clippy::arc_with_non_send_sync. While this application
+// uses single-threaded async runtime, Wayland API constraints require Send+Sync types.
 pub struct IconHandle {
-    cache: RefCell<HashMap<IconCacheKey, ImageSurface>>,
+    cache: Mutex<HashMap<IconCacheKey, ImageSurface>>,
     icon: Option<Icon>,
 }
 impl IconHandle {
     fn new(icon: Option<Icon>) -> Self {
         Self {
-            cache: RefCell::new(HashMap::new()),
+            cache: Mutex::new(HashMap::new()),
             icon,
         }
     }
@@ -60,12 +63,12 @@ impl IconHandle {
                 Icon::Pixmap(_) => IconCacheType::Pixmap,
             },
         };
-        if let Some(cache) = self.cache.borrow().get(&cache_key).cloned() {
+        if let Some(cache) = self.cache.lock().unwrap().get(&cache_key).cloned() {
             return cache;
         }
 
         if let Some(content) = icon.draw_icon(size, theme, theme_path) {
-            self.cache.borrow_mut().insert(cache_key, content.clone());
+            self.cache.lock().unwrap().insert(cache_key, content.clone());
             return content;
         }
 

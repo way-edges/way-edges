@@ -57,6 +57,9 @@ pub struct WorkspaceConfig {
     #[serde(default)]
     pub output_name: Option<String>,
 
+    #[serde(default)]
+    pub focused_only: bool,
+
     pub preset: WorkspacePreset,
 }
 

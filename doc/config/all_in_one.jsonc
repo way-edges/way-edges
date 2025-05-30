@@ -100,6 +100,7 @@
             "output_name": "eDP-1", // not specified, it will use the output that this widget is on
             "pop_duration": 1000, // ms
             "workspace_transition_duration": 300, // ms
+            "focused_only": false, // only animate widgets on the currently focused monitor (works with both niri and Hyprland)
             // "preset": "hyprland",
             // "preset": "niri",
             "preset": {

@@ -18,6 +18,7 @@
     "output_name": "eDP-1", // not specified, it will use the output that this widget is on
     "pop_duration": 1000, // ms
     "workspace_transition_duration": 300, // ms
+    "focused_only": false, // only show animation on the currently focused monitor
     // "preset": "hyprland",
     // "preset": "niri",
     "preset": {
@@ -43,8 +44,11 @@
 | output_name                   | not specified, it will use the output that this widget is on |
 | pop_duration                  | ms                                                           |
 | workspace_transition_duration | ms                                                           |
+| focused_only                  | only show workspaces on focused monitor: `true` or `false`   |
 | animation_curve               | animation curve                                              |
 | preset                        | `hyprland` or `niri` or `niri` with config                   |
+
+`focused_only`: On multi-monitor setups, when set to `true`, widgets will only animate on the currently focused monitor. When set to `false`, widgets animate on all monitors. This helps prevent unwanted animations on non-focused monitors when switching workspaces. **Available for both niri and Hyprland.**
 
 ## Preset: niri
 
@@ -57,13 +61,37 @@
 "preset": "niri",
 ```
 
-| Name         | Description            |
-| ------------ | ---------------------- |
-| type         | const `niri`           |
-| filter_empty | ignore empty workspace |
-
 ## Preset: hyprland
 
 ```jsonc
 "preset": "hyprland",
+```
+
+## Multi-Monitor Configuration Examples
+
+### Example: Focused-only animations
+
+```jsonc
+{
+  "preset": "hyprland",
+  "focused_only": true, // Only animate on currently focused monitor
+  "widget_configuration": {
+    "spacing": 5,
+  },
+}
+```
+
+### Example: Niri with focused-only animations
+
+```jsonc
+{
+  "preset": {
+    "type": "niri",
+    "filter_empty": true
+  },
+  "focused_only": true, // Only animate on currently focused monitor
+  "widget_configuration": {
+    "spacing": 8,
+  },
+}
 ```

@@ -125,6 +125,85 @@ impl App {
         }
     }
 
+    pub fn handle_new_output(&mut self, output: &wayland_client::protocol::wl_output::WlOutput) {
+        log::info!("New output detected, creating widgets for existing groups");
+        
+        // Collect widget creation tasks to avoid borrowing conflicts
+        let mut widget_creation_tasks = Vec::new();
+        
+        for (group_name, group_opt) in &self.groups {
+            if let Some(group) = group_opt {
+                // Check each widget config to see if it should create a widget on the new output
+                for conf in &group.widget_configs {
+                    let should_create_widget = match &conf.monitor {
+                        MonitorSpecifier::ID(_) => {
+                            // For ID-based matching, we don't create new widgets on hot-plug
+                            // since the ID positions might have changed
+                            false
+                        }
+                        MonitorSpecifier::Names(items) => {
+                            self.output_state
+                                .info(output)
+                                .and_then(|info| info.name)
+                                .filter(|output_name| items.contains(output_name))
+                                .is_some()
+                        }
+                        MonitorSpecifier::All => true,
+                        _ => unreachable!(),
+                    };
+
+                    if should_create_widget {
+                        widget_creation_tasks.push((group_name.clone(), conf.clone()));
+                    }
+                }
+            }
+        }
+        
+        // Now create the widgets without borrowing conflicts
+        for (group_name, conf) in widget_creation_tasks {
+            match Widget::init_widget(conf.clone(), output.clone(), self) {
+                Ok(widget) => {
+                    if let Some(Some(group)) = self.groups.get_mut(&group_name) {
+                        group.map.entry(conf.name).or_default().push(widget);
+                        log::debug!("Created widget for group '{}' on new output", group_name);
+                    }
+                }
+                Err(e) => {
+                    log::error!("Failed to create widget for group '{}' on new output: {}", group_name, e);
+                    util::notify_send(
+                        "Way-edges hot-plug error",
+                        &format!("Failed to create widget for group '{}': {}", group_name, e),
+                        true
+                    );
+                }
+            }
+        }
+    }
+
+    pub fn handle_output_destroyed(&mut self, destroyed_output: &wayland_client::protocol::wl_output::WlOutput) {
+        log::info!("Output destroyed, cleaning up associated widgets");
+        
+        for (group_name, group_opt) in self.groups.iter_mut() {
+            if let Some(group) = group_opt {
+                for widgets in group.map.values_mut() {
+                    widgets.retain(|widget| {
+                        let should_keep = {
+                            let w = widget.lock().unwrap();
+                            // Keep widget if it's not associated with the destroyed output
+                            w.output != *destroyed_output
+                        };
+                        
+                        if !should_keep {
+                            log::debug!("Removing widget from group '{}' due to output destruction", group_name);
+                        }
+                        
+                        should_keep
+                    });
+                }
+            }
+        }
+    }
+
     fn init_group(&self, conf: config::Group) -> Option<Group> {
         log::debug!("group config:\n{conf:?}");
         Group::init_group(conf.widgets, self)
@@ -139,12 +218,14 @@ impl App {
 pub struct Group {
     // the `None` is for unnamed widgets
     map: HashMap<Option<String>, Vec<Arc<Mutex<Widget>>>>,
+    // Store original widget configs for hot-plug support
+    widget_configs: Vec<config::Config>,
 }
 impl Group {
     fn init_group(widgets_config: Vec<config::Config>, app: &App) -> Result<Self, String> {
         let mut map: HashMap<Option<String>, Vec<Arc<Mutex<Widget>>>> = HashMap::new();
 
-        for conf in widgets_config.into_iter() {
+        for conf in widgets_config.iter().cloned() {
             let name = conf.name.clone();
             let confs: Vec<(config::Config, WlOutput)> = match conf.monitor.clone() {
                 MonitorSpecifier::ID(index) => app
@@ -180,8 +261,12 @@ impl Group {
             }
         }
 
-        Ok(Self { map })
+        Ok(Self {
+            map,
+            widget_configs: widgets_config,
+        })
     }
+
     fn get_widget(&self, name: &str) -> Option<Vec<Arc<Mutex<Widget>>>> {
         self.map.get(&Some(name.to_string())).cloned()
     }
