@@ -1,7 +1,4 @@
-
-
-https://github.com/user-attachments/assets/a0dda5a0-94df-41b7-9343-8f5083443f05
-
+<https://github.com/user-attachments/assets/a0dda5a0-94df-41b7-9343-8f5083443f05>
 
 ## 🫧 Project board
 
@@ -41,7 +38,7 @@ Example config: <https://github.com/ogios/dots/tree/master/way-edges>
 
 Special thanks for:
 
-- [JakeStanger/system-tray](https://github.com/JakeStanger/system-tray). I forked one for zbus5.0 version: <https://github.com/ogios/system-tray-zbus5>
+- [JakeStanger/system-tray](https://github.com/JakeStanger/system-tray).
 - [Rayzeq/tryfol](https://github.com/Rayzeq/tryfol)
 - [elkowar/eww](https://github.com/elkowar/eww)
 - [YaLTeR/niri](https://github.com/YaLTeR/niri)
