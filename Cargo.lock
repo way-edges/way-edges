@@ -1403,7 +1403,7 @@ dependencies = [
 [[package]]
 name = "linicon-theme"
 version = "1.2.0"
-source = "git+https://github.com/ogios/linicon-theme.git?branch=main#8570e93ee9344cd7d22a6159e3ff73569eb5e62e"
+source = "git+https://git.sr.ht/~zethra/linicon-theme?branch=main#ae30a81cad23bb3b77a4c836baec39946eab862d"
 dependencies = [
  "freedesktop_entry_parser",
  "rust-ini",
@@ -2481,7 +2481,8 @@ dependencies = [
 [[package]]
 name = "system-tray"
 version = "0.7.0"
-source = "git+https://github.com/ogios/system-tray.git?branch=custom#af7bb134c96acd68f98a8c7bac6d4c4fcb835d8f"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c3397841ed755bf361606a845779e0f7333d35fb4e39627ef6f656d7cdad4c73"
 dependencies = [
  "futures-lite",
  "serde",

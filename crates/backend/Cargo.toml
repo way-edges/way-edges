@@ -36,7 +36,7 @@ niri-ipc = "25.5.0"
 
 walkdir = "2.5.0"
 freedesktop-icons = { git = "https://github.com/ogios/freedesktop-icons", branch = "main" }
-linicon-theme = { git = "https://github.com/ogios/linicon-theme.git", branch = "main" }
+linicon-theme = { git = "https://git.sr.ht/~zethra/linicon-theme", branch = "main" }
 
 sysinfo = { version = "0.35.1", default-features = false, features = [
   "disk",
