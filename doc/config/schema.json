@@ -963,6 +963,10 @@
               "type": "string",
               "default": "#00000000"
             },
+            "focused_only": {
+              "type": "boolean",
+              "default": false
+            },
             "gap": {
               "type": "integer",
               "format": "int32",
