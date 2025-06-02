@@ -68,7 +68,10 @@ impl IconHandle {
         }
 
         if let Some(content) = icon.draw_icon(size, theme, theme_path) {
-            self.cache.lock().unwrap().insert(cache_key, content.clone());
+            self.cache
+                .lock()
+                .unwrap()
+                .insert(cache_key, content.clone());
             return content;
         }
 

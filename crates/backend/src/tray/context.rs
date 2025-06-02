@@ -42,7 +42,7 @@ impl TrayMap {
     // Allow Arc<Mutex<TrayMap>> despite TrayMap not being Send+Sync due to cairo::ImageSurface.
     // This is acceptable because:
     // 1. Application uses single-threaded async runtime (LocalRuntime)
-    // 2. Arc<Mutex<...>> pattern required by Wayland API constraints (WlSurface::data needs Send+Sync)  
+    // 2. Arc<Mutex<...>> pattern required by Wayland API constraints (WlSurface::data needs Send+Sync)
     // 3. Cairo surfaces are inherently not thread-safe and shouldn't cross thread boundaries
     #[allow(clippy::arc_with_non_send_sync)]
     fn new() -> Arc<Mutex<Self>> {

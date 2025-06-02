@@ -50,7 +50,8 @@ impl WidgetContext for PulseAudioContext {
         self.draw_conf.fg_color = fg_color;
 
         if let Some(mute_text_color) = self.mute_text_color {
-            let bg_text_color = color_transition(self.non_mute_text_color, mute_text_color, mute_y as f32);
+            let bg_text_color =
+                color_transition(self.non_mute_text_color, mute_text_color, mute_y as f32);
             self.draw_conf.bg_text_color = Some(bg_text_color);
         }
 

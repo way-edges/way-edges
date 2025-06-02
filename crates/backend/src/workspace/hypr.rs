@@ -45,10 +45,16 @@ fn sort_workspaces(v: Vec<Workspace>, m: Vec<Monitor>) -> HashMap<String, (Vec<W
     map
 }
 
-fn workspace_vec_to_data(v: &[Workspace], focus_id: i32, active: i32, monitor_name: &str, focused_monitor: &Option<String>) -> WorkspaceData {
+fn workspace_vec_to_data(
+    v: &[Workspace],
+    focus_id: i32,
+    active: i32,
+    monitor_name: &str,
+    focused_monitor: &Option<String>,
+) -> WorkspaceData {
     // Count actual workspaces on this monitor, not assuming contiguous IDs
     let workspace_count = v.len() as i32;
-    
+
     // Find the position of the focused workspace within this monitor's workspaces
     let focus = if let Some(ref focused_mon) = focused_monitor {
         if monitor_name == focused_mon {
@@ -108,13 +114,14 @@ fn on_signal() {
     ctx.data.map = sort_workspaces(get_workspace(), get_monitors());
     ctx.data.focus = get_focus();
     // Always try to update focused_monitor after fetching new data
-        ctx.data.focused_monitor = get_focused_monitor();
+    ctx.data.focused_monitor = get_focused_monitor();
 
     if is_initial_sync {
         // Perform the unconditional sync only on the first population
-        ctx.workspace_ctx.sync_all_widgets_unconditionally(|output, _conf_data| {
-            ctx.data.get_workspace_data(output)
-        });
+        ctx.workspace_ctx
+            .sync_all_widgets_unconditionally(|output, _conf_data| {
+                ctx.data.get_workspace_data(output)
+            });
     }
 
     // Regular call that respects focused_only
@@ -186,25 +193,24 @@ impl HyprCtx {
         }
     }
     fn call(&mut self) {
-        self.workspace_ctx
-            .call(|output, _, focused_only| {
-                if focused_only {
-                    // Only send updates to the currently focused monitor
-                    if let Some(ref focused_monitor) = self.data.focused_monitor {
-                        if output != focused_monitor {
-                            return None; // Skip non-focused monitors
-                        }
-                    } else {
-                        return None; // No focused monitor known yet
+        self.workspace_ctx.call(|output, _, focused_only| {
+            if focused_only {
+                // Only send updates to the currently focused monitor
+                if let Some(ref focused_monitor) = self.data.focused_monitor {
+                    if output != focused_monitor {
+                        return None; // Skip non-focused monitors
                     }
+                } else {
+                    return None; // No focused monitor known yet
                 }
-                Some(self.data.get_workspace_data(output))
-            });
+            }
+            Some(self.data.get_workspace_data(output))
+        });
     }
     fn add_cb(&mut self, cb: WorkspaceCB<HyprConf>) -> ID {
         if !self.data.is_default() {
-        cb.sender
-            .send(self.data.get_workspace_data(&cb.output))
+            cb.sender
+                .send(self.data.get_workspace_data(&cb.output))
                 .unwrap_or_else(|e| log::error!("Error sending initial data in add_cb: {}", e));
         }
         self.workspace_ctx.add_cb(cb)
@@ -269,10 +275,10 @@ fn init_hyprland_listener() {
 
     listener.add_active_monitor_changed_handler(async_closure!(|e| {
         log::debug!("received monitor change: {e:?}");
-        
+
         // Update focused monitor for focused_only feature
         on_monitor_focus_change(&e.monitor_name);
-        
+
         if let Some(workspace_name) = e.workspace_name {
             if let Some(id) = workspace_name.regular_to_i32() {
                 match id {
@@ -336,15 +342,10 @@ impl HyprWorkspaceHandler {
 
         log::debug!("change to workspace: {output} - {index}");
 
-        let Some(id) = ctx
-            .data
-            .map
-            .get(output)
-            .and_then(|(v, _)| {
-                // Use the actual workspace ID at the given index
-                v.get(index).map(|workspace| workspace.id)
-            })
-        else {
+        let Some(id) = ctx.data.map.get(output).and_then(|(v, _)| {
+            // Use the actual workspace ID at the given index
+            v.get(index).map(|workspace| workspace.id)
+        }) else {
             return;
         };
 

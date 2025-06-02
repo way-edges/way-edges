@@ -63,12 +63,17 @@ impl<T> WorkspaceCtx<T> {
                 assert!(data.active >= -1);
                 // the focus and active workspace should always be the same
                 assert!(data.focus < 0 || (data.focus == data.active));
-                f.sender.send(data).unwrap_or_else(|e| log::error!("Failed to send workspace data: {}",e));
+                f.sender
+                    .send(data)
+                    .unwrap_or_else(|e| log::error!("Failed to send workspace data: {}", e));
             }
         })
     }
 
-    fn sync_all_widgets_unconditionally(&self, mut data_func: impl FnMut(&str, &T) -> WorkspaceData) {
+    fn sync_all_widgets_unconditionally(
+        &self,
+        mut data_func: impl FnMut(&str, &T) -> WorkspaceData,
+    ) {
         self.cb.values().for_each(|f| {
             let data = data_func(&f.output, &f.data);
             f.sender.send(data).unwrap_or_else(|e| {
