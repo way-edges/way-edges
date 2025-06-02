@@ -42,6 +42,11 @@ impl DataCache {
             focused_output,
         }
     }
+
+    fn is_default(&self) -> bool {
+        self.inner.is_empty() && self.focused_output.is_none()
+    }
+
     fn get_workspace_data(&self, output: &str, filter_empty: bool) -> WorkspaceData {
         let Some(wps) = self.inner.get(output) else {
             return WorkspaceData::default();
@@ -179,12 +184,14 @@ impl NiriCtx {
             });
     }
     fn add_cb(&mut self, cb: WorkspaceCB<NiriConf>) -> ID {
+        if !self.data.is_default() {
         cb.sender
             .send(
                 self.data
                     .get_workspace_data(&cb.output, cb.data.filter_empty),
             )
-            .unwrap();
+                .unwrap_or_else(|e| log::error!("Error sending initial data in add_cb: {}", e));
+        }
         self.workspace_ctx.add_cb(cb)
     }
     fn remove_cb(&mut self, id: ID) {
@@ -206,6 +213,14 @@ fn start_listener() {
         let wp = get_workspaces().await.expect("Failed to get workspaces");
         let ctx = get_niri_ctx();
         ctx.data = DataCache::new(sort_workspaces(wp));
+        
+        // Perform the unconditional sync
+        ctx.workspace_ctx.sync_all_widgets_unconditionally(|output, conf_data| {
+            ctx.data.get_workspace_data(output, conf_data.filter_empty)
+        });
+        
+        // It's good practice to call the main update logic afterwards, 
+        // which will respect focused_only for any subsequent updates.
         ctx.call();
     });
 

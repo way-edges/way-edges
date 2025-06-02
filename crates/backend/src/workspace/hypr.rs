@@ -103,12 +103,21 @@ fn get_focused_monitor() -> Option<String> {
 
 fn on_signal() {
     let ctx = get_hypr_ctx();
+    let is_initial_sync = ctx.data.is_default();
+
     ctx.data.map = sort_workspaces(get_workspace(), get_monitors());
     ctx.data.focus = get_focus();
-    // Update focused monitor if not set or has changed
-    if ctx.data.focused_monitor.is_none() {
+    // Always try to update focused_monitor after fetching new data
         ctx.data.focused_monitor = get_focused_monitor();
+
+    if is_initial_sync {
+        // Perform the unconditional sync only on the first population
+        ctx.workspace_ctx.sync_all_widgets_unconditionally(|output, _conf_data| {
+            ctx.data.get_workspace_data(output)
+        });
     }
+
+    // Regular call that respects focused_only
     ctx.call();
 }
 
@@ -149,6 +158,11 @@ impl CacheData {
             focused_monitor: None,
         }
     }
+
+    fn is_default(&self) -> bool {
+        self.map.is_empty() && self.focus == -1 && self.focused_monitor.is_none()
+    }
+
     fn get_workspace_data(&self, output: &str) -> WorkspaceData {
         let Some((wps, active)) = self.map.get(output) else {
             return WorkspaceData::default();
@@ -188,9 +202,11 @@ impl HyprCtx {
             });
     }
     fn add_cb(&mut self, cb: WorkspaceCB<HyprConf>) -> ID {
+        if !self.data.is_default() {
         cb.sender
             .send(self.data.get_workspace_data(&cb.output))
-            .unwrap();
+                .unwrap_or_else(|e| log::error!("Error sending initial data in add_cb: {}", e));
+        }
         self.workspace_ctx.add_cb(cb)
     }
     fn remove_cb(&mut self, id: ID) {

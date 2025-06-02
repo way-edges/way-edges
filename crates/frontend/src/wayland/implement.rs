@@ -102,9 +102,8 @@ impl OutputHandler for App {
         &mut self,
         _conn: &Connection,
         _qh: &QueueHandle<Self>,
-        output: wl_output::WlOutput,
+        _output: wl_output::WlOutput,
     ) {
-        self.handle_new_output(&output);
     }
 
     fn update_output(
@@ -120,23 +119,14 @@ impl OutputHandler for App {
         &mut self,
         _conn: &Connection,
         _qh: &QueueHandle<Self>,
-        output: wl_output::WlOutput,
+        _output: wl_output::WlOutput,
     ) {
-        self.handle_output_destroyed(&output);
     }
 }
 
 impl LayerShellHandler for App {
     fn closed(&mut self, _conn: &Connection, _qh: &QueueHandle<Self>, _layer: &LayerSurface) {
-        // Don't automatically exit on layer surface closure
-        // The layer surface might be closed due to:
-        // 1. Output destruction (normal cleanup during hot-plug)
-        // 2. Widget cleanup (normal app behavior)
-        // 3. Compositor decision (unusual but shouldn't force exit)
-        // 
-        // Instead of exiting immediately, let the compositor or other mechanisms
-        // handle application shutdown when appropriate.
-        log::debug!("Layer surface closed");
+        self.exit = true
     }
 
     fn configure(
