@@ -144,7 +144,7 @@ impl Group {
     fn init_group(widgets_config: Vec<config::Config>, app: &App) -> Result<Self, String> {
         let mut map: HashMap<Option<String>, Vec<Arc<Mutex<Widget>>>> = HashMap::new();
 
-        for conf in widgets_config.into_iter() {
+        for conf in widgets_config.iter().cloned() {
             let name = conf.name.clone();
             let confs: Vec<(config::Config, WlOutput)> = match conf.monitor.clone() {
                 MonitorSpecifier::ID(index) => app
@@ -182,6 +182,7 @@ impl Group {
 
         Ok(Self { map })
     }
+
     fn get_widget(&self, name: &str) -> Option<Vec<Arc<Mutex<Widget>>>> {
         self.map.get(&Some(name.to_string())).cloned()
     }

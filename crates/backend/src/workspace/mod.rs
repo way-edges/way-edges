@@ -30,6 +30,7 @@ pub struct WorkspaceCB<T> {
     pub sender: Sender<WorkspaceData>,
     pub output: String,
     pub data: T,
+    pub focused_only: bool,
 }
 
 type ID = u32;
@@ -55,15 +56,25 @@ impl<T> WorkspaceCtx<T> {
     fn remove_cb(&mut self, id: ID) {
         self.cb.remove(&id);
     }
-    fn call(&mut self, mut data_func: impl FnMut(&str, &T) -> WorkspaceData) {
-        self.cb.values_mut().for_each(|f| {
-            let data = data_func(&f.output, &f.data);
-            // one output should always have a active workspace
-            assert!(data.active >= -1);
-            // the focus and active workspace should always be the same
-            assert!(data.focus < 0 || (data.focus == data.active));
-            f.sender.send(data).unwrap();
+    fn call(&mut self, mut data_func: impl FnMut(&str, &T, bool) -> Option<WorkspaceData>) {
+        self.cb.values().for_each(|f| {
+            if let Some(data) = data_func(&f.output, &f.data, f.focused_only) {
+                // one output should always have a active workspace
+                assert!(data.active >= -1);
+                // the focus and active workspace should always be the same
+                assert!(data.focus < 0 || (data.focus == data.active));
+                f.sender.send(data).unwrap_or_else(|e| log::error!("Failed to send workspace data: {}",e));
+            }
         })
+    }
+
+    fn sync_all_widgets_unconditionally(&self, mut data_func: impl FnMut(&str, &T) -> WorkspaceData) {
+        self.cb.values().for_each(|f| {
+            let data = data_func(&f.output, &f.data);
+            f.sender.send(data).unwrap_or_else(|e| {
+                log::error!("Error sending unconditional sync data: {}", e);
+            });
+        });
     }
 }
 

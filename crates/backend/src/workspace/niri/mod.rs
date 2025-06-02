@@ -23,11 +23,30 @@ fn filter_empty_workspace(v: &[Workspace]) -> Vec<&Workspace> {
 #[derive(Default)]
 struct DataCache {
     inner: HashMap<String, Vec<Workspace>>,
+    focused_output: Option<String>,
 }
 impl DataCache {
     fn new(map: HashMap<String, Vec<Workspace>>) -> Self {
-        Self { inner: map }
+        // Determine which output is focused by looking for the focused workspace
+        let focused_output = map.iter()
+            .find_map(|(output_name, workspaces)| {
+                if workspaces.iter().any(|w| w.is_focused) {
+                    Some(output_name.clone())
+                } else {
+                    None
+                }
+            });
+        
+        Self { 
+            inner: map,
+            focused_output,
+        }
     }
+
+    fn is_default(&self) -> bool {
+        self.inner.is_empty() && self.focused_output.is_none()
+    }
+
     fn get_workspace_data(&self, output: &str, filter_empty: bool) -> WorkspaceData {
         let Some(wps) = self.inner.get(output) else {
             return WorkspaceData::default();
@@ -150,15 +169,29 @@ impl NiriCtx {
     }
     fn call(&mut self) {
         self.workspace_ctx
-            .call(|output, conf| self.data.get_workspace_data(output, conf.filter_empty));
+            .call(|output, conf, focused_only| {
+                // If focused_only is enabled, only send updates to the focused monitor
+                if focused_only {
+                    if let Some(ref focused_output) = self.data.focused_output {
+                        if output != focused_output {
+                            return None; // Skip this monitor
+                        }
+                    } else {
+                        return None; // No focused monitor found, skip all
+                    }
+                }
+                Some(self.data.get_workspace_data(output, conf.filter_empty))
+            });
     }
     fn add_cb(&mut self, cb: WorkspaceCB<NiriConf>) -> ID {
+        if !self.data.is_default() {
         cb.sender
             .send(
                 self.data
                     .get_workspace_data(&cb.output, cb.data.filter_empty),
             )
-            .unwrap();
+                .unwrap_or_else(|e| log::error!("Error sending initial data in add_cb: {}", e));
+        }
         self.workspace_ctx.add_cb(cb)
     }
     fn remove_cb(&mut self, id: ID) {
@@ -180,6 +213,14 @@ fn start_listener() {
         let wp = get_workspaces().await.expect("Failed to get workspaces");
         let ctx = get_niri_ctx();
         ctx.data = DataCache::new(sort_workspaces(wp));
+        
+        // Perform the unconditional sync
+        ctx.workspace_ctx.sync_all_widgets_unconditionally(|output, conf_data| {
+            ctx.data.get_workspace_data(output, conf_data.filter_empty)
+        });
+        
+        // It's good practice to call the main update logic afterwards, 
+        // which will respect focused_only for any subsequent updates.
         ctx.call();
     });
 
