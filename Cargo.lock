@@ -977,12 +977,13 @@ dependencies = [
 
 [[package]]
 name = "freedesktop-icons"
-version = "0.2.6"
-source = "git+https://github.com/ogios/freedesktop-icons?branch=main#48ae8dbcc36c6a9d9adcb7c01be4920001d84e9f"
+version = "0.3.0"
+source = "git+https://github.com/ogios/freedesktop-icons?branch=use#807964d45063d6911a58595d733aa1fbf2197874"
 dependencies = [
  "dirs",
  "ini_core",
- "thiserror 1.0.69",
+ "memmap2",
+ "thiserror 2.0.12",
  "tracing",
  "xdg 2.5.2",
 ]

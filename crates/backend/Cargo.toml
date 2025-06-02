@@ -35,7 +35,7 @@ resvg = { version = "0.45.0", default-features = false }
 niri-ipc = "25.5.0"
 
 walkdir = "2.5.0"
-freedesktop-icons = { git = "https://github.com/ogios/freedesktop-icons", branch = "main" }
+freedesktop-icons = { git = "https://github.com/ogios/freedesktop-icons", branch = "use" }
 linicon-theme = { git = "https://git.sr.ht/~zethra/linicon-theme", branch = "main" }
 
 sysinfo = { version = "0.35.1", default-features = false, features = [
