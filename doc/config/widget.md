@@ -2,7 +2,7 @@
 
 ```jsonc
 {
-  "name": "widget_base_example",
+  "namespace": "widget_base_example",
   "edge": "top",
   "position": "left",
   "layer": "overlay",
@@ -24,29 +24,30 @@
   "pinnable": true,
   "pin_with_key": true,
   "pin_key": 274, // run `way-edges` with `--mouse-debug`, then click on any widget to get the key printed in log
-  "widget": {
-    // this can be `btn`, `slider`, `wrap-box`, `workspace`.
-    // the lsp completion might not show them all, but once you write it, the rest property completion should work
-    "type": "btn",
-    "thickness": 20,
-    "length": "25%",
-    "border_width": 5,
-    "border_color": "#112233aa",
-    "color": "#ffeeddaa",
-    "event_map": {
-      "272": "sh -c pkill nwg-drawer || nwg-drawer", // left click
-      "273": "niri msg action maximize-column", // right click
-      "274": "niri msg action close-window", // middle click
-      "275": "niri msg action toggle-overview", // side click 1
-      "276": "niri msg action toggle-column-tabbed-display", // side click 2
-    },
-  },
+
+  // NOTE: THE REST OF THESE CONFIGURATIONS ARE ENUM SPECIFIC
+  // `type` can be `btn`, `slider`, `wrap-box`, `workspace`.
+  // the lsp completion might not show them all, but once you write it, the rest property completion should work
+  "type": "btn",
+  // ...
+  // "thickness": 20,
+  // "length": "25%",
+  // "border_width": 5,
+  // "border_color": "#112233aa",
+  // "color": "#ffeeddaa",
+  // "event_map": {
+  //   "272": "sh -c pkill nwg-drawer || nwg-drawer", // left click
+  //   "273": "niri msg action maximize-column", // right click
+  //   "274": "niri msg action close-window", // middle click
+  //   "275": "niri msg action toggle-overview", // side click 1
+  //   "276": "niri msg action toggle-column-tabbed-display", // side click 2
+  // },
 },
 ```
 
 | Name                | Description                                                                   |
 | ------------------- | ----------------------------------------------------------------------------- |
-| name                | can be null, but in order to `toggle-pin` it, name is a must use              |
+| namespace           | can be null, but in order to `togglepin` it you have to specify this          |
 | edge                | monitors edge                                                                 |
 | position            | Position on that edge                                                         |
 | layer               | wlr layershell layer                                                          |
@@ -60,4 +61,4 @@
 | pinnable            | able to pin the widget, pin will not auto hide the widget                     |
 | pin_with_key        | whether use a mouse key to pin the widget, only works when pinnable=true      |
 | pin_key             | the mouse key to pin the widget, only works when pin_with_key=true            |
-| widget              | the actual widget configurations                                              |
+| type                | can be `btn`, `slider`, `wrap-box`, `workspace`                               |

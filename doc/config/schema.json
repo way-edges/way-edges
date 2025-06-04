@@ -3,17 +3,10 @@
   "title": "Root",
   "type": "object",
   "properties": {
-    "ensure_load_group": {
-      "type": "array",
-      "default": [],
-      "items": {
-        "type": "string"
-      }
-    },
-    "groups": {
+    "widgets": {
       "type": "array",
       "items": {
-        "$ref": "#/$defs/Group"
+        "$ref": "#/$defs/Widget"
       }
     }
   },
@@ -201,86 +194,6 @@
       "additionalProperties": false,
       "required": ["index", "widget"]
     },
-    "Config": {
-      "type": "object",
-      "properties": {
-        "animation_curve": {
-          "$ref": "#/$defs/Curve"
-        },
-        "edge": {
-          "type": "string",
-          "enum": ["top", "bottom", "left", "right"]
-        },
-        "extra_trigger_size": {
-          "$ref": "#/$defs/NumOrRelative"
-        },
-        "ignore_exclusive": {
-          "type": "boolean"
-        },
-        "layer": {
-          "type": "string",
-          "enum": ["top", "bottom", "background", "overlay"]
-        },
-        "margins": {
-          "$ref": "#/$defs/Margins"
-        },
-        "monitor": {
-          "$ref": "#/$defs/MonitorSpecifier"
-        },
-        "name": {
-          "type": ["string", "null"]
-        },
-        "pin_key": {
-          "type": "integer",
-          "format": "uint32",
-          "minimum": 0
-        },
-        "pin_with_key": {
-          "type": "boolean"
-        },
-        "pinnable": {
-          "type": "boolean"
-        },
-        "position": {
-          "type": ["string", "null"],
-          "enum": ["top", "bottom", "left", "right"]
-        },
-        "preview_size": {
-          "$ref": "#/$defs/NumOrRelative"
-        },
-        "transition_duration": {
-          "type": "integer",
-          "format": "uint64",
-          "minimum": 0
-        },
-        "widget": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/Widget"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        }
-      },
-      "additionalProperties": false,
-      "required": [
-        "edge",
-        "position",
-        "layer",
-        "margins",
-        "monitor",
-        "ignore_exclusive",
-        "transition_duration",
-        "animation_curve",
-        "extra_trigger_size",
-        "preview_size",
-        "pin_with_key",
-        "pin_key",
-        "pinnable"
-      ]
-    },
     "Curve": {
       "type": "string",
       "enum": ["linear", "ease-quad", "ease-cubic", "ease-expo"]
@@ -294,22 +207,6 @@
           "type": "string"
         }
       ]
-    },
-    "Group": {
-      "type": "object",
-      "properties": {
-        "name": {
-          "type": "string",
-          "default": ""
-        },
-        "widgets": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/Config"
-          }
-        }
-      },
-      "additionalProperties": false
     },
     "HeaderDrawConfig": {
       "type": "object",
@@ -336,8 +233,11 @@
     },
     "KeyEventMap": {
       "type": "object",
-      "additionalProperties": {
-        "type": "string"
+      "additionalProperties": false,
+      "patternProperties": {
+        "^\\d+$": {
+          "type": "string"
+        }
       }
     },
     "Margins": {
@@ -823,6 +723,9 @@
               "type": "string",
               "const": "btn"
             },
+            "animation_curve": {
+              "$ref": "#/$defs/Curve"
+            },
             "border_color": {
               "type": "string",
               "default": "#00000000"
@@ -836,18 +739,82 @@
               "type": "string",
               "default": "#00000000"
             },
+            "edge": {
+              "type": "string",
+              "enum": ["top", "bottom", "left", "right"]
+            },
             "event_map": {
               "$ref": "#/$defs/KeyEventMap"
+            },
+            "extra_trigger_size": {
+              "$ref": "#/$defs/NumOrRelative"
+            },
+            "ignore_exclusive": {
+              "type": "boolean"
+            },
+            "layer": {
+              "type": "string",
+              "enum": ["top", "bottom", "background", "overlay"]
             },
             "length": {
               "$ref": "#/$defs/NumOrRelative"
             },
+            "margins": {
+              "$ref": "#/$defs/Margins"
+            },
+            "monitor": {
+              "$ref": "#/$defs/MonitorSpecifier"
+            },
+            "namespace": {
+              "type": "string"
+            },
+            "pin_key": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            },
+            "pin_with_key": {
+              "type": "boolean"
+            },
+            "pinnable": {
+              "type": "boolean"
+            },
+            "position": {
+              "type": ["string", "null"],
+              "enum": ["top", "bottom", "left", "right"]
+            },
+            "preview_size": {
+              "$ref": "#/$defs/NumOrRelative"
+            },
             "thickness": {
               "$ref": "#/$defs/NumOrRelative"
+            },
+            "transition_duration": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0
             }
           },
           "additionalProperties": false,
-          "required": ["type", "thickness", "length"]
+          "required": [
+            "type",
+            "edge",
+            "position",
+            "layer",
+            "margins",
+            "monitor",
+            "namespace",
+            "ignore_exclusive",
+            "transition_duration",
+            "animation_curve",
+            "extra_trigger_size",
+            "preview_size",
+            "pin_with_key",
+            "pin_key",
+            "pinnable",
+            "thickness",
+            "length"
+          ]
         },
         {
           "type": "object",
@@ -855,6 +822,9 @@
             "type": {
               "type": "string",
               "const": "slider"
+            },
+            "animation_curve": {
+              "$ref": "#/$defs/Curve"
             },
             "bg_color": {
               "type": "string",
@@ -873,6 +843,13 @@
               "format": "int32",
               "default": 3
             },
+            "edge": {
+              "type": "string",
+              "enum": ["top", "bottom", "left", "right"]
+            },
+            "extra_trigger_size": {
+              "$ref": "#/$defs/NumOrRelative"
+            },
             "fg_color": {
               "type": "string",
               "default": "#00000000"
@@ -881,16 +858,50 @@
               "type": ["string", "null"],
               "default": "#00000000"
             },
+            "ignore_exclusive": {
+              "type": "boolean"
+            },
+            "layer": {
+              "type": "string",
+              "enum": ["top", "bottom", "background", "overlay"]
+            },
             "length": {
               "$ref": "#/$defs/NumOrRelative"
+            },
+            "margins": {
+              "$ref": "#/$defs/Margins"
+            },
+            "monitor": {
+              "$ref": "#/$defs/MonitorSpecifier"
+            },
+            "namespace": {
+              "type": "string"
             },
             "obtuse_angle": {
               "type": "number",
               "format": "double",
               "default": 120.0
             },
+            "pin_key": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            },
+            "pin_with_key": {
+              "type": "boolean"
+            },
+            "pinnable": {
+              "type": "boolean"
+            },
+            "position": {
+              "type": ["string", "null"],
+              "enum": ["top", "bottom", "left", "right"]
+            },
             "preset": {
               "$ref": "#/$defs/Preset"
+            },
+            "preview_size": {
+              "$ref": "#/$defs/NumOrRelative"
             },
             "radius": {
               "type": "number",
@@ -903,10 +914,33 @@
             },
             "thickness": {
               "$ref": "#/$defs/NumOrRelative"
+            },
+            "transition_duration": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0
             }
           },
           "additionalProperties": false,
-          "required": ["type", "thickness", "length"]
+          "required": [
+            "type",
+            "edge",
+            "position",
+            "layer",
+            "margins",
+            "monitor",
+            "namespace",
+            "ignore_exclusive",
+            "transition_duration",
+            "animation_curve",
+            "extra_trigger_size",
+            "preview_size",
+            "pin_with_key",
+            "pin_key",
+            "pinnable",
+            "thickness",
+            "length"
+          ]
         },
         {
           "type": "object",
@@ -918,13 +952,62 @@
             "align": {
               "$ref": "#/$defs/Align"
             },
+            "animation_curve": {
+              "$ref": "#/$defs/Curve"
+            },
+            "edge": {
+              "type": "string",
+              "enum": ["top", "bottom", "left", "right"]
+            },
+            "extra_trigger_size": {
+              "$ref": "#/$defs/NumOrRelative"
+            },
             "gap": {
               "type": "number",
               "format": "double",
               "default": 10.0
             },
+            "ignore_exclusive": {
+              "type": "boolean"
+            },
+            "layer": {
+              "type": "string",
+              "enum": ["top", "bottom", "background", "overlay"]
+            },
+            "margins": {
+              "$ref": "#/$defs/Margins"
+            },
+            "monitor": {
+              "$ref": "#/$defs/MonitorSpecifier"
+            },
+            "namespace": {
+              "type": "string"
+            },
             "outlook": {
               "$ref": "#/$defs/Outlook"
+            },
+            "pin_key": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            },
+            "pin_with_key": {
+              "type": "boolean"
+            },
+            "pinnable": {
+              "type": "boolean"
+            },
+            "position": {
+              "type": ["string", "null"],
+              "enum": ["top", "bottom", "left", "right"]
+            },
+            "preview_size": {
+              "$ref": "#/$defs/NumOrRelative"
+            },
+            "transition_duration": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0
             },
             "widgets": {
               "type": "array",
@@ -934,7 +1017,23 @@
             }
           },
           "additionalProperties": false,
-          "required": ["type"]
+          "required": [
+            "type",
+            "edge",
+            "position",
+            "layer",
+            "margins",
+            "monitor",
+            "namespace",
+            "ignore_exclusive",
+            "transition_duration",
+            "animation_curve",
+            "extra_trigger_size",
+            "preview_size",
+            "pin_with_key",
+            "pin_key",
+            "pinnable"
+          ]
         },
         {
           "type": "object",
@@ -959,6 +1058,13 @@
               "type": "string",
               "default": "#00000000"
             },
+            "edge": {
+              "type": "string",
+              "enum": ["top", "bottom", "left", "right"]
+            },
+            "extra_trigger_size": {
+              "$ref": "#/$defs/NumOrRelative"
+            },
             "focus_color": {
               "type": "string",
               "default": "#00000000"
@@ -976,16 +1082,43 @@
               "type": ["string", "null"],
               "default": "#00000000"
             },
+            "ignore_exclusive": {
+              "type": "boolean"
+            },
             "invert_direction": {
               "type": "boolean",
               "default": false
             },
+            "layer": {
+              "type": "string",
+              "enum": ["top", "bottom", "background", "overlay"]
+            },
             "length": {
               "$ref": "#/$defs/NumOrRelative"
+            },
+            "margins": {
+              "$ref": "#/$defs/Margins"
+            },
+            "monitor": {
+              "$ref": "#/$defs/MonitorSpecifier"
+            },
+            "namespace": {
+              "type": "string"
             },
             "output_name": {
               "type": ["string", "null"],
               "default": null
+            },
+            "pin_key": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0
+            },
+            "pin_with_key": {
+              "type": "boolean"
+            },
+            "pinnable": {
+              "type": "boolean"
             },
             "pop_duration": {
               "type": "integer",
@@ -993,11 +1126,26 @@
               "default": 1000,
               "minimum": 0
             },
+            "position": {
+              "type": ["string", "null"],
+              "enum": ["top", "bottom", "left", "right"]
+            },
             "preset": {
               "$ref": "#/$defs/WorkspacePreset"
             },
+            "preview_size": {
+              "$ref": "#/$defs/NumOrRelative"
+            },
             "thickness": {
               "$ref": "#/$defs/NumOrRelative"
+            },
+            "transition_duration": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0
+            },
+            "workspace_animation_curve": {
+              "$ref": "#/$defs/Curve"
             },
             "workspace_transition_duration": {
               "type": "integer",
@@ -1007,7 +1155,26 @@
             }
           },
           "additionalProperties": false,
-          "required": ["type", "thickness", "length", "preset"]
+          "required": [
+            "type",
+            "edge",
+            "position",
+            "layer",
+            "margins",
+            "monitor",
+            "namespace",
+            "ignore_exclusive",
+            "transition_duration",
+            "animation_curve",
+            "extra_trigger_size",
+            "preview_size",
+            "pin_with_key",
+            "pin_key",
+            "pinnable",
+            "thickness",
+            "length",
+            "preset"
+          ]
         }
       ]
     },
