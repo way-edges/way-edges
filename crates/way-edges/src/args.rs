@@ -22,7 +22,7 @@ pub struct Cli {
     pub command: Option<Command>,
 }
 
-fn complete_only_group(current: &std::ffi::OsStr) -> Vec<CompletionCandidate> {
+fn complete_widget_name(current: &std::ffi::OsStr) -> Vec<CompletionCandidate> {
     let Some(current) = current.to_str() else {
         return vec![];
     };
@@ -31,56 +31,11 @@ fn complete_only_group(current: &std::ffi::OsStr) -> Vec<CompletionCandidate> {
         return vec![];
     };
 
-    root.groups
-        .iter()
-        .filter(|group| group.name.starts_with(current))
-        .map(|group| CompletionCandidate::new(&group.name))
+    root.widgets
+        .into_iter()
+        .filter(|w| w.get_common_config().name.starts_with(current))
+        .map(|w| CompletionCandidate::new(&w.get_common_config().name))
         .collect()
-}
-
-fn complete_group_and_widget(current: &std::ffi::OsStr) -> Vec<CompletionCandidate> {
-    let Some(current) = current.to_str() else {
-        return vec![];
-    };
-
-    let Ok(raw_root) = config::get_config_root() else {
-        return vec![];
-    };
-
-    if let Some((group_name, widget_name)) = current.split_once(':') {
-        let Some(raw_group) = raw_root
-            .groups
-            .into_iter()
-            .find(|raw_group| raw_group.name.eq(group_name))
-        else {
-            return vec![];
-        };
-
-        raw_group
-            .widgets
-            .iter()
-            .filter_map(|widget| {
-                let name = widget.name.as_ref()?;
-
-                if !name.is_empty() && name.starts_with(widget_name) {
-                    let name = group_name.to_owned() + ":" + name;
-                    Some(CompletionCandidate::new(&name))
-                } else {
-                    None
-                }
-            })
-            .collect()
-    } else {
-        raw_root
-            .groups
-            .iter()
-            .filter(|raw_group| raw_group.name.starts_with(current))
-            .map(|raw_group| {
-                let name = raw_group.name.to_owned() + ":";
-                CompletionCandidate::new(&name)
-            })
-            .collect()
-    }
 }
 
 #[derive(Subcommand, Debug, PartialEq, Clone)]
@@ -93,28 +48,12 @@ pub enum Command {
     #[command(name = "daemon", alias = "d")]
     Daemon,
 
-    /// add group of widgets in applicatoin given group name
-    #[command(name = "add", alias = "a")]
-    Add {
-        /// group name
-        #[clap(add = ArgValueCompleter::new(complete_only_group))]
-        name: String,
-    },
-
-    /// remove group of widgets in applicatoin given group name
-    #[command(name = "rm", alias = "r")]
-    Remove {
-        /// group name
-        #[clap(add = ArgValueCompleter::new(complete_only_group))]
-        name: String,
-    },
-
     /// toggle pin of a widget under certain group.
     /// format: <group_name>:<widget_name>
     #[command(name = "togglepin")]
     TogglePin {
         /// format: <group_name>:<widget_name>
-        #[clap(add = ArgValueCompleter::new(complete_group_and_widget))]
+        #[clap(add = ArgValueCompleter::new(complete_widget_name))]
         group_and_widget_name: String,
     },
 
@@ -129,8 +68,6 @@ pub enum Command {
 impl Command {
     pub fn send_ipc(&self) {
         let (command, args) = match self {
-            Self::Add { name } => (ipc::IPC_COMMAND_ADD, vec![name.clone()]),
-            Self::Remove { name } => (ipc::IPC_COMMAND_REMOVE, vec![name.clone()]),
             Self::Exit => (ipc::IPC_COMMAND_QUIT, vec![]),
             Self::TogglePin {
                 group_and_widget_name: name,
