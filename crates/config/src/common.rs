@@ -172,7 +172,7 @@ struct ConfigShadow {
     pub monitor: MonitorSpecifier,
 
     #[serde(default)]
-    pub name: Option<String>,
+    pub name: String,
 
     #[serde(default)]
     pub ignore_exclusive: bool,
@@ -234,7 +234,7 @@ pub struct CommonConfig {
     pub layer: Layer,
     pub margins: Margins,
     pub monitor: MonitorSpecifier,
-    pub name: Option<String>,
+    pub name: String,
     pub ignore_exclusive: bool,
     pub transition_duration: u64,
     pub animation_curve: Curve,
