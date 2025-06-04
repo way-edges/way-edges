@@ -172,7 +172,7 @@ struct ConfigShadow {
     pub monitor: MonitorSpecifier,
 
     #[serde(default)]
-    pub name: String,
+    pub namespace: String,
 
     #[serde(default)]
     pub ignore_exclusive: bool,
@@ -209,7 +209,7 @@ impl From<ConfigShadow> for CommonConfig {
             layer: value.layer,
             margins: value.margins,
             monitor: value.monitor,
-            name: value.name,
+            namespace: value.namespace,
             ignore_exclusive: value.ignore_exclusive,
             transition_duration: value.transition_duration,
             extra_trigger_size: value.extra_trigger_size,
@@ -234,7 +234,7 @@ pub struct CommonConfig {
     pub layer: Layer,
     pub margins: Margins,
     pub monitor: MonitorSpecifier,
-    pub name: String,
+    pub namespace: String,
     pub ignore_exclusive: bool,
     pub transition_duration: u64,
     pub animation_curve: Curve,

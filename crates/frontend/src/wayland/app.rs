@@ -98,7 +98,7 @@ impl WidgetMap {
 
         for conf in widgets_config.iter().cloned() {
             let common = conf.get_common_config();
-            let name = common.name.clone();
+            let name = common.namespace.clone();
             let confs: Vec<(config::Widget, WlOutput)> = match common.monitor.clone() {
                 MonitorSpecifier::ID(index) => app
                     .output_state
@@ -752,7 +752,7 @@ impl<'a> WidgetBuilder<'a> {
             &app.queue_handle,
             surface,
             common.layer,
-            Some(format!("way-edges-widget{}", common.name)),
+            Some(format!("way-edges-widget{}", common.namespace)),
             Some(&output),
         );
         layer.set_anchor(common.edge | common.position);
