@@ -54,7 +54,7 @@ pub enum Command {
     TogglePin {
         /// format: <group_name>:<widget_name>
         #[clap(add = ArgValueCompleter::new(complete_widget_name))]
-        group_and_widget_name: String,
+        namespace: String,
     },
 
     /// reload widget configuration
@@ -69,17 +69,8 @@ impl Command {
     pub fn send_ipc(&self) {
         let (command, args) = match self {
             Self::Exit => (ipc::IPC_COMMAND_QUIT, vec![]),
-            Self::TogglePin {
-                group_and_widget_name: name,
-            } => {
-                let (group_name, widget_name) = name
-                    .split_once(':')
-                    .ok_or("widget must be specified with: `group_name:widget_name`")
-                    .unwrap();
-                (
-                    ipc::IPC_COMMAND_TOGGLE_PIN,
-                    vec![group_name.to_string(), widget_name.to_string()],
-                )
+            Self::TogglePin { namespace } => {
+                (ipc::IPC_COMMAND_TOGGLE_PIN, vec![namespace.to_string()])
             }
             Self::Reload => (ipc::IPC_COMMAND_RELOAD, vec![]),
             _ => {
