@@ -11,10 +11,7 @@ use crate::{
     widgets::WidgetContext,
 };
 
-use config::{
-    widgets::slide::{base::SlideConfig, preset::BacklightConfig},
-    Config,
-};
+use config::widgets::slide::{base::SlideConfig, preset::BacklightConfig};
 
 #[derive(Debug)]
 pub struct BacklightContext {
@@ -49,8 +46,7 @@ impl WidgetContext for BacklightContext {
 
 pub fn preset(
     builder: &mut WidgetBuilder,
-    conf: &Config,
-    mut w_conf: SlideConfig,
+    w_conf: &mut SlideConfig,
     mut preset_conf: BacklightConfig,
 ) -> impl WidgetContext {
     let device = preset_conf.device.take();
@@ -69,8 +65,8 @@ pub fn preset(
         backend_id,
         device,
         progress,
-        draw_conf: DrawConfig::new(&w_conf, conf.edge),
-        progress_state: setup_event(conf, &mut w_conf),
+        draw_conf: DrawConfig::new(w_conf),
+        progress_state: setup_event(w_conf),
         only_redraw_on_internal_update: w_conf.redraw_only_on_internal_update,
     }
 }

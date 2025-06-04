@@ -11,7 +11,7 @@ use crate::{
     wayland::app::{App, WidgetBuilder},
 };
 use box_traits::{BoxedWidgetCtx, BoxedWidgetCtxRc, BoxedWidgetGrid};
-use config::{common::Curve, widgets::wrapbox::BoxConfig, Config};
+use config::{shared::Curve, widgets::wrapbox::BoxConfig};
 use event::LastWidget;
 use grid::{builder::GrideBoxBuilder, GridBox};
 use outlook::{init_outlook, OutlookDraw};
@@ -41,13 +41,9 @@ impl WidgetContext for BoxContext {
     }
 }
 
-pub fn init_widget(
-    window: &mut WidgetBuilder,
-    conf: &Config,
-    mut w_conf: BoxConfig,
-) -> impl WidgetContext {
-    let grid_box = init_boxed_widgets(window, &mut w_conf);
-    let outlook_draw_conf = init_outlook(w_conf.outlook, conf);
+pub fn init_widget(window: &mut WidgetBuilder, w_conf: &mut BoxConfig) -> impl WidgetContext {
+    let grid_box = init_boxed_widgets(window, w_conf);
+    let outlook_draw_conf = init_outlook(&w_conf.outlook, w_conf.common.edge);
 
     BoxContext {
         grid_box,

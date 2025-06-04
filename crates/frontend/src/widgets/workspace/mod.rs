@@ -12,10 +12,7 @@ use backend::workspace::{
     niri::register_niri_event_callback,
     WorkspaceCB, WorkspaceData, WorkspaceHandler,
 };
-use config::{
-    widgets::workspace::{WorkspaceConfig, WorkspacePreset},
-    Config,
-};
+use config::widgets::workspace::{WorkspaceConfig, WorkspacePreset};
 use draw::DrawConf;
 use event::HoverData;
 use smithay_client_toolkit::{output::OutputInfo, seat::pointer::BTN_LEFT};
@@ -25,25 +22,27 @@ use super::WidgetContext;
 pub fn init_widget(
     builder: &mut WidgetBuilder,
     size: (i32, i32),
-    conf: &Config,
-    mut w_conf: WorkspaceConfig,
+    w_conf: &mut WorkspaceConfig,
     output: &OutputInfo,
 ) -> impl WidgetContext {
-    w_conf.size.calculate_relative(size, conf.edge);
+    let edge = w_conf.common.edge;
+    w_conf.size.calculate_relative(size, edge);
     if w_conf.output_name.is_none() {
         w_conf.output_name = output.name.clone();
     }
 
-    let workspace_transition =
-        builder.new_animation(w_conf.workspace_transition_duration, w_conf.animation_curve);
+    let workspace_transition = builder.new_animation(
+        w_conf.workspace_transition_duration,
+        w_conf.workspace_animation_curve,
+    );
 
-    let draw_conf = DrawConf::new(&w_conf, workspace_transition.clone(), conf.edge);
+    let draw_conf = DrawConf::new(w_conf, workspace_transition.clone(), edge);
 
     let workspace_data = Rc::new(Cell::new((
         WorkspaceData::default(),
         WorkspaceData::default(),
     )));
-    let hover_data = HoverData::new(conf.edge, w_conf.invert_direction);
+    let hover_data = HoverData::new(edge, w_conf.invert_direction);
 
     let workspace_data_weak = Rc::downgrade(&workspace_data);
     let workspace_transition_weak = workspace_transition.downgrade();
@@ -74,7 +73,7 @@ pub fn init_widget(
         };
     }
 
-    let workspace_handler = match w_conf.preset {
+    let workspace_handler = match w_conf.preset.clone() {
         WorkspacePreset::Hyprland => {
             register_hypr_event_callback(wp_cb!(pop_signal_sender, w_conf, HyprConf))
         }

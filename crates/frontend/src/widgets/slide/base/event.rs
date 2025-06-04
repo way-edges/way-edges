@@ -1,6 +1,5 @@
 use crate::mouse_state::MouseEvent;
 use config::widgets::slide::base::SlideConfig;
-use config::Config;
 use smithay_client_toolkit::seat::pointer::BTN_LEFT;
 use smithay_client_toolkit::shell::wlr_layer::Anchor;
 
@@ -36,8 +35,8 @@ fn make_translate_func(edge: Anchor) -> fn(i32, i32, (f64, f64)) -> f64 {
     }
 }
 
-pub fn setup_event(conf: &Config, w_conf: &mut SlideConfig) -> ProgressState {
-    let func = make_translate_func(conf.edge);
+pub fn setup_event(w_conf: &mut SlideConfig) -> ProgressState {
+    let func = make_translate_func(w_conf.common.edge);
     let left_pressing = false;
 
     ProgressState {

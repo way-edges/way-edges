@@ -4,10 +4,7 @@ use crate::{
     mouse_state::{MouseEvent, MouseStateData},
     wayland::app::WidgetBuilder,
 };
-use config::{
-    widgets::{button::BtnConfig, common::KeyEventMap},
-    Config,
-};
+use config::{shared::KeyEventMap, widgets::button::BtnConfig};
 use draw::DrawConfig;
 
 use super::WidgetContext;
@@ -15,13 +12,14 @@ use super::WidgetContext;
 pub fn init_widget(
     _: &mut WidgetBuilder,
     size: (i32, i32),
-    config: &Config,
-    mut btn_config: BtnConfig,
+    btn_config: &mut BtnConfig,
 ) -> impl WidgetContext {
-    btn_config.size.calculate_relative(size, config.edge);
+    btn_config
+        .size
+        .calculate_relative(size, btn_config.common.edge);
 
     BtnContext {
-        draw_conf: DrawConfig::new(&btn_config, config.edge),
+        draw_conf: DrawConfig::new(btn_config, btn_config.common.edge),
         pressing: false,
         event_map: std::mem::take(&mut btn_config.event_map),
     }

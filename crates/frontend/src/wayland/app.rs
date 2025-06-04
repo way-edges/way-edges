@@ -90,6 +90,7 @@ impl App {
     }
 }
 
+#[derive(Debug, Default)]
 pub struct WidgetMap(HashMap<String, Vec<Arc<Mutex<Widget>>>>);
 impl WidgetMap {
     fn new(widgets_config: Vec<config::Widget>, app: &App) -> Result<Self, String> {
@@ -809,7 +810,7 @@ impl<'a> WidgetBuilder<'a> {
         let start_pos = (0, 0);
         let mouse_state = MouseState::new();
         let buffer = Buffer::default();
-        let draw_core = DrawCore::new(&conf);
+        let draw_core = DrawCore::new(conf.get_common_config());
 
         Widget {
             monitor,
