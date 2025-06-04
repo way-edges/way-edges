@@ -4,7 +4,7 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 use util::color::COLOR_BLACK;
 
-use crate::widgets::common::{self, dt_family_owned, FamilyOwnedRef};
+use crate::shared::{color_translate, dt_family_owned, schema_color, FamilyOwnedRef};
 
 #[derive(Educe, Deserialize, JsonSchema, Clone)]
 #[educe(Debug)]
@@ -35,8 +35,8 @@ fn dt_time_update_interval() -> u64 {
 #[schemars(deny_unknown_fields)]
 pub struct TextConfig {
     #[serde(default = "dt_fg_color")]
-    #[serde(deserialize_with = "common::color_translate")]
-    #[schemars(schema_with = "common::schema_color")]
+    #[serde(deserialize_with = "color_translate")]
+    #[schemars(schema_with = "schema_color")]
     pub fg_color: Color,
     #[serde(default = "dt_font_size")]
     pub font_size: i32,

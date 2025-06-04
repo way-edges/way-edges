@@ -12,7 +12,7 @@ use std::{
     sync::OnceLock,
 };
 
-use crate::widgets::Widget;
+pub use crate::widgets::Widget;
 
 static CONFIG_PATH: OnceLock<PathBuf> = OnceLock::new();
 pub fn get_config_path() -> &'static Path {

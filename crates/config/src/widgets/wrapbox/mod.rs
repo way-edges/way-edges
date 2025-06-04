@@ -11,6 +11,8 @@ use tray::TrayConfig;
 use util::color::parse_color;
 use way_edges_derive::const_property;
 
+use crate::shared::{color_translate, schema_color};
+
 // =================================== OUTLOOK
 #[derive(Debug, Deserialize, Clone, JsonSchema)]
 pub struct OutlookMargins {
@@ -42,8 +44,8 @@ pub struct OutlookWindowConfig {
     #[serde(default)]
     pub margins: OutlookMargins,
     #[serde(default = "dt_color")]
-    #[serde(deserialize_with = "super::common::color_translate")]
-    #[schemars(schema_with = "super::common::schema_color")]
+    #[serde(deserialize_with = "color_translate")]
+    #[schemars(schema_with = "schema_color")]
     pub color: Color,
     #[serde(default = "dt_radius")]
     pub border_radius: i32,
@@ -75,8 +77,8 @@ pub struct OutlookBoardConfig {
     #[serde(default)]
     pub margins: OutlookMargins,
     #[serde(default = "dt_color")]
-    #[serde(deserialize_with = "super::common::color_translate")]
-    #[schemars(schema_with = "super::common::schema_color")]
+    #[serde(deserialize_with = "color_translate")]
+    #[schemars(schema_with = "schema_color")]
     pub color: Color,
     #[serde(default = "dt_radius")]
     pub border_radius: i32,

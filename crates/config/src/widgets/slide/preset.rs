@@ -9,7 +9,10 @@ use util::{
     },
 };
 
-use crate::{shared::Curve, widgets::common::KeyEventMap};
+use crate::shared::{
+    color_translate, option_color_translate, schema_color, schema_optional_color,
+    schema_optional_template, Curve, KeyEventMap,
+};
 
 #[derive(Debug, Deserialize, JsonSchema, Clone)]
 #[serde(rename_all = "snake_case", tag = "type")]
@@ -29,12 +32,12 @@ impl Default for Preset {
 #[schemars(deny_unknown_fields)]
 pub struct PulseAudioConfig {
     #[serde(default = "default_mute_color")]
-    #[serde(deserialize_with = "super::super::common::color_translate")]
-    #[schemars(schema_with = "super::super::common::schema_color")]
+    #[serde(deserialize_with = "color_translate")]
+    #[schemars(schema_with = "schema_color")]
     pub mute_color: Color,
     #[serde(default)]
-    #[serde(deserialize_with = "super::super::common::option_color_translate")]
-    #[schemars(schema_with = "super::super::common::schema_optional_color")]
+    #[serde(deserialize_with = "option_color_translate")]
+    #[schemars(schema_with = "schema_optional_color")]
     pub mute_text_color: Option<Color>,
 
     #[serde(default)]
@@ -61,7 +64,7 @@ pub struct CustomConfig {
 
     #[serde(default)]
     #[serde(deserialize_with = "slide_change_template")]
-    #[schemars(schema_with = "super::super::common::schema_optional_template")]
+    #[schemars(schema_with = "schema_optional_template")]
     pub on_change: Option<Template>,
 
     #[serde(default)]

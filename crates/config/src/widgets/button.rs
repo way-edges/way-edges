@@ -1,6 +1,6 @@
 use crate::common::CommonConfig;
 
-use super::common::{self, CommonSize, KeyEventMap};
+use crate::shared::{color_translate, schema_color, CommonSize, KeyEventMap};
 use cosmic_text::Color;
 use educe::Educe;
 use schemars::JsonSchema;
@@ -23,14 +23,14 @@ pub struct BtnConfig {
     #[serde(flatten)]
     pub size: CommonSize,
     #[serde(default = "dt_color")]
-    #[serde(deserialize_with = "common::color_translate")]
-    #[schemars(schema_with = "common::schema_color")]
+    #[serde(deserialize_with = "color_translate")]
+    #[schemars(schema_with = "schema_color")]
     pub color: Color,
     #[serde(default = "dt_border_width")]
     pub border_width: i32,
     #[serde(default = "dt_border_color")]
-    #[serde(deserialize_with = "common::color_translate")]
-    #[schemars(schema_with = "common::schema_color")]
+    #[serde(deserialize_with = "color_translate")]
+    #[schemars(schema_with = "schema_color")]
     pub border_color: Color,
 
     #[serde(default)]

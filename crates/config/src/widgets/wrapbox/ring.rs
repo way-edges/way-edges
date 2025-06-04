@@ -1,6 +1,5 @@
-use crate::shared::Curve;
-use crate::widgets::common::{
-    color_translate, dt_family_owned, schema_color, schema_optional_template, FamilyOwnedRef,
+use crate::shared::{
+    color_translate, dt_family_owned, schema_color, schema_optional_template, Curve, FamilyOwnedRef,
 };
 use cosmic_text::{Color, FamilyOwned};
 use schemars::JsonSchema;
