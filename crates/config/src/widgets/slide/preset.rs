@@ -9,7 +9,7 @@ use util::{
     },
 };
 
-use crate::{common::Curve, widgets::common::KeyEventMap};
+use crate::{shared::Curve, widgets::common::KeyEventMap};
 
 #[derive(Debug, Deserialize, JsonSchema, Clone)]
 #[serde(rename_all = "snake_case", tag = "type")]

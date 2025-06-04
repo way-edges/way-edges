@@ -1,4 +1,4 @@
-use crate::common::Curve;
+use crate::shared::Curve;
 use crate::widgets::common::{
     color_translate, dt_family_owned, schema_color, schema_optional_template, FamilyOwnedRef,
 };

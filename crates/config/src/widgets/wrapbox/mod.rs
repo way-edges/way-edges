@@ -187,12 +187,17 @@ pub struct BoxedWidgetConfig {
 use schemars::Schema;
 use serde_json::Value;
 
+use crate::common::CommonConfig;
+
 // =================================== FINAL
 #[derive(Debug, Deserialize, JsonSchema, Clone)]
 #[schemars(deny_unknown_fields)]
 #[schemars(transform = BoxConfig_generate_defs)]
 #[const_property("type", "wrap-box")]
 pub struct BoxConfig {
+    #[serde(flatten)]
+    pub common: CommonConfig,
+
     #[serde(default)]
     pub outlook: Outlook,
     #[serde(default)]

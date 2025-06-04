@@ -5,6 +5,8 @@ use serde::Deserialize;
 use util::color::parse_color;
 use way_edges_derive::{const_property, GetSize};
 
+use crate::common::CommonConfig;
+
 use super::{
     super::common::{self, CommonSize},
     preset::Preset,
@@ -20,6 +22,8 @@ use serde_json::Value;
 #[schemars(transform = SlideConfig_generate_defs)]
 #[const_property("type", "slide")]
 pub struct SlideConfig {
+    #[serde(flatten)]
+    pub common: CommonConfig,
     // draw related
     #[serde(flatten)]
     pub size: CommonSize,

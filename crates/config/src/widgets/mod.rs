@@ -29,8 +29,6 @@ pub mod common {
     use smithay_client_toolkit::shell::wlr_layer::Anchor;
     use util::{color::parse_color, shell::shell_cmd_non_block};
 
-    use crate::common::NumOrRelative;
-
     #[derive(Debug, Deserialize, JsonSchema, Clone)]
     pub struct CommonSize {
         pub thickness: NumOrRelative,
@@ -158,6 +156,8 @@ pub mod common {
     }
 
     use cosmic_text::FamilyOwned;
+
+    use crate::shared::NumOrRelative;
 
     #[derive(Serialize, Deserialize)]
     #[serde(remote = "FamilyOwned")]

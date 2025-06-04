@@ -1,4 +1,5 @@
-use crate::common::Curve;
+use crate::common::CommonConfig;
+use crate::shared::Curve;
 
 use super::common::{self, CommonSize};
 use cosmic_text::Color;
@@ -15,6 +16,8 @@ use way_edges_derive::{const_property, GetSize};
 #[const_property("type", "workspace")]
 pub struct WorkspaceConfig {
     #[serde(flatten)]
+    pub common: CommonConfig,
+    #[serde(flatten)]
     // flatten does not support `default` yet.
     // issue: https://github.com/serde-rs/serde/issues/1626
     // PR: https://github.com/serde-rs/serde/pull/2687
@@ -29,7 +32,7 @@ pub struct WorkspaceConfig {
     #[serde(default = "dt_workspace_transition_duration")]
     pub workspace_transition_duration: u64,
     #[serde(default)]
-    pub animation_curve: Curve,
+    pub workspace_animation_curve: Curve,
 
     #[serde(default = "dt_pop_duration")]
     pub pop_duration: u64,

@@ -1,3 +1,5 @@
+use crate::common::CommonConfig;
+
 use super::common::{self, CommonSize, KeyEventMap};
 use cosmic_text::Color;
 use educe::Educe;
@@ -16,6 +18,8 @@ use serde_json::Value;
 // FIXME: THIS DOES NOT WORK IDK WHY. so i have to add `transform` manually
 #[const_property("type", "btn")]
 pub struct BtnConfig {
+    #[serde(flatten)]
+    pub common: CommonConfig,
     #[serde(flatten)]
     pub size: CommonSize,
     #[serde(default = "dt_color")]

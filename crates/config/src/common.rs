@@ -1,170 +1,300 @@
-use regex_lite::Regex;
-use schemars::{json_schema, JsonSchema};
-use serde::{Deserialize, Deserializer};
+use schemars::json_schema;
+use serde::Deserializer;
 use smithay_client_toolkit::shell::wlr_layer::{Anchor, Layer};
-use std::str::FromStr;
 
-#[derive(Debug, Clone, Copy, Deserialize, Default, JsonSchema)]
-#[serde(rename_all = "kebab-case")]
-pub enum Curve {
-    Linear,
-    EaseQuad,
-    #[default]
-    EaseCubic,
-    EaseExpo,
+use schemars::JsonSchema;
+use std::collections::HashSet;
+
+use serde::Deserialize;
+
+use crate::shared::{Curve, NumOrRelative};
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum MonitorSpecifier {
+    ID(usize),
+    Names(HashSet<String>),
+    All,
+
+    // this shall not be used for deserialization
+    Name(String),
 }
-
-#[derive(Debug, Clone, Copy)]
-pub enum NumOrRelative {
-    Num(f64),
-    Relative(f64),
-}
-impl JsonSchema for NumOrRelative {
-    fn always_inline_schema() -> bool {
-        false
-    }
-
-    fn schema_id() -> std::borrow::Cow<'static, str> {
-        Self::schema_name()
-    }
-
+impl JsonSchema for MonitorSpecifier {
     fn schema_name() -> std::borrow::Cow<'static, str> {
-        std::borrow::Cow::Borrowed("NumOrRelative")
+        "MonitorSpecifier".into()
     }
 
     fn json_schema(_: &mut schemars::SchemaGenerator) -> schemars::Schema {
         json_schema!({
-            "type": ["number", "string"],
-            "anyOf": [
-                {
-                    "type": "number",
-                    "description": "absolute number"
-                },
+            "oneOf": [
                 {
                     "type": "string",
-                    "pattern": r"^(\d+(\.\d+)?)%\s*(.*)$",
-                    "description": "relative number"
+                },
+                {
+                    "enum": ["*"],
+                },
+                {
+                    "type": "number",
+                    "minimum": 0,
+                },
+                {
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                    },
                 }
-            ]
+            ],
         })
     }
 }
-impl Default for NumOrRelative {
+impl Default for MonitorSpecifier {
     fn default() -> Self {
-        Self::Num(f64::default())
+        Self::ID(0)
     }
 }
-#[allow(dead_code)]
-impl NumOrRelative {
-    pub fn is_relative(&self) -> bool {
-        match self {
-            NumOrRelative::Num(_) => false,
-            NumOrRelative::Relative(_) => true,
-        }
-    }
-    pub fn get_num(&self) -> Result<f64, &str> {
-        if let Self::Num(r) = self {
-            Ok(*r)
-        } else {
-            Err("relative, not num")
-        }
-    }
-    pub fn get_num_into(self) -> Result<f64, &'static str> {
-        if let Self::Num(r) = self {
-            Ok(r)
-        } else {
-            Err("relative, not num")
-        }
-    }
-    pub fn is_valid_length(&self) -> bool {
-        match self {
-            NumOrRelative::Num(r) => *r > f64::default(),
-            NumOrRelative::Relative(r) => *r > 0.,
-        }
-    }
-    pub fn get_rel(&self) -> Result<f64, &'static str> {
-        if let Self::Relative(r) = self {
-            Ok(*r)
-        } else {
-            Err("num, not relative")
-        }
-    }
-    pub fn get_rel_into(self) -> Result<f64, &'static str> {
-        if let Self::Relative(r) = self {
-            Ok(r)
-        } else {
-            Err("num, not relative")
-        }
-    }
-    pub fn calculate_relative_into(self, max: f64) -> Self {
-        if let Self::Relative(r) = self {
-            Self::Num(r * max)
-        } else {
-            self
-        }
-    }
-    pub fn calculate_relative(&mut self, max: f64) {
-        if let Self::Relative(r) = self {
-            *self = Self::Num(*r * max)
-        }
-    }
-}
-impl<'de> Deserialize<'de> for NumOrRelative {
-    fn deserialize<D>(d: D) -> Result<Self, D::Error>
+impl<'de> Deserialize<'de> for MonitorSpecifier {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
     {
-        struct F64OrRelativeVisitor;
-        impl serde::de::Visitor<'_> for F64OrRelativeVisitor {
-            type Value = NumOrRelative;
+        struct MonitorSpecifierVisitor;
+        impl<'ae> serde::de::Visitor<'ae> for MonitorSpecifierVisitor {
+            type Value = MonitorSpecifier;
 
             fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-                formatter.write_str("a number or a string")
+                formatter.write_str("a monitor ID or a list of monitor names")
             }
 
-            fn visit_i64<E>(self, v: i64) -> Result<Self::Value, E>
+            fn visit_u64<E>(self, value: u64) -> Result<Self::Value, E>
             where
                 E: serde::de::Error,
             {
-                Ok(NumOrRelative::Num(v as f64))
+                Ok(MonitorSpecifier::ID(value as usize))
             }
 
-            fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
+            fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
             where
                 E: serde::de::Error,
             {
-                Ok(NumOrRelative::Num(v as f64))
-            }
-
-            fn visit_f64<E>(self, v: f64) -> Result<Self::Value, E>
-            where
-                E: serde::de::Error,
-            {
-                Ok(NumOrRelative::Num(v))
-            }
-            fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-            where
-                E: serde::de::Error,
-            {
-                // just `unwrap`, it's ok
-                lazy_static::lazy_static! {
-                    static ref re: Regex = Regex::new(r"^(\d+(\.\d+)?)%\s*(.*)$").unwrap();
-                }
-
-                if let Some(captures) = re.captures(v) {
-                    let percentage_str = captures.get(1).map_or("", |m| m.as_str());
-                    let percentage = f64::from_str(percentage_str).map_err(E::custom)?;
-
-                    Ok(NumOrRelative::Relative(percentage * 0.01))
+                if value == "*" {
+                    Ok(MonitorSpecifier::All)
                 } else {
-                    Err(E::custom(
-                        "Input does not match the expected format.".to_string(),
-                    ))
+                    let mut hashset = HashSet::new();
+                    hashset.insert(value.to_string());
+                    Ok(MonitorSpecifier::Names(hashset))
                 }
+            }
+
+            fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+            where
+                A: serde::de::SeqAccess<'ae>,
+            {
+                let mut names = HashSet::new();
+                while let Some(value) = seq.next_element::<String>()? {
+                    names.insert(value);
+                }
+                Ok(MonitorSpecifier::Names(names))
             }
         }
-        d.deserialize_any(F64OrRelativeVisitor)
+
+        deserializer.deserialize_any(MonitorSpecifierVisitor)
     }
+}
+
+mod tests {
+
+    #[test]
+    fn test_monitor_specifier() {
+        use super::*;
+        use serde_jsonrc::json;
+
+        #[derive(Debug, Deserialize)]
+        struct TestConfig {
+            monitor: MonitorSpecifier,
+        }
+
+        let json_data = json!({
+            "monitor": 1,
+        });
+        let config: TestConfig = serde_jsonrc::from_value(json_data).unwrap();
+        assert_eq!(config.monitor, MonitorSpecifier::ID(1));
+
+        let json_data = json!({
+            "monitor": "*",
+        });
+        let config: TestConfig = serde_jsonrc::from_value(json_data).unwrap();
+        assert_eq!(config.monitor, MonitorSpecifier::All);
+
+        let json_data = json!({
+            "monitor": ["Monitor1", "Monitor2"],
+        });
+        let config: TestConfig = serde_jsonrc::from_value(json_data).unwrap();
+        assert_eq!(
+            config.monitor,
+            MonitorSpecifier::Names(HashSet::from_iter(vec![
+                "Monitor1".to_string(),
+                "Monitor2".to_string()
+            ]))
+        );
+    }
+}
+
+#[derive(Debug, Deserialize, Clone, Default, JsonSchema)]
+#[schemars(deny_unknown_fields)]
+pub struct Margins {
+    #[serde(default)]
+    pub left: NumOrRelative,
+    #[serde(default)]
+    pub top: NumOrRelative,
+    #[serde(default)]
+    pub right: NumOrRelative,
+    #[serde(default)]
+    pub bottom: NumOrRelative,
+}
+
+#[derive(Debug, Deserialize)]
+struct ConfigShadow {
+    #[serde(default = "dt_edge")]
+    #[serde(deserialize_with = "deserialize_edge")]
+    pub edge: Anchor,
+
+    #[serde(default)]
+    #[serde(deserialize_with = "deserialize_optional_edge")]
+    pub position: Option<Anchor>,
+
+    #[serde(default = "dt_layer")]
+    #[serde(deserialize_with = "deserialize_layer")]
+    pub layer: Layer,
+
+    #[serde(default)]
+    pub margins: Margins,
+
+    #[serde(default)]
+    pub monitor: MonitorSpecifier,
+
+    #[serde(default)]
+    pub name: Option<String>,
+
+    #[serde(default)]
+    pub ignore_exclusive: bool,
+
+    #[serde(default = "dt_transition_duration")]
+    pub transition_duration: u64,
+    #[serde(default)]
+    pub animation_curve: Curve,
+    #[serde(default = "dt_extra_trigger_size")]
+    pub extra_trigger_size: NumOrRelative,
+
+    #[serde(default = "dt_preview_size")]
+    pub preview_size: NumOrRelative,
+
+    #[serde(default = "dt_pinnable")]
+    pub pinnable: bool,
+    #[serde(default = "dt_pin_with_key")]
+    pub pin_with_key: bool,
+    #[serde(default = "dt_pin_key")]
+    pub pin_key: u32,
+}
+
+impl From<ConfigShadow> for CommonConfig {
+    fn from(value: ConfigShadow) -> Self {
+        let position;
+        if let Some(pos) = value.position {
+            position = pos
+        } else {
+            position = value.edge
+        }
+        Self {
+            edge: value.edge,
+            position,
+            layer: value.layer,
+            margins: value.margins,
+            monitor: value.monitor,
+            name: value.name,
+            ignore_exclusive: value.ignore_exclusive,
+            transition_duration: value.transition_duration,
+            extra_trigger_size: value.extra_trigger_size,
+            preview_size: value.preview_size,
+            animation_curve: value.animation_curve,
+            pinnable: value.pinnable,
+            pin_with_key: value.pin_with_key,
+            pin_key: value.pin_key,
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, JsonSchema, Clone)]
+#[serde(from = "ConfigShadow")]
+#[schemars(deny_unknown_fields)]
+pub struct CommonConfig {
+    #[schemars(schema_with = "schema_edge")]
+    pub edge: Anchor,
+    #[schemars(schema_with = "schema_optional_edge")]
+    pub position: Anchor,
+    #[schemars(schema_with = "schema_layer")]
+    pub layer: Layer,
+    pub margins: Margins,
+    pub monitor: MonitorSpecifier,
+    pub name: Option<String>,
+    pub ignore_exclusive: bool,
+    pub transition_duration: u64,
+    pub animation_curve: Curve,
+    pub extra_trigger_size: NumOrRelative,
+    pub preview_size: NumOrRelative,
+
+    pub pin_with_key: bool,
+    pub pin_key: u32,
+    pub pinnable: bool,
+}
+impl CommonConfig {
+    pub fn resolve_relative(&mut self, size: (i32, i32)) {
+        // margins
+        macro_rules! calculate_margins {
+            ($m:expr, $s:expr) => {
+                if $m.is_relative() {
+                    $m.calculate_relative($s as f64);
+                }
+            };
+        }
+        calculate_margins!(self.margins.left, size.0);
+        calculate_margins!(self.margins.right, size.0);
+        calculate_margins!(self.margins.top, size.1);
+        calculate_margins!(self.margins.bottom, size.1);
+
+        // extra
+        if self.extra_trigger_size.is_relative() {
+            let max = match self.edge {
+                Anchor::LEFT | Anchor::RIGHT => size.0,
+                Anchor::TOP | Anchor::BOTTOM => size.1,
+                _ => unreachable!(),
+            };
+            self.extra_trigger_size.calculate_relative(max as f64);
+        }
+    }
+}
+
+fn dt_edge() -> Anchor {
+    Anchor::LEFT
+}
+fn dt_layer() -> Layer {
+    Layer::Top
+}
+fn dt_transition_duration() -> u64 {
+    300
+}
+fn dt_extra_trigger_size() -> NumOrRelative {
+    NumOrRelative::Num(1.0)
+}
+fn dt_preview_size() -> NumOrRelative {
+    NumOrRelative::Num(0.0)
+}
+fn dt_pinnable() -> bool {
+    true
+}
+fn dt_pin_with_key() -> bool {
+    true
+}
+fn dt_pin_key() -> u32 {
+    smithay_client_toolkit::seat::pointer::BTN_MIDDLE
 }
 
 fn match_edge(edge: &str) -> Option<Anchor> {

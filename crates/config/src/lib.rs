@@ -1,19 +1,18 @@
 pub mod common;
-pub mod conf;
-pub mod root;
+pub mod shared;
 pub mod widgets;
 
-pub use conf::*;
-pub use root::*;
-use schemars::schema_for;
+use schemars::{schema_for, JsonSchema};
+use serde::Deserialize;
 
 use std::{
     fs::OpenOptions,
     io::Read,
     path::{Path, PathBuf},
-    // str::FromStr,
     sync::OnceLock,
 };
+
+use crate::widgets::Widget;
 
 static CONFIG_PATH: OnceLock<PathBuf> = OnceLock::new();
 pub fn get_config_path() -> &'static Path {
@@ -28,41 +27,32 @@ pub fn get_config_path() -> &'static Path {
     b
 }
 
-pub fn get_config_file_content() -> Result<String, String> {
+fn get_config_file_content() -> Result<String, String> {
     let p = get_config_path();
-    let mut f = match OpenOptions::new()
-        // .create(true)
-        //.append(true)
+
+    OpenOptions::new()
         .read(true)
         .open(p)
-    {
-        Ok(f) => f,
-        Err(e) => return Err(format!("failed to open config file: {e}")),
-    };
-    let mut s = String::new();
-    match f.read_to_string(&mut s) {
-        Ok(_) => {}
-        Err(e) => return Err(format!("failed to read config file: {e}")),
-    };
-    Ok(s)
+        .and_then(|mut f| {
+            let mut s = String::new();
+            f.read_to_string(&mut s).map(|_| s)
+        })
+        .map_err(|e| format!("failed to open config file: {e}"))
 }
 
 pub fn get_config_root() -> Result<Root, String> {
     let s = get_config_file_content()?;
-    root::parse_config(&s)
-}
-
-pub fn get_config_by_group(group_name: &str) -> Option<Group> {
-    let mut root = get_config_root()
-        .inspect_err(|e| {
-            log::error!("Failed to load config: {e}");
-        })
-        .ok()?;
-
-    root.take_group(group_name)
+    serde_jsonrc::from_str(&s).map_err(|e| format!("JSON parse error: {e}"))
 }
 
 pub fn output_json_schema() {
     let schema = schema_for!(Root);
     println!("{}", serde_jsonrc::to_string_pretty(&schema).unwrap());
+}
+
+#[derive(Deserialize, Debug, JsonSchema)]
+#[schemars(extend("allowTrailingCommas" = true))]
+pub struct Root {
+    #[serde(default)]
+    pub widgets: Vec<Widget>,
 }
