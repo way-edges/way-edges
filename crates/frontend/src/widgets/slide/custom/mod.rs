@@ -3,11 +3,8 @@ use interval_task::runner::Runner;
 use std::{cell::Cell, rc::Rc, time::Duration};
 
 use config::{
-    widgets::{
-        common::KeyEventMap,
-        slide::{base::SlideConfig, preset::CustomConfig},
-    },
-    Config,
+    shared::KeyEventMap,
+    widgets::slide::{base::SlideConfig, preset::CustomConfig},
 };
 use util::{
     shell::{shell_cmd, shell_cmd_non_block},
@@ -15,7 +12,7 @@ use util::{
 };
 
 use super::base::{
-    draw::{self, DrawConfig},
+    draw::DrawConfig,
     event::{setup_event, ProgressState},
 };
 use crate::{
@@ -77,8 +74,7 @@ impl WidgetContext for CustomContext {
 
 pub fn custom_preset(
     builder: &mut WidgetBuilder,
-    conf: &Config,
-    mut w_conf: SlideConfig,
+    w_conf: SlideConfig,
     mut preset_conf: CustomConfig,
 ) -> impl WidgetContext {
     let progress = Rc::new(Cell::new(0.));
@@ -92,13 +88,14 @@ pub fn custom_preset(
     // on change
     let on_change = preset_conf.on_change.take();
 
+    let edge = builder.common_config.edge;
     CustomContext {
         runner,
         progress,
         event_map,
         on_change,
-        draw_conf: draw::DrawConfig::new(&w_conf, conf.edge),
-        progress_state: setup_event(conf, &mut w_conf),
+        draw_conf: DrawConfig::new(edge, &w_conf),
+        progress_state: setup_event(edge, &w_conf),
         only_redraw_on_internal_update: w_conf.redraw_only_on_internal_update,
     }
 }

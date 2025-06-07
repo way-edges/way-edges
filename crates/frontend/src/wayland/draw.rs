@@ -1,4 +1,4 @@
-use config::common::NumOrRelative;
+use config::{common::CommonConfig, shared::NumOrRelative};
 use smithay_client_toolkit::shell::wlr_layer::Anchor;
 
 #[derive(Debug)]
@@ -10,7 +10,7 @@ pub struct DrawCore {
     pop_coordinate_func: PopCoordinateFunc,
 }
 impl DrawCore {
-    pub fn new(conf: &config::Config) -> Self {
+    pub fn new(conf: &CommonConfig) -> Self {
         let visible_y_func = make_visible_y_func(conf.edge);
         let pop_coordinate_func = make_pop_coordiante_pose_func(conf.edge);
         Self {

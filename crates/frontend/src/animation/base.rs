@@ -1,6 +1,6 @@
 use std::time::{Duration, Instant};
 
-use config::common::Curve;
+use config::shared::Curve;
 
 #[derive(Debug)]
 pub(super) struct Animation {

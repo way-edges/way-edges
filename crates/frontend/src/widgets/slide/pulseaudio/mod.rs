@@ -20,10 +20,7 @@ use backend::pulseaudio::{
     change::{set_mute, set_vol},
     PulseAudioDevice, VInfo,
 };
-use config::{
-    widgets::slide::{base::SlideConfig, preset::PulseAudioConfig},
-    Config,
-};
+use config::widgets::slide::{base::SlideConfig, preset::PulseAudioConfig};
 
 #[derive(Debug)]
 pub struct PulseAudioContext {
@@ -86,8 +83,7 @@ impl WidgetContext for PulseAudioContext {
 
 fn common(
     builder: &mut WidgetBuilder,
-    conf: &Config,
-    mut w_conf: SlideConfig,
+    w_conf: SlideConfig,
     preset_conf: PulseAudioConfig,
     device: PulseAudioDevice,
 ) -> impl WidgetContext {
@@ -118,6 +114,7 @@ fn common(
     });
     let backend_id = backend::pulseaudio::register_callback(redraw_signal, device.clone()).unwrap();
 
+    let edge = builder.common_config.edge;
     PulseAudioContext {
         backend_id,
         device,
@@ -127,8 +124,8 @@ fn common(
         non_mute_text_color,
         mute_text_color,
         mute_animation,
-        draw_conf: DrawConfig::new(&w_conf, conf.edge),
-        progress_state: setup_event(conf, &mut w_conf),
+        draw_conf: DrawConfig::new(edge, &w_conf),
+        progress_state: setup_event(edge, &w_conf),
         only_redraw_on_internal_update: w_conf.redraw_only_on_internal_update,
         debounce_ctx: None,
     }
@@ -136,7 +133,6 @@ fn common(
 
 pub fn speaker(
     builder: &mut WidgetBuilder,
-    config: &Config,
     w_conf: SlideConfig,
     mut preset_conf: PulseAudioConfig,
 ) -> impl WidgetContext {
@@ -147,12 +143,11 @@ pub fn speaker(
             PulseAudioDevice::NamedSink(name)
         });
 
-    common(builder, config, w_conf, preset_conf, device)
+    common(builder, w_conf, preset_conf, device)
 }
 
 pub fn microphone(
     builder: &mut WidgetBuilder,
-    config: &Config,
     w_conf: SlideConfig,
     mut preset_conf: PulseAudioConfig,
 ) -> impl WidgetContext {
@@ -163,5 +158,5 @@ pub fn microphone(
             PulseAudioDevice::NamedSource(name)
         });
 
-    common(builder, config, w_conf, preset_conf, device)
+    common(builder, w_conf, preset_conf, device)
 }

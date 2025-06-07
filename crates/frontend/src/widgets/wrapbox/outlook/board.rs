@@ -19,7 +19,7 @@ pub struct DrawConf {
     corners: [bool; 4],
 }
 impl DrawConf {
-    pub fn new(outlook: OutlookBoardConfig, edge: Anchor) -> Self {
+    pub fn new(outlook: &OutlookBoardConfig, edge: Anchor) -> Self {
         let corners = match edge {
             Anchor::LEFT => [false, true, true, false],
             Anchor::RIGHT => [true, false, false, true],

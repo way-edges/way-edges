@@ -4,41 +4,33 @@ mod custom;
 mod pulseaudio;
 
 use crate::wayland::app::WidgetBuilder;
-use config::{widgets::slide::base::SlideConfig, Config};
+use config::widgets::slide::base::SlideConfig;
 
 use super::WidgetContext;
 
 pub fn init_widget(
     builder: &mut WidgetBuilder,
     size: (i32, i32),
-    config: &Config,
     mut w_conf: SlideConfig,
 ) -> Box<dyn WidgetContext> {
-    w_conf.size.calculate_relative(size, config.edge);
+    w_conf
+        .size
+        .calculate_relative(size, builder.common_config.edge);
 
     use config::widgets::slide::preset::Preset;
 
     match std::mem::take(&mut w_conf.preset) {
         Preset::Backlight(backlight_config) => {
-            Box::new(backlight::preset(builder, config, w_conf, backlight_config))
+            Box::new(backlight::preset(builder, w_conf, backlight_config))
         }
-        Preset::Speaker(pulse_audio_config) => Box::new(pulseaudio::speaker(
-            builder,
-            config,
-            w_conf,
-            pulse_audio_config,
-        )),
-        Preset::Microphone(pulse_audio_config) => Box::new(pulseaudio::microphone(
-            builder,
-            config,
-            w_conf,
-            pulse_audio_config,
-        )),
-        Preset::Custom(custom_config) => Box::new(custom::custom_preset(
-            builder,
-            config,
-            w_conf,
-            custom_config,
-        )),
+        Preset::Speaker(pulse_audio_config) => {
+            Box::new(pulseaudio::speaker(builder, w_conf, pulse_audio_config))
+        }
+        Preset::Microphone(pulse_audio_config) => {
+            Box::new(pulseaudio::microphone(builder, w_conf, pulse_audio_config))
+        }
+        Preset::Custom(custom_config) => {
+            Box::new(custom::custom_preset(builder, w_conf, custom_config))
+        }
     }
 }

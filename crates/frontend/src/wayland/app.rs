@@ -11,7 +11,7 @@ use calloop::{
     ping::{make_ping, Ping},
     LoopHandle, LoopSignal,
 };
-use config::{common::Curve, MonitorSpecifier};
+use config::{common::MonitorSpecifier, shared::Curve};
 use smithay_client_toolkit::{
     compositor::{CompositorState, SurfaceData as SctkSurfaceData, SurfaceDataExt},
     output::OutputState,
@@ -47,7 +47,7 @@ use super::{draw::DrawCore, window_pop_state::WindowPopState};
 pub struct App {
     pub exit: bool,
     pub show_mouse_key: bool,
-    pub groups: HashMap<String, Option<Group>>,
+    pub widget_map: WidgetMap,
 
     pub queue_handle: QueueHandle<App>,
     pub event_loop_handle: LoopHandle<'static, App>,
@@ -68,85 +68,37 @@ pub struct App {
 impl App {
     pub fn handle_ipc(&mut self, cmd: IPCCommand) {
         match cmd {
-            IPCCommand::AddGroup(s) => self.add_group(&s),
-            IPCCommand::RemoveGroup(s) => self.rm_group(&s),
-            IPCCommand::TogglePin(gn, wn) => self.toggle_pin(&gn, &wn),
+            IPCCommand::TogglePin(wn) => self.toggle_pin(&wn),
             IPCCommand::Exit => self.exit = true,
             IPCCommand::Reload => self.reload(),
         };
     }
 
-    fn add_group(&mut self, name: &str) {
-        if self.groups.contains_key(name) {
-            return;
-        }
-
-        if let Some(group) = config::get_config_by_group(name) {
-            let group = self.init_group(group);
-            self.groups.insert(name.to_string(), group);
-        }
-    }
-    fn rm_group(&mut self, name: &str) {
-        drop(self.groups.remove(name));
-    }
-    fn toggle_pin(&mut self, gn: &str, wn: &str) {
-        let Some(Some(group)) = self.groups.get_mut(gn) else {
-            return;
-        };
-        if let Some(ws) = group.get_widget(wn) {
-            ws.into_iter()
-                .for_each(|w| w.lock().unwrap().toggle_pin(self));
+    fn toggle_pin(&mut self, name: &str) {
+        for w in self.widget_map.get_widgets(name) {
+            w.lock().unwrap().toggle_pin(self)
         }
     }
 
     pub fn reload(&mut self) {
-        let mut conf = match config::get_config_root() {
-            Ok(c) => c,
-            Err(e) => {
-                log::error!("Failed to load config: {e}");
-                return;
-            }
-        };
-
-        // ensure load_groups are loaded
-        conf.ensure_load_group.iter().for_each(|key| {
-            self.groups.entry(key.clone()).or_insert(None);
-        });
-
-        // FIX: HOW CAN WE DO THIS???
-        let ptr = self as *const App;
-        for (k, widget_map) in self.groups.iter_mut() {
-            drop(widget_map.take());
-
-            if let Some(g) = conf.groups.iter().position(|g| &g.name == k) {
-                let group = conf.groups.swap_remove(g);
-                *widget_map = unsafe { ptr.as_ref().unwrap() }.init_group(group);
-            };
-        }
-    }
-
-    fn init_group(&self, conf: config::Group) -> Option<Group> {
-        log::debug!("group config:\n{conf:?}");
-        Group::init_group(conf.widgets, self)
-            .inspect_err(|e| {
-                log::error!("{e}");
-                util::notify_send("Way-edges app error", e, true);
+        self.widget_map = config::get_config_root()
+            .and_then(|c| WidgetMap::new(c.widgets.clone(), self))
+            .unwrap_or_else(|e| {
+                log::error!("Failed to load widgets: {e}");
+                WidgetMap(HashMap::new())
             })
-            .ok()
     }
 }
 
-pub struct Group {
-    // the `None` is for unnamed widgets
-    map: HashMap<Option<String>, Vec<Arc<Mutex<Widget>>>>,
-}
-impl Group {
-    fn init_group(widgets_config: Vec<config::Config>, app: &App) -> Result<Self, String> {
-        let mut map: HashMap<Option<String>, Vec<Arc<Mutex<Widget>>>> = HashMap::new();
+#[derive(Debug, Default)]
+pub struct WidgetMap(HashMap<String, Vec<Arc<Mutex<Widget>>>>);
+impl WidgetMap {
+    fn new(widgets_config: Vec<config::Widget>, app: &App) -> Result<Self, String> {
+        let mut map: HashMap<String, Vec<Arc<Mutex<Widget>>>> = HashMap::new();
 
         for conf in widgets_config.iter().cloned() {
-            let name = conf.name.clone();
-            let confs: Vec<(config::Config, WlOutput)> = match conf.monitor.clone() {
+            let name = conf.common.namespace.clone();
+            let confs: Vec<(config::Widget, WlOutput)> = match conf.common.monitor.clone() {
                 MonitorSpecifier::ID(index) => app
                     .output_state
                     .outputs()
@@ -180,11 +132,11 @@ impl Group {
             }
         }
 
-        Ok(Self { map })
+        Ok(Self(map))
     }
 
-    fn get_widget(&self, name: &str) -> Option<Vec<Arc<Mutex<Widget>>>> {
-        self.map.get(&Some(name.to_string())).cloned()
+    fn get_widgets(&self, name: &str) -> Vec<Arc<Mutex<Widget>>> {
+        self.0.get(name).cloned().unwrap_or_default()
     }
 }
 
@@ -437,13 +389,14 @@ impl Widget {
     }
 
     fn init_widget(
-        mut conf: config::Config,
+        conf: config::Widget,
         wl_output: WlOutput,
         app: &App,
     ) -> Result<Arc<Mutex<Self>>, String> {
-        let mut builder = WidgetBuilder::new(&mut conf, wl_output, app)?;
-        let w = init_widget(&mut conf, &mut builder);
-        let s = builder.build(conf, w);
+        let config::Widget { common, widget } = conf;
+        let mut builder = WidgetBuilder::new(common, wl_output, app)?;
+        let w = init_widget(widget, &mut builder);
+        let s = builder.build(w);
 
         Ok(Arc::new_cyclic(|weak| {
             SurfaceData::from_wl(s.layer.wl_surface()).store_widget(weak.clone());
@@ -619,6 +572,8 @@ impl RedrawEssentail {
 }
 
 pub struct WidgetBuilder<'a> {
+    pub common_config: config::CommonConfig,
+
     pub margins: [i32; 4],
     pub output_size: (i32, i32),
 
@@ -750,25 +705,13 @@ impl WidgetBuilder<'_> {
 }
 impl<'a> WidgetBuilder<'a> {
     fn new(
-        conf: &mut config::Config,
+        mut common: config::CommonConfig,
         output: WlOutput,
         app: &'a App,
     ) -> Result<WidgetBuilder<'a>, String> {
-        // let output = match &conf.monitor {
-        //     MonitorSpecifier::ID(index) => app.output_state.outputs().nth(*index),
-        //     MonitorSpecifier::Name(name) => app.output_state.outputs().find(|out| {
-        //         app.output_state
-        //             .info(out)
-        //             .and_then(|info| info.name)
-        //             .filter(|output_name| output_name == name)
-        //             .is_some()
-        //     }),
-        //     _ => unreachable!(),
-        // }
-        // .ok_or(format!("output not found: {:?}", conf.monitor))?;
         let monitor = app.output_state.info(&output).unwrap();
         let output_size = monitor.modes[0].dimensions;
-        conf.resolve_relative(output_size);
+        common.resolve_relative(output_size);
 
         let surface = app.compositor_state.create_surface_with_data(
             &app.queue_handle,
@@ -809,39 +752,39 @@ impl<'a> WidgetBuilder<'a> {
         let layer = app.shell.create_layer_surface(
             &app.queue_handle,
             surface,
-            conf.layer,
-            Some("way-edges-widget"),
+            common.layer,
+            Some(format!("way-edges-widget{}", common.namespace)),
             Some(&output),
         );
-        layer.set_anchor(conf.edge | conf.position);
-        if conf.ignore_exclusive {
+        layer.set_anchor(common.edge | common.position);
+        if common.ignore_exclusive {
             layer.set_exclusive_zone(-1);
         };
         let margins = [
-            conf.margins.top.get_num().unwrap() as i32,
-            conf.margins.right.get_num().unwrap() as i32,
-            conf.margins.bottom.get_num().unwrap() as i32,
-            conf.margins.left.get_num().unwrap() as i32,
+            common.margins.top.get_num().unwrap() as i32,
+            common.margins.right.get_num().unwrap() as i32,
+            common.margins.bottom.get_num().unwrap() as i32,
+            common.margins.left.get_num().unwrap() as i32,
         ];
         layer.set_margin(margins[0], margins[1], margins[2], margins[3]);
         layer.set_size(1, 1);
         layer.commit();
 
         let pop_animation = ToggleAnimation::new(
-            Duration::from_millis(conf.transition_duration),
-            conf.animation_curve,
+            Duration::from_millis(common.transition_duration),
+            common.animation_curve,
         )
         .make_rc();
         let animation_list = AnimationList::new();
         let window_pop_state = WindowPopState::new(
             pop_animation,
-            conf.pinnable,
-            conf.pin_with_key,
-            conf.pin_key,
+            common.pinnable,
+            common.pin_with_key,
+            common.pin_key,
         );
 
         Ok(Self {
-            monitor: conf.monitor.clone(),
+            monitor: common.monitor.clone(),
             output,
             app,
             layer,
@@ -850,9 +793,10 @@ impl<'a> WidgetBuilder<'a> {
             margins,
             output_size,
             window_pop_state,
+            common_config: common,
         })
     }
-    pub fn build(self, conf: config::Config, w: Box<dyn WidgetContext>) -> Widget {
+    pub fn build(self, w: Box<dyn WidgetContext>) -> Widget {
         let Self {
             monitor,
             output,
@@ -863,12 +807,13 @@ impl<'a> WidgetBuilder<'a> {
             margins,
             output_size,
             window_pop_state,
+            common_config,
         } = self;
 
         let start_pos = (0, 0);
         let mouse_state = MouseState::new();
         let buffer = Buffer::default();
-        let draw_core = DrawCore::new(&conf);
+        let draw_core = DrawCore::new(&common_config);
 
         Widget {
             monitor,

@@ -30,10 +30,8 @@
     "widgets": [
       {
         "index": [-1, -1], // position in the grid layout. -1 means next available position.
-        "widget": {
-          "type": "ring",
-          // ... ring configs omitted here for brevity
-        },
+        "type": "ring",
+        // ... ring configs omitted here for brevity
       },
     ],
   },
@@ -95,3 +93,15 @@
 | color         | color         |
 | border_radius | int           |
 | margins       | margins       |
+
+## widgets
+
+| Name  | Description                                          |
+| ----- | ---------------------------------------------------- |
+| index | default \[-1, -1\], you can choose to leave it empty |
+
+the rest of the widget config:
+
+- [Ring](ring.md)
+- [Text](text.md)
+- [Tray](tray.md)

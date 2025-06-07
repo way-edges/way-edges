@@ -4,26 +4,23 @@ use crate::{
     mouse_state::{MouseEvent, MouseStateData},
     wayland::app::WidgetBuilder,
 };
-use config::{
-    widgets::{button::BtnConfig, common::KeyEventMap},
-    Config,
-};
+use config::{shared::KeyEventMap, widgets::button::BtnConfig};
 use draw::DrawConfig;
 
 use super::WidgetContext;
 
 pub fn init_widget(
-    _: &mut WidgetBuilder,
+    builder: &mut WidgetBuilder,
     size: (i32, i32),
-    config: &Config,
     mut btn_config: BtnConfig,
 ) -> impl WidgetContext {
-    btn_config.size.calculate_relative(size, config.edge);
+    let edge = builder.common_config.edge;
+    btn_config.size.calculate_relative(size, edge);
 
     BtnContext {
-        draw_conf: DrawConfig::new(&btn_config, config.edge),
+        draw_conf: DrawConfig::new(&btn_config, edge),
         pressing: false,
-        event_map: std::mem::take(&mut btn_config.event_map),
+        event_map: btn_config.event_map,
     }
 }
 

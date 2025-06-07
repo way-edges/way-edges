@@ -1,6 +1,7 @@
-use crate::common::Curve;
+use crate::shared::{
+    color_translate, option_color_translate, schema_color, schema_optional_color, CommonSize, Curve,
+};
 
-use super::common::{self, CommonSize};
 use cosmic_text::Color;
 use schemars::Schema;
 use schemars::{json_schema, JsonSchema};
@@ -29,26 +30,26 @@ pub struct WorkspaceConfig {
     #[serde(default = "dt_workspace_transition_duration")]
     pub workspace_transition_duration: u64,
     #[serde(default)]
-    pub animation_curve: Curve,
+    pub workspace_animation_curve: Curve,
 
     #[serde(default = "dt_pop_duration")]
     pub pop_duration: u64,
 
     #[serde(default = "dt_default_color")]
-    #[serde(deserialize_with = "common::color_translate")]
-    #[schemars(schema_with = "common::schema_color")]
+    #[serde(deserialize_with = "color_translate")]
+    #[schemars(schema_with = "schema_color")]
     pub default_color: Color,
     #[serde(default = "dt_focus_color")]
-    #[serde(deserialize_with = "common::color_translate")]
-    #[schemars(schema_with = "common::schema_color")]
+    #[serde(deserialize_with = "color_translate")]
+    #[schemars(schema_with = "schema_color")]
     pub focus_color: Color,
     #[serde(default = "dt_active_color")]
-    #[serde(deserialize_with = "common::color_translate")]
-    #[schemars(schema_with = "common::schema_color")]
+    #[serde(deserialize_with = "color_translate")]
+    #[schemars(schema_with = "schema_color")]
     pub active_color: Color,
     #[serde(default)]
-    #[serde(deserialize_with = "common::option_color_translate")]
-    #[schemars(schema_with = "common::schema_optional_color")]
+    #[serde(deserialize_with = "option_color_translate")]
+    #[schemars(schema_with = "schema_optional_color")]
     pub hover_color: Option<Color>,
 
     #[serde(default)]
