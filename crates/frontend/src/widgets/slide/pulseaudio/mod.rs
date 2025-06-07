@@ -83,7 +83,7 @@ impl WidgetContext for PulseAudioContext {
 
 fn common(
     builder: &mut WidgetBuilder,
-    w_conf: &mut SlideConfig,
+    w_conf: SlideConfig,
     preset_conf: PulseAudioConfig,
     device: PulseAudioDevice,
 ) -> impl WidgetContext {
@@ -114,6 +114,7 @@ fn common(
     });
     let backend_id = backend::pulseaudio::register_callback(redraw_signal, device.clone()).unwrap();
 
+    let edge = builder.common_config.edge;
     PulseAudioContext {
         backend_id,
         device,
@@ -123,8 +124,8 @@ fn common(
         non_mute_text_color,
         mute_text_color,
         mute_animation,
-        draw_conf: DrawConfig::new(w_conf),
-        progress_state: setup_event(w_conf),
+        draw_conf: DrawConfig::new(edge, &w_conf),
+        progress_state: setup_event(edge, &w_conf),
         only_redraw_on_internal_update: w_conf.redraw_only_on_internal_update,
         debounce_ctx: None,
     }
@@ -132,7 +133,7 @@ fn common(
 
 pub fn speaker(
     builder: &mut WidgetBuilder,
-    w_conf: &mut SlideConfig,
+    w_conf: SlideConfig,
     mut preset_conf: PulseAudioConfig,
 ) -> impl WidgetContext {
     let device = preset_conf
@@ -147,7 +148,7 @@ pub fn speaker(
 
 pub fn microphone(
     builder: &mut WidgetBuilder,
-    w_conf: &mut SlideConfig,
+    w_conf: SlideConfig,
     mut preset_conf: PulseAudioConfig,
 ) -> impl WidgetContext {
     let device = preset_conf

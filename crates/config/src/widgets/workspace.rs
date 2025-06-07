@@ -1,4 +1,3 @@
-use crate::common::CommonConfig;
 use crate::shared::{
     color_translate, option_color_translate, schema_color, schema_optional_color, CommonSize, Curve,
 };
@@ -16,8 +15,6 @@ use way_edges_derive::{const_property, GetSize};
 #[schemars(transform = WorkspaceConfig_generate_defs)]
 #[const_property("type", "workspace")]
 pub struct WorkspaceConfig {
-    #[serde(flatten)]
-    pub common: CommonConfig,
     #[serde(flatten)]
     // flatten does not support `default` yet.
     // issue: https://github.com/serde-rs/serde/issues/1626

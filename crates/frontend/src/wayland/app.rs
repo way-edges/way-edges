@@ -97,9 +97,8 @@ impl WidgetMap {
         let mut map: HashMap<String, Vec<Arc<Mutex<Widget>>>> = HashMap::new();
 
         for conf in widgets_config.iter().cloned() {
-            let common = conf.get_common_config();
-            let name = common.namespace.clone();
-            let confs: Vec<(config::Widget, WlOutput)> = match common.monitor.clone() {
+            let name = conf.common.namespace.clone();
+            let confs: Vec<(config::Widget, WlOutput)> = match conf.common.monitor.clone() {
                 MonitorSpecifier::ID(index) => app
                     .output_state
                     .outputs()
@@ -390,13 +389,14 @@ impl Widget {
     }
 
     fn init_widget(
-        mut conf: config::Widget,
+        conf: config::Widget,
         wl_output: WlOutput,
         app: &App,
     ) -> Result<Arc<Mutex<Self>>, String> {
-        let mut builder = WidgetBuilder::new(&mut conf, wl_output, app)?;
-        let w = init_widget(&mut conf, &mut builder);
-        let s = builder.build(conf, w);
+        let config::Widget { common, widget } = conf;
+        let mut builder = WidgetBuilder::new(common, wl_output, app)?;
+        let w = init_widget(widget, &mut builder);
+        let s = builder.build(w);
 
         Ok(Arc::new_cyclic(|weak| {
             SurfaceData::from_wl(s.layer.wl_surface()).store_widget(weak.clone());
@@ -572,6 +572,8 @@ impl RedrawEssentail {
 }
 
 pub struct WidgetBuilder<'a> {
+    pub common_config: config::CommonConfig,
+
     pub margins: [i32; 4],
     pub output_size: (i32, i32),
 
@@ -703,13 +705,12 @@ impl WidgetBuilder<'_> {
 }
 impl<'a> WidgetBuilder<'a> {
     fn new(
-        conf: &mut config::Widget,
+        mut common: config::CommonConfig,
         output: WlOutput,
         app: &'a App,
     ) -> Result<WidgetBuilder<'a>, String> {
         let monitor = app.output_state.info(&output).unwrap();
         let output_size = monitor.modes[0].dimensions;
-        let common = conf.get_common_config_mut();
         common.resolve_relative(output_size);
 
         let surface = app.compositor_state.create_surface_with_data(
@@ -792,9 +793,10 @@ impl<'a> WidgetBuilder<'a> {
             margins,
             output_size,
             window_pop_state,
+            common_config: common,
         })
     }
-    pub fn build(self, conf: config::Widget, w: Box<dyn WidgetContext>) -> Widget {
+    pub fn build(self, w: Box<dyn WidgetContext>) -> Widget {
         let Self {
             monitor,
             output,
@@ -805,12 +807,13 @@ impl<'a> WidgetBuilder<'a> {
             margins,
             output_size,
             window_pop_state,
+            common_config,
         } = self;
 
         let start_pos = (0, 0);
         let mouse_state = MouseState::new();
         let buffer = Buffer::default();
-        let draw_core = DrawCore::new(conf.get_common_config());
+        let draw_core = DrawCore::new(&common_config);
 
         Widget {
             monitor,

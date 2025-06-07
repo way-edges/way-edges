@@ -41,9 +41,9 @@ impl WidgetContext for BoxContext {
     }
 }
 
-pub fn init_widget(window: &mut WidgetBuilder, w_conf: &mut BoxConfig) -> impl WidgetContext {
-    let grid_box = init_boxed_widgets(window, w_conf);
-    let outlook_draw_conf = init_outlook(&w_conf.outlook, w_conf.common.edge);
+pub fn init_widget(builder: &mut WidgetBuilder, w_conf: BoxConfig) -> impl WidgetContext {
+    let outlook_draw_conf = init_outlook(&w_conf.outlook, builder.common_config.edge);
+    let grid_box = init_boxed_widgets(builder, w_conf);
 
     BoxContext {
         grid_box,
@@ -56,7 +56,7 @@ pub fn init_widget(window: &mut WidgetBuilder, w_conf: &mut BoxConfig) -> impl W
     }
 }
 
-fn init_boxed_widgets(window: &mut WidgetBuilder, box_conf: &mut BoxConfig) -> BoxedWidgetGrid {
+fn init_boxed_widgets(window: &mut WidgetBuilder, mut box_conf: BoxConfig) -> BoxedWidgetGrid {
     let mut builder = GrideBoxBuilder::<BoxedWidgetCtxRc>::new();
     let ws = std::mem::take(&mut box_conf.widgets);
 

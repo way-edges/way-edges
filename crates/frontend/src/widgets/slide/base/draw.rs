@@ -29,10 +29,9 @@ pub struct DrawConfig {
     func: fn(&DrawConfig, f64) -> ImageSurface,
 }
 impl DrawConfig {
-    pub fn new(slide_conf: &SlideConfig) -> Self {
+    pub fn new(edge: Anchor, slide_conf: &SlideConfig) -> Self {
         let content_size = slide_conf.size().unwrap();
 
-        let edge = slide_conf.common.edge;
         let func = match edge {
             Anchor::LEFT => draw_left,
             Anchor::RIGHT => draw_right,

@@ -22,10 +22,10 @@ use super::WidgetContext;
 pub fn init_widget(
     builder: &mut WidgetBuilder,
     size: (i32, i32),
-    w_conf: &mut WorkspaceConfig,
+    mut w_conf: WorkspaceConfig,
     output: &OutputInfo,
 ) -> impl WidgetContext {
-    let edge = w_conf.common.edge;
+    let edge = builder.common_config.edge;
     w_conf.size.calculate_relative(size, edge);
     if w_conf.output_name.is_none() {
         w_conf.output_name = output.name.clone();
@@ -36,7 +36,7 @@ pub fn init_widget(
         w_conf.workspace_animation_curve,
     );
 
-    let draw_conf = DrawConf::new(w_conf, workspace_transition.clone(), edge);
+    let draw_conf = DrawConf::new(&w_conf, workspace_transition.clone(), edge);
 
     let workspace_data = Rc::new(Cell::new((
         WorkspaceData::default(),

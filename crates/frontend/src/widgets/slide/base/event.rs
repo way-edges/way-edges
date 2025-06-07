@@ -35,8 +35,8 @@ fn make_translate_func(edge: Anchor) -> fn(i32, i32, (f64, f64)) -> f64 {
     }
 }
 
-pub fn setup_event(w_conf: &mut SlideConfig) -> ProgressState {
-    let func = make_translate_func(w_conf.common.edge);
+pub fn setup_event(edge: Anchor, w_conf: &SlideConfig) -> ProgressState {
+    let func = make_translate_func(edge);
     let left_pressing = false;
 
     ProgressState {

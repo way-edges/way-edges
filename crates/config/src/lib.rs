@@ -12,7 +12,8 @@ use std::{
     sync::OnceLock,
 };
 
-pub use crate::widgets::Widget;
+pub use crate::common::CommonConfig;
+pub use crate::widgets::WidgetConfig;
 
 static CONFIG_PATH: OnceLock<PathBuf> = OnceLock::new();
 pub fn get_config_path() -> &'static Path {
@@ -55,4 +56,12 @@ pub fn output_json_schema() {
 pub struct Root {
     #[serde(default)]
     pub widgets: Vec<Widget>,
+}
+
+#[derive(Deserialize, Debug, JsonSchema, Clone)]
+pub struct Widget {
+    #[serde(flatten)]
+    pub common: CommonConfig,
+    #[serde(flatten)]
+    pub widget: WidgetConfig,
 }

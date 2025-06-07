@@ -11,9 +11,11 @@ use super::WidgetContext;
 pub fn init_widget(
     builder: &mut WidgetBuilder,
     size: (i32, i32),
-    w_conf: &mut SlideConfig,
+    mut w_conf: SlideConfig,
 ) -> Box<dyn WidgetContext> {
-    w_conf.size.calculate_relative(size, w_conf.common.edge);
+    w_conf
+        .size
+        .calculate_relative(size, builder.common_config.edge);
 
     use config::widgets::slide::preset::Preset;
 
