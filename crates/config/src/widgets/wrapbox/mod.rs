@@ -182,8 +182,13 @@ pub enum BoxedWidget {
 #[derive(Debug, Deserialize, JsonSchema, Clone)]
 #[schemars(deny_unknown_fields)]
 pub struct BoxedWidgetConfig {
+    #[serde(default = "dt_index")]
     pub index: [isize; 2],
+    #[serde(flatten)]
     pub widget: BoxedWidget,
+}
+fn dt_index() -> [isize; 2] {
+    [-1, -1]
 }
 
 use schemars::Schema;
