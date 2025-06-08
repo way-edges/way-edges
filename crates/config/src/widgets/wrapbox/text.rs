@@ -16,17 +16,19 @@ pub enum TextPreset {
         format: String,
         #[serde(default)]
         time_zone: Option<String>,
-        #[serde(default = "dt_time_update_interval")]
+        #[serde(default = "dt_update_interval")]
         update_interval: u64,
     },
     Custom {
-        update_with_interval_ms: (u64, String),
+        #[serde(default = "dt_update_interval")]
+        update_interval: u64,
+        cmd: String,
     },
 }
 fn dt_time_format() -> String {
     "%Y-%m-%d %H:%M:%S".to_string()
 }
-fn dt_time_update_interval() -> u64 {
+fn dt_update_interval() -> u64 {
     1000
 }
 

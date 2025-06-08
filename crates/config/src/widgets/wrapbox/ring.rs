@@ -39,6 +39,7 @@ pub enum RingPreset {
         partition: String,
     },
     Custom {
+        #[serde(default = "dt_update_interval")]
         update_interval: u64,
         cmd: String,
     },
