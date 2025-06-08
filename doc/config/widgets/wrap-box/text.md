@@ -15,7 +15,8 @@
   // },
   "preset": {
     "type": "custom",
-    "update_with_interval_ms": [1000, "echo -n aaa"], // this is the command to run. The command should output a string.
+    "cmd": "echo -n aaa", // this is the command to run. The command should output a string.
+    "update_interval": 1000, // ms
   },
 },
 ```
@@ -51,11 +52,13 @@
 ```jsonc
 "preset": {
   "type": "custom",
-  "update_with_interval_ms": [1000, "echo -n aaa"], // this is the command to run. The command should output a string.
+  "cmd": "echo -n aaa", // this is the command to run. The command should output a string.
+  "update_interval": 1000, // ms
 },
 ```
 
-| Name                    | Description                        |
-| ----------------------- | ---------------------------------- |
-| type                    | const `custom`                     |
-| update_with_interval_ms | \[interval in ms, command to run\] |
+| Name            | Description                                                     |
+| --------------- | --------------------------------------------------------------- |
+| type            | const `custom`                                                  |
+| cmd             | this is the command to run. The command should output a string. |
+| update_interval | ms                                                              |

@@ -643,11 +643,12 @@
             "update_interval": {
               "type": "integer",
               "format": "uint64",
+              "default": 1000,
               "minimum": 0
             }
           },
           "additionalProperties": false,
-          "required": ["type", "update_interval", "cmd"]
+          "required": ["type", "cmd"]
         }
       ]
     },
@@ -685,24 +686,18 @@
               "type": "string",
               "const": "custom"
             },
-            "update_with_interval_ms": {
-              "type": "array",
-              "maxItems": 2,
-              "minItems": 2,
-              "prefixItems": [
-                {
-                  "type": "integer",
-                  "format": "uint64",
-                  "minimum": 0
-                },
-                {
-                  "type": "string"
-                }
-              ]
+            "cmd": {
+              "type": "string"
+            },
+            "update_interval": {
+              "type": "integer",
+              "format": "uint64",
+              "default": 1000,
+              "minimum": 0
             }
           },
           "additionalProperties": false,
-          "required": ["type", "update_with_interval_ms"]
+          "required": ["type", "cmd"]
         }
       ]
     },
