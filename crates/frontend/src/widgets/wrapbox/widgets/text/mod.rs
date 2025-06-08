@@ -42,9 +42,7 @@ fn time_preset(
     )
 }
 
-fn custom_preset(s: Sender<String>, update_with_interval_ms: (u64, String)) -> Runner<()> {
-    let (time, cmd) = update_with_interval_ms;
-
+fn custom_preset(s: Sender<String>, time: u64, cmd: String) -> Runner<()> {
     // ignore fail
     let f = move || shell_cmd(&cmd).unwrap_or_default();
 
@@ -66,8 +64,9 @@ fn match_preset(preset: TextPreset, s: Sender<String>) -> Runner<()> {
             update_interval,
         } => time_preset(s, format, time_zone, update_interval),
         TextPreset::Custom {
-            update_with_interval_ms,
-        } => custom_preset(s, update_with_interval_ms),
+            update_interval,
+            cmd,
+        } => custom_preset(s, update_interval, cmd),
     }
 }
 
