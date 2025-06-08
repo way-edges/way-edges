@@ -58,7 +58,7 @@ pub fn init_widget(builder: &mut WidgetBuilder, w_conf: BoxConfig) -> impl Widge
 
 fn init_boxed_widgets(window: &mut WidgetBuilder, mut box_conf: BoxConfig) -> BoxedWidgetGrid {
     let mut builder = GrideBoxBuilder::<BoxedWidgetCtxRc>::new();
-    let ws = std::mem::take(&mut box_conf.widgets);
+    let ws = std::mem::take(&mut box_conf.items);
 
     use config::widgets::wrapbox::BoxedWidget;
     ws.into_iter().for_each(|w| {

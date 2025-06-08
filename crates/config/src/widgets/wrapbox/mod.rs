@@ -203,7 +203,7 @@ pub struct BoxConfig {
     #[serde(default)]
     pub outlook: Outlook,
     #[serde(default)]
-    pub widgets: Vec<BoxedWidgetConfig>,
+    pub items: Vec<BoxedWidgetConfig>,
 
     #[serde(default = "dt_gap")]
     pub gap: f64,
