@@ -759,7 +759,6 @@
           "minimum": 0
         }
       },
-      "allowTrailingCommas": true,
       "oneOf": [
         {
           "type": "object",
@@ -866,14 +865,14 @@
               "format": "double",
               "default": 10.0
             },
-            "outlook": {
-              "$ref": "#/$defs/Outlook"
-            },
-            "widgets": {
+            "items": {
               "type": "array",
               "items": {
                 "$ref": "#/$defs/BoxedWidgetConfig"
               }
+            },
+            "outlook": {
+              "$ref": "#/$defs/Outlook"
             }
           },
           "required": ["type"]

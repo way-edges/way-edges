@@ -124,7 +124,7 @@
           // ...
         },
       },
-      "widgets": [
+      "items": [
         {
           "index": [-1, -1], // position in the grid layout. -1 means next available position.
           "type": "ring",
@@ -173,7 +173,7 @@
       // ... other basic configs omitted here for brevity
       "type": "wrap-box",
       // ... other wrap-box configs omitted here for brevity
-      "widgets": [
+      "items": [
         {
           "index": [-1, -1], // position in the grid layout. -1 means next available position.
           "type": "text",
@@ -197,7 +197,7 @@
       // ... other basic configs omitted here for brevity
       "type": "wrap-box",
       // ... other wrap-box configs omitted here for brevity
-      "widgets": [
+      "items": [
         {
           "index": [-1, -1], // position in the grid layout. -1 means next available position.
           "type": "tray",

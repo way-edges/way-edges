@@ -27,7 +27,7 @@
         // ...
       },
     },
-    "widgets": [
+    "items": [
       {
         "index": [-1, -1], // position in the grid layout. -1 means next available position.
         "type": "ring",
@@ -44,7 +44,7 @@
 | align   | 9 positions: center_left, center_right, top_left, top_right, bottom_left, bottom_right, left_top, left_bottom, right_top, right_bottom |
 | gap     | gap between each widget                                                                                                                |
 | outlook | `window` or `board`                                                                                                                    |
-| widgets | _**grid layout**_ widgets with each of their index and config                                                                          |
+| items   | _**grid layout**_ widgets with each of their index and config                                                                          |
 
 ## Outlook: window
 
@@ -94,7 +94,7 @@
 | border_radius | int           |
 | margins       | margins       |
 
-## widgets
+## items
 
 | Name  | Description                                          |
 | ----- | ---------------------------------------------------- |
