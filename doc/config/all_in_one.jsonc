@@ -2,7 +2,7 @@
   "$schema": "./schema.json",
   "widgets": [
     {
-      "name": "widget_base_example",
+      "namespace": "widget_base_example",
       "edge": "top",
       "position": "left",
       "layer": "overlay",
