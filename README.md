@@ -31,8 +31,7 @@ Example config: <https://github.com/ogios/dots/tree/master/way-edges>
 ## 🚀 Launch
 
 1. Run daemon first(`way-edges`).
-2. Add group of widgets given group name specified in your configuration file(`way-edges add <group_name>`).
-3. Some command require widget_name specified in order to operate.
+2. Some command require widget namespace specified in order to operate.
 
 ## 💛 Thanks
 
