@@ -5,10 +5,11 @@ use serde::Deserialize;
 use util::color::parse_color;
 use way_edges_derive::{const_property, GetSize};
 
-use super::{
-    super::common::{self, CommonSize},
-    preset::Preset,
+use crate::shared::{
+    color_translate, option_color_translate, schema_color, schema_optional_color, CommonSize,
 };
+
+use super::preset::Preset;
 
 use schemars::Schema;
 use serde_json::Value;
@@ -19,6 +20,7 @@ use serde_json::Value;
 #[schemars(deny_unknown_fields)]
 #[schemars(transform = SlideConfig_generate_defs)]
 #[const_property("type", "slide")]
+#[serde(rename_all = "kebab-case")]
 pub struct SlideConfig {
     // draw related
     #[serde(flatten)]
@@ -32,24 +34,24 @@ pub struct SlideConfig {
     pub radius: f64,
 
     #[serde(default = "dt_bg_color")]
-    #[serde(deserialize_with = "common::color_translate")]
-    #[schemars(schema_with = "common::schema_color")]
+    #[serde(deserialize_with = "color_translate")]
+    #[schemars(schema_with = "schema_color")]
     pub bg_color: Color,
     #[serde(default = "dt_fg_color")]
-    #[serde(deserialize_with = "common::color_translate")]
-    #[schemars(schema_with = "common::schema_color")]
+    #[serde(deserialize_with = "color_translate")]
+    #[schemars(schema_with = "schema_color")]
     pub fg_color: Color,
     #[serde(default = "dt_border_color")]
-    #[serde(deserialize_with = "common::color_translate")]
-    #[schemars(schema_with = "common::schema_color")]
+    #[serde(deserialize_with = "color_translate")]
+    #[schemars(schema_with = "schema_color")]
     pub border_color: Color,
     #[serde(default)]
-    #[serde(deserialize_with = "common::option_color_translate")]
-    #[schemars(schema_with = "common::schema_optional_color")]
+    #[serde(deserialize_with = "option_color_translate")]
+    #[schemars(schema_with = "schema_optional_color")]
     pub fg_text_color: Option<Color>,
     #[serde(default)]
-    #[serde(deserialize_with = "common::option_color_translate")]
-    #[schemars(schema_with = "common::schema_optional_color")]
+    #[serde(deserialize_with = "option_color_translate")]
+    #[schemars(schema_with = "schema_optional_color")]
     pub bg_text_color: Option<Color>,
 
     #[serde(default)]

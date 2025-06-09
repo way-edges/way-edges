@@ -1,10 +1,8 @@
-use crate::ipc::IPC_COMMAND_RELOAD;
+use crate::ipc::{get_ipc_sock, IPC_COMMAND_RELOAD};
 use crate::runtime::get_backend_runtime_handle;
 
 use super::{CommandBody, IPCCommand};
-use super::{
-    IPC_COMMAND_ADD, IPC_COMMAND_QUIT, IPC_COMMAND_REMOVE, IPC_COMMAND_TOGGLE_PIN, SOCK_FILE,
-};
+use super::{IPC_COMMAND_QUIT, IPC_COMMAND_TOGGLE_PIN};
 use std::path::Path;
 
 use calloop::channel::Sender;
@@ -15,10 +13,10 @@ use util::notify_send;
 pub fn start_ipc(sender: Sender<IPCCommand>) {
     get_backend_runtime_handle().spawn(async {
         let listener = {
-            let path = Path::new(SOCK_FILE);
+            let path = Path::new(get_ipc_sock());
             std::fs::create_dir_all(path.parent().unwrap()).unwrap();
-            let _ = std::fs::remove_file(SOCK_FILE);
-            tokio::net::UnixListener::bind(SOCK_FILE).unwrap()
+            let _ = std::fs::remove_file(path);
+            tokio::net::UnixListener::bind(path).unwrap()
         };
 
         tokio::spawn(async move {
@@ -46,16 +44,9 @@ fn deal_stream_in_background(stream: UnixStream, sender: Sender<IPCCommand>) {
         let command_body =
             serde_jsonrc::from_str::<CommandBody>(&raw).map_err(|e| e.to_string())?;
         let ipc = match command_body.command.as_str() {
-            IPC_COMMAND_ADD => {
-                IPCCommand::AddGroup(command_body.args.first().ok_or("No group name")?.clone())
+            IPC_COMMAND_TOGGLE_PIN => {
+                IPCCommand::TogglePin(command_body.args.first().ok_or("No widget name")?.clone())
             }
-            IPC_COMMAND_REMOVE => {
-                IPCCommand::RemoveGroup(command_body.args.first().ok_or("No group name")?.clone())
-            }
-            IPC_COMMAND_TOGGLE_PIN => IPCCommand::TogglePin(
-                command_body.args.first().ok_or("No group name")?.clone(),
-                command_body.args.get(1).ok_or("No widget name")?.clone(),
-            ),
             IPC_COMMAND_QUIT => IPCCommand::Exit,
             IPC_COMMAND_RELOAD => IPCCommand::Reload,
             _ => return Err("unknown command".to_string()),

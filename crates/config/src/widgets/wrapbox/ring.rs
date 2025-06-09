@@ -1,6 +1,5 @@
-use crate::common::Curve;
-use crate::widgets::common::{
-    color_translate, dt_family_owned, schema_color, schema_optional_template, FamilyOwnedRef,
+use crate::shared::{
+    color_translate, dt_family_owned, schema_color, schema_optional_template, Curve, FamilyOwnedRef,
 };
 use cosmic_text::{Color, FamilyOwned};
 use schemars::JsonSchema;
@@ -12,7 +11,11 @@ use util::template::{
 };
 
 #[derive(Debug, Deserialize, JsonSchema, Clone)]
-#[serde(rename_all = "lowercase", tag = "type")]
+#[serde(
+    rename_all = "kebab-case",
+    rename_all_fields = "kebab-case",
+    tag = "type"
+)]
 #[schemars(deny_unknown_fields)]
 pub enum RingPreset {
     Ram {
@@ -40,6 +43,7 @@ pub enum RingPreset {
         partition: String,
     },
     Custom {
+        #[serde(default = "dt_update_interval")]
         update_interval: u64,
         cmd: String,
     },
@@ -60,6 +64,7 @@ fn dt_update_interval() -> u64 {
 }
 
 #[derive(Deserialize, Debug)]
+#[serde(rename_all = "kebab-case")]
 pub struct RingConfigShadow {
     #[serde(default = "dt_r")]
     pub radius: i32,
@@ -136,6 +141,7 @@ impl From<RingConfigShadow> for RingConfig {
 
 #[derive(Debug, Deserialize, JsonSchema, Clone)]
 #[serde(from = "RingConfigShadow")]
+#[serde(rename_all = "kebab-case")]
 #[schemars(deny_unknown_fields)]
 pub struct RingConfig {
     pub radius: i32,

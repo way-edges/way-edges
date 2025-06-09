@@ -11,8 +11,11 @@ use tray::TrayConfig;
 use util::color::parse_color;
 use way_edges_derive::const_property;
 
+use crate::shared::{color_translate, schema_color};
+
 // =================================== OUTLOOK
 #[derive(Debug, Deserialize, Clone, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
 pub struct OutlookMargins {
     #[serde(default = "dt_margin")]
     pub left: i32,
@@ -38,12 +41,13 @@ impl Default for OutlookMargins {
 }
 #[derive(Debug, Deserialize, JsonSchema, Clone)]
 #[schemars(deny_unknown_fields)]
+#[serde(rename_all = "kebab-case")]
 pub struct OutlookWindowConfig {
     #[serde(default)]
     pub margins: OutlookMargins,
     #[serde(default = "dt_color")]
-    #[serde(deserialize_with = "super::common::color_translate")]
-    #[schemars(schema_with = "super::common::schema_color")]
+    #[serde(deserialize_with = "color_translate")]
+    #[schemars(schema_with = "schema_color")]
     pub color: Color,
     #[serde(default = "dt_radius")]
     pub border_radius: i32,
@@ -71,19 +75,20 @@ fn dt_border_width() -> i32 {
 }
 
 #[derive(Debug, Deserialize, JsonSchema, Clone)]
+#[serde(rename_all = "kebab-case")]
 pub struct OutlookBoardConfig {
     #[serde(default)]
     pub margins: OutlookMargins,
     #[serde(default = "dt_color")]
-    #[serde(deserialize_with = "super::common::color_translate")]
-    #[schemars(schema_with = "super::common::schema_color")]
+    #[serde(deserialize_with = "color_translate")]
+    #[schemars(schema_with = "schema_color")]
     pub color: Color,
     #[serde(default = "dt_radius")]
     pub border_radius: i32,
 }
 
 #[derive(Debug, Deserialize, Clone, JsonSchema)]
-#[serde(rename_all = "snake_case", tag = "type")]
+#[serde(rename_all = "kebab-case", tag = "type")]
 pub enum Outlook {
     Window(OutlookWindowConfig),
     Board(OutlookBoardConfig),
@@ -96,7 +101,7 @@ impl Default for Outlook {
 
 // =================================== GRID
 #[derive(Deserialize, Debug, Default, Clone, Copy, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[serde(rename_all = "kebab-case")]
 pub enum Align {
     #[default]
     TopLeft,
@@ -170,7 +175,7 @@ impl Align {
 
 // =================================== WIDGETS
 #[derive(Debug, Deserialize, JsonSchema, Clone)]
-#[serde(rename_all = "lowercase", tag = "type")]
+#[serde(rename_all = "kebab-case", tag = "type")]
 pub enum BoxedWidget {
     Ring(RingConfig),
     Text(TextConfig),
@@ -179,9 +184,15 @@ pub enum BoxedWidget {
 
 #[derive(Debug, Deserialize, JsonSchema, Clone)]
 #[schemars(deny_unknown_fields)]
+#[serde(rename_all = "kebab-case")]
 pub struct BoxedWidgetConfig {
+    #[serde(default = "dt_index")]
     pub index: [isize; 2],
+    #[serde(flatten)]
     pub widget: BoxedWidget,
+}
+fn dt_index() -> [isize; 2] {
+    [-1, -1]
 }
 
 use schemars::Schema;
@@ -192,11 +203,12 @@ use serde_json::Value;
 #[schemars(deny_unknown_fields)]
 #[schemars(transform = BoxConfig_generate_defs)]
 #[const_property("type", "wrap-box")]
+#[serde(rename_all = "kebab-case")]
 pub struct BoxConfig {
     #[serde(default)]
     pub outlook: Outlook,
     #[serde(default)]
-    pub widgets: Vec<BoxedWidgetConfig>,
+    pub items: Vec<BoxedWidgetConfig>,
 
     #[serde(default = "dt_gap")]
     pub gap: f64,

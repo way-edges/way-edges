@@ -4,11 +4,15 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 use util::color::COLOR_BLACK;
 
-use crate::widgets::common::{self, dt_family_owned, FamilyOwnedRef};
+use crate::shared::{color_translate, dt_family_owned, schema_color, FamilyOwnedRef};
 
 #[derive(Educe, Deserialize, JsonSchema, Clone)]
 #[educe(Debug)]
-#[serde(rename_all = "snake_case", tag = "type")]
+#[serde(
+    rename_all = "kebab-case",
+    rename_all_fields = "kebab-case",
+    tag = "type"
+)]
 #[schemars(deny_unknown_fields)]
 pub enum TextPreset {
     Time {
@@ -16,27 +20,30 @@ pub enum TextPreset {
         format: String,
         #[serde(default)]
         time_zone: Option<String>,
-        #[serde(default = "dt_time_update_interval")]
+        #[serde(default = "dt_update_interval")]
         update_interval: u64,
     },
     Custom {
-        update_with_interval_ms: (u64, String),
+        #[serde(default = "dt_update_interval")]
+        update_interval: u64,
+        cmd: String,
     },
 }
 fn dt_time_format() -> String {
     "%Y-%m-%d %H:%M:%S".to_string()
 }
-fn dt_time_update_interval() -> u64 {
+fn dt_update_interval() -> u64 {
     1000
 }
 
 #[derive(Educe, Deserialize, JsonSchema, Clone)]
 #[educe(Debug)]
 #[schemars(deny_unknown_fields)]
+#[serde(rename_all = "kebab-case")]
 pub struct TextConfig {
     #[serde(default = "dt_fg_color")]
-    #[serde(deserialize_with = "common::color_translate")]
-    #[schemars(schema_with = "common::schema_color")]
+    #[serde(deserialize_with = "color_translate")]
+    #[schemars(schema_with = "schema_color")]
     pub fg_color: Color,
     #[serde(default = "dt_font_size")]
     pub font_size: i32,

@@ -9,10 +9,13 @@ use util::{
     },
 };
 
-use crate::{common::Curve, widgets::common::KeyEventMap};
+use crate::shared::{
+    color_translate, option_color_translate, schema_color, schema_optional_color,
+    schema_optional_template, Curve, KeyEventMap,
+};
 
 #[derive(Debug, Deserialize, JsonSchema, Clone)]
-#[serde(rename_all = "snake_case", tag = "type")]
+#[serde(rename_all = "kebab-case", tag = "type")]
 pub enum Preset {
     Speaker(PulseAudioConfig),
     Microphone(PulseAudioConfig),
@@ -27,14 +30,15 @@ impl Default for Preset {
 
 #[derive(Debug, Deserialize, JsonSchema, Clone)]
 #[schemars(deny_unknown_fields)]
+#[serde(rename_all = "kebab-case")]
 pub struct PulseAudioConfig {
     #[serde(default = "default_mute_color")]
-    #[serde(deserialize_with = "super::super::common::color_translate")]
-    #[schemars(schema_with = "super::super::common::schema_color")]
+    #[serde(deserialize_with = "color_translate")]
+    #[schemars(schema_with = "schema_color")]
     pub mute_color: Color,
     #[serde(default)]
-    #[serde(deserialize_with = "super::super::common::option_color_translate")]
-    #[schemars(schema_with = "super::super::common::schema_optional_color")]
+    #[serde(deserialize_with = "option_color_translate")]
+    #[schemars(schema_with = "schema_optional_color")]
     pub mute_text_color: Option<Color>,
 
     #[serde(default)]
@@ -48,6 +52,7 @@ fn default_mute_color() -> Color {
 
 #[derive(Debug, Deserialize, JsonSchema, Clone)]
 #[schemars(deny_unknown_fields)]
+#[serde(rename_all = "kebab-case")]
 pub struct BacklightConfig {
     #[serde(default)]
     pub device: Option<String>,
@@ -55,13 +60,14 @@ pub struct BacklightConfig {
 
 #[derive(Debug, Deserialize, Default, JsonSchema, Clone)]
 #[schemars(deny_unknown_fields)]
+#[serde(rename_all = "kebab-case")]
 pub struct CustomConfig {
     #[serde(default)]
     pub interval_update: (u64, String),
 
     #[serde(default)]
     #[serde(deserialize_with = "slide_change_template")]
-    #[schemars(schema_with = "super::super::common::schema_optional_template")]
+    #[schemars(schema_with = "schema_optional_template")]
     pub on_change: Option<Template>,
 
     #[serde(default)]

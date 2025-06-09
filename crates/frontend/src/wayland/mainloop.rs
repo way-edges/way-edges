@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use backend::{
     config_file_watch::start_configuration_file_watcher, ipc::start_ipc,
     runtime::init_backend_runtime_handle,
@@ -15,6 +13,8 @@ use smithay_client_toolkit::{
     shm::{slot::SlotPool, Shm},
 };
 use wayland_client::{globals::registry_queue_init, Connection};
+
+use crate::wayland::app::WidgetMap;
 
 use super::app::App;
 
@@ -61,7 +61,7 @@ pub fn run_app(show_mouse_key: bool) {
         pointer: None,
         shell: layer_shell,
 
-        groups: HashMap::new(),
+        widget_map: WidgetMap::default(),
     };
 
     init_backend_runtime_handle();

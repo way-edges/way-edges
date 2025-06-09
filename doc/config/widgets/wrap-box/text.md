@@ -4,18 +4,19 @@
 {
 "widget": {
   "type": "text",
-  "fg_color": "#00000000",
-  "font_family": "monospace",
-  "font_size": 24,
+  "fg-color": "#00000000",
+  "font-family": "monospace",
+  "font-size": 24,
   // "preset": {
   //   "type": "time",
   //   "format": "%Y-%m-%d %H:%M:%S",
-  //   "time_zone": "uk", // null for local time
-  //   "update_interval": 1000, // ms
+  //   "time-zone": "uk", // null for local time
+  //   "update-interval": 1000, // ms
   // },
   "preset": {
     "type": "custom",
-    "update_with_interval_ms": [1000, "echo -n aaa"], // this is the command to run. The command should output a string.
+    "cmd": "echo -n aaa", // this is the command to run. The command should output a string.
+    "update-interval": 1000, // ms
   },
 },
 ```
@@ -23,9 +24,9 @@
 | Name        | Description        |
 | ----------- | ------------------ |
 | type        | const `text`       |
-| fg_color    | color              |
-| font_family | font family        |
-| font_size   | font size          |
+| fg-color    | color              |
+| font-family | font family        |
+| font-size   | font size          |
 | preset      | `time` or `custom` |
 
 ## Preset: time
@@ -34,8 +35,8 @@
 "preset": {
   "type": "time",
   "format": "%Y-%m-%d %H:%M:%S",
-  "time_zone": "uk", // null for local time
-  "update_interval": 1000, // ms
+  "time-zone": "uk", // null for local time
+  "update-interval": 1000, // ms
 },
 ```
 
@@ -43,19 +44,21 @@
 | --------------- | ------------ |
 | type            | const `time` |
 | format          | time format  |
-| time_zone       | time zone    |
-| update_interval | ms           |
+| time-zone       | time zone    |
+| update-interval | ms           |
 
 ## Preset: custom
 
 ```jsonc
 "preset": {
   "type": "custom",
-  "update_with_interval_ms": [1000, "echo -n aaa"], // this is the command to run. The command should output a string.
+  "cmd": "echo -n aaa", // this is the command to run. The command should output a string.
+  "update-interval": 1000, // ms
 },
 ```
 
-| Name                    | Description                        |
-| ----------------------- | ---------------------------------- |
-| type                    | const `custom`                     |
-| update_with_interval_ms | \[interval in ms, command to run\] |
+| Name            | Description                                                     |
+| --------------- | --------------------------------------------------------------- |
+| type            | const `custom`                                                  |
+| cmd             | this is the command to run. The command should output a string. |
+| update-interval | ms                                                              |

@@ -1,257 +1,229 @@
 {
   "$schema": "./schema.json",
-  "ensure_load_group": ["group_example_1", "g2"],
-  "groups": [
+  "widgets": [
     {
-      "name": "group_example_1",
-      "widgets": [
-        {
-          "name": "widget_base_example",
-          "edge": "top",
-          "position": "left",
-          "layer": "overlay",
-          // "monitor": 0,
-          // "monitor": "*",
-          // "monitor": "eDP-1",
-          "monitor": ["eDP-1", "HDMI-A-1"],
-          "extra_trigger_size": 1, // or "10%"
-          "preview_size": 20, // or "100%"
-          "animation_curve": "ease-expo",
-          "transition_duration": 300,
-          "margins": {
-            "top": 0,
-            "left": 0,
-            "bottom": 0,
-            "right": 0,
-          },
-          "ignore_exclusive": false,
-          "pinnable": true,
-          "pin_with_key": true,
-          "pin_key": 274, // run `way-edges` with `--mouse-debug`, then click on any widget to get the key printed in log
-          "widget": {
-            // this can be `btn`, `slider`, `wrap-box`, `workspace`.
-            // the lsp completion might not show them all, but once you write it, the rest property completion should work
-            "type": "btn",
-            "thickness": 20,
-            "length": "25%",
-            "border_width": 5,
-            "border_color": "#112233aa",
-            "color": "#ffeeddaa",
-            "event_map": {
-              "272": "sh -c pkill nwg-drawer || nwg-drawer", // left click
-              "273": "niri msg action maximize-column", // right click
-              "274": "niri msg action close-window", // middle click
-              "275": "niri msg action toggle-overview", // side click 1
-              "276": "niri msg action toggle-column-tabbed-display", // side click 2
-            },
-          },
+      "namespace": "widget_base_example",
+      "edge": "top",
+      "position": "left",
+      "layer": "overlay",
+      // "monitor": 0,
+      // "monitor": "*",
+      // "monitor": "eDP-1",
+      "monitor": ["eDP-1", "HDMI-A-1"],
+      "extra-trigger-size": 1, // or "10%"
+      "preview-size": 20, // or "100%"
+      "animation-curve": "ease-expo",
+      "transition-duration": 300,
+      "margins": {
+        "top": 0,
+        "left": 0,
+        "bottom": 0,
+        "right": 0,
+      },
+      "ignore-exclusive": false,
+      "pinnable": true,
+      "pin-with-key": true,
+      "pin-key": 274, // run `way-edges` with `--mouse-debug`, then click on any widget to get the key printed in log
+      // this can be `btn`, `slider`, `wrap-box`, `workspace`.
+      // the lsp completion might not show them all, but once you write it, the rest property completion should work
+      "type": "btn",
+      "thickness": 20,
+      "length": "25%",
+      "border-width": 5,
+      "border-color": "#112233aa",
+      "color": "#ffeeddaa",
+      "event-map": {
+        "272": "sh -c pkill nwg-drawer || nwg-drawer", // left click
+        "273": "niri msg action maximize-column", // right click
+        "274": "niri msg action close-window", // middle click
+        "275": "niri msg action toggle-overview", // side click 1
+        "276": "niri msg action toggle-column-tabbed-display", // side click 2
+      },
+    },
+    {
+      // ... other basic configs omitted here for brevity
+      "type": "slider",
+      "thickness": 20,
+      "length": "25%",
+      "border-width": 3,
+      "border-color": "#112233aa",
+      "fg-color": "#ffeeddaa",
+      "bg-color": "#112233aa",
+      "bg-text-color": "#124123aa",
+      "fg-text-color": "#124123aa",
+      "redraw-only-on-internal-update": true, // This is when you want to reduce the cpu usage. The progress update by manually dragging the slider is sent, but it won't be redrawn until the value is changed by other means.
+      "radius": 20, // corner radius
+      "obtuse-angle": 120, // in degrees(90~180). controls how much curve the widget has
+      // "preset": {
+      //   "type": "custom",
+      //   "interval-update": [100, "echo -n 0.1"], // update the progress. The first value is the interval in ms, and the second value is the command to run. The command should output a number between 0 and 1.
+      //   "on-change": "notify-send {float:2,100}%", // this is the command to run when the value changes. The value is passed as a parameter. You can use {float:2,100} to format the value as a float with 2 decimal places multiplied by 100.
+      //   "event-map": {
+      //     // same as btn
+      //   },
+      // },
+      // "preset": {
+      //   "type": "speaker",
+      //   "type": "microphone",
+      //   "device": "alsa_output.pci-0000_00_1f.3.analog-stereo", // Name of the device, not description of the device. null for default sink/source
+      //   "animation-curve": "ease-expo", // mute animation
+      //   "mute-text-color": "#00000000",
+      //   "mute-color": "#00000000",
+      // },
+      "preset": {
+        "type": "backlight",
+        "device": "nvidia_0", // this is the name of the device. Find it under `/sys/class/backlight/` It should be something like `nvidia_0`, `intel_0`, etc.
+      },
+    },
+    {
+      // ... other basic configs omitted here for brevity
+      "type": "workspace",
+      "thickness": 20,
+      "length": "25%",
+      "active-increase": 0.5, // increase the size of the active workspace hint
+      "animation-curve": "ease-expo",
+      "active-color": "#00000000",
+      "default-color": "#00000000",
+      "focus-color": "#00000000",
+      "hover-color": "#00000000",
+      "gap": 5,
+      "invert-direction": false,
+      "output-name": "eDP-1", // not specified, it will use the output that this widget is on
+      "pop-duration": 1000, // ms
+      "workspace-transition-duration": 300, // ms
+      "focused-only": false, // only animate widgets on the currently focused monitor (works with both niri and Hyprland)
+      // "preset": "hyprland",
+      // "preset": "niri",
+      "preset": {
+        "type": "niri",
+        "filter-empty": true,
+      },
+    },
+    {
+      // ... other basic configs omitted here for brevity
+      "type": "wrap-box",
+      "align": "center-left", // 9 positions: center-left, center-right, top-left, top-right, bottom-left, bottom-right, left-top, left-bottom, right-top, right-bottom
+      "gap": 10,
+      // "outlook": {
+      //   "type": "window",
+      //   "color": "#00000000",
+      //   "border-radius": 5,
+      //   "border-width": 15,
+      //   "margins": {
+      //     "left": 5,
+      //     "right": 5,
+      //     "bottom": 5,
+      //     "top": 5,
+      //   }
+      // },
+      "outlook": {
+        "type": "board",
+        "border-radius": 5,
+        "color": "#00000000",
+        "margins": {
+          // ...
         },
+      },
+      "items": [
         {
-          // ... other basic configs omitted here for brevity
-          "widget": {
-            "type": "slider",
-            "thickness": 20,
-            "length": "25%",
-            "border_width": 3,
-            "border_color": "#112233aa",
-            "fg_color": "#ffeeddaa",
-            "bg_color": "#112233aa",
-            "bg_text_color": "#124123aa",
-            "fg_text_color": "#124123aa",
-            "redraw_only_on_internal_update": true, // This is when you want to reduce the cpu usage. The progress update by manually dragging the slider is sent, but it won't be redrawn until the value is changed by other means.
-            "radius": 20, // corner radius
-            "obtuse_angle": 120, // in degrees(90~180). controls how much curve the widget has
-            // "preset": {
-            //   "type": "custom",
-            //   "interval_update": [100, "echo -n 0.1"], // update the progress. The first value is the interval in ms, and the second value is the command to run. The command should output a number between 0 and 1.
-            //   "on_change": "notify-send {float:2,100}%", // this is the command to run when the value changes. The value is passed as a parameter. You can use {float:2,100} to format the value as a float with 2 decimal places multiplied by 100.
-            //   "event_map": {
-            //     // same as btn
-            //   },
-            // },
-            // "preset": {
-            //   "type": "speaker",
-            //   "type": "microphone",
-            //   "device": "alsa_output.pci-0000_00_1f.3.analog-stereo", // Name of the device, not description of the device. null for default sink/source
-            //   "animation_curve": "ease-expo", // mute animation
-            //   "mute_text_color": "#00000000",
-            //   "mute_color": "#00000000",
-            // },
-            "preset": {
-              "type": "backlight",
-              "device": "nvidia_0", // this is the name of the device. Find it under `/sys/class/backlight/` It should be something like `nvidia_0`, `intel_0`, etc.
-            },
-          },
-        },
-        {
-          // ... other basic configs omitted here for brevity
-          "widget": {
-            "type": "workspace",
-            "thickness": 20,
-            "length": "25%",
-            "active_increase": 0.5, // increase the size of the active workspace hint
-            "animation_curve": "ease-expo",
-            "active_color": "#00000000",
-            "default_color": "#00000000",
-            "focus_color": "#00000000",
-            "hover_color": "#00000000",
-            "gap": 5,
-            "invert_direction": false,
-            "output_name": "eDP-1", // not specified, it will use the output that this widget is on
-            "pop_duration": 1000, // ms
-            "workspace_transition_duration": 300, // ms
-            "focused_only": false, // only animate widgets on the currently focused monitor (works with both niri and Hyprland)
-            // "preset": "hyprland",
-            // "preset": "niri",
-            "preset": {
-              "type": "niri",
-              "filter_empty": true,
-            },
+          "index": [-1, -1], // position in the grid layout. -1 means next available position.
+          "type": "ring",
+          "animation-curve": "ease-expo",
+          "bg-color": "#00000000",
+          "fg-color": "#00000000",
+          "font-family": "serif",
+          "font-size": 0,
+          "prefix": "prefix {float:2,100}%",
+          "suffix": "surfix {float:2,100}%",
+          "prefix-hide": false,
+          "suffix-hide": false,
+          "ring-width": 20,
+          "radius": 35,
+          "text-transition-ms": 100, // ms
+          // "preset": {
+          //   "type": "ram",
+          //   "update-interval": 1000, // ms
+          // },
+          // "preset": {
+          //   "type": "battery",
+          //   "update-interval": 1000, // ms
+          // },
+          // "preset": {
+          //   "type": "cpu",
+          //   "update-interval": 1000, // ms
+          // },
+          // "preset": {
+          //   "type": "swap",
+          //   "update-interval": 1000, // ms
+          // },
+          // "preset": {
+          //   "type": "disk",
+          //   "update-interval": 1000, // ms
+          //   "partition": "/",
+          // },
+          "preset": {
+            "type": "custom",
+            "cmd": "echo -n 0.5", // this is the command to run. The command should output a number between 0 and 1.
+            "update-interval": 1000, // ms
           },
         },
       ],
     },
     {
-      "name": "g2",
-      "widgets": [
+      // ... other basic configs omitted here for brevity
+      "type": "wrap-box",
+      // ... other wrap-box configs omitted here for brevity
+      "items": [
         {
-          // ... other basic configs omitted here for brevity
-          "widget": {
-            "type": "wrap-box",
-            "align": "center_left", // 9 positions: center_left, center_right, top_left, top_right, bottom_left, bottom_right, left_top, left_bottom, right_top, right_bottom
-            "gap": 10,
-            // "outlook": {
-            //   "type": "window",
-            //   "color": "#00000000",
-            //   "border_radius": 5,
-            //   "border_width": 15,
-            //   "margins": {
-            //     "left": 5,
-            //     "right": 5,
-            //     "bottom": 5,
-            //     "top": 5,
-            //   }
-            // },
-            "outlook": {
-              "type": "board",
-              "border_radius": 5,
-              "color": "#00000000",
-              "margins": {
-                // ...
-              },
-            },
-            "widgets": [
-              {
-                "index": [-1, -1], // position in the grid layout. -1 means next available position.
-                "widget": {
-                  "type": "ring",
-                  "animation_curve": "ease-expo",
-                  "bg_color": "#00000000",
-                  "fg_color": "#00000000",
-                  "font_family": "serif",
-                  "font_size": 0,
-                  "prefix": "prefix {float:2,100}%",
-                  "suffix": "surfix {float:2,100}%",
-                  "prefix_hide": false,
-                  "suffix_hide": false,
-                  "ring_width": 20,
-                  "radius": 35,
-                  "text_transition_ms": 100, // ms
-                  // "preset": {
-                  //   "type": "ram",
-                  //   "update_interval": 1000, // ms
-                  // },
-                  // "preset": {
-                  //   "type": "battery",
-                  //   "update_interval": 1000, // ms
-                  // },
-                  // "preset": {
-                  //   "type": "cpu",
-                  //   "update_interval": 1000, // ms
-                  // },
-                  // "preset": {
-                  //   "type": "swap",
-                  //   "update_interval": 1000, // ms
-                  // },
-                  // "preset": {
-                  //   "type": "disk",
-                  //   "update_interval": 1000, // ms
-                  //   "partition": "/",
-                  // },
-                  "preset": {
-                    "type": "custom",
-                    "cmd": "echo -n 0.5", // this is the command to run. The command should output a number between 0 and 1.
-                    "update_interval": 1000, // ms
-                  },
-                },
-              },
-            ],
+          "index": [-1, -1], // position in the grid layout. -1 means next available position.
+          "type": "text",
+          "fg-color": "#00000000",
+          "font-family": "monospace",
+          "font-size": 24,
+          // "preset": {
+          //   "type": "time",
+          //   "format": "%Y-%m-%d %H:%M:%S",
+          //   "time-zone": "uk", // null for local time
+          //   "update-interval": 1000, // ms
+          // },
+          "preset": {
+            "type": "custom",
+            "cmd": "echo -n aaa", // this is the command to run. The command should output a string.
+            "update-interval": 1000, // ms
           },
         },
+      ],
+    },
+    {
+      // ... other basic configs omitted here for brevity
+      "type": "wrap-box",
+      // ... other wrap-box configs omitted here for brevity
+      "items": [
         {
-          // ... other basic configs omitted here for brevity
-          "widget": {
-            "type": "wrap-box",
-            // ... other wrap-box configs omitted here for brevity
-            "widgets": [
-              {
-                "index": [-1, -1], // position in the grid layout. -1 means next available position.
-                "widget": {
-                  "type": "text",
-                  "fg_color": "#00000000",
-                  "font_family": "monospace",
-                  "font_size": 24,
-                  // "preset": {
-                  //   "type": "time",
-                  //   "format": "%Y-%m-%d %H:%M:%S",
-                  //   "time_zone": "uk", // null for local time
-                  //   "update_interval": 1000, // ms
-                  // },
-                  "preset": {
-                    "type": "custom",
-                    "update_with_interval_ms": [1000, "echo -n aaa"], // this is the command to run. The command should output a string.
-                  },
-                },
-              },
-            ],
+          "index": [-1, -1], // position in the grid layout. -1 means next available position.
+          "type": "tray",
+          "font-family": "monospace",
+          "grid-align": "bottom-center", // 9 positions: center-left, center-right, top-left, top-right, bottom-left, bottom-right, left-top, left-bottom, right-top, right-bottom
+          "icon-theme": "breeze", // null will fetch the default icon theme
+          "icon-size": 20,
+          "tray-gap": 2,
+          "header-draw-config": {
+            "text-color": "#00000000",
+            "font-pixel-height": 20,
           },
-        },
-        {
-          // ... other basic configs omitted here for brevity
-          "widget": {
-            "type": "wrap-box",
-            // ... other wrap-box configs omitted here for brevity
-            "widgets": [
-              {
-                "index": [-1, -1], // position in the grid layout. -1 means next available position.
-                "widget": {
-                  "type": "tray",
-                  "font_family": "monospace",
-                  "grid_align": "bottom_center", // 9 positions: center_left, center_right, top_left, top_right, bottom_left, bottom_right, left_top, left_bottom, right_top, right_bottom
-                  "icon_theme": "breeze", // null will fetch the default icon theme
-                  "icon_size": 20,
-                  "tray_gap": 2,
-                  "header_draw_config": {
-                    "text_color": "#00000000",
-                    "font_pixel_height": 20,
-                  },
-                  // "header_menu_align": "left"
-                  "header_menu_align": "right",
-                  // "header_menu_stack": "header_top",
-                  "header_menu_stack": "menu_top",
-                  "menu_draw_config": {
-                    "border_color": "#00000000",
-                    "text_color": "#00000000",
-                    "marker_color": "#00000000",
-                    "font_pixel_height": 22,
-                    "icon_size": 20,
-                    "marker_size": 20,
-                    "separator_height": 5,
-                    "margin": [12, 12], // horizontal, vertical
-                  },
-                },
-              },
-            ],
+          // "header-menu-align": "left"
+          "header-menu-align": "right",
+          // "header-menu-stack": "header-top",
+          "header-menu-stack": "menu-top",
+          "menu-draw-config": {
+            "border-color": "#00000000",
+            "text-color": "#00000000",
+            "marker-color": "#00000000",
+            "font-pixel-height": 22,
+            "icon-size": 20,
+            "marker-size": 20,
+            "separator-height": 5,
+            "margin": [12, 12], // horizontal, vertical
           },
         },
       ],
