@@ -53,12 +53,14 @@ pub fn output_json_schema() {
 
 #[derive(Deserialize, Debug, JsonSchema)]
 #[schemars(extend("allowTrailingCommas" = true))]
+#[serde(rename_all = "kebab-case")]
 pub struct Root {
     #[serde(default)]
     pub widgets: Vec<Widget>,
 }
 
 #[derive(Deserialize, Debug, JsonSchema, Clone)]
+#[serde(rename_all = "kebab-case")]
 pub struct Widget {
     #[serde(flatten)]
     pub common: CommonConfig,

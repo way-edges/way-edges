@@ -15,7 +15,7 @@ use crate::shared::{
 };
 
 #[derive(Debug, Deserialize, JsonSchema, Clone)]
-#[serde(rename_all = "snake_case", tag = "type")]
+#[serde(rename_all = "kebab-case", tag = "type")]
 pub enum Preset {
     Speaker(PulseAudioConfig),
     Microphone(PulseAudioConfig),
@@ -30,6 +30,7 @@ impl Default for Preset {
 
 #[derive(Debug, Deserialize, JsonSchema, Clone)]
 #[schemars(deny_unknown_fields)]
+#[serde(rename_all = "kebab-case")]
 pub struct PulseAudioConfig {
     #[serde(default = "default_mute_color")]
     #[serde(deserialize_with = "color_translate")]
@@ -51,6 +52,7 @@ fn default_mute_color() -> Color {
 
 #[derive(Debug, Deserialize, JsonSchema, Clone)]
 #[schemars(deny_unknown_fields)]
+#[serde(rename_all = "kebab-case")]
 pub struct BacklightConfig {
     #[serde(default)]
     pub device: Option<String>,
@@ -58,6 +60,7 @@ pub struct BacklightConfig {
 
 #[derive(Debug, Deserialize, Default, JsonSchema, Clone)]
 #[schemars(deny_unknown_fields)]
+#[serde(rename_all = "kebab-case")]
 pub struct CustomConfig {
     #[serde(default)]
     pub interval_update: (u64, String),

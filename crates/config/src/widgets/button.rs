@@ -15,6 +15,7 @@ use serde_json::Value;
 #[schemars(deny_unknown_fields)]
 // FIXME: THIS DOES NOT WORK IDK WHY. so i have to add `transform` manually
 #[const_property("type", "btn")]
+#[serde(rename_all = "kebab-case")]
 pub struct BtnConfig {
     #[serde(flatten)]
     pub size: CommonSize,

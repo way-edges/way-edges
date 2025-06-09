@@ -20,6 +20,7 @@ use serde_json::Value;
 #[schemars(deny_unknown_fields)]
 #[schemars(transform = SlideConfig_generate_defs)]
 #[const_property("type", "slide")]
+#[serde(rename_all = "kebab-case")]
 pub struct SlideConfig {
     // draw related
     #[serde(flatten)]

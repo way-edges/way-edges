@@ -15,6 +15,7 @@ use crate::shared::{color_translate, schema_color};
 
 // =================================== OUTLOOK
 #[derive(Debug, Deserialize, Clone, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
 pub struct OutlookMargins {
     #[serde(default = "dt_margin")]
     pub left: i32,
@@ -40,6 +41,7 @@ impl Default for OutlookMargins {
 }
 #[derive(Debug, Deserialize, JsonSchema, Clone)]
 #[schemars(deny_unknown_fields)]
+#[serde(rename_all = "kebab-case")]
 pub struct OutlookWindowConfig {
     #[serde(default)]
     pub margins: OutlookMargins,
@@ -73,6 +75,7 @@ fn dt_border_width() -> i32 {
 }
 
 #[derive(Debug, Deserialize, JsonSchema, Clone)]
+#[serde(rename_all = "kebab-case")]
 pub struct OutlookBoardConfig {
     #[serde(default)]
     pub margins: OutlookMargins,
@@ -85,7 +88,7 @@ pub struct OutlookBoardConfig {
 }
 
 #[derive(Debug, Deserialize, Clone, JsonSchema)]
-#[serde(rename_all = "snake_case", tag = "type")]
+#[serde(rename_all = "kebab-case", tag = "type")]
 pub enum Outlook {
     Window(OutlookWindowConfig),
     Board(OutlookBoardConfig),
@@ -98,7 +101,7 @@ impl Default for Outlook {
 
 // =================================== GRID
 #[derive(Deserialize, Debug, Default, Clone, Copy, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[serde(rename_all = "kebab-case")]
 pub enum Align {
     #[default]
     TopLeft,
@@ -172,7 +175,7 @@ impl Align {
 
 // =================================== WIDGETS
 #[derive(Debug, Deserialize, JsonSchema, Clone)]
-#[serde(rename_all = "lowercase", tag = "type")]
+#[serde(rename_all = "kebab-case", tag = "type")]
 pub enum BoxedWidget {
     Ring(RingConfig),
     Text(TextConfig),
@@ -181,6 +184,7 @@ pub enum BoxedWidget {
 
 #[derive(Debug, Deserialize, JsonSchema, Clone)]
 #[schemars(deny_unknown_fields)]
+#[serde(rename_all = "kebab-case")]
 pub struct BoxedWidgetConfig {
     #[serde(default = "dt_index")]
     pub index: [isize; 2],
@@ -199,6 +203,7 @@ use serde_json::Value;
 #[schemars(deny_unknown_fields)]
 #[schemars(transform = BoxConfig_generate_defs)]
 #[const_property("type", "wrap-box")]
+#[serde(rename_all = "kebab-case")]
 pub struct BoxConfig {
     #[serde(default)]
     pub outlook: Outlook,

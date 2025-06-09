@@ -11,7 +11,7 @@ use crate::shared::{
 };
 
 #[derive(Debug, Deserialize, Default, Clone, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[serde(rename_all = "kebab-case")]
 pub enum HeaderMenuStack {
     #[default]
     HeaderTop,
@@ -19,7 +19,7 @@ pub enum HeaderMenuStack {
 }
 
 #[derive(Debug, Deserialize, Default, Clone, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[serde(rename_all = "kebab-case")]
 pub enum HeaderMenuAlign {
     #[default]
     Left,
@@ -36,6 +36,7 @@ impl HeaderMenuAlign {
 
 #[derive(Debug, Deserialize, JsonSchema, Clone)]
 #[schemars(deny_unknown_fields)]
+#[serde(rename_all = "kebab-case")]
 pub struct HeaderDrawConfig {
     #[serde(default = "dt_header_font_pixel_height")]
     pub font_pixel_height: i32,
@@ -61,6 +62,7 @@ fn dt_header_text_color() -> Color {
 
 #[derive(Debug, Deserialize, JsonSchema, Clone)]
 #[schemars(deny_unknown_fields)]
+#[serde(rename_all = "kebab-case")]
 pub struct MenuDrawConfig {
     #[serde(default = "dt_menu_margin")]
     pub margin: [i32; 2],
@@ -124,6 +126,7 @@ fn dt_menu_text_color() -> Color {
 #[derive(Educe, Deserialize, JsonSchema, Clone)]
 #[educe(Debug)]
 #[schemars(deny_unknown_fields)]
+#[serde(rename_all = "kebab-case")]
 pub struct TrayConfig {
     #[serde(default = "dt_family_owned")]
     #[serde(with = "FamilyOwnedRef")]

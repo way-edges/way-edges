@@ -140,6 +140,7 @@ mod tests {
 
 #[derive(Debug, Deserialize, Clone, Default, JsonSchema)]
 #[schemars(deny_unknown_fields)]
+#[serde(rename_all = "kebab-case")]
 pub struct Margins {
     #[serde(default)]
     pub left: NumOrRelative,
@@ -152,6 +153,7 @@ pub struct Margins {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "kebab-case")]
 struct ConfigShadow {
     #[serde(default = "dt_edge")]
     #[serde(deserialize_with = "deserialize_edge")]
@@ -225,6 +227,7 @@ impl From<ConfigShadow> for CommonConfig {
 #[derive(Debug, Deserialize, JsonSchema, Clone)]
 #[serde(from = "ConfigShadow")]
 #[schemars(deny_unknown_fields)]
+#[serde(rename_all = "kebab-case")]
 pub struct CommonConfig {
     #[schemars(schema_with = "schema_edge")]
     pub edge: Anchor,

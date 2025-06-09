@@ -14,6 +14,7 @@ use way_edges_derive::{const_property, GetSize};
 #[schemars(deny_unknown_fields)]
 #[schemars(transform = WorkspaceConfig_generate_defs)]
 #[const_property("type", "workspace")]
+#[serde(rename_all = "kebab-case")]
 pub struct WorkspaceConfig {
     #[serde(flatten)]
     // flatten does not support `default` yet.
@@ -89,6 +90,7 @@ fn dt_active_color() -> Color {
 
 #[derive(Debug, JsonSchema, Clone)]
 #[schemars(transform = WorkspacePreset_generate_defs)]
+#[serde(rename_all = "kebab-case")]
 pub enum WorkspacePreset {
     Hyprland,
     Niri(NiriConf),
@@ -111,7 +113,7 @@ impl<'de> Deserialize<'de> for WorkspacePreset {
             }
         } else {
             #[derive(Deserialize)]
-            #[serde(rename_all = "snake_case", tag = "type")]
+            #[serde(rename_all = "kebab-case", tag = "type")]
             enum Helper {
                 Hyprland,
                 Niri(NiriConf),
@@ -133,6 +135,7 @@ impl<'de> Deserialize<'de> for WorkspacePreset {
 #[schemars(deny_unknown_fields)]
 #[schemars(transform = NiriConf_generate_defs)]
 #[const_property("type", "niri")]
+#[serde(rename_all = "kebab-case")]
 pub struct NiriConf {
     #[serde(default = "dt_filter_empty")]
     pub filter_empty: bool,

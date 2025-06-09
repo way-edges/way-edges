@@ -11,7 +11,11 @@ use util::template::{
 };
 
 #[derive(Debug, Deserialize, JsonSchema, Clone)]
-#[serde(rename_all = "lowercase", tag = "type")]
+#[serde(
+    rename_all = "kebab-case",
+    rename_all_fields = "kebab-case",
+    tag = "type"
+)]
 #[schemars(deny_unknown_fields)]
 pub enum RingPreset {
     Ram {
@@ -60,6 +64,7 @@ fn dt_update_interval() -> u64 {
 }
 
 #[derive(Deserialize, Debug)]
+#[serde(rename_all = "kebab-case")]
 pub struct RingConfigShadow {
     #[serde(default = "dt_r")]
     pub radius: i32,
@@ -136,6 +141,7 @@ impl From<RingConfigShadow> for RingConfig {
 
 #[derive(Debug, Deserialize, JsonSchema, Clone)]
 #[serde(from = "RingConfigShadow")]
+#[serde(rename_all = "kebab-case")]
 #[schemars(deny_unknown_fields)]
 pub struct RingConfig {
     pub radius: i32,

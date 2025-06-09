@@ -8,7 +8,11 @@ use crate::shared::{color_translate, dt_family_owned, schema_color, FamilyOwnedR
 
 #[derive(Educe, Deserialize, JsonSchema, Clone)]
 #[educe(Debug)]
-#[serde(rename_all = "snake_case", tag = "type")]
+#[serde(
+    rename_all = "kebab-case",
+    rename_all_fields = "kebab-case",
+    tag = "type"
+)]
 #[schemars(deny_unknown_fields)]
 pub enum TextPreset {
     Time {
@@ -35,6 +39,7 @@ fn dt_update_interval() -> u64 {
 #[derive(Educe, Deserialize, JsonSchema, Clone)]
 #[educe(Debug)]
 #[schemars(deny_unknown_fields)]
+#[serde(rename_all = "kebab-case")]
 pub struct TextConfig {
     #[serde(default = "dt_fg_color")]
     #[serde(deserialize_with = "color_translate")]
