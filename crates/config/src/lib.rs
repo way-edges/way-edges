@@ -16,14 +16,21 @@ pub use crate::common::CommonConfig;
 pub use crate::widgets::WidgetConfig;
 
 static CONFIG_PATH: OnceLock<PathBuf> = OnceLock::new();
+
+pub fn set_config_path(path: Option<&str>) {
+    CONFIG_PATH
+        .set(path.map(PathBuf::from).unwrap_or_else(|| {
+            let bd = xdg::BaseDirectories::new();
+            match bd.place_config_file("way-edges/config.jsonc") {
+                Ok(p) => p,
+                Err(e) => panic!("failed to create config file: {e}"),
+            }
+        }))
+        .unwrap();
+}
+
 pub fn get_config_path() -> &'static Path {
-    let pb = CONFIG_PATH.get_or_init(|| {
-        let bd = xdg::BaseDirectories::new();
-        match bd.place_config_file("way-edges/config.jsonc") {
-            Ok(p) => p,
-            Err(e) => panic!("failed to create config file: {e}"),
-        }
-    });
+    let pb = CONFIG_PATH.get().unwrap();
     let b = pb.as_path();
     b
 }

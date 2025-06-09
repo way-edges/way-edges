@@ -14,6 +14,8 @@ fn main() {
 
     let cli = args::get_args();
 
+    config::set_config_path(cli.config_path.as_deref());
+
     if let Some(cmd) = cli.command.as_ref() {
         match &cmd {
             args::Command::Daemon => {

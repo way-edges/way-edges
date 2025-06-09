@@ -18,6 +18,9 @@ pub struct Cli {
     #[arg(short = 'd', long)]
     pub mouse_debug: bool,
 
+    #[arg(short = 'c', long)]
+    pub config_path: Option<String>,
+
     #[command(subcommand)]
     pub command: Option<Command>,
 }
