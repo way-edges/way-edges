@@ -21,6 +21,9 @@ pub struct Cli {
     #[arg(short = 'c', long)]
     pub config_path: Option<String>,
 
+    #[arg(short = 'i', long)]
+    pub ipc_namespace: Option<String>,
+
     #[command(subcommand)]
     pub command: Option<Command>,
 }

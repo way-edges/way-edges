@@ -15,6 +15,7 @@ fn main() {
     let cli = args::get_args();
 
     config::set_config_path(cli.config_path.as_deref());
+    backend::ipc::set_ipc_namespace(cli.ipc_namespace.as_deref());
 
     if let Some(cmd) = cli.command.as_ref() {
         match &cmd {
