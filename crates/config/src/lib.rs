@@ -30,9 +30,12 @@ pub fn set_config_path(path: Option<&str>) {
 }
 
 pub fn get_config_path() -> &'static Path {
-    let pb = CONFIG_PATH.get().unwrap();
-    let b = pb.as_path();
-    b
+    if CONFIG_PATH.get().is_none() {
+        // If the config path is not set, we will use the default path.
+        set_config_path(None);
+    }
+
+    CONFIG_PATH.get().unwrap().as_path()
 }
 
 fn get_config_file_content() -> Result<String, String> {
