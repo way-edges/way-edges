@@ -15,15 +15,15 @@
     "Align": {
       "type": "string",
       "enum": [
-        "top_left",
-        "top_center",
-        "top_right",
-        "center_left",
-        "center_center",
-        "center_right",
-        "bottom_left",
-        "bottom_center",
-        "bottom_right"
+        "top-left",
+        "top-center",
+        "top-right",
+        "center-left",
+        "center-center",
+        "center-right",
+        "bottom-left",
+        "bottom-center",
+        "bottom-right"
       ]
     },
     "BoxedWidgetConfig": {
@@ -48,22 +48,22 @@
               "type": "string",
               "const": "ring"
             },
-            "animation_curve": {
+            "animation-curve": {
               "$ref": "#/$defs/Curve"
             },
-            "bg_color": {
+            "bg-color": {
               "type": "string",
               "default": "#00000000"
             },
-            "fg_color": {
+            "fg-color": {
               "type": "string",
               "default": "#00000000"
             },
-            "font_family": {
+            "font-family": {
               "$ref": "#/$defs/FamilyOwned",
               "default": "monospace"
             },
-            "font_size": {
+            "font-size": {
               "type": "integer",
               "format": "int32"
             },
@@ -71,7 +71,7 @@
               "type": ["string", "null"],
               "default": "{float:2,100}"
             },
-            "prefix_hide": {
+            "prefix-hide": {
               "type": "boolean"
             },
             "preset": {
@@ -81,7 +81,7 @@
               "type": "integer",
               "format": "int32"
             },
-            "ring_width": {
+            "ring-width": {
               "type": "integer",
               "format": "int32"
             },
@@ -89,10 +89,10 @@
               "type": ["string", "null"],
               "default": "{float:2,100}"
             },
-            "suffix_hide": {
+            "suffix-hide": {
               "type": "boolean"
             },
-            "text_transition_ms": {
+            "text-transition-ms": {
               "type": "integer",
               "format": "uint64",
               "minimum": 0
@@ -101,16 +101,16 @@
           "required": [
             "type",
             "radius",
-            "ring_width",
-            "bg_color",
-            "fg_color",
-            "text_transition_ms",
-            "animation_curve",
+            "ring-width",
+            "bg-color",
+            "fg-color",
+            "text-transition-ms",
+            "animation-curve",
             "prefix",
-            "prefix_hide",
+            "prefix-hide",
             "suffix",
-            "suffix_hide",
-            "font_size",
+            "suffix-hide",
+            "font-size",
             "preset"
           ]
         },
@@ -121,15 +121,15 @@
               "type": "string",
               "const": "text"
             },
-            "fg_color": {
+            "fg-color": {
               "type": "string",
               "default": "#00000000"
             },
-            "font_family": {
+            "font-family": {
               "$ref": "#/$defs/FamilyOwned",
               "default": "monospace"
             },
-            "font_size": {
+            "font-size": {
               "type": "integer",
               "format": "int32",
               "default": 24
@@ -147,35 +147,35 @@
               "type": "string",
               "const": "tray"
             },
-            "font_family": {
+            "font-family": {
               "$ref": "#/$defs/FamilyOwned",
               "default": "monospace"
             },
-            "grid_align": {
+            "grid-align": {
               "$ref": "#/$defs/Align"
             },
-            "header_draw_config": {
+            "header-draw-config": {
               "$ref": "#/$defs/HeaderDrawConfig"
             },
-            "header_menu_align": {
+            "header-menu-align": {
               "$ref": "#/$defs/HeaderMenuAlign"
             },
-            "header_menu_stack": {
+            "header-menu-stack": {
               "$ref": "#/$defs/HeaderMenuStack"
             },
-            "icon_size": {
+            "icon-size": {
               "type": "integer",
               "format": "int32",
               "default": 20
             },
-            "icon_theme": {
+            "icon-theme": {
               "type": ["string", "null"],
               "default": null
             },
-            "menu_draw_config": {
+            "menu-draw-config": {
               "$ref": "#/$defs/MenuDrawConfig"
             },
-            "tray_gap": {
+            "tray-gap": {
               "type": "integer",
               "format": "int32",
               "default": 2
@@ -203,12 +203,12 @@
     "HeaderDrawConfig": {
       "type": "object",
       "properties": {
-        "font_pixel_height": {
+        "font-pixel-height": {
           "type": "integer",
           "format": "int32",
           "default": 20
         },
-        "text_color": {
+        "text-color": {
           "type": "string",
           "default": "#00000000"
         }
@@ -221,7 +221,7 @@
     },
     "HeaderMenuStack": {
       "type": "string",
-      "enum": ["header_top", "menu_top"]
+      "enum": ["header-top", "menu-top"]
     },
     "KeyEventMap": {
       "type": "object",
@@ -253,16 +253,16 @@
     "MenuDrawConfig": {
       "type": "object",
       "properties": {
-        "border_color": {
+        "border-color": {
           "type": "string",
           "default": "#00000000"
         },
-        "font_pixel_height": {
+        "font-pixel-height": {
           "type": "integer",
           "format": "int32",
           "default": 22
         },
-        "icon_size": {
+        "icon-size": {
           "type": "integer",
           "format": "int32",
           "default": 20
@@ -277,21 +277,21 @@
           "maxItems": 2,
           "minItems": 2
         },
-        "marker_color": {
+        "marker-color": {
           "type": ["string", "null"],
           "default": "#00000000"
         },
-        "marker_size": {
+        "marker-size": {
           "type": "integer",
           "format": "int32",
           "default": 20
         },
-        "separator_height": {
+        "separator-height": {
           "type": "integer",
           "format": "int32",
           "default": 5
         },
-        "text_color": {
+        "text-color": {
           "type": "string",
           "default": "#00000000"
         }
@@ -324,7 +324,7 @@
         "type": {
           "const": "niri"
         },
-        "filter_empty": {
+        "filter-empty": {
           "type": "boolean",
           "default": true
         }
@@ -354,12 +354,12 @@
               "type": "string",
               "const": "window"
             },
-            "border_radius": {
+            "border-radius": {
               "type": "integer",
               "format": "int32",
               "default": 5
             },
-            "border_width": {
+            "border-width": {
               "type": "integer",
               "format": "int32",
               "default": 15
@@ -391,7 +391,7 @@
     "OutlookBoardConfig": {
       "type": "object",
       "properties": {
-        "border_radius": {
+        "border-radius": {
           "type": "integer",
           "format": "int32",
           "default": 5
@@ -439,17 +439,17 @@
               "type": "string",
               "const": "speaker"
             },
-            "animation_curve": {
+            "animation-curve": {
               "$ref": "#/$defs/Curve"
             },
             "device": {
               "type": ["string", "null"]
             },
-            "mute_color": {
+            "mute-color": {
               "type": "string",
               "default": "#00000000"
             },
-            "mute_text_color": {
+            "mute-text-color": {
               "type": ["string", "null"],
               "default": "#00000000"
             }
@@ -464,17 +464,17 @@
               "type": "string",
               "const": "microphone"
             },
-            "animation_curve": {
+            "animation-curve": {
               "$ref": "#/$defs/Curve"
             },
             "device": {
               "type": ["string", "null"]
             },
-            "mute_color": {
+            "mute-color": {
               "type": "string",
               "default": "#00000000"
             },
-            "mute_text_color": {
+            "mute-text-color": {
               "type": ["string", "null"],
               "default": "#00000000"
             }
@@ -504,10 +504,10 @@
               "type": "string",
               "const": "custom"
             },
-            "event_map": {
+            "event-map": {
               "$ref": "#/$defs/KeyEventMap"
             },
-            "interval_update": {
+            "interval-update": {
               "type": "array",
               "default": [0, ""],
               "maxItems": 2,
@@ -523,7 +523,7 @@
                 }
               ]
             },
-            "on_change": {
+            "on-change": {
               "type": ["string", "null"],
               "default": "{float:2,100}"
             }
@@ -542,7 +542,7 @@
               "type": "string",
               "const": "ram"
             },
-            "update_interval": {
+            "update-interval": {
               "type": "integer",
               "format": "uint64",
               "default": 1000,
@@ -559,7 +559,7 @@
               "type": "string",
               "const": "swap"
             },
-            "update_interval": {
+            "update-interval": {
               "type": "integer",
               "format": "uint64",
               "default": 1000,
@@ -582,7 +582,7 @@
               "default": null,
               "minimum": 0
             },
-            "update_interval": {
+            "update-interval": {
               "type": "integer",
               "format": "uint64",
               "default": 1000,
@@ -599,7 +599,7 @@
               "type": "string",
               "const": "battery"
             },
-            "update_interval": {
+            "update-interval": {
               "type": "integer",
               "format": "uint64",
               "default": 1000,
@@ -620,7 +620,7 @@
               "type": "string",
               "default": "/"
             },
-            "update_interval": {
+            "update-interval": {
               "type": "integer",
               "format": "uint64",
               "default": 1000,
@@ -640,7 +640,7 @@
             "cmd": {
               "type": "string"
             },
-            "update_interval": {
+            "update-interval": {
               "type": "integer",
               "format": "uint64",
               "default": 1000,
@@ -665,11 +665,11 @@
               "type": "string",
               "default": "%Y-%m-%d %H:%M:%S"
             },
-            "time_zone": {
+            "time-zone": {
               "type": ["string", "null"],
               "default": null
             },
-            "update_interval": {
+            "update-interval": {
               "type": "integer",
               "format": "uint64",
               "default": 1000,
@@ -689,7 +689,7 @@
             "cmd": {
               "type": "string"
             },
-            "update_interval": {
+            "update-interval": {
               "type": "integer",
               "format": "uint64",
               "default": 1000,
@@ -704,17 +704,17 @@
     "Widget": {
       "type": "object",
       "properties": {
-        "animation_curve": {
+        "animation-curve": {
           "$ref": "#/$defs/Curve"
         },
         "edge": {
           "type": "string",
           "enum": ["top", "bottom", "left", "right"]
         },
-        "extra_trigger_size": {
+        "extra-trigger-size": {
           "$ref": "#/$defs/NumOrRelative"
         },
-        "ignore_exclusive": {
+        "ignore-exclusive": {
           "type": "boolean"
         },
         "layer": {
@@ -730,12 +730,12 @@
         "namespace": {
           "type": "string"
         },
-        "pin_key": {
+        "pin-key": {
           "type": "integer",
           "format": "uint32",
           "minimum": 0
         },
-        "pin_with_key": {
+        "pin-with-key": {
           "type": "boolean"
         },
         "pinnable": {
@@ -745,10 +745,10 @@
           "type": ["string", "null"],
           "enum": ["top", "bottom", "left", "right"]
         },
-        "preview_size": {
+        "preview-size": {
           "$ref": "#/$defs/NumOrRelative"
         },
-        "transition_duration": {
+        "transition-duration": {
           "type": "integer",
           "format": "uint64",
           "minimum": 0
@@ -762,11 +762,11 @@
               "type": "string",
               "const": "btn"
             },
-            "border_color": {
+            "border-color": {
               "type": "string",
               "default": "#00000000"
             },
-            "border_width": {
+            "border-width": {
               "type": "integer",
               "format": "int32",
               "default": 3
@@ -775,7 +775,7 @@
               "type": "string",
               "default": "#00000000"
             },
-            "event_map": {
+            "event-map": {
               "$ref": "#/$defs/KeyEventMap"
             },
             "length": {
@@ -794,35 +794,35 @@
               "type": "string",
               "const": "slider"
             },
-            "bg_color": {
+            "bg-color": {
               "type": "string",
               "default": "#00000000"
             },
-            "bg_text_color": {
+            "bg-text-color": {
               "type": ["string", "null"],
               "default": "#00000000"
             },
-            "border_color": {
+            "border-color": {
               "type": "string",
               "default": "#00000000"
             },
-            "border_width": {
+            "border-width": {
               "type": "integer",
               "format": "int32",
               "default": 3
             },
-            "fg_color": {
+            "fg-color": {
               "type": "string",
               "default": "#00000000"
             },
-            "fg_text_color": {
+            "fg-text-color": {
               "type": ["string", "null"],
               "default": "#00000000"
             },
             "length": {
               "$ref": "#/$defs/NumOrRelative"
             },
-            "obtuse_angle": {
+            "obtuse-angle": {
               "type": "number",
               "format": "double",
               "default": 120.0
@@ -835,7 +835,7 @@
               "format": "double",
               "default": 20.0
             },
-            "redraw_only_on_internal_update": {
+            "redraw-only-on-internal-update": {
               "type": "boolean",
               "default": false
             },
@@ -879,24 +879,24 @@
               "type": "string",
               "const": "workspace"
             },
-            "active_color": {
+            "active-color": {
               "type": "string",
               "default": "#00000000"
             },
-            "active_increase": {
+            "active-increase": {
               "type": "number",
               "format": "double",
               "default": 0.5
             },
-            "default_color": {
+            "default-color": {
               "type": "string",
               "default": "#00000000"
             },
-            "focus_color": {
+            "focus-color": {
               "type": "string",
               "default": "#00000000"
             },
-            "focused_only": {
+            "focused-only": {
               "type": "boolean",
               "default": false
             },
@@ -905,22 +905,22 @@
               "format": "int32",
               "default": 5
             },
-            "hover_color": {
+            "hover-color": {
               "type": ["string", "null"],
               "default": "#00000000"
             },
-            "invert_direction": {
+            "invert-direction": {
               "type": "boolean",
               "default": false
             },
             "length": {
               "$ref": "#/$defs/NumOrRelative"
             },
-            "output_name": {
+            "output-name": {
               "type": ["string", "null"],
               "default": null
             },
-            "pop_duration": {
+            "pop-duration": {
               "type": "integer",
               "format": "uint64",
               "default": 1000,
@@ -932,10 +932,10 @@
             "thickness": {
               "$ref": "#/$defs/NumOrRelative"
             },
-            "workspace_animation_curve": {
+            "workspace-animation-curve": {
               "$ref": "#/$defs/Curve"
             },
-            "workspace_transition_duration": {
+            "workspace-transition-duration": {
               "type": "integer",
               "format": "uint64",
               "default": 300,
@@ -952,13 +952,13 @@
         "margins",
         "monitor",
         "namespace",
-        "ignore_exclusive",
-        "transition_duration",
-        "animation_curve",
-        "extra_trigger_size",
-        "preview_size",
-        "pin_with_key",
-        "pin_key",
+        "ignore-exclusive",
+        "transition-duration",
+        "animation-curve",
+        "extra-trigger-size",
+        "preview-size",
+        "pin-with-key",
+        "pin-key",
         "pinnable"
       ]
     },

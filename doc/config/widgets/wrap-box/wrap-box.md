@@ -5,13 +5,13 @@
   // ... other basic configs omitted here for brevity
   "widget": {
     "type": "wrap-box",
-    "align": "center_left", // 9 positions: center_left, center_right, top_left, top_right, bottom_left, bottom_right, left_top, left_bottom, right_top, right_bottom
+    "align": "center-left", // 9 positions: center-left, center-right, top-left, top-right, bottom-left, bottom-right, left-top, left-bottom, right-top, right-bottom
     "gap": 10,
     // "outlook": {
     //   "type": "window",
     //   "color": "#00000000",
-    //   "border_radius": 5,
-    //   "border_width": 15,
+    //   "border-radius": 5,
+    //   "border-width": 15,
     //   "margins": {
     //     "left": 5,
     //     "right": 5,
@@ -21,7 +21,7 @@
     // },
     "outlook": {
       "type": "board",
-      "border_radius": 5,
+      "border-radius": 5,
       "color": "#00000000",
       "margins": {
         // ...
@@ -41,7 +41,7 @@
 | Name    | Description                                                                                                                            |
 | ------- | -------------------------------------------------------------------------------------------------------------------------------------- |
 | type    | const `wrap-box`                                                                                                                       |
-| align   | 9 positions: center_left, center_right, top_left, top_right, bottom_left, bottom_right, left_top, left_bottom, right_top, right_bottom |
+| align   | 9 positions: center-left, center-right, top-left, top-right, bottom-left, bottom-right, left-top, left-bottom, right-top, right-bottom |
 | gap     | gap between each widget                                                                                                                |
 | outlook | `window` or `board`                                                                                                                    |
 | items   | _**grid layout**_ widgets with each of their index and config                                                                          |
@@ -52,8 +52,8 @@
 "outlook": {
   "type": "window",
   "color": "#00000000",
-  "border_radius": 5,
-  "border_width": 15,
+  "border-radius": 5,
+  "border-width": 15,
   "margins": {
     "left": 5,
     "right": 5,
@@ -67,8 +67,8 @@
 | ------------- | -------------- |
 | type          | const `window` |
 | color         | color          |
-| border_radius | int            |
-| border_width  | int            |
+| border-radius | int            |
+| border-width  | int            |
 | margins       | margins        |
 
 ## Outlook: board
@@ -77,7 +77,7 @@
 "outlook": {
   "type": "board",
   "color": "#00000000",
-  "border_radius": 5,
+  "border-radius": 5,
   "margins": {
     "left": 5,
     "right": 5,
@@ -91,7 +91,7 @@
 | ------------- | ------------- |
 | type          | const `board` |
 | color         | color         |
-| border_radius | int           |
+| border-radius | int           |
 | margins       | margins       |
 
 ## items
