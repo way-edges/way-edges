@@ -1,0 +1,201 @@
+btn {
+  namespace "widget_base_example"
+  edge "top"
+  position "left"
+  layer "overlay"
+  // monitor 0
+  // monitor "*"
+  // monitor "eDP-1"
+  monitor "eDP-1" "HDMI-A-1"
+  extra-trigger-size 1 // or "10%"
+  preview-size 20 // or "100%"
+  animation-curve "ease-expo"
+  transition-duration 300
+  margins {
+    top 0
+    left 0
+    bottom 0
+    right 0
+  }
+  ignore-exclusive false
+  pinnable true
+  pin-with-key true
+  pin-key 274 // run `way-edges` with `--mouse-debug`, then click on any widget to get the key printed in log
+  // this can be `btn`, `slider`, `wrap-box`, `workspace`.
+  // the lsp completion might not show them all, but once you write it, the rest property completion should work
+  thickness 20
+  length "25%"
+  border-width 5
+  border-color "#112233aa"
+  color "#ffeeddaa"
+  event-map {
+    #272 "sh -c pkill nwg-drawer || nwg-drawer" // left click
+    #273 "niri msg action maximize-column" // right click
+    #274 "niri msg action close-window" // middle click
+    #275 "niri msg action toggle-overview" // side click 1
+    #276 "niri msg action toggle-column-tabbed-display" // side click 2
+  }
+}
+
+slider {
+  // ... other basic configs omitted here for brevity
+  thickness 20
+  length "25%"
+  border-width 3
+  border-color "#112233aa"
+  fg-color "#ffeeddaa"
+  bg-color "#112233aa"
+  bg-text-color "#124123aa"
+  fg-text-color "#124123aa"
+  redraw-only-on-internal-update true // This is when you want to reduce the cpu usage. The progress update by manually dragging the slider is sent, but it won't be redrawn until the value is changed by other means.
+  radius 20 // corner radius
+  obtuse-angle 120 // in degrees(90~180). controls how much curve the widget has
+  // preset "custom" {
+  //   interval-update [100, "echo -n 0.1"] // update the progress. The first value is the interval in ms, and the second value is the command to run. The command should output a number between 0 and 1.
+  //   on-change "notify-send {float:2,100}%" // this is the command to run when the value changes. The value is passed as a parameter. You can use {float:2,100} to format the value as a float with 2 decimal places multiplied by 100.
+  //   event-map {
+  //     // same as btn
+  //   }
+  // }
+
+  // preset "speaker" {
+  // preset "microphone" {
+  //   device "alsa_output.pci-0000_00_1f.3.analog-stereo" // Name of the device, not description of the device. null for default sink/source
+  //   animation-curve "ease-expo" // mute animation
+  //   mute-text-color "#00000000"
+  //   mute-color "#00000000"
+  // }
+
+  preset "backlight" {
+    device "nvidia_0" // this is the name of the device. Find it under `/sys/class/backlight/` It should be something like `nvidia_0`, `intel_0`, etc.
+  }
+}
+
+workspace {
+  // ... other basic configs omitted here for brevity
+  thickness 20
+  length "25%"
+  active-increase 0.5 // increase the size of the active workspace hint
+  animation-curve "ease-expo"
+  active-color "#00000000"
+  default-color "#00000000"
+  focus-color "#00000000"
+  hover-color "#00000000"
+  gap 5
+  invert-direction false
+  output-name "eDP-1" // not specified, it will use the output that this widget is on
+  pop-duration 1000 // ms
+  workspace-transition-duration 300 // ms
+  focused-only false // only animate widgets on the currently focused monitor (works with both niri and Hyprland)
+
+  // preset "hyprland"
+  // preset "niri"
+  preset "niri" {
+    filter-empty true // only show workspaces that have windows in them
+  }
+}
+
+wrap-box {
+  // ... other basic configs omitted here for brevity
+  align "center-left" // 9 positions: center-left, center-right, top-left, top-right, bottom-left, bottom-right, left-top, left-bottom, right-top, right-bottom
+  gap 10
+  // outlook "window" {
+  //   color "#00000000"
+  //   border-radius 5
+  //   border-width 15
+  //   margins {
+  //     left 5
+  //     right 5
+  //     bottom 5
+  //     top 5
+  //   }
+  // }
+  outlook "board" {
+    border-radius 5
+    color "#00000000"
+    margins {
+      // ...
+    }
+  }
+
+  items {
+    ring {
+      index -1 -1 // position in the grid layout. -1 means next available position.
+
+      animation-curve "ease-expo"
+      bg-color "#00000000"
+      fg-color "#00000000"
+      font-family "serif"
+      font-size 0
+      prefix "prefix {float:2,100}%"
+      suffix "surfix {float:2,100}%"
+      prefix-hide false
+      suffix-hide false
+      ring-width 20
+      radius 35
+      text-transition-ms 100 // ms
+      // preset "ram" {
+      //   update-interval 1000 // ms
+      // }
+      // preset "battery" {
+      //   update-interval 1000 // ms
+      // }
+      // preset "cpu" {
+      //   update-interval 1000 // ms
+      // }
+      // preset "swap" {
+      //   update-interval 1000 // ms
+      // }
+      // preset "disk" {
+      //   update-interval 1000 // ms
+      //   partition "/"
+      // }
+      preset "custom" {
+        cmd "echo -n 0.5" // this is the command to run. The command should output a number between 0 and 1.
+        update-interval 1000 // ms
+      }
+    }
+
+    text {
+      index -1 -1 // position in the grid layout. -1 means next available position.
+
+      fg-color "#00000000"
+      font-family "monospace"
+      font-size 24
+      // preset "time" {
+      //   format "%Y-%m-%d %H:%M:%S"
+      //   time-zone "uk" // null for local time
+      //   update-interval 1000 // ms
+      // }
+      preset "custom" {
+        cmd "echo -n Hello, World!" // this is the command to run. The command should output a string.
+        update-interval 1000 // ms
+      }
+    }
+
+    tray {
+      index -1 -1 // position in the grid layout. -1 means next available position.
+
+      font-family "monospace"
+      icon-theme "breeze" // null will fetch the default icon theme
+      icon-size 20
+      tray-gap 2
+      header-draw-config {
+        text-color "#00000000"
+        font-pixel-height 20
+      }
+      header-menu-align "right"
+      header-menu-stack "menu-top"
+      menu-draw-config {
+        border-color "#00000000"
+        text-color "#00000000"
+        marker-color "#00000000"
+        font-pixel-height 22
+        icon-size 20
+        marker-size 20
+        separator-height 5
+        margin 12 12 // horizontal, vertical
+      }
+    }
+  }
+}
