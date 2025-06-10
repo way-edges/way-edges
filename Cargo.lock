@@ -297,6 +297,7 @@ dependencies = [
  "tokio",
  "util",
  "walkdir",
+ "xdg 3.0.0",
  "zbus",
 ]
 

@@ -1,5 +1,10 @@
 mod listen;
-use std::{io::Write, os::unix::net::UnixStream, sync::OnceLock};
+use std::{
+    io::Write,
+    os::unix::net::UnixStream,
+    path::{Path, PathBuf},
+    sync::OnceLock,
+};
 
 pub use listen::start_ipc;
 
@@ -17,18 +22,19 @@ pub const IPC_COMMAND_RELOAD: &str = "reload";
 pub const IPC_COMMAND_QUIT: &str = "q";
 pub const IPC_COMMAND_TOGGLE_PIN: &str = "togglepin";
 
-static SOCK_FILE: OnceLock<String> = OnceLock::new();
+static SOCK_FILE: OnceLock<PathBuf> = OnceLock::new();
 
 pub fn set_ipc_namespace(namespace: Option<&str>) {
     SOCK_FILE
-        .set(format!(
-            "/tmp/way-edges/way-edges{}.sock",
-            namespace.unwrap_or_default()
-        ))
+        .set(
+            xdg::BaseDirectories::new()
+                .place_runtime_file(format!("way-edges{}.sock", namespace.unwrap_or_default()))
+                .unwrap(),
+        )
         .unwrap();
 }
 
-fn get_ipc_sock() -> &'static str {
+fn get_ipc_sock() -> &'static Path {
     SOCK_FILE.get().expect("IPC socket file not set")
 }
 

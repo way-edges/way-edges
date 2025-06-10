@@ -19,9 +19,8 @@ util.workspace = true
 serde_jsonrc.workspace = true
 serde.workspace = true
 schemars.workspace = true
+xdg.workspace = true
 
 serde_json = "1.0.140"
-
-xdg = "3.0.0"
 
 smol_str = "0.2.2"

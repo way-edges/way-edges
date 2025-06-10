@@ -15,6 +15,7 @@ system-tray.workspace = true
 serde_jsonrc.workspace = true
 serde.workspace = true
 calloop.workspace = true
+xdg.workspace = true
 
 
 hyprland = { version = "0.4.0-beta.2", default-features = false, features = [
