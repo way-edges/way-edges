@@ -204,7 +204,7 @@ mod tests {
 
     #[test]
     fn test_deserialize_object_niri_with_config() {
-        let yaml_str = r#"{ "preset": { "type": "niri", "filter_empty": false } }"#;
+        let yaml_str = r#"{ "preset": { "type": "niri", "filter-empty": false } }"#;
         let config: serde_jsonrc::Value = serde_jsonrc::from_str(yaml_str).unwrap();
         let preset: WorkspacePreset = serde_jsonrc::from_value(config["preset"].clone()).unwrap();
         assert_eq!(preset.to_string(), "Niri(filter_empty: false)");
