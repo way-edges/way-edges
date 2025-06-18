@@ -52,6 +52,7 @@
       "bg-text-color": "#124123aa",
       "fg-text-color": "#124123aa",
       "redraw-only-on-internal-update": true, // This is when you want to reduce the cpu usage. The progress update by manually dragging the slider is sent, but it won't be redrawn until the value is changed by other means.
+      "scroll-unit": 0.005,
       "radius": 20, // corner radius
       "obtuse-angle": 120, // in degrees(90~180). controls how much curve the widget has
       // "preset": {
