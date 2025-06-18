@@ -9,7 +9,8 @@
 Please refer to [doc](doc) directory.
 
 > [!WARNING]
-> **master branch always refer to the latest but may not be released configurations, if you are using a released binary, please match the corresponding commit with the tag you are on**.  
+> **master branch always refer to the latest but may not be released configurations, if you are using a released binary, please match the corresponding commit with the tag you are on**.
+> 
 > You can always find that in the [tag](https://github.com/way-edges/way-edges/tags) page, click on the second link which refers to the commit hash of that tag.
 
 ## 📥 Installation
