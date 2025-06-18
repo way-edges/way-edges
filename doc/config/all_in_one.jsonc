@@ -56,8 +56,9 @@
       "obtuse-angle": 120, // in degrees(90~180). controls how much curve the widget has
       // "preset": {
       //   "type": "custom",
-      //   "interval-update": [100, "echo -n 0.1"], // update the progress. The first value is the interval in ms, and the second value is the command to run. The command should output a number between 0 and 1.
-      //   "on-change": "notify-send {float:2,100}%", // this is the command to run when the value changes. The value is passed as a parameter. You can use {float:2,100} to format the value as a float with 2 decimal places multiplied by 100.
+      //   "update-interval": 100, // ms to execute update command
+      //   "update-command": "echo -n 0.1", // The command should output a number between 0 and 1.
+      //   "on-change-command": "notify-send {float:2,100}%", // this is the command to run when the value changes. The value is passed as a parameter. You can use {float:2,100} to format the value as a float with 2 decimal places multiplied by 100.
       //   "event-map": {
       //     // same as btn
       //   },

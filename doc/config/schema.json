@@ -507,25 +507,19 @@
             "event-map": {
               "$ref": "#/$defs/KeyEventMap"
             },
-            "interval-update": {
-              "type": "array",
-              "default": [0, ""],
-              "maxItems": 2,
-              "minItems": 2,
-              "prefixItems": [
-                {
-                  "type": "integer",
-                  "format": "uint64",
-                  "minimum": 0
-                },
-                {
-                  "type": "string"
-                }
-              ]
-            },
-            "on-change": {
+            "on-change-command": {
               "type": ["string", "null"],
               "default": "{float:2,100}"
+            },
+            "update-command": {
+              "type": "string",
+              "default": ""
+            },
+            "update-interval": {
+              "type": "integer",
+              "format": "uint64",
+              "default": 0,
+              "minimum": 0
             }
           },
           "additionalProperties": false,

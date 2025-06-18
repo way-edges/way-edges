@@ -86,7 +86,7 @@ pub fn custom_preset(
     let event_map = std::mem::take(&mut preset_conf.event_map);
 
     // on change
-    let on_change = preset_conf.on_change.take();
+    let on_change = preset_conf.on_change_command.take();
 
     let edge = builder.common_config.edge;
     CustomContext {
@@ -105,7 +105,7 @@ fn interval_update(
     preset_conf: &CustomConfig,
     progress_cache: &Rc<Cell<f64>>,
 ) -> Option<Runner<()>> {
-    if preset_conf.interval_update.0 > 0 && !preset_conf.interval_update.1.is_empty() {
+    if preset_conf.update_interval > 0 && !preset_conf.update_command.is_empty() {
         let progress_cache_weak = Rc::downgrade(progress_cache);
         let redraw_signal = window.make_redraw_channel(move |_, p| {
             let Some(progress_cache) = progress_cache_weak.upgrade() else {
@@ -114,9 +114,9 @@ fn interval_update(
             progress_cache.set(p);
         });
 
-        let cmd = preset_conf.interval_update.1.clone();
+        let cmd = preset_conf.update_command.clone();
         let mut runner = interval_task::runner::new_runner(
-            Duration::from_millis(preset_conf.interval_update.0),
+            Duration::from_millis(preset_conf.update_interval),
             || (),
             move |_| {
                 match shell_cmd(&cmd).and_then(|res| {

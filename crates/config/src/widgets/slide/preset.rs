@@ -63,12 +63,14 @@ pub struct BacklightConfig {
 #[serde(rename_all = "kebab-case")]
 pub struct CustomConfig {
     #[serde(default)]
-    pub interval_update: (u64, String),
+    pub update_command: String,
+    #[serde(default)]
+    pub update_interval: u64,
 
     #[serde(default)]
     #[serde(deserialize_with = "slide_change_template")]
     #[schemars(schema_with = "schema_optional_template")]
-    pub on_change: Option<Template>,
+    pub on_change_command: Option<Template>,
 
     #[serde(default)]
     pub event_map: KeyEventMap,
