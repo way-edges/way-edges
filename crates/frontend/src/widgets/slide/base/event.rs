@@ -35,47 +35,79 @@ fn make_translate_func(edge: Anchor) -> fn(i32, i32, (f64, f64)) -> f64 {
     }
 }
 
-pub fn setup_event(edge: Anchor, w_conf: &SlideConfig) -> ProgressState {
+pub trait ProgressData {
+    fn get(&self) -> f64;
+    fn set(&mut self, value: f64);
+}
+
+pub fn setup_event<T: ProgressData>(
+    edge: Anchor,
+    w_conf: &SlideConfig,
+    data: T,
+) -> ProgressState<T> {
     let func = make_translate_func(edge);
     let left_pressing = false;
 
     ProgressState {
         left_pressing,
+        scroll_unit: w_conf.scroll_unit,
         length: w_conf.size().unwrap().1 as i32 - 2 * w_conf.border_width,
         border_width: w_conf.border_width,
         func,
+        progress: data,
     }
 }
 #[derive(Debug)]
-pub struct ProgressState {
+pub struct ProgressState<T: ProgressData> {
     left_pressing: bool,
-
     length: i32,
     border_width: i32,
     func: fn(i32, i32, (f64, f64)) -> f64,
+    scroll_unit: f64,
+
+    progress: T,
 }
-impl ProgressState {
-    pub fn if_change_progress(&mut self, event: MouseEvent) -> Option<f64> {
+impl<T: ProgressData> ProgressState<T> {
+    fn calculate(&self, pos: (f64, f64)) -> f64 {
+        (self.func)(self.length, self.border_width, pos)
+    }
+    pub fn p(&self) -> f64 {
+        self.progress.get()
+    }
+    pub fn if_change_progress(
+        &mut self,
+        event: MouseEvent,
+        update_progress_immediate: bool,
+    ) -> Option<f64> {
         let mut p = None;
         match event {
             MouseEvent::Press(pos, key) => {
                 if key == BTN_LEFT {
                     self.left_pressing = true;
-                    p = Some((self.func)(self.length, self.border_width, pos))
+                    p = Some(self.calculate(pos));
                 }
             }
-            MouseEvent::Release(_, key) => {
+            MouseEvent::Release(pos, key) => {
                 if key == BTN_LEFT {
                     self.left_pressing = false;
+                    p = Some(self.calculate(pos));
                 }
             }
             MouseEvent::Motion(pos) => {
                 if self.left_pressing {
-                    p = Some((self.func)(self.length, self.border_width, pos))
+                    p = Some(self.calculate(pos));
                 }
+            }
+            MouseEvent::Scroll(_, v) => {
+                p = Some(self.progress.get() + (self.scroll_unit * v).clamp(0.0, 1.0));
             }
             _ => {}
         }
+
+        if update_progress_immediate && p.is_some() {
+            self.progress.set(p.unwrap());
+        }
+
         p
     }
 }
