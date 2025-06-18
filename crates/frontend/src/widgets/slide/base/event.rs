@@ -1,3 +1,6 @@
+use std::cell::Cell;
+use std::rc::Rc;
+
 use crate::mouse_state::MouseEvent;
 use config::widgets::slide::base::SlideConfig;
 use smithay_client_toolkit::seat::pointer::BTN_LEFT;
@@ -57,6 +60,18 @@ pub fn setup_event<T: ProgressData>(
         progress: data,
     }
 }
+
+pub type ProgressDataf = Rc<Cell<f64>>;
+impl ProgressData for ProgressDataf {
+    fn get(&self) -> f64 {
+        Cell::get(self)
+    }
+
+    fn set(&mut self, value: f64) {
+        Cell::set(self, value);
+    }
+}
+
 #[derive(Debug)]
 pub struct ProgressState<T: ProgressData> {
     left_pressing: bool,
@@ -73,6 +88,9 @@ impl<T: ProgressData> ProgressState<T> {
     }
     pub fn p(&self) -> f64 {
         self.progress.get()
+    }
+    pub fn data(&mut self) -> &mut T {
+        &mut self.progress
     }
     pub fn if_change_progress(
         &mut self,
@@ -99,11 +117,12 @@ impl<T: ProgressData> ProgressState<T> {
                 }
             }
             MouseEvent::Scroll(_, v) => {
-                p = Some(self.progress.get() + (self.scroll_unit * v).clamp(0.0, 1.0));
+                p = Some((self.progress.get() + (self.scroll_unit * v)).clamp(0.0, 1.0));
             }
             _ => {}
         }
 
+        #[allow(clippy::unnecessary_unwrap)]
         if update_progress_immediate && p.is_some() {
             self.progress.set(p.unwrap());
         }

@@ -18,20 +18,11 @@ use super::base::{
 use crate::{
     mouse_state::{MouseEvent, MouseStateData},
     wayland::app::WidgetBuilder,
-    widgets::{slide::base::event::ProgressData, WidgetContext},
+    widgets::{
+        slide::base::event::{ProgressData, ProgressDataf},
+        WidgetContext,
+    },
 };
-
-type Progress = Rc<Cell<f64>>;
-
-impl ProgressData for Progress {
-    fn get(&self) -> f64 {
-        Cell::get(self)
-    }
-
-    fn set(&mut self, value: f64) {
-        Cell::set(self, value);
-    }
-}
 
 #[derive(Debug)]
 pub struct CustomContext {
@@ -42,7 +33,7 @@ pub struct CustomContext {
 
     draw_conf: DrawConfig,
 
-    progress_state: ProgressState<Progress>,
+    progress_state: ProgressState<ProgressDataf>,
     only_redraw_on_internal_update: bool,
 }
 impl WidgetContext for CustomContext {
@@ -121,7 +112,7 @@ fn interval_update(
     preset_conf: &CustomConfig,
     progress_cache: &Rc<Cell<f64>>,
 ) -> Option<Runner<()>> {
-    if preset_conf.update_interval <= 0 || preset_conf.update_command.is_empty() {
+    if preset_conf.update_interval == 0 || preset_conf.update_command.is_empty() {
         return None;
     }
 
