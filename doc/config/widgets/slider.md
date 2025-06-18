@@ -16,7 +16,7 @@
     "redraw-only-on-internal-update": true, // This is when you want to reduce the cpu usage. The progress update by manually dragging the slider is sent, but it won't be redrawn until the value is changed by other means.
     "radius": 20, // corner radius
     "obtuse-angle": 120, // in degrees(90~180). controls how much curve the widget has
-    "scroll-unit": 0.005,
+    "scroll-unit": 0.005, // 0 to 1. defines the amount of progress to change per pixel from vertical scroll with mouse wheel. default 0.005
     // "preset": {
     //   "type": "custom",
     //   "update-interval": 100, // ms to execute update command
@@ -54,7 +54,7 @@
 | bg-text-color                  | hex only, but with alpha channel supported                                                                                                                                     |
 | border-color                   | hex only, but with alpha channel supported                                                                                                                                     |
 | redraw-only-on-internal-update | This is when you want to reduce the cpu usage. The progress update by manually dragging the slider is sent, but it won't be redrawn until the value is changed by other means. |
-| scroll-unit                    | 0 to 1. defines how much progress to change on 1 pixel vertical scroll from mouse wheel. default 0.005                                                                         |
+| scroll-unit                    | 0 to 1. defines the amount of progress to change per pixel from vertical scroll with mouse wheel. default 0.005                                                                |
 | radius                         | corner radius                                                                                                                                                                  |
 | obtuse-angle                   | in degrees(90~180). controls how much curve the widget has                                                                                                                     |
 | preset                         | 4 presets: `custom`, `speaker`, `microphone`, `backlight`                                                                                                                      |
