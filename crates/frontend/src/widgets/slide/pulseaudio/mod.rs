@@ -90,9 +90,6 @@ impl WidgetContext for PulseAudioContext {
             .if_change_progress(event.clone(), !self.only_redraw_on_internal_update)
         {
             // debounce
-            if let Some(last) = self.debounce_ctx.take() {
-                drop(last)
-            }
             let ctx = Arc::new(());
             set_vol(self.device.clone(), p, std::sync::Arc::downgrade(&ctx));
             self.debounce_ctx = Some(ctx);
