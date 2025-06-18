@@ -58,6 +58,9 @@ pub struct SlideConfig {
     pub redraw_only_on_internal_update: bool,
 
     #[serde(default)]
+    pub scroll_unit: f64,
+
+    #[serde(default)]
     pub preset: Preset,
 }
 
