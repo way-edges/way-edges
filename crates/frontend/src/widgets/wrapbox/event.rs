@@ -132,6 +132,11 @@ pub fn on_mouse_event(event: MouseEvent, ctx: &mut BoxContext) -> bool {
                 }
             }
         }
+        common_event => {
+            if let Some(last) = ctx.last_widget.take_current() {
+                redraw.or(last.borrow_mut().on_mouse_event(common_event));
+            }
+        }
     };
 
     redraw.res()
