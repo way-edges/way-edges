@@ -833,6 +833,11 @@
               "type": "boolean",
               "default": false
             },
+            "scroll-unit": {
+              "type": "number",
+              "format": "double",
+              "default": 0.005
+            },
             "thickness": {
               "$ref": "#/$defs/NumOrRelative"
             }

@@ -57,8 +57,15 @@ pub struct SlideConfig {
     #[serde(default)]
     pub redraw_only_on_internal_update: bool,
 
+    #[serde(default = "default_scroll_unit")]
+    pub scroll_unit: f64,
+
     #[serde(default)]
     pub preset: Preset,
+}
+
+fn default_scroll_unit() -> f64 {
+    0.005
 }
 
 fn dt_border_width() -> i32 {

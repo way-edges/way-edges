@@ -8,7 +8,7 @@ use super::base::{
 use crate::{
     mouse_state::{MouseEvent, MouseStateData},
     wayland::app::WidgetBuilder,
-    widgets::WidgetContext,
+    widgets::{slide::base::event::ProgressDataf, WidgetContext},
 };
 
 use config::widgets::slide::{base::SlideConfig, preset::BacklightConfig};
@@ -18,29 +18,28 @@ pub struct BacklightContext {
     #[allow(dead_code)]
     backend_id: i32,
     device: Option<String>,
-    progress: Rc<Cell<f64>>,
 
     draw_conf: DrawConfig,
 
-    progress_state: ProgressState,
+    progress_state: ProgressState<ProgressDataf>,
     only_redraw_on_internal_update: bool,
 }
 impl WidgetContext for BacklightContext {
     fn redraw(&mut self) -> ImageSurface {
-        let p = self.progress.get();
+        let p = self.progress_state.p();
         self.draw_conf.draw(p)
     }
 
     fn on_mouse_event(&mut self, _: &MouseStateData, event: MouseEvent) -> bool {
-        if let Some(p) = self.progress_state.if_change_progress(event.clone()) {
-            if !self.only_redraw_on_internal_update {
-                self.progress.set(p);
-            }
-
+        if let Some(p) = self
+            .progress_state
+            .if_change_progress(event.clone(), !self.only_redraw_on_internal_update)
+        {
             backend::backlight::dbus::set_backlight(self.device.as_ref(), p);
+            !self.only_redraw_on_internal_update
+        } else {
+            false
         }
-
-        !self.only_redraw_on_internal_update
     }
 }
 
@@ -65,9 +64,8 @@ pub fn preset(
     BacklightContext {
         backend_id,
         device,
-        progress,
         draw_conf: DrawConfig::new(edge, &w_conf),
-        progress_state: setup_event(edge, &w_conf),
+        progress_state: setup_event(edge, &w_conf, progress),
         only_redraw_on_internal_update: w_conf.redraw_only_on_internal_update,
     }
 }

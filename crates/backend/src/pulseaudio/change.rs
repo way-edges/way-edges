@@ -52,7 +52,6 @@ fn change_source_vol(ctx: &Context, name: &str, vol_percentage: f64) {
     });
 }
 
-// i don't know how to set it with pulseaudio api
 pub fn set_vol(os: PulseAudioDevice, v: f64, debounce_ctx: std::sync::Weak<()>) {
     get_backend_runtime_handle().spawn(async move {
         // debounce 1ms

@@ -355,7 +355,7 @@ impl Widget {
                 pos.0 -= self.start_pos.0 as f64;
                 pos.1 -= self.start_pos.1 as f64;
             }
-            MouseEvent::Leave => {}
+            _ => {}
         }
 
         match event {

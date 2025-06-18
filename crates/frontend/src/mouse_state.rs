@@ -7,6 +7,7 @@ pub enum MouseEvent {
     Enter((f64, f64)),
     Leave,
     Motion((f64, f64)),
+    Scroll(f64, f64), // horizontal, vertical
 }
 
 #[derive(Debug)]
@@ -60,10 +61,7 @@ impl MouseState {
                 horizontal,
                 vertical,
                 ..
-            } => {
-                log::debug!("Scroll H:{horizontal:?}, V:{vertical:?}");
-                None
-            }
+            } => Some(MouseEvent::Scroll(horizontal.absolute, vertical.absolute)),
         }
     }
 

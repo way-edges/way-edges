@@ -9,6 +9,7 @@ use super::base::{
     draw::DrawConfig,
     event::{setup_event, ProgressState},
 };
+use crate::widgets::slide::base::event::ProgressData;
 use crate::{
     animation::ToggleAnimationRc,
     mouse_state::{MouseEvent, MouseStateData},
@@ -23,11 +24,34 @@ use backend::pulseaudio::{
 use config::widgets::slide::{base::SlideConfig, preset::PulseAudioConfig};
 
 #[derive(Debug)]
+struct Progress(Rc<Cell<VInfo>>);
+impl ProgressData for Progress {
+    fn get(&self) -> f64 {
+        Cell::get(&self.0).vol
+    }
+
+    fn set(&mut self, value: f64) {
+        let mut v = Cell::get(&self.0);
+        v.vol = value;
+        Cell::set(&self.0, v);
+    }
+}
+impl From<Rc<Cell<VInfo>>> for Progress {
+    fn from(vinfo: Rc<Cell<VInfo>>) -> Self {
+        Progress(vinfo)
+    }
+}
+impl Progress {
+    fn is_muted(&self) -> bool {
+        Cell::get(&self.0).is_muted
+    }
+}
+
+#[derive(Debug)]
 pub struct PulseAudioContext {
     #[allow(dead_code)]
     backend_id: i32,
     device: PulseAudioDevice,
-    vinfo: Rc<Cell<VInfo>>,
     debounce_ctx: Option<Arc<()>>,
 
     non_mute_color: Color,
@@ -37,7 +61,7 @@ pub struct PulseAudioContext {
     mute_animation: ToggleAnimationRc,
     draw_conf: DrawConfig,
 
-    progress_state: ProgressState,
+    progress_state: ProgressState<Progress>,
     only_redraw_on_internal_update: bool,
 }
 impl WidgetContext for PulseAudioContext {
@@ -52,32 +76,27 @@ impl WidgetContext for PulseAudioContext {
             self.draw_conf.bg_text_color = Some(bg_text_color);
         }
 
-        let p = self.vinfo.get().vol;
+        let p = self.progress_state.p();
         self.draw_conf.draw(p)
     }
 
     fn on_mouse_event(&mut self, _: &MouseStateData, event: MouseEvent) -> bool {
-        if let Some(p) = self.progress_state.if_change_progress(event.clone()) {
-            if !self.only_redraw_on_internal_update {
-                let mut vinfo = self.vinfo.get();
-                vinfo.vol = p;
-                self.vinfo.set(vinfo);
-            }
+        if let MouseEvent::Release(_, BTN_RIGHT) = event {
+            set_mute(self.device.clone(), !self.progress_state.data().is_muted());
+        }
 
+        if let Some(p) = self
+            .progress_state
+            .if_change_progress(event.clone(), !self.only_redraw_on_internal_update)
+        {
             // debounce
-            if let Some(last) = self.debounce_ctx.take() {
-                drop(last)
-            }
             let ctx = Arc::new(());
             set_vol(self.device.clone(), p, std::sync::Arc::downgrade(&ctx));
             self.debounce_ctx = Some(ctx);
+            !self.only_redraw_on_internal_update
+        } else {
+            false
         }
-
-        if let MouseEvent::Release(_, BTN_RIGHT) = event {
-            set_mute(self.device.clone(), !self.vinfo.get().is_muted);
-        }
-
-        !self.only_redraw_on_internal_update
     }
 }
 
@@ -118,14 +137,13 @@ fn common(
     PulseAudioContext {
         backend_id,
         device,
-        vinfo,
         non_mute_color,
         mute_color,
         non_mute_text_color,
         mute_text_color,
         mute_animation,
         draw_conf: DrawConfig::new(edge, &w_conf),
-        progress_state: setup_event(edge, &w_conf),
+        progress_state: setup_event(edge, &w_conf, vinfo.into()),
         only_redraw_on_internal_update: w_conf.redraw_only_on_internal_update,
         debounce_ctx: None,
     }
