@@ -1,5 +1,8 @@
 # Workspace
 
+The workspace can be changed by either left click, or by only vertical scroll event though mouse wheel or whatever input device that sends `discrete != 0`  
+Which means scroll with 2 fingers on touchpad can not trigger anything in this widget. (This should be a behavior defined by your compositor for example niri, using 3 fingers swipe operation to change the workspace)
+
 ```jsonc
 {
   // ... other basic configs omitted here for brevity

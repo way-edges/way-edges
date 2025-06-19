@@ -1,5 +1,7 @@
 # Slider
 
+The progress can be changed by either left click and drag, or by any vertical scroll event though what ever input device(touchpad, mouse wheel etc.)
+
 ```jsonc
 {
   // ... other basic configs omitted here for brevity
