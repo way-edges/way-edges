@@ -1,4 +1,4 @@
-use smithay_client_toolkit::seat::pointer::{PointerEvent, PointerEventKind};
+use smithay_client_toolkit::seat::pointer::{AxisScroll, PointerEvent, PointerEventKind};
 
 #[derive(Debug, Clone)]
 pub enum MouseEvent {
@@ -7,7 +7,7 @@ pub enum MouseEvent {
     Enter((f64, f64)),
     Leave,
     Motion((f64, f64)),
-    Scroll(f64, f64), // horizontal, vertical
+    Scroll(AxisScroll, AxisScroll), // horizontal, vertical
 }
 
 #[derive(Debug)]
@@ -61,7 +61,7 @@ impl MouseState {
                 horizontal,
                 vertical,
                 ..
-            } => Some(MouseEvent::Scroll(horizontal.absolute, vertical.absolute)),
+            } => Some(MouseEvent::Scroll(horizontal, vertical)),
         }
     }
 

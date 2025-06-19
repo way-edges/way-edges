@@ -117,7 +117,7 @@ impl<T: ProgressData> ProgressState<T> {
                 }
             }
             MouseEvent::Scroll(_, v) => {
-                p = Some((self.progress.get() + (self.scroll_unit * v)).clamp(0.0, 1.0));
+                p = Some((self.progress.get() + (self.scroll_unit * v.absolute)).clamp(0.0, 1.0));
             }
             _ => {}
         }

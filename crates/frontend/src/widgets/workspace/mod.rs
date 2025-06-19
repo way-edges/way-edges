@@ -137,7 +137,7 @@ impl WidgetContext for WorkspaceCtx {
             MouseEvent::Scroll(_, v) => {
                 let (d, _) = self.workspace_data.get();
                 let id = d.active;
-                let new_id = id + (v / v.abs()).ceil() as i32;
+                let new_id = id + v.discrete;
                 if new_id == new_id.clamp(0, d.workspace_count - 1) {
                     self.workspace_handler.change_to_workspace(new_id as usize);
                     should_redraw = true;
