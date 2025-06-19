@@ -195,6 +195,9 @@ struct ConfigShadow {
     pub pin_with_key: bool,
     #[serde(default = "dt_pin_key")]
     pub pin_key: u32,
+
+    #[serde(default)]
+    pub pin_on_startup: bool,
 }
 
 impl From<ConfigShadow> for CommonConfig {
@@ -220,6 +223,7 @@ impl From<ConfigShadow> for CommonConfig {
             pinnable: value.pinnable,
             pin_with_key: value.pin_with_key,
             pin_key: value.pin_key,
+            pin_on_startup: value.pin_on_startup,
         }
     }
 }
@@ -247,6 +251,7 @@ pub struct CommonConfig {
     pub pin_with_key: bool,
     pub pin_key: u32,
     pub pinnable: bool,
+    pub pin_on_startup: bool,
 }
 impl CommonConfig {
     pub fn resolve_relative(&mut self, size: (i32, i32)) {

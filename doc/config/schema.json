@@ -729,6 +729,9 @@
           "format": "uint32",
           "minimum": 0
         },
+        "pin-on-startup": {
+          "type": "boolean"
+        },
         "pin-with-key": {
           "type": "boolean"
         },
@@ -958,7 +961,8 @@
         "preview-size",
         "pin-with-key",
         "pin-key",
-        "pinnable"
+        "pinnable",
+        "pin-on-startup"
       ]
     },
     "WorkspacePreset": {

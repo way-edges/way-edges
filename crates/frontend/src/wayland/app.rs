@@ -776,12 +776,16 @@ impl<'a> WidgetBuilder<'a> {
         )
         .make_rc();
         let animation_list = AnimationList::new();
-        let window_pop_state = WindowPopState::new(
+        let mut window_pop_state = WindowPopState::new(
             pop_animation,
             common.pinnable,
             common.pin_with_key,
             common.pin_key,
         );
+
+        if common.pin_on_startup {
+            window_pop_state.toggle_pin(false);
+        }
 
         Ok(Self {
             monitor: common.monitor.clone(),
