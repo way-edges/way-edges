@@ -2448,9 +2448,9 @@ dependencies = [
 [[package]]
 name = "system-tray"
 version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c3397841ed755bf361606a845779e0f7333d35fb4e39627ef6f656d7cdad4c73"
+source = "git+https://github.com/ogios/system-tray.git?branch=icon-update-fix#44c5547bc52e76534d4262e9d63abe3404af392d"
 dependencies = [
+ "cfg-if",
  "futures-lite",
  "serde",
  "thiserror 2.0.12",

@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{ops::Not, sync::Arc};
 
 use system_tray::client::ActivateRequest;
 use util::notify_send;
@@ -46,18 +46,25 @@ impl TrayMap {
                         .get_mut(&id)
                         .map(|tray| tray.update_title(title))
                         .unwrap_or_default(),
-                    // TODO: why icon update can only have name update
-                    system_tray::client::UpdateEvent::Icon(icon_path) => {
-                        let icon = icon_path.filter(|name| !name.is_empty()).map(Icon::Named);
-                        // NOTE: WE IGNORE EMPTY ICON
-                        if icon.is_some() {
-                            self.inner
-                                .get_mut(&id)
-                                .map(|tray| tray.update_icon(icon))
-                                .unwrap_or_default()
-                        } else {
-                            false
-                        }
+                    system_tray::client::UpdateEvent::Icon {
+                        icon_name,
+                        icon_pixmap,
+                    } => {
+                        let icon = icon_name
+                            .filter(|name| !name.is_empty())
+                            .map(Icon::Named)
+                            .or_else(|| {
+                                icon_pixmap
+                                    .is_empty()
+                                    .not()
+                                    .then_some(icon_pixmap)
+                                    .map(Icon::Pixmap)
+                            });
+
+                        self.inner
+                            .get_mut(&id)
+                            .map(|tray| tray.update_icon(icon))
+                            .unwrap_or_default()
                     }
 
                     // not implemented
