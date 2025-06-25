@@ -142,7 +142,7 @@ impl From<RingConfigShadow> for RingConfig {
 #[derive(Debug, Deserialize, JsonSchema, Clone)]
 #[serde(from = "RingConfigShadow")]
 #[serde(rename_all = "kebab-case")]
-#[schemars(deny_unknown_fields)]
+#[schemars(deny_unknown_fields, !from)]
 pub struct RingConfig {
     pub radius: i32,
     pub ring_width: i32,

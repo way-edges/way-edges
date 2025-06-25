@@ -230,7 +230,7 @@ impl From<ConfigShadow> for CommonConfig {
 
 #[derive(Debug, Deserialize, JsonSchema, Clone)]
 #[serde(from = "ConfigShadow")]
-#[schemars(deny_unknown_fields)]
+#[schemars(deny_unknown_fields, !from)]
 #[serde(rename_all = "kebab-case")]
 pub struct CommonConfig {
     #[schemars(schema_with = "schema_edge")]

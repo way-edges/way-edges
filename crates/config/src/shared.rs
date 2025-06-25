@@ -24,10 +24,6 @@ pub enum NumOrRelative {
     Relative(f64),
 }
 impl JsonSchema for NumOrRelative {
-    fn always_inline_schema() -> bool {
-        false
-    }
-
     fn schema_id() -> std::borrow::Cow<'static, str> {
         Self::schema_name()
     }
