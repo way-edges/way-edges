@@ -47,7 +47,7 @@ fn workspace_vec_to_data(v: &[Workspace], focus_id: i32, active: i32) -> Workspa
     let max_id = v.last().map(|w| w.id).unwrap();
     let workspace_count = max_id - min_id + 1;
 
-    let active = active - min_id + 1 - 1;
+    let active = active - min_id;
     let focus = if focus_id < min_id || focus_id > max_id {
         -1
     } else {
