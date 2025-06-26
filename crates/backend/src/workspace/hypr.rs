@@ -28,50 +28,30 @@ fn sort_workspaces(v: Vec<Workspace>, m: Vec<Monitor>) -> HashMap<String, (Vec<W
     });
 
     map.iter_mut().for_each(|(k, (v, active))| {
+        v.retain(|w| w.id > 0); // common workspaces id start from 1
         v.sort_by_key(|w| w.id);
 
         *active = m
             .iter()
             .find(|m| &m.name == k)
-            .and_then(|monitor| {
-                // Find the position of the active workspace in this monitor's workspace list
-                v.iter()
-                    .position(|w| w.id == monitor.active_workspace.id)
-                    .map(|pos| pos as i32)
-            })
+            .map(|monitor| monitor.active_workspace.id)
             .unwrap_or(-1);
     });
 
     map
 }
 
-fn workspace_vec_to_data(
-    v: &[Workspace],
-    focus_id: i32,
-    active: i32,
-    monitor_name: &str,
-    focused_monitor: &Option<String>,
-) -> WorkspaceData {
+fn workspace_vec_to_data(v: &[Workspace], focus_id: i32, active: i32) -> WorkspaceData {
     // Count actual workspaces on this monitor, not assuming contiguous IDs
-    let workspace_count = v.len() as i32;
+    let min_id = v.first().map(|w| w.id).unwrap();
+    let max_id = v.last().map(|w| w.id).unwrap();
+    let workspace_count = max_id - min_id + 1;
 
-    // Find the position of the focused workspace within this monitor's workspaces
-    let focus = if let Some(ref focused_mon) = focused_monitor {
-        if monitor_name == focused_mon {
-            // Find the position of the currently focused workspace in this monitor's workspace list
-            v.iter()
-                .position(|w| w.id == focus_id)
-                .map(|pos| pos as i32)
-                .unwrap_or(-1)
-        } else {
-            -1 // No focus on non-focused monitors
-        }
+    let active = active - min_id + 1 - 1;
+    let focus = if focus_id < min_id || focus_id > max_id {
+        -1
     } else {
-        // If we don't know which monitor is focused yet, check if the global focus is on this monitor
-        v.iter()
-            .position(|w| w.id == focus_id)
-            .map(|pos| pos as i32)
-            .unwrap_or(-1)
+        active
     };
 
     WorkspaceData {
@@ -174,7 +154,7 @@ impl CacheData {
         let Some((wps, active)) = self.map.get(output) else {
             return WorkspaceData::default();
         };
-        workspace_vec_to_data(wps, self.focus, *active, output, &self.focused_monitor)
+        workspace_vec_to_data(wps, self.focus, *active)
     }
 }
 
@@ -344,7 +324,7 @@ impl HyprWorkspaceHandler {
 
         let Some(id) = ctx.data.map.get(output).and_then(|(v, _)| {
             // Use the actual workspace ID at the given index
-            v.get(index).map(|workspace| workspace.id)
+            v.first().map(|w| w.id + index as i32)
         }) else {
             return;
         };
