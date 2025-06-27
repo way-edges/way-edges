@@ -113,18 +113,18 @@ fn draw_common_horizontal(
     let default_color = conf.default_color;
 
     let sorting: Box<dyn std::iter::Iterator<Item = _>> = if conf.invert_direction {
-        Box::new((1..=data.workspace_count).rev())
+        Box::new((0..data.workspace_count).rev())
     } else {
-        Box::new(1..=data.workspace_count)
+        Box::new(0..data.workspace_count)
     };
-    sorting.enumerate().for_each(|(index, id)| {
+    sorting.enumerate().for_each(|(index, workspace_index)| {
         // size and color
-        let (length, mut color) = if id - 1 == target {
+        let (length, mut color) = if workspace_index == target {
             (
                 item_min_length + (item_max_length - item_min_length) * y,
                 color_transition(default_color, target_color, y as f32),
             )
-        } else if id - 1 == prev_target {
+        } else if workspace_index == prev_target {
             (
                 item_min_length + (item_max_length - item_min_length) * (1. - y),
                 color_transition(target_color, default_color, y as f32),
@@ -135,13 +135,13 @@ fn draw_common_horizontal(
 
         // mouse hover color
         if let Some(hover_color) = conf.hover_color {
-            if id as isize - 1 == hover_id {
+            if workspace_index as isize == hover_id {
                 color = color_mix(hover_color, color);
             }
         }
 
         // draw
-        if id - 1 == target {
+        if workspace_index == target {
             cairo_set_color(&ctx, color);
             ctx.rectangle(Z, Z, length, conf.thickness as f64);
             ctx.fill().unwrap();
