@@ -1,7 +1,11 @@
 use std::{collections::HashMap, sync::Mutex};
 
 use cairo::ImageSurface;
-use system_tray::item::{IconPixmap, StatusNotifierItem};
+use log::{error, warn};
+use system_tray::{
+    item::{IconPixmap, StatusNotifierItem},
+    menu::MenuDiff,
+};
 
 use super::icon::{
     fallback_icon, parse_icon_given_data, parse_icon_given_name, parse_icon_given_pixmaps,
@@ -297,5 +301,62 @@ impl Tray {
     }
     pub(super) fn update_menu(&mut self, new: RootMenu) {
         self.menu.replace(new);
+    }
+    pub(super) fn update_menu_item(&mut self, diff: MenuDiff) {
+        if let Some(root) = &mut self.menu {
+            fn find_menu_by_id(v: &mut [MenuItem], id: i32) -> Option<&mut MenuItem> {
+                v.iter_mut().find_map(|item| {
+                    if item.id == id {
+                        Some(item)
+                    } else {
+                        if let Some(submenu) = &mut item.submenu {
+                            return find_menu_by_id(submenu, id);
+                        }
+                        None
+                    }
+                })
+            }
+            if let Some(item) = find_menu_by_id(&mut root.submenus, diff.id) {
+                // update
+                if let Some(label) = diff.update.label {
+                    item.label = label
+                }
+                if let Some(enabled) = diff.update.enabled {
+                    item.enabled = enabled;
+                }
+                if let Some(icon_name) = diff.update.icon_name {
+                    item.icon = Some(IconHandle::new(icon_name.map(Icon::Named)));
+                }
+                if let Some(icon_data) = diff.update.icon_data {
+                    item.icon = Some(IconHandle::new(icon_data.map(Icon::PngData)));
+                }
+                if let Some(toggle_state) = diff.update.toggle_state {
+                    use system_tray::menu::ToggleState::*;
+                    match toggle_state {
+                        On | Off => match &mut item.menu_type {
+                            MenuType::Radio(v) | MenuType::Check(v) => *v = toggle_state == On,
+                            _ => error!("Menu item with toggle state but not toggle type"),
+                        },
+                        Indeterminate => {
+                            warn!(
+                                "Menu item with toggle state Indeterminate, this should not happen"
+                            );
+                            item.menu_type = MenuType::Normal;
+                        }
+                    }
+                }
+
+                // remove
+                for i in diff.remove {
+                    #[allow(clippy::single_match)]
+                    match i.as_str() {
+                        "enabled" => {
+                            item.enabled = true;
+                        }
+                        _ => {}
+                    }
+                }
+            }
+        }
     }
 }

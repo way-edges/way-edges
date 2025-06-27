@@ -1,4 +1,4 @@
-use std::{ops::Not, sync::Arc};
+use std::sync::Arc;
 
 use system_tray::client::ActivateRequest;
 use util::notify_send;
@@ -55,9 +55,7 @@ impl TrayMap {
                             .map(Icon::Named)
                             .or_else(|| {
                                 icon_pixmap
-                                    .is_empty()
-                                    .not()
-                                    .then_some(icon_pixmap)
+                                    .filter(|pixmap| !pixmap.is_empty())
                                     .map(Icon::Pixmap)
                             });
 
@@ -86,12 +84,13 @@ impl TrayMap {
                         log::warn!("NOT IMPLEMENTED TOOLTIP");
                         false
                     }
-                    system_tray::client::UpdateEvent::MenuDiff(_) => {
-                        // ???
-                        // I suspect this is a bug in the library
-                        // which we only get None with `remove: ["visible"]`
-                        log::warn!("NOT IMPLEMENTED MENU DIFF");
-                        false
+                    system_tray::client::UpdateEvent::MenuDiff(diffs) => {
+                        if let Some(tray) = self.inner.get_mut(&id) {
+                            diffs
+                                .into_iter()
+                                .for_each(|diff| tray.update_menu_item(diff));
+                        }
+                        true
                     }
                     system_tray::client::UpdateEvent::MenuConnect(_) => {
                         // no need i think?
