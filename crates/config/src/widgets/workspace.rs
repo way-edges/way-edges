@@ -62,7 +62,17 @@ pub struct WorkspaceConfig {
     #[serde(default)]
     pub focused_only: bool,
 
+    #[serde(default)]
+    pub border_width: Option<i32>,
+
+    #[serde(default = "dt_border_radius")]
+    pub border_radius: i32,
+
     pub preset: WorkspacePreset,
+}
+
+fn dt_border_radius() -> i32 {
+    5
 }
 
 fn dt_gap() -> i32 {
