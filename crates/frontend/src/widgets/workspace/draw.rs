@@ -6,7 +6,7 @@ use cosmic_text::Color;
 use smithay_client_toolkit::shell::wlr_layer::Anchor;
 use util::{
     color::{cairo_set_color, color_mix, color_transition},
-    draw::new_surface,
+    draw::{draw_rect_path, new_surface},
     Z,
 };
 
@@ -20,6 +20,9 @@ pub struct DrawConf {
     length: i32,
     gap: i32,
     active_increase: f64,
+
+    border_width: f64,
+    border_radius: f64,
 
     pub default_color: Color,
     pub focus_color: Color,
@@ -58,6 +61,11 @@ impl DrawConf {
             invert_direction: w_conf.invert_direction,
             workspace_transition,
             func,
+            border_width: w_conf
+                .border_width
+                .map(|w| w as f64)
+                .unwrap_or(thickness.ceil() / 10.),
+            border_radius: w_conf.border_radius as f64,
         }
     }
     pub fn draw(
@@ -95,8 +103,6 @@ fn draw_common_horizontal(
     let mut draw_start_pos = 0.;
 
     let hover_id = hover_data.hover_id;
-
-    let border_width = conf.thickness as f64 / 10.;
 
     macro_rules! get_target {
         ($d:expr, $c:expr) => {
@@ -141,23 +147,49 @@ fn draw_common_horizontal(
         }
 
         // draw
+        ctx.save().unwrap();
+
         if workspace_index == target {
             cairo_set_color(&ctx, color);
-            ctx.rectangle(Z, Z, length, conf.thickness as f64);
+            ctx.append_path(
+                &draw_rect_path(
+                    conf.border_radius,
+                    (length, conf.thickness as f64),
+                    [true, true, true, true],
+                )
+                .unwrap(),
+            );
             ctx.fill().unwrap();
         } else {
             cairo_set_color(&ctx, target_color);
-            ctx.rectangle(Z, Z, length, conf.thickness as f64);
+            ctx.append_path(
+                &draw_rect_path(
+                    conf.border_radius,
+                    (length, conf.thickness as f64),
+                    [true, true, true, true],
+                )
+                .unwrap(),
+            );
             ctx.fill().unwrap();
+
             cairo_set_color(&ctx, color);
-            ctx.rectangle(
-                border_width,
-                border_width,
-                length - 2. * border_width,
-                conf.thickness as f64 - 2. * border_width,
+            ctx.translate(conf.border_width, conf.border_width);
+            ctx.append_path(
+                &draw_rect_path(
+                    conf.border_radius,
+                    (
+                        length - 2. * conf.border_width,
+                        conf.thickness as f64 - 2. * conf.border_width,
+                    ),
+                    [true, true, true, true],
+                )
+                .unwrap(),
             );
             ctx.fill().unwrap();
         }
+
+        ctx.restore().unwrap();
+
         if (index + 1) as i32 != data.workspace_count {
             ctx.translate(length + conf.gap as f64, Z);
         };
