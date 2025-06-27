@@ -890,6 +890,16 @@
               "format": "double",
               "default": 0.5
             },
+            "border-radius": {
+              "type": "integer",
+              "format": "int32",
+              "default": 5
+            },
+            "border-width": {
+              "type": ["integer", "null"],
+              "format": "int32",
+              "default": null
+            },
             "default-color": {
               "type": "string",
               "default": "#00000000"

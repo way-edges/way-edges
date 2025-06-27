@@ -94,6 +94,8 @@
       "pop-duration": 1000, // ms
       "workspace-transition-duration": 300, // ms
       "focused-only": false, // only animate widgets on the currently focused monitor (works with both niri and Hyprland)
+      "border-radius": 5,
+      "border-width": null,
       // "preset": "hyprland",
       // "preset": "niri",
       "preset": {
