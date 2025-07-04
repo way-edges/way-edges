@@ -2447,8 +2447,9 @@ dependencies = [
 
 [[package]]
 name = "system-tray"
-version = "0.8.0"
-source = "git+https://github.com/ogios/system-tray.git?branch=hotfix%2Foption-icon-pixel-update#dc5c0caaee3af299e8c45c0cd03260bb58934b55"
+version = "0.8.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "90d5d024b1573d22079347055d817863c21ea0903df404668095499c08800e4a"
 dependencies = [
  "cfg-if",
  "futures-lite",
