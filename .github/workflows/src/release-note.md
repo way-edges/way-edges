@@ -1,26 +1,28 @@
 # 💻 Way-Edges
 
-Sorry for the breaking changes, the readability of the previous configuration is just too bad...
+- break: slider custom-preset:
+  - interval-update -> update-interval and update-command
+  - on-change -> on-change-command
 
-As for the group feature, you might want to make it with the new `customize configuration path` and `ipc socket namespace` command line arguments.
+- nix: change nixpkgs flake input to nixos-25.05 + very minor refactor. #139 @Brisingr05
 
-## Breaking
+## Hyprland workspace should be stable now
 
-- remove group
-- flatten widget key
-- remove add&rm ipc
-- name -> namespace
-- everything kebab-case
-- workspace: animation_curve -> workspace_animation_curve
-- text: custom preset update_with_interval_ms split into cmd&update_interval
-- box: widgets key -> items
-- box: flatten widget key
+- Hyprland empty workspace no longer get excluded
+- Ignore Hyprland special workspace
 
-## Other changes
+## Tray should be stable now
 
-- (@oliviafloof ) nix: add metadata and formatter #132
-- (@psi4j ) feat: Add focused_only workspace widget support, and slight change to hyprland workspace behavior #136
-- ipc socket file namespace
-- customize configuration path
-- box: index key is optional
-- bump lots of deps
+- Able to update tray icon with pixmap data
+- implement tray menu diff event
+
+## New scroll support for certain widgets
+
+- Mouse/Touchpad scroll support for slider
+- Mouse scroll support for workspace
+
+## Other
+
+- border-width and border-radius for workspace
+- `pin-on-startup` option
+- Move socket file from /tmp to XDG_RUNTIME_DIR
