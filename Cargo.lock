@@ -1018,7 +1018,6 @@ dependencies = [
  "smithay-client-toolkit",
  "system-tray",
  "timerfd",
- "tiny-skia",
  "util",
  "way-edges-derive",
  "wayland-client",

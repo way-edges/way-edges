@@ -13,7 +13,6 @@ frontend = { version = "0.1.0", path = "crates/frontend" }
 
 cosmic-text = "0.14.1"
 cairo-rs = { version = "0.20", default-features = false, features = ["png"] }
-tiny-skia = "0.11.4"
 
 xdg = "3.0.0"
 thiserror = "2.0.11"
