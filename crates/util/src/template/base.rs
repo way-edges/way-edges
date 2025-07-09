@@ -2,8 +2,6 @@ use std::{borrow::Cow, collections::HashMap, fmt::Debug, rc::Rc};
 
 use downcast_rs::Downcast;
 
-use crate::notify_send;
-
 pub trait TemplateArgParser: Debug + Downcast {
     fn name(&self) -> &str;
 }
@@ -67,7 +65,6 @@ impl Template {
 
             let Some(processer) = processers.get(name) else {
                 let msg = format!("Unknown template: {name}");
-                notify_send("Way-Eges", &msg, true);
                 log::error!("{msg}");
                 continue;
             };
@@ -75,7 +72,6 @@ impl Template {
             let processed = processer.process(arg);
             let Ok(parser) = processed else {
                 let msg = format!("Faild to parse template: {name}: {processed:?}");
-                notify_send("Way-Eges", &msg, true);
                 log::error!("{msg}");
                 continue;
             };
