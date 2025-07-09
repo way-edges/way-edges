@@ -37,9 +37,7 @@ schemars = { version = "1.0.0-alpha.17" }
 
 [profile.release]
 opt-level = "z"
-strip = true
-
-# Uncomment the following lines to enable more aggressive optimizations
-# opt-level = 3
-# lto = true
-# codegen-units = 1
+lto = "thin"
+codegen-units = 1
+panic = "abort"
+strip = "symbols"
