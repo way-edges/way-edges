@@ -68,9 +68,7 @@ impl MouseState {
     // triggers
     fn press(&mut self, p: u32, pos: (f64, f64)) -> Option<MouseEvent> {
         if self.mouse_debug {
-            let msg = format!("key pressed: {}", p);
-            log::debug!("Mouse Debug info: {msg}");
-            util::notify_send("Way-edges mouse button debug message", &msg, false);
+            log::debug!("Mouse Debug info: key pressed: {p}");
         };
 
         if self.data.pressing.is_none() {
@@ -82,9 +80,7 @@ impl MouseState {
     }
     fn unpress(&mut self, p: u32, pos: (f64, f64)) -> Option<MouseEvent> {
         if self.mouse_debug {
-            let msg = format!("key released: {}", p);
-            log::debug!("Mouse Debug info: {msg}");
-            util::notify_send("Way-edges mouse button debug message", &msg, false);
+            log::debug!("Mouse Debug info: key released: {p}");
         };
 
         if self.data.pressing.eq(&Some(p)) {

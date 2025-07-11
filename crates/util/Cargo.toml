@@ -13,6 +13,5 @@ lazy_static.workspace = true
 cosmic-text.workspace = true
 
 
-notify-rust = "4.11"
 # downcast-rs = "1.2.1"
 downcast-rs = "2.0.1"

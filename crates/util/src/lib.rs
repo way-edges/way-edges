@@ -25,40 +25,11 @@ pub mod shell {
         };
         if let Err(ref e) = msg {
             log::error!("error running command: {value}\n{e}");
-            crate::notify_send("Way-Edges command error", e, true);
         };
         msg
     }
     pub fn shell_cmd_non_block(value: String) {
         thread::spawn(move || shell_cmd(&value));
-    }
-}
-
-pub fn notify_send(summary: &str, body: &str, is_critical: bool) {
-    use notify_rust::Notification;
-
-    let mut n = Notification::new();
-    n.summary(summary);
-    n.body(body);
-    if is_critical {
-        n.urgency(notify_rust::Urgency::Critical);
-    }
-    if let Err(e) = n.show() {
-        log::error!("Failed to send notification: \"{summary}\" - \"{body}\"\nError: {e}");
-    }
-}
-
-pub async fn notify_send_async(summary: &str, body: &str, is_critical: bool) {
-    use notify_rust::Notification;
-
-    let mut n = Notification::new();
-    n.summary(summary);
-    n.body(body);
-    if is_critical {
-        n.urgency(notify_rust::Urgency::Critical);
-    }
-    if let Err(e) = n.show_async().await {
-        log::error!("Failed to send notification: \"{summary}\" - \"{body}\"\nError: {e}");
     }
 }
 

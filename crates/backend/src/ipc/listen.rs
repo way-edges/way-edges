@@ -8,8 +8,6 @@ use std::path::Path;
 use calloop::channel::Sender;
 use tokio::net::UnixStream;
 
-use util::notify_send;
-
 pub fn start_ipc(sender: Sender<IPCCommand>) {
     get_backend_runtime_handle().spawn(async {
         let listener = {
@@ -26,9 +24,7 @@ pub fn start_ipc(sender: Sender<IPCCommand>) {
                         deal_stream_in_background(stream, sender.clone());
                     }
                     Err(e) => {
-                        let msg = format!("Fail to connect socket: {e}");
-                        notify_send("Way-edges", msg.as_str(), true);
-                        log::error!("msg");
+                        log::error!("Fail to connect socket: {e}");
                         break;
                     }
                 }
