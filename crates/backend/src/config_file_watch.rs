@@ -46,7 +46,6 @@ pub fn start_configuration_file_watcher(sender: Sender<()>) {
                     if weak_d.upgrade().is_none() {
                         return;
                     }
-                    println!("aaa");
                     sender.send(()).unwrap();
                 });
 
