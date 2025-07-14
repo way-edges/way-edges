@@ -15,6 +15,8 @@ use hyprland::{
 
 use crate::{runtime::get_backend_runtime_handle, workspace::WorkspaceData};
 
+use config::widgets::workspace::HyprConf;
+
 use super::{WorkspaceCB, WorkspaceCtx, WorkspaceHandler, ID};
 
 fn sort_workspaces(v: Vec<Workspace>, m: Vec<Monitor>) -> HashMap<String, (Vec<Workspace>, i32)> {
@@ -41,19 +43,37 @@ fn sort_workspaces(v: Vec<Workspace>, m: Vec<Monitor>) -> HashMap<String, (Vec<W
     map
 }
 
-fn workspace_vec_to_data(v: &[Workspace], focus_id: i32, active: i32) -> WorkspaceData {
-    // Count actual workspaces on this monitor, not assuming contiguous IDs
-    let min_id = v.first().map(|w| w.id).unwrap();
-    let max_id = v.last().map(|w| w.id).unwrap();
-    let workspace_count = max_id - min_id + 1;
-
-    let active = active - min_id;
-    let focus = if focus_id < min_id || focus_id > max_id {
-        -1
+fn workspace_vec_to_data(v: &[Workspace], focus_id: i32, active_id: i32, show_empty: bool) -> WorkspaceData {
+    // Handle empty workspace vector
+    if v.is_empty() {
+        return WorkspaceData::default();
+    }
+    
+    // Count actual workspaces on this monitor
+    // If show_empty is true and there's only one workspace, add one potential workspace
+    // This matches Niri's behavior of ensuring there's always a workspace ready to switch to
+    let workspace_count = if show_empty && v.len() == 1 {
+        2
     } else {
-        active
+        v.len() as i32
     };
-
+    
+    // Find the index of the active workspace in this monitor's workspace list
+    // active_id is the workspace ID that's currently visible on this specific monitor
+    let active = v.iter()
+        .position(|w| w.id == active_id)
+        .map(|i| i as i32)
+        .unwrap_or(-1);
+    
+    // Find the index of the globally focused workspace (if it's on this monitor)
+    // In Hyprland, focus_id is the global active workspace ID across all monitors
+    // We only set focus if this globally active workspace exists on the current monitor
+    // This ensures only one monitor shows the "focused" state at a time
+    let focus = v.iter()
+        .position(|w| w.id == focus_id)
+        .map(|i| i as i32)
+        .unwrap_or(-1);
+    
     WorkspaceData {
         workspace_count,
         focus,
@@ -99,8 +119,8 @@ fn on_signal() {
     if is_initial_sync {
         // Perform the unconditional sync only on the first population
         ctx.workspace_ctx
-            .sync_all_widgets_unconditionally(|output, _conf_data| {
-                ctx.data.get_workspace_data(output)
+            .sync_all_widgets_unconditionally(|output, conf_data| {
+                ctx.data.get_workspace_data(output, conf_data.show_empty)
             });
     }
 
@@ -150,16 +170,14 @@ impl CacheData {
         self.map.is_empty() && self.focus == -1 && self.focused_monitor.is_none()
     }
 
-    fn get_workspace_data(&self, output: &str) -> WorkspaceData {
+    fn get_workspace_data(&self, output: &str, show_empty: bool) -> WorkspaceData {
         let Some((wps, active)) = self.map.get(output) else {
             return WorkspaceData::default();
         };
-        workspace_vec_to_data(wps, self.focus, *active)
+        workspace_vec_to_data(wps, self.focus, *active, show_empty)
     }
 }
 
-// TODO: Hyprland specific config
-pub struct HyprConf;
 
 struct HyprCtx {
     workspace_ctx: WorkspaceCtx<HyprConf>,
@@ -173,7 +191,7 @@ impl HyprCtx {
         }
     }
     fn call(&mut self) {
-        self.workspace_ctx.call(|output, _, focused_only| {
+        self.workspace_ctx.call(|output, conf, focused_only| {
             if focused_only {
                 // Only send updates to the currently focused monitor
                 if let Some(ref focused_monitor) = self.data.focused_monitor {
@@ -184,13 +202,13 @@ impl HyprCtx {
                     return None; // No focused monitor known yet
                 }
             }
-            Some(self.data.get_workspace_data(output))
+            Some(self.data.get_workspace_data(output, conf.show_empty))
         });
     }
     fn add_cb(&mut self, cb: WorkspaceCB<HyprConf>) -> ID {
         if !self.data.is_default() {
             cb.sender
-                .send(self.data.get_workspace_data(&cb.output))
+                .send(self.data.get_workspace_data(&cb.output, cb.data.show_empty))
                 .unwrap_or_else(|e| log::error!("Error sending initial data in add_cb: {}", e));
         }
         self.workspace_ctx.add_cb(cb)
@@ -323,8 +341,10 @@ impl HyprWorkspaceHandler {
         log::debug!("change to workspace: {output} - {index}");
 
         let Some(id) = ctx.data.map.get(output).and_then(|(v, _)| {
-            // Use the actual workspace ID at the given index
-            v.first().map(|w| w.id + index as i32)
+            // Get the workspace ID at the given index
+            // Important: This uses the actual workspace ID from the vector, instead of calculating it
+            // This handles non-contiguous workspace IDs correctly in Hyprland (e.g., [1, 3, 5])
+            v.get(index).map(|w| w.id)
         }) else {
             return;
         };

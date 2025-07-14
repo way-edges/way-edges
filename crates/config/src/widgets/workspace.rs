@@ -102,7 +102,7 @@ fn dt_active_color() -> Color {
 #[schemars(transform = WorkspacePreset_generate_defs)]
 #[serde(rename_all = "kebab-case")]
 pub enum WorkspacePreset {
-    Hyprland,
+    Hyprland(HyprConf),
     Niri(NiriConf),
 }
 impl<'de> Deserialize<'de> for WorkspacePreset {
@@ -114,7 +114,7 @@ impl<'de> Deserialize<'de> for WorkspacePreset {
 
         if let Some(preset_str) = value.as_str() {
             match preset_str {
-                "hyprland" => Ok(WorkspacePreset::Hyprland),
+                "hyprland" => Ok(WorkspacePreset::Hyprland(HyprConf::default())),
                 "niri" => Ok(WorkspacePreset::Niri(NiriConf::default())),
                 _ => Err(serde::de::Error::unknown_variant(
                     preset_str,
@@ -125,7 +125,7 @@ impl<'de> Deserialize<'de> for WorkspacePreset {
             #[derive(Deserialize)]
             #[serde(rename_all = "kebab-case", tag = "type")]
             enum Helper {
-                Hyprland,
+                Hyprland(HyprConf),
                 Niri(NiriConf),
             }
 
@@ -134,7 +134,7 @@ impl<'de> Deserialize<'de> for WorkspacePreset {
             })?;
 
             match helper {
-                Helper::Hyprland => Ok(WorkspacePreset::Hyprland),
+                Helper::Hyprland(conf) => Ok(WorkspacePreset::Hyprland(conf)),
                 Helper::Niri(conf) => Ok(WorkspacePreset::Niri(conf)),
             }
         }
@@ -162,6 +162,31 @@ fn dt_filter_empty() -> bool {
     true
 }
 
+#[derive(Debug, Deserialize, JsonSchema, Clone)]
+#[schemars(deny_unknown_fields)]
+#[schemars(transform = HyprConf_generate_defs)]
+#[const_property("type", "hyprland")]
+#[serde(rename_all = "kebab-case")]
+pub struct HyprConf {
+    /// Whether to show an empty workspace indicator when only one workspace exists.
+    /// This matches Niri's behavior of always having a workspace ready to switch to.
+    /// Hyprland doesn't automatically create an extra workspace, so this only simulates 
+    /// the way Niri would handle this for visual consistency between compositors.
+    #[serde(default = "dt_show_empty")]
+    pub show_empty: bool,
+}
+impl Default for HyprConf {
+    fn default() -> Self {
+        Self {
+            show_empty: dt_show_empty(),
+        }
+    }
+}
+
+fn dt_show_empty() -> bool {
+    false
+}
+
 #[allow(non_snake_case)]
 fn WorkspacePreset_generate_defs(s: &mut Schema) {
     *s = json_schema!({
@@ -172,11 +197,15 @@ fn WorkspacePreset_generate_defs(s: &mut Schema) {
       },
       {
         "type": "object",
-        "$ref": "#/$defs/NiriConf",
+        "oneOf": [
+          { "$ref": "#/$defs/HyprConf" },
+          { "$ref": "#/$defs/NiriConf" }
+        ]
       }
       ]
     })
 }
+
 
 #[cfg(test)]
 mod tests {
@@ -188,7 +217,9 @@ mod tests {
     impl fmt::Display for WorkspacePreset {
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
             match self {
-                WorkspacePreset::Hyprland => write!(f, "Hyprland"),
+                WorkspacePreset::Hyprland(conf) => {
+                    write!(f, "Hyprland(show_empty: {})", conf.show_empty)
+                }
                 WorkspacePreset::Niri(conf) => {
                     write!(f, "Niri(filter_empty: {})", conf.filter_empty)
                 }
@@ -225,7 +256,7 @@ mod tests {
         let yaml_str = r#"{ "preset": "hyprland" }"#;
         let config: serde_jsonrc::Value = serde_jsonrc::from_str(yaml_str).unwrap();
         let preset: WorkspacePreset = serde_jsonrc::from_value(config["preset"].clone()).unwrap();
-        assert_eq!(preset.to_string(), "Hyprland");
+        assert_eq!(preset.to_string(), "Hyprland(show_empty: false)");
     }
 
     #[test]
@@ -233,8 +264,17 @@ mod tests {
         let yaml_str = r#"{ "preset": { "type": "hyprland" } }"#;
         let config: serde_jsonrc::Value = serde_jsonrc::from_str(yaml_str).unwrap();
         let preset: WorkspacePreset = serde_jsonrc::from_value(config["preset"].clone()).unwrap();
-        assert_eq!(preset.to_string(), "Hyprland");
+        assert_eq!(preset.to_string(), "Hyprland(show_empty: false)");
     }
+
+    #[test]
+    fn test_deserialize_object_hyprland_with_config() {
+        let yaml_str = r#"{ "preset": { "type": "hyprland", "show-empty": true } }"#;
+        let config: serde_jsonrc::Value = serde_jsonrc::from_str(yaml_str).unwrap();
+        let preset: WorkspacePreset = serde_jsonrc::from_value(config["preset"].clone()).unwrap();
+        assert_eq!(preset.to_string(), "Hyprland(show_empty: true)");
+    }
+
 
     #[test]
     fn test_deserialize_invalid_string() {

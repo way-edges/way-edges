@@ -72,7 +72,19 @@ Which means scroll with 2 fingers on touchpad can not trigger anything in this w
 
 ```jsonc
 "preset": "hyprland",
+// or with configuration
+"preset": {
+  "type": "hyprland",
+  "show_empty": false, // Don't add extra workspace indicator when only one exists (default)
+},
+// to enable the extra workspace indicator:
+"preset": {
+  "type": "hyprland",
+  "show_empty": true, // Always show at least 2 workspace indicators
+},
 ```
+
+The Hyprland preset supports adding an extra empty workspace indicator when only one workspace exists on a monitor. When `show_empty` is set to `true`, it ensures there's always at least 2 workspace indicators visible (similar to Niri's behavior), preventing the widget from extending to the screen edge with a single workspace. The default is `false`.
 
 ## Multi-Monitor Configuration Examples
 
@@ -81,6 +93,18 @@ Which means scroll with 2 fingers on touchpad can not trigger anything in this w
 ```jsonc
 {
   "preset": "hyprland",
+  "focused-only": true, // Only animate on currently focused monitor
+}
+```
+
+### Example: Hyprland with empty workspace filtering
+
+```jsonc
+{
+  "preset": {
+    "type": "hyprland",
+    "show_empty": false, // Hide workspaces with no windows
+  },
   "focused-only": true, // Only animate on currently focused monitor
 }
 ```

@@ -8,7 +8,7 @@ use crate::{
     wayland::app::WidgetBuilder,
 };
 use backend::workspace::{
-    hypr::{register_hypr_event_callback, HyprConf},
+    hypr::register_hypr_event_callback,
     niri::register_niri_event_callback,
     WorkspaceCB, WorkspaceData, WorkspaceHandler,
 };
@@ -74,8 +74,8 @@ pub fn init_widget(
     }
 
     let workspace_handler = match w_conf.preset.clone() {
-        WorkspacePreset::Hyprland => {
-            register_hypr_event_callback(wp_cb!(pop_signal_sender, w_conf, HyprConf))
+        WorkspacePreset::Hyprland(hypr_conf) => {
+            register_hypr_event_callback(wp_cb!(pop_signal_sender, w_conf, hypr_conf))
         }
         WorkspacePreset::Niri(niri_conf) => {
             register_niri_event_callback(wp_cb!(pop_signal_sender, w_conf, niri_conf))
