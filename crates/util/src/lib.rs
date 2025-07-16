@@ -4,7 +4,8 @@ pub mod template;
 pub mod text;
 
 pub mod shell {
-    use std::{process::Command, thread};
+    use log::{error, warn};
+    use std::{os::unix::process::CommandExt, process::Command, thread};
 
     pub fn shell_cmd(value: &str) -> Result<String, String> {
         let mut cmd = Command::new("/bin/sh");
@@ -29,7 +30,40 @@ pub mod shell {
         msg
     }
     pub fn shell_cmd_non_block(value: String) {
-        thread::spawn(move || shell_cmd(&value));
+        thread::spawn(move || {
+            log::debug!("running command: {value}");
+            let mut cmd = Command::new("/bin/sh");
+            cmd.arg("-c").arg(&value);
+            cmd.stdout(std::process::Stdio::null())
+                .stderr(std::process::Stdio::null())
+                .stdin(std::process::Stdio::null());
+            unsafe {
+                cmd.pre_exec(move || {
+                    match libc::fork() {
+                        -1 => return Err(std::io::Error::last_os_error()),
+                        0 => (),
+                        _ => libc::_exit(0),
+                    }
+
+                    Ok(())
+                });
+            }
+            match cmd.spawn() {
+                Ok(mut c) => match c.wait() {
+                    Ok(s) => {
+                        if !s.success() {
+                            warn!("command exit unsuccessfully: {value}");
+                        }
+                    }
+                    Err(e) => {
+                        error!("error waiting for command {cmd:?}: {e:?}");
+                    }
+                },
+                Err(err) => {
+                    error!("error spawning {cmd:?}: {err:?}");
+                }
+            }
+        });
     }
 }
 
