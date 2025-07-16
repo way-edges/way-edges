@@ -1,9 +1,5 @@
 <https://github.com/user-attachments/assets/ca4fd799-a174-4072-b9e7-929ce9bbc1fe>
 
-## 🫧 Project board
-
-<https://github.com/orgs/way-edges/projects/1/views/1>
-
 ## 🔍 Doc
 
 Please refer to [doc](doc) directory.
@@ -11,14 +7,17 @@ Please refer to [doc](doc) directory.
 > [!WARNING]
 > **master branch always refer to the latest but may not be released configurations, if you are using a released binary, please match the corresponding commit with the tag you are on**.
 > 
-> You can always find that in the [tag](https://github.com/way-edges/way-edges/tags) page, click on the second link which refers to the commit hash of that tag.
+> You can always find that in the [tag](https://github.com/way-edges/way-edges/tags) page:
+> - enter the tag page
+> - click on the commit hash link under the corresponding tag
+> - click **Browse files** on the right 
 
 ## 📥 Installation
 
 ### Arch(aur)
 
 - [way-edges-bin](https://aur.archlinux.org/packages/way-edges-bin)
-- [way-edges-git](https://aur.archlinux.org/packages/way-edges-git)
+- [way-edges-git](https://aur.archlinux.org/packages/way-edges-git) (recommended)
 
 ### Manual
 
@@ -27,11 +26,10 @@ git clone https://github.com/way-edges/way-edges.git
 cd way-edges && cargo build --release
 ```
 
-## ⚙️ Configuration
+## ⚙️ Example config
 
-Doc: [doc](doc/config)
-
-Example config: <https://github.com/ogios/dots/tree/master/way-edges>
+my own config: <https://github.com/ogios/dots/tree/master/way-edges>  
+i'm using `-git` version of the package in aur, the configurations may differ from `-bin`
 
 ## 🚀 Launch
 

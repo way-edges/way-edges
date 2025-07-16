@@ -2789,6 +2789,7 @@ dependencies = [
  "cosmic-text",
  "downcast-rs 2.0.1",
  "lazy_static",
+ "libc",
  "log",
  "paste",
  "regex-lite",

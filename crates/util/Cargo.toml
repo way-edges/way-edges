@@ -15,3 +15,5 @@ cosmic-text.workspace = true
 
 # downcast-rs = "1.2.1"
 downcast-rs = "2.0.1"
+
+libc = "0.2.174"
