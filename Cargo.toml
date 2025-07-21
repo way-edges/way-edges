@@ -15,7 +15,7 @@ frontend = { version = "0.1.0", path = "crates/frontend" }
 #   "shape-run-cache",
 # ] }
 cosmic-text = "0.14.2"
-cairo-rs = { version = "0.20", default-features = false, features = ["png"] }
+cairo-rs = { version = "0.21", default-features = false, features = ["png"] }
 
 xdg = "3.0.0"
 thiserror = "2.0.11"
