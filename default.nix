@@ -34,5 +34,8 @@ rustPlatform.buildRustPackage {
 
   src = pkgs.lib.cleanSource ./.;
 
-  RUSTFLAGS = "--cfg tokio_unstable";
+  RUSTFLAGS = [
+    "--cfg tokio_unstable"
+    "--cfg tokio_uring"
+  ];
 }
