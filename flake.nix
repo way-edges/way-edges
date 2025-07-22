@@ -60,7 +60,10 @@
 
           src = pkgs.lib.cleanSource ./.;
 
-          RUSTFLAGS = "--cfg tokio_unstable";
+          RUSTFLAGS = [
+            "--cfg tokio_unstable"
+            "--cfg tokio_uring"
+          ];
 
           meta = {
             description = "Lightweight wayland client focusing on widgets hidden in your screen edge.";
@@ -92,7 +95,10 @@
             libpulseaudio
           ];
 
-          RUSTFLAGS = "--cfg tokio_unstable";
+          RUSTFLAGS = [
+            "--cfg tokio_unstable"
+            "--cfg tokio_uring"
+          ];
         };
     in
     {
