@@ -1,8 +1,37 @@
-use niri_ipc::{socket::SOCKET_PATH_ENV, Reply};
+use niri_ipc::{socket::SOCKET_PATH_ENV, Reply, Workspace};
+use serde::Deserialize;
 use tokio::{
     io::{self, AsyncBufReadExt, AsyncWriteExt, BufReader},
     net::UnixStream,
 };
+
+/// A compositor event.
+#[derive(Deserialize, Debug, Clone)]
+pub enum Event {
+    /// The workspace configuration has changed.
+    WorkspacesChanged {
+        /// The new workspace configuration.
+        ///
+        /// This configuration completely replaces the previous configuration. I.e. if any
+        /// workspaces are missing from here, then they were deleted.
+        workspaces: Vec<Workspace>,
+    },
+    /// A workspace was activated on an output.
+    ///
+    /// This doesn't always mean the workspace became focused, just that it's now the active
+    /// workspace on its output. All other workspaces on the same output become inactive.
+    WorkspaceActivated {
+        /// Id of the newly active workspace.
+        #[allow(dead_code)]
+        id: u64,
+        /// Whether this workspace also became focused.
+        ///
+        /// If `true`, this is now the single focused workspace. All other workspaces are no longer
+        /// focused, but they may remain active on their respective outputs.
+        #[allow(dead_code)]
+        focused: bool,
+    },
+}
 
 pub struct Connection(UnixStream);
 impl Connection {
@@ -40,10 +69,11 @@ impl Connection {
 
 pub struct Listener(BufReader<UnixStream>);
 impl Listener {
-    pub async fn next_event(&mut self, buf: &mut String) -> io::Result<niri_ipc::Event> {
-        self.0
-            .read_line(buf)
-            .await
-            .map(|_| serde_jsonrc::from_str(buf).unwrap())
+    pub async fn next_event(&mut self, buf: &mut String) -> io::Result<Option<Event>> {
+        self.0.read_line(buf).await.map(|_| {
+            serde_jsonrc::from_str(buf)
+                .inspect_err(|e| log::warn!("Unhandled niri event: {e}"))
+                .ok()
+        })
     }
 }

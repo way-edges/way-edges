@@ -6,15 +6,14 @@ use std::{
 };
 
 use config::widgets::workspace::NiriConf;
-use connection::Connection;
-use niri_ipc::Workspace;
+use connection::{Connection, Event};
 use tokio::io;
 
 use crate::runtime::get_backend_runtime_handle;
 
 use super::{WorkspaceCB, WorkspaceCtx, WorkspaceData, WorkspaceHandler, ID};
 
-fn filter_empty_workspace(v: &[Workspace]) -> Vec<&Workspace> {
+fn filter_empty_workspace(v: &[niri_ipc::Workspace]) -> Vec<&niri_ipc::Workspace> {
     v.iter()
         .filter(|w| w.is_focused || w.active_window_id.is_some())
         .collect()
@@ -22,11 +21,11 @@ fn filter_empty_workspace(v: &[Workspace]) -> Vec<&Workspace> {
 
 #[derive(Default)]
 struct DataCache {
-    inner: HashMap<String, Vec<Workspace>>,
+    inner: HashMap<String, Vec<niri_ipc::Workspace>>,
     focused_output: Option<String>,
 }
 impl DataCache {
-    fn new(map: HashMap<String, Vec<Workspace>>) -> Self {
+    fn new(map: HashMap<String, Vec<niri_ipc::Workspace>>) -> Self {
         // Determine which output is focused by looking for the focused workspace
         let focused_output = map.iter().find_map(|(output_name, workspaces)| {
             if workspaces.iter().any(|w| w.is_focused) {
@@ -74,7 +73,12 @@ impl DataCache {
             active,
         }
     }
-    fn get_workspace(&self, output: &str, filter_empty: bool, index: usize) -> Option<&Workspace> {
+    fn get_workspace(
+        &self,
+        output: &str,
+        filter_empty: bool,
+        index: usize,
+    ) -> Option<&niri_ipc::Workspace> {
         let wps = self.inner.get(output)?;
 
         let v = if filter_empty {
@@ -90,7 +94,7 @@ impl DataCache {
     }
 }
 
-fn sort_workspaces(v: Vec<Workspace>) -> HashMap<String, Vec<Workspace>> {
+fn sort_workspaces(v: Vec<niri_ipc::Workspace>) -> HashMap<String, Vec<niri_ipc::Workspace>> {
     let mut a = HashMap::new();
 
     v.into_iter().for_each(|mut f| {
@@ -105,27 +109,22 @@ fn sort_workspaces(v: Vec<Workspace>) -> HashMap<String, Vec<Workspace>> {
     a
 }
 
-async fn process_event(e: niri_ipc::Event) {
+async fn process_event(e: Event) {
     log::debug!("niri event: {e:?}");
 
     let ctx = get_niri_ctx();
     // NOTE: id start from 1
     ctx.data = match e {
-        niri_ipc::Event::WorkspaceActivated { id: _, focused: _ } => {
+        Event::WorkspaceActivated { id: _, focused: _ } => {
             let data = get_workspaces().await.expect("Failed to get workspaces");
             DataCache::new(sort_workspaces(data))
         }
-        niri_ipc::Event::WorkspacesChanged { workspaces } => {
-            DataCache::new(sort_workspaces(workspaces))
-        }
-        _ => {
-            return;
-        }
+        Event::WorkspacesChanged { workspaces } => DataCache::new(sort_workspaces(workspaces)),
     };
 
     ctx.call();
 }
-async fn get_workspaces() -> io::Result<Vec<Workspace>> {
+async fn get_workspaces() -> io::Result<Vec<niri_ipc::Workspace>> {
     let mut l = Connection::make_connection()
         .await
         .expect("Failed to connect to niri socket");
@@ -188,7 +187,7 @@ impl NiriCtx {
                     self.data
                         .get_workspace_data(&cb.output, cb.data.filter_empty),
                 )
-                .unwrap_or_else(|e| log::error!("Error sending initial data in add_cb: {}", e));
+                .unwrap_or_else(|e| log::error!("Error sending initial data in add_cb: {e}"));
         }
         self.workspace_ctx.add_cb(cb)
     }
@@ -234,9 +233,10 @@ fn start_listener() {
         let mut buf = String::new();
         loop {
             match l.next_event(&mut buf).await {
-                Ok(e) => process_event(e).await,
+                Ok(Some(e)) => process_event(e).await,
+                Ok(None) => {}
                 Err(err) => {
-                    log::error!("error reading from event stream: {}", err);
+                    log::error!("error reading from event stream: {err}");
                     break;
                 }
             }
