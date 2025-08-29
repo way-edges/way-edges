@@ -71,9 +71,8 @@ pub struct Listener(BufReader<UnixStream>);
 impl Listener {
     pub async fn next_event(&mut self, buf: &mut String) -> io::Result<Option<Event>> {
         self.0.read_line(buf).await.map(|_| {
-            serde_jsonrc::from_str(buf)
-                .inspect_err(|e| log::warn!("Unhandled niri event: {e}"))
-                .ok()
+            log::debug!("Received niri event: {buf}");
+            serde_jsonrc::from_str(buf).ok()
         })
     }
 }
