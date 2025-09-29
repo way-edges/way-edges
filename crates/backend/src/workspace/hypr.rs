@@ -7,9 +7,9 @@ use std::{
 };
 
 use hyprland::{
-    async_closure,
     data::{Monitor, Workspace},
     event_listener::{self},
+    prelude::async_closure,
     shared::{HyprData, HyprDataActive, WorkspaceType},
 };
 
@@ -225,6 +225,7 @@ fn init_hyprland_listener() {
 
     let mut listener = event_listener::AsyncEventListener::new();
 
+    #[allow(deprecated)]
     listener.add_workspace_changed_handler(async_closure!(move |data| {
         let workspace_type = data.name;
         log::debug!("received workspace change: {workspace_type}");
@@ -240,6 +241,7 @@ fn init_hyprland_listener() {
         }
     }));
 
+    #[allow(deprecated)]
     listener.add_workspace_added_handler(async_closure!(move |data| {
         let workspace_type = data.name;
         log::debug!("received workspace add: {workspace_type}");
@@ -248,11 +250,13 @@ fn init_hyprland_listener() {
         }
     }));
 
+    #[allow(deprecated)]
     listener.add_workspace_deleted_handler(async_closure!(move |e| {
         log::debug!("received workspace destroy: {e:?}");
         on_signal();
     }));
 
+    #[allow(deprecated)]
     listener.add_active_monitor_changed_handler(async_closure!(|e| {
         log::debug!("received monitor change: {e:?}");
 

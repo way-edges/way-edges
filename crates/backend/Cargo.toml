@@ -39,7 +39,7 @@ walkdir = "2.5.0"
 freedesktop-icons = { git = "https://github.com/ogios/freedesktop-icons", branch = "use" }
 linicon-theme = { git = "https://git.sr.ht/~zethra/linicon-theme", branch = "main" }
 
-sysinfo = { version = "0.36.0", default-features = false, features = [
+sysinfo = { version = "0.37.1", default-features = false, features = [
   "disk",
   "system",
 ] }
