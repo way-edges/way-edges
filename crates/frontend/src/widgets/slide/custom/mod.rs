@@ -129,14 +129,18 @@ fn interval_update(
         Duration::from_millis(preset_conf.update_interval),
         || (),
         move |_| {
-            match shell_cmd(&cmd).and_then(|res| {
-                use std::str::FromStr;
-                f64::from_str(res.trim()).map_err(|_| "Invalid number".to_string())
-            }) {
-                Ok(progress) => {
-                    redraw_signal.send(progress).unwrap();
-                }
-                Err(err) => log::error!("slide custom updata error: {err}"),
+            if let Err(err) = shell_cmd(&cmd)
+                .and_then(|res| {
+                    use std::str::FromStr;
+                    f64::from_str(res.trim()).map_err(|_| "Invalid number".to_string())
+                })
+                .and_then(|progress| {
+                    redraw_signal
+                        .send(progress)
+                        .map_err(|e| format!("Redraw signal error: {e}"))
+                })
+            {
+                log::error!("slide custom updata error: {err}")
             }
 
             false

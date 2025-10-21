@@ -104,6 +104,8 @@ impl OutputHandler for App {
         _qh: &QueueHandle<Self>,
         _output: wl_output::WlOutput,
     ) {
+        log::info!("new output detected, reload");
+        self.reload();
     }
 
     fn update_output(
@@ -112,6 +114,7 @@ impl OutputHandler for App {
         _qh: &QueueHandle<Self>,
         _output: wl_output::WlOutput,
     ) {
+        log::info!("output updated, reload");
         self.reload();
     }
 
@@ -121,12 +124,14 @@ impl OutputHandler for App {
         _qh: &QueueHandle<Self>,
         _output: wl_output::WlOutput,
     ) {
+        log::info!("output destroyed, reload");
+        self.reload();
     }
 }
 
 impl LayerShellHandler for App {
     fn closed(&mut self, _conn: &Connection, _qh: &QueueHandle<Self>, _layer: &LayerSurface) {
-        self.exit = true
+        log::debug!("Close event from layer surface: {_layer:?}");
     }
 
     fn configure(
