@@ -64,6 +64,9 @@ pub struct App {
     pub shell: LayerShell,
     pub shm: Shm,
     pub pool: SlotPool,
+
+    // if the the outputs get updated before we first initialize widgets, do not call reload
+    pub(crate) first_time_initialized: bool,
 }
 impl App {
     pub fn handle_ipc(&mut self, cmd: IPCCommand) {
@@ -81,6 +84,8 @@ impl App {
     }
 
     pub fn reload(&mut self) {
+        self.first_time_initialized = true;
+
         self.widget_map = config::get_config_root()
             .and_then(|c| WidgetMap::new(c.widgets.clone(), self))
             .unwrap_or_else(|e| {

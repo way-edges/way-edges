@@ -44,6 +44,8 @@ pub fn run_app(show_mouse_key: bool) {
     let viewporter_manager = globals.bind(&qh, 0..=1, ()).into();
 
     let mut app = App {
+        first_time_initialized: false,
+
         exit: false,
         show_mouse_key,
         queue_handle: qh,

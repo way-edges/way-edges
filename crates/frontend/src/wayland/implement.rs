@@ -104,6 +104,9 @@ impl OutputHandler for App {
         _qh: &QueueHandle<Self>,
         _output: wl_output::WlOutput,
     ) {
+        if !self.first_time_initialized {
+            return;
+        }
         log::info!("new output detected, reload");
         self.reload();
     }
@@ -114,6 +117,9 @@ impl OutputHandler for App {
         _qh: &QueueHandle<Self>,
         _output: wl_output::WlOutput,
     ) {
+        if !self.first_time_initialized {
+            return;
+        }
         log::info!("output updated, reload");
         self.reload();
     }
@@ -124,6 +130,9 @@ impl OutputHandler for App {
         _qh: &QueueHandle<Self>,
         _output: wl_output::WlOutput,
     ) {
+        if !self.first_time_initialized {
+            return;
+        }
         log::info!("output destroyed, reload");
         self.reload();
     }
