@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use backend::{
     config_file_watch::start_configuration_file_watcher, ipc::start_ipc,
     runtime::init_backend_runtime_handle,
@@ -44,6 +46,7 @@ pub fn run_app(show_mouse_key: bool) {
     let viewporter_manager = globals.bind(&qh, 0..=1, ()).into();
 
     let mut app = App {
+        reload_guard: None,
         first_time_initialized: false,
 
         exit: false,
@@ -101,7 +104,9 @@ pub fn run_app(show_mouse_key: bool) {
     });
 
     while !app.exit {
-        event_loop.dispatch(None, &mut app).unwrap();
+        event_loop
+            .dispatch(Some(Duration::from_millis(16)), &mut app)
+            .unwrap();
     }
     log::info!("EXITED");
 }

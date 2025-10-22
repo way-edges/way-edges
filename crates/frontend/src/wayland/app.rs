@@ -9,7 +9,7 @@ use backend::ipc::IPCCommand;
 use calloop::{
     channel::Sender,
     ping::{make_ping, Ping},
-    LoopHandle, LoopSignal,
+    Idle, LoopHandle, LoopSignal,
 };
 use config::{common::MonitorSpecifier, shared::Curve};
 use smithay_client_toolkit::{
@@ -67,6 +67,7 @@ pub struct App {
 
     // if the the outputs get updated before we first initialize widgets, do not call reload
     pub(crate) first_time_initialized: bool,
+    pub(crate) reload_guard: Option<Idle<'static>>,
 }
 impl App {
     pub fn handle_ipc(&mut self, cmd: IPCCommand) {
@@ -83,16 +84,23 @@ impl App {
         }
     }
 
-    pub fn reload(&mut self) {
-        log::info!("Reloading widgets...");
-        self.first_time_initialized = true;
-
+    fn reload_widgets(&mut self) {
         self.widget_map = config::get_config_root()
             .and_then(|c| WidgetMap::new(c.widgets.clone(), self))
             .unwrap_or_else(|e| {
                 log::error!("Failed to load widgets: {e}");
                 WidgetMap(HashMap::new())
             });
+    }
+
+    pub fn reload(&mut self) {
+        log::info!("Reloading widgets...");
+        self.first_time_initialized = true;
+
+        let idle = self.event_loop_handle.insert_idle(App::reload_widgets);
+        if let Some(old) = self.reload_guard.replace(idle) {
+            old.cancel()
+        }
     }
 }
 
@@ -721,7 +729,10 @@ impl<'a> WidgetBuilder<'a> {
         output: WlOutput,
         app: &'a App,
     ) -> Result<WidgetBuilder<'a>, String> {
-        let monitor = app.output_state.info(&output).unwrap();
+        let monitor = app
+            .output_state
+            .info(&output)
+            .ok_or("Failed to get output info")?;
         let output_size = monitor.modes[0].dimensions;
         common.resolve_relative(output_size);
 
