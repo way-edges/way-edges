@@ -84,6 +84,7 @@ impl App {
     }
 
     pub fn reload(&mut self) {
+        log::info!("Reloading widgets...");
         self.first_time_initialized = true;
 
         self.widget_map = config::get_config_root()
@@ -91,8 +92,14 @@ impl App {
             .unwrap_or_else(|e| {
                 log::error!("Failed to load widgets: {e}");
                 WidgetMap(HashMap::new())
-            })
+            });
     }
+}
+
+// the states from `App` that are needed when building widgets
+pub struct WidgetBuildingStates<'a> {
+    pub event_loop_handle: &'a LoopHandle<'static, App>,
+    pub output_state: &'a OutputState,
 }
 
 #[derive(Debug, Default)]
@@ -584,7 +591,7 @@ pub struct WidgetBuilder<'a> {
 
     pub monitor: MonitorSpecifier,
     pub output: WlOutput,
-    pub app: &'a App,
+    pub app: WidgetBuildingStates<'a>,
     pub layer: LayerSurface,
     pub scale: Scale,
 
@@ -792,10 +799,15 @@ impl<'a> WidgetBuilder<'a> {
             window_pop_state.toggle_pin(false);
         }
 
+        let widget_builder_states = WidgetBuildingStates {
+            event_loop_handle: &app.event_loop_handle,
+            output_state: &app.output_state,
+        };
+
         Ok(Self {
             monitor: common.monitor.clone(),
             output,
-            app,
+            app: widget_builder_states,
             layer,
             animation_list,
             scale,

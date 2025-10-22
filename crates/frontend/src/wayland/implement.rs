@@ -107,7 +107,7 @@ impl OutputHandler for App {
         if !self.first_time_initialized {
             return;
         }
-        log::info!("new output detected, reload");
+        log::info!("new output detected");
         self.reload();
     }
 
@@ -120,7 +120,7 @@ impl OutputHandler for App {
         if !self.first_time_initialized {
             return;
         }
-        log::info!("output updated, reload");
+        log::info!("output updated");
         self.reload();
     }
 
@@ -133,7 +133,7 @@ impl OutputHandler for App {
         if !self.first_time_initialized {
             return;
         }
-        log::info!("output destroyed, reload");
+        log::info!("output destroyed");
         self.reload();
     }
 }
