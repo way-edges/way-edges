@@ -168,6 +168,9 @@ struct ConfigShadow {
     pub layer: Layer,
 
     #[serde(default)]
+    offset: i32,
+
+    #[serde(default)]
     pub margins: Margins,
 
     #[serde(default)]
@@ -212,6 +215,7 @@ impl From<ConfigShadow> for CommonConfig {
             edge: value.edge,
             position,
             layer: value.layer,
+            offset: value.offset,
             margins: value.margins,
             monitor: value.monitor,
             namespace: value.namespace,
@@ -239,6 +243,7 @@ pub struct CommonConfig {
     pub position: Anchor,
     #[schemars(schema_with = "schema_layer")]
     pub layer: Layer,
+    pub offset: i32,
     pub margins: Margins,
     pub monitor: MonitorSpecifier,
     pub namespace: String,
