@@ -168,7 +168,7 @@ struct ConfigShadow {
     pub layer: Layer,
 
     #[serde(default)]
-    offset: i32,
+    pub offset: i32,
 
     #[serde(default)]
     pub margins: Margins,
