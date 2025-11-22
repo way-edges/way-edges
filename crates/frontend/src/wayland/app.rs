@@ -786,7 +786,7 @@ impl<'a> WidgetBuilder<'a> {
             layer.set_exclusive_zone(-1);
         };
 
-        let offset = common.offset;
+        let offset = common.offset.get_num().unwrap() as i32;
 
         let margins = [
             common.margins.top.get_num().unwrap() as i32,

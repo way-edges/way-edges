@@ -26,7 +26,7 @@ impl DrawCore {
     }
 }
 
-/// in: content_size, visible_y, preview_size
+/// in: content_size, offset, visible_y, preview_size
 /// out: coordinate to translate, is will be <=0, size revealed
 type VisibleYFunc = fn((i32, i32), i32, f64, NumOrRelative) -> i32;
 
@@ -42,10 +42,11 @@ fn make_visible_y_func(edge: Anchor) -> VisibleYFunc {
 
     macro_rules! a {
         ($n:ident, $t:tt) => {
-            fn $n(size: (i32, i32), offset: i32, ts_y: f64, preview: NumOrRelative) -> i32 {
+            fn $n(size: (i32, i32), offset: i32, progress: f64, preview: NumOrRelative) -> i32 {
                 let preview = cal_pre!(size.$t, preview);
-                let progress = ((size.$t + offset) as f64 * ts_y).ceil() as i32;
-                preview.max(progress)
+                let total = size.$t + offset;
+                let visable = (total as f64 * progress).ceil() as i32;
+                visable.max(preview)
             }
         };
     }
