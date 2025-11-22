@@ -20,15 +20,15 @@ impl DrawCore {
             pop_coordinate_func,
         }
     }
-    pub fn calc_coordinate(&self, content_size: (i32, i32), progress: f64) -> [i32; 4] {
-        let visible = (self.visible_y_func)(content_size, progress, self.preview_size);
+    pub fn calc_coordinate(&self, content_size: (i32, i32), offset: i32, progress: f64) -> [i32; 4] {
+        let visible = (self.visible_y_func)(content_size, offset, progress, self.preview_size);
         (self.pop_coordinate_func)(content_size, visible, self.extra_trigger_size)
     }
 }
 
-/// in: content_size, visible_y, preview_size
+/// in: content_size, offset, visible_y, preview_size
 /// out: coordinate to translate, is will be <=0, size revealed
-type VisibleYFunc = fn((i32, i32), f64, NumOrRelative) -> i32;
+type VisibleYFunc = fn((i32, i32), i32, f64, NumOrRelative) -> i32;
 
 fn make_visible_y_func(edge: Anchor) -> VisibleYFunc {
     macro_rules! cal_pre {
@@ -42,10 +42,11 @@ fn make_visible_y_func(edge: Anchor) -> VisibleYFunc {
 
     macro_rules! a {
         ($n:ident, $t:tt) => {
-            fn $n(size: (i32, i32), ts_y: f64, preview: NumOrRelative) -> i32 {
+            fn $n(size: (i32, i32), offset: i32, progress: f64, preview: NumOrRelative) -> i32 {
                 let preview = cal_pre!(size.$t, preview);
-                let progress = (size.$t as f64 * ts_y).ceil() as i32;
-                preview.max(progress)
+                let total = size.$t + offset;
+                let visable = (total as f64 * progress).ceil() as i32;
+                visable.max(preview)
             }
         };
     }

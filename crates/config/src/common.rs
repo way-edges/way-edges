@@ -168,6 +168,9 @@ struct ConfigShadow {
     pub layer: Layer,
 
     #[serde(default)]
+    pub offset: NumOrRelative,
+
+    #[serde(default)]
     pub margins: Margins,
 
     #[serde(default)]
@@ -212,6 +215,7 @@ impl From<ConfigShadow> for CommonConfig {
             edge: value.edge,
             position,
             layer: value.layer,
+            offset: value.offset,
             margins: value.margins,
             monitor: value.monitor,
             namespace: value.namespace,
@@ -239,6 +243,7 @@ pub struct CommonConfig {
     pub position: Anchor,
     #[schemars(schema_with = "schema_layer")]
     pub layer: Layer,
+    pub offset: NumOrRelative,
     pub margins: Margins,
     pub monitor: MonitorSpecifier,
     pub namespace: String,
@@ -268,13 +273,16 @@ impl CommonConfig {
         calculate_margins!(self.margins.top, size.1);
         calculate_margins!(self.margins.bottom, size.1);
 
-        // extra
+        // offset & extra
+        let max = match self.edge {
+            Anchor::LEFT | Anchor::RIGHT => size.0,
+            Anchor::TOP | Anchor::BOTTOM => size.1,
+            _ => unreachable!(),
+        };
+        if self.offset.is_relative() {
+            self.offset.calculate_relative(max as f64);
+        }
         if self.extra_trigger_size.is_relative() {
-            let max = match self.edge {
-                Anchor::LEFT | Anchor::RIGHT => size.0,
-                Anchor::TOP | Anchor::BOTTOM => size.1,
-                _ => unreachable!(),
-            };
             self.extra_trigger_size.calculate_relative(max as f64);
         }
     }

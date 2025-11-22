@@ -189,6 +189,7 @@ pub struct Widget {
     next_frame: bool,
     frame_available: bool,
 
+    offset: i32,
     margins: [i32; 4],
 
     // for damage
@@ -274,7 +275,7 @@ impl Widget {
         let progress = self.pop_animation.borrow_mut().progress();
         let coordinate = self
             .draw_core
-            .calc_coordinate((self.content_width, self.content_height), progress);
+            .calc_coordinate((self.content_width, self.content_height), self.offset, progress);
         self.start_pos = (coordinate[0], coordinate[1]);
         let width = coordinate[2];
         let height = coordinate[3];
@@ -594,6 +595,7 @@ impl RedrawEssentail {
 pub struct WidgetBuilder<'a> {
     pub common_config: config::CommonConfig,
 
+    pub offset: i32,
     pub margins: [i32; 4],
     pub output_size: (i32, i32),
 
@@ -783,6 +785,9 @@ impl<'a> WidgetBuilder<'a> {
         if common.ignore_exclusive {
             layer.set_exclusive_zone(-1);
         };
+
+        let offset = common.offset.get_num().unwrap() as i32;
+
         let margins = [
             common.margins.top.get_num().unwrap() as i32,
             common.margins.right.get_num().unwrap() as i32,
@@ -822,6 +827,7 @@ impl<'a> WidgetBuilder<'a> {
             layer,
             animation_list,
             scale,
+            offset,
             margins,
             output_size,
             window_pop_state,
@@ -836,6 +842,7 @@ impl<'a> WidgetBuilder<'a> {
             layer,
             scale,
             animation_list,
+            offset,
             margins,
             output_size,
             window_pop_state,
@@ -868,6 +875,7 @@ impl<'a> WidgetBuilder<'a> {
             widget_has_update: true,
             next_frame: false,
             frame_available: true,
+            offset,
             margins,
             output_size,
         }
