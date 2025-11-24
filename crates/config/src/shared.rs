@@ -1,4 +1,5 @@
 use cosmic_text::{Color, FamilyOwned};
+use lazy_static::lazy_static;
 use regex_lite::Regex;
 use schemars::{json_schema, JsonSchema};
 use serde::{self, Deserialize, Deserializer, Serialize};
@@ -7,6 +8,18 @@ use smithay_client_toolkit::shell::wlr_layer::Anchor;
 use std::collections::HashMap;
 use std::str::FromStr;
 use util::{color::parse_color, shell::shell_cmd_non_block};
+
+lazy_static! {
+    static ref ACTION_CODE_MAP: HashMap<&'static str, u32> = {
+        let mut m = HashMap::new();
+        m.insert("left-click", 272);
+        m.insert("right-click", 273);
+        m.insert("middle-click", 274);
+        m.insert("side-button-1", 275);
+        m.insert("side-button-2", 276);
+        m
+    };
+}
 
 #[derive(Debug, Clone, Copy, Deserialize, Default, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
@@ -213,7 +226,14 @@ impl<'de> Deserialize<'de> for KeyEventMap {
             {
                 let mut event_map = HashMap::new();
                 while let Some((key, value)) = map.next_entry::<String, String>()? {
-                    event_map.insert(key.parse().map_err(serde::de::Error::custom)?, value);
+                    let action_code = if let Ok(code) = key.parse::<u32>() {
+                        code
+                    } else {
+                        *ACTION_CODE_MAP.get(key.as_str()).ok_or_else(|| {
+                            serde::de::Error::custom(format!("Unknown action key: '{}'.", key))
+                        })?
+                    };
+                    event_map.insert(action_code, value);
                 }
                 Ok(KeyEventMap(event_map))
             }
