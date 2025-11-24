@@ -1,5 +1,4 @@
 use cosmic_text::{Color, FamilyOwned};
-use lazy_static::lazy_static;
 use regex_lite::Regex;
 use schemars::{json_schema, JsonSchema};
 use serde::{self, Deserialize, Deserializer, Serialize};
@@ -9,17 +8,14 @@ use std::collections::HashMap;
 use std::str::FromStr;
 use util::{color::parse_color, shell::shell_cmd_non_block};
 
-lazy_static! {
-    static ref ACTION_CODE_MAP: HashMap<&'static str, u32> = {
-        let mut m = HashMap::new();
-        m.insert("left-click", 272);
-        m.insert("right-click", 273);
-        m.insert("middle-click", 274);
-        m.insert("side-button-1", 275);
-        m.insert("side-button-2", 276);
-        m
-    };
-}
+// pairs instead of hashmap to reuse it for json schema generation
+static ACTION_CODE_PAIRS: &[(&'static str, u32)] = &[
+    ("left-click", 272),
+    ("right-click", 273),
+    ("middle-click", 274),
+    ("side-button-1", 275),
+    ("side-button-2", 276),
+];
 
 #[derive(Debug, Clone, Copy, Deserialize, Default, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
@@ -197,7 +193,7 @@ impl CommonSize {
     }
 }
 
-#[derive(Debug, Default, JsonSchema, Clone)]
+#[derive(Debug, Default, Clone)]
 pub struct KeyEventMap(HashMap<u32, String>);
 impl KeyEventMap {
     pub fn call(&self, k: u32) {
@@ -229,9 +225,13 @@ impl<'de> Deserialize<'de> for KeyEventMap {
                     let action_code = if let Ok(code) = key.parse::<u32>() {
                         code
                     } else {
-                        *ACTION_CODE_MAP.get(key.as_str()).ok_or_else(|| {
-                            serde::de::Error::custom(format!("Unknown action key: '{}'.", key))
-                        })?
+                        ACTION_CODE_PAIRS
+                            .iter()
+                            .find(|&&(k, _)| k == key)
+                            .map(|&(_, code)| code)
+                            .ok_or_else(|| {
+                                serde::de::Error::custom(format!("Unknown action key: '{}'.", key))
+                            })?
                     };
                     event_map.insert(action_code, value);
                 }
@@ -239,6 +239,30 @@ impl<'de> Deserialize<'de> for KeyEventMap {
             }
         }
         deserializer.deserialize_any(EventMapVisitor)
+    }
+}
+
+impl JsonSchema for KeyEventMap {
+    fn schema_id() -> std::borrow::Cow<'static, str> {
+        Self::schema_name()
+    }
+
+    fn schema_name() -> std::borrow::Cow<'static, str> {
+        std::borrow::Cow::Borrowed("KeyEventMap")
+    }
+
+    fn json_schema(_: &mut schemars::SchemaGenerator) -> schemars::Schema {
+        let allowed_str_keys: Vec<_> = ACTION_CODE_PAIRS.iter().map(|&(k, _)| k).collect();
+        let str_keys_pattern = format!("^({})$", allowed_str_keys.join("|"));
+
+        json_schema!({
+            "type": "object",
+            "patternProperties": {
+                r"^\d+$": {"type": "string"},
+                str_keys_pattern: {"type": "string"}
+            },
+            "additionalProperties": false
+        })
     }
 }
 
