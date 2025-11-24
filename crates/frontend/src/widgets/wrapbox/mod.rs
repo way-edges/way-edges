@@ -42,7 +42,11 @@ impl WidgetContext for BoxContext {
 }
 
 pub fn init_widget(builder: &mut WidgetBuilder, w_conf: BoxConfig) -> impl WidgetContext {
-    let outlook_draw_conf = init_outlook(&w_conf.outlook, builder.common_config.edge);
+    let outlook_draw_conf = init_outlook(
+        &w_conf.outlook,
+        builder.common_config.edge,
+        builder.common_config.offset,
+    );
     let grid_box = init_boxed_widgets(builder, w_conf);
 
     BoxContext {

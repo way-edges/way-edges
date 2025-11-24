@@ -62,6 +62,12 @@ impl NumOrRelative {
             NumOrRelative::Relative(_) => true,
         }
     }
+    pub fn is_zero(&self) -> bool {
+        match self {
+            NumOrRelative::Num(r) => *r == 0.,
+            NumOrRelative::Relative(r) => *r == 0.,
+        }
+    }
     pub fn get_num(&self) -> Result<f64, &str> {
         if let Self::Num(r) = self {
             Ok(*r)
