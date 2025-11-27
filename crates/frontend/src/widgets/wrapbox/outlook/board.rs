@@ -1,6 +1,9 @@
 use cairo::ImageSurface;
 
-use config::widgets::wrapbox::{OutlookBoardConfig, OutlookMargins};
+use config::{
+    shared::NumOrRelative,
+    widgets::wrapbox::{OutlookBoardConfig, OutlookMargins},
+};
 use cosmic_text::Color;
 use smithay_client_toolkit::shell::wlr_layer::Anchor;
 use util::{
@@ -19,13 +22,16 @@ pub struct DrawConf {
     corners: [bool; 4],
 }
 impl DrawConf {
-    pub fn new(outlook: &OutlookBoardConfig, edge: Anchor) -> Self {
-        let corners = match edge {
-            Anchor::LEFT => [false, true, true, false],
-            Anchor::RIGHT => [true, false, false, true],
-            Anchor::TOP => [false, false, true, true],
-            Anchor::BOTTOM => [true, true, false, false],
-            _ => unreachable!(),
+    pub fn new(outlook: &OutlookBoardConfig, edge: Anchor, offset: NumOrRelative) -> Self {
+        let corners = match offset.is_zero() {
+            false => [true; 4],
+            true => match edge {
+                Anchor::LEFT => [false, true, true, false],
+                Anchor::RIGHT => [true, false, false, true],
+                Anchor::TOP => [false, false, true, true],
+                Anchor::BOTTOM => [true, true, false, false],
+                _ => unreachable!(),
+            },
         };
 
         Self {
