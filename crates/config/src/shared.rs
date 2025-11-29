@@ -8,6 +8,17 @@ use std::collections::HashMap;
 use std::str::FromStr;
 use util::{color::parse_color, shell::shell_cmd_non_block};
 
+#[rustfmt::skip]
+static ACTION_CODE_PAIRS: &[(&'static str, u32)] = &[
+    ("mouse-left",    0x110),
+    ("mouse-right",   0x111),
+    ("mouse-middle",  0x112),
+    ("mouse-side",    0x113),
+    ("mouse-extra",   0x114),
+    ("mouse-forward", 0x115),
+    ("mouse-back",    0x116),
+];
+
 #[derive(Debug, Clone, Copy, Deserialize, Default, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub enum Curve {
@@ -190,7 +201,7 @@ impl CommonSize {
     }
 }
 
-#[derive(Debug, Default, JsonSchema, Clone)]
+#[derive(Debug, Default, Clone)]
 pub struct KeyEventMap(HashMap<u32, String>);
 impl KeyEventMap {
     pub fn call(&self, k: u32) {
@@ -219,12 +230,46 @@ impl<'de> Deserialize<'de> for KeyEventMap {
             {
                 let mut event_map = HashMap::new();
                 while let Some((key, value)) = map.next_entry::<String, String>()? {
-                    event_map.insert(key.parse().map_err(serde::de::Error::custom)?, value);
+                    let action_code = if let Ok(code) = key.parse::<u32>() {
+                        code
+                    } else {
+                        ACTION_CODE_PAIRS
+                            .iter()
+                            .find_map(|&(k, code)| (k == key).then_some(code))
+                            .ok_or_else(|| {
+                                serde::de::Error::custom(format!("Unknown action key: '{}'.", key))
+                            })?
+                    };
+                    event_map.insert(action_code, value);
                 }
                 Ok(KeyEventMap(event_map))
             }
         }
         deserializer.deserialize_any(EventMapVisitor)
+    }
+}
+
+impl JsonSchema for KeyEventMap {
+    fn schema_id() -> std::borrow::Cow<'static, str> {
+        Self::schema_name()
+    }
+
+    fn schema_name() -> std::borrow::Cow<'static, str> {
+        std::borrow::Cow::Borrowed("KeyEventMap")
+    }
+
+    fn json_schema(_: &mut schemars::SchemaGenerator) -> schemars::Schema {
+        let allowed_str_keys: Vec<_> = ACTION_CODE_PAIRS.iter().map(|&(k, _)| k).collect();
+        let str_keys_pattern = format!("^({})$", allowed_str_keys.join("|"));
+
+        json_schema!({
+            "type": "object",
+            "patternProperties": {
+                r"^\d+$": {"type": "string"},
+                str_keys_pattern: {"type": "string"}
+            },
+            "additionalProperties": false
+        })
     }
 }
 
