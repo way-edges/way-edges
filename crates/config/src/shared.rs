@@ -8,13 +8,15 @@ use std::collections::HashMap;
 use std::str::FromStr;
 use util::{color::parse_color, shell::shell_cmd_non_block};
 
-// pairs instead of hashmap to reuse it for json schema generation
+#[rustfmt::skip]
 static ACTION_CODE_PAIRS: &[(&'static str, u32)] = &[
-    ("left-click", 272),
-    ("right-click", 273),
-    ("middle-click", 274),
-    ("side-button-1", 275),
-    ("side-button-2", 276),
+    ("mouse-left",    0x110),
+    ("mouse-right",   0x111),
+    ("mouse-middle",  0x112),
+    ("mouse-side",    0x113),
+    ("mouse-extra",   0x114),
+    ("mouse-forward", 0x115),
+    ("mouse-back",    0x116),
 ];
 
 #[derive(Debug, Clone, Copy, Deserialize, Default, JsonSchema)]
@@ -227,8 +229,7 @@ impl<'de> Deserialize<'de> for KeyEventMap {
                     } else {
                         ACTION_CODE_PAIRS
                             .iter()
-                            .find(|&&(k, _)| k == key)
-                            .map(|&(_, code)| code)
+                            .find_map(|&(k, code)| (k == key).then_some(code))
                             .ok_or_else(|| {
                                 serde::de::Error::custom(format!("Unknown action key: '{}'.", key))
                             })?
