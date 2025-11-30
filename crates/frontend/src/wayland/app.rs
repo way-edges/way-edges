@@ -1,5 +1,6 @@
 use std::{
     collections::HashMap,
+    mem,
     rc::Rc,
     sync::{atomic::AtomicPtr, Arc, Mutex, Weak},
     time::Duration,
@@ -85,6 +86,29 @@ impl App {
     }
 
     fn reload_widgets(&mut self) {
+        // clear contents of old widgets
+        let ws = mem::take(&mut self.widget_map.0)
+            .into_values()
+            .flatten()
+            .collect::<Vec<_>>();
+        ws.into_iter().for_each(|arc| {
+            // we make sure that no other references exist
+            // tipically this should be Some() since this function is called in idle
+            // and the backend or any other threads shall not hold references to widgets
+            let mtx = Arc::into_inner(arc).unwrap();
+
+            // and tipically this should be Ok() since no other references should exist
+            match mtx.into_inner() {
+                Ok(mut w) => w.clear_contents(self),
+                Err(e) => {
+                    log::error!(
+                        "Failed to clear widget contents during reload, mutex of this widget is poisoned: {e}"
+                    );
+                }
+            }
+        });
+
+        // create new
         self.widget_map = config::get_config_root()
             .and_then(|c| WidgetMap::new(c.widgets.clone(), self))
             .unwrap_or_else(|e| {
@@ -273,9 +297,11 @@ impl Widget {
         self.prepare_content();
 
         let progress = self.pop_animation.borrow_mut().progress();
-        let coordinate = self
-            .draw_core
-            .calc_coordinate((self.content_width, self.content_height), self.offset, progress);
+        let coordinate = self.draw_core.calc_coordinate(
+            (self.content_width, self.content_height),
+            self.offset,
+            progress,
+        );
         self.start_pos = (coordinate[0], coordinate[1]);
         let width = coordinate[2];
         let height = coordinate[3];
@@ -423,6 +449,30 @@ impl Widget {
             SurfaceData::from_wl(s.layer.wl_surface()).store_widget(weak.clone());
             Mutex::new(s)
         }))
+    }
+
+    fn clear_contents(&mut self, app: &mut App) {
+        let (buffer, canvas) = app
+            .pool
+            .create_buffer(
+                1,
+                1,
+                1 * 4,
+                wayland_client::protocol::wl_shm::Format::Argb8888,
+            )
+            .unwrap();
+        buffer
+            .attach_to(self.layer.wl_surface())
+            .expect("buffer attach");
+        canvas.fill(0);
+
+        self.layer
+            .wl_surface()
+            .damage_buffer(0, 0, self.output_size.0, self.output_size.1);
+
+        self.call_frame(&app.queue_handle);
+
+        self.layer.commit();
     }
 }
 
