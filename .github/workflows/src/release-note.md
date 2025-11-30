@@ -1,28 +1,23 @@
 # 💻 Way-Edges
 
-- break: slider custom-preset:
-  - interval-update -> update-interval and update-command
-  - on-change -> on-change-command
+# Important
 
-- nix: change nixpkgs flake input to nixos-25.05 + very minor refactor. #139 @Brisingr05
+- fix: clear old contents before reloading widgets, is won't stick on the screen anymore.
+- fix: correctly handles outputs update event, and reloads widgets accordingly
+- feat: allow `mouse-xxx` for specifying some mouse events in `event-map`, in #155 by @SheffeyG
+  - including: `mouse-left`, `mouse-right`, `mouse-middle`, `mouse-side`, `mouse-extra`, `mouse-forward`, `mouse-back`.
+- feat: introduce `offset` property for widgets, which pushes the widget further out from the edge. in #154 by @SheffeyG
 
-## Hyprland workspace should be stable now
+# Others
 
-- Hyprland empty workspace no longer get excluded
-- Ignore Hyprland special workspace
-
-## Tray should be stable now
-
-- Able to update tray icon with pixmap data
-- implement tray menu diff event
-
-## New scroll support for certain widgets
-
-- Mouse/Touchpad scroll support for slider
-- Mouse scroll support for workspace
-
-## Other
-
-- border-width and border-radius for workspace
-- `pin-on-startup` option
-- Move socket file from /tmp to XDG_RUNTIME_DIR
+- feat: watching configuration file directly instead of the directory containing it, supports symlinks.
+- feat: detach shell commands so that it still exists after way-edges exits
+- fix: write niri Event ourselves incase something breaks after new changes were made in niri-git
+- feat: reload widgets only when idle
+- feat: round all corners for `wrap-box` when offset is used. in #156 by @SheffeyG
+- feat: enable tokio_iouring. Nix supports: #148 by @Brisingr05
+- nix: flake.lock: Update. in #153 by @oliviafloof
+- doc: add an animation showing how we make the widgets pop, and how the coordinates are calculated, incase i forgor again 💀
+- chore: send desktop notifications no more, use terminal output only
+- chore: optimize build flags for faster compilation
+- chore: remove unused dependencies
