@@ -12,7 +12,7 @@ use util::{pre_multiply_and_to_little_endian_argb, Z};
 pub fn parse_icon_given_data(vec: &Vec<u8>, size: i32) -> Option<ImageSurface> {
     ImageSurface::create_from_png(&mut Cursor::new(vec))
         .ok()
-        .map(|img| scale_image_to_size(img, size))
+        .and_then(|img| scale_image_to_size(img, size))
 }
 
 pub fn parse_icon_given_pixmaps(vec: &[IconPixmap], size: i32) -> Option<ImageSurface> {
@@ -49,7 +49,7 @@ pub fn parse_icon_given_pixmaps(vec: &[IconPixmap], size: i32) -> Option<ImageSu
         )
         .unwrap();
 
-        Some(scale_image_to_size(img, size))
+        scale_image_to_size(img, size)
     }
 }
 
@@ -76,7 +76,16 @@ pub fn fallback_icon(size: i32, theme: Option<&str>) -> Option<ImageSurface> {
     draw_icon_file(f, size)
 }
 
-fn scale_image_to_size(img: ImageSurface, size: i32) -> ImageSurface {
+fn scale_image_to_size(img: ImageSurface, size: i32) -> Option<ImageSurface> {
+    if img.height() == 0 || img.width() == 0 {
+        log::error!(
+            "scale_image_to_size error: image has zero width or height: width={}, height={}",
+            img.width(),
+            img.height()
+        );
+        return None;
+    }
+
     let scale = size as f64 / img.height() as f64;
     let width = (img.width() as f64 * scale).ceil() as i32;
     let height = (img.height() as f64 * scale).ceil() as i32;
@@ -88,7 +97,7 @@ fn scale_image_to_size(img: ImageSurface, size: i32) -> ImageSurface {
     context.set_source_surface(&img, Z, Z).unwrap();
     context.paint().unwrap();
 
-    surf
+    Some(surf)
 }
 
 fn draw_icon_file(file_path: PathBuf, size: i32) -> Option<ImageSurface> {
@@ -102,7 +111,7 @@ fn draw_icon_file(file_path: PathBuf, size: i32) -> Option<ImageSurface> {
         }
     }?;
 
-    Some(scale_image_to_size(img, size))
+    scale_image_to_size(img, size)
 }
 
 fn load_png(p: &PathBuf) -> Option<ImageSurface> {
@@ -122,7 +131,7 @@ fn load_svg(p: &PathBuf) -> Option<ImageSurface> {
                 .and_then(|p| p.parent().map(|p| p.to_path_buf())),
             ..usvg::Options::default()
         };
-        // NOTE: WE DO NOT EXPECT TEXT TO APPEAR INSIDE, SHOULD WE?
+        // NOTE: WE DO NOT EXPECT TEXT TO APPEAR INSIDE
         // opt.fontdb.load_system_fonts();
 
         let svg_data = std::fs::read(p)
