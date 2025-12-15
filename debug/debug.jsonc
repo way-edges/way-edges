@@ -1,0 +1,18 @@
+{
+  "$schema": "./schema.json",
+  "widgets": [
+    {
+      "type": "wrap-box",
+      "ignore-exclusive": true,
+      "position": "left",
+      "edge": "bottom",
+      "monitor": ["HDMI-A-1"],
+      "items": [
+        {
+          "type": "tray",
+          "icon-size": 40,
+        },
+      ],
+    },
+  ],
+}
