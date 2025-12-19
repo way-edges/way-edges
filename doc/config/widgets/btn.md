@@ -1,6 +1,6 @@
 # Button
 
-```jsonc
+```json
 {
 "type": "btn",
 "thickness": 20,
@@ -9,11 +9,11 @@
 "border-color": "#112233aa",
 "color": "#ffeeddaa",
 "event-map": {
-  "272": "sh -c pkill nwg-drawer || nwg-drawer", // left click
-  "273": "niri msg action maximize-column", // right click
-  "274": "niri msg action close-window", // middle click
-  "275": "niri msg action toggle-overview", // side click 1
-  "276": "niri msg action toggle-column-tabbed-display", // side click 2
+  "mouse-left": "sh -c pkill nwg-drawer || nwg-drawer -ovl",
+  "mouse-right": "niri msg action maximize-column",
+  "mouse-middle": "niri msg action close-window",
+  "mouse-side": "niri msg action toggle-overview",
+  "mouse-extra": "niri msg action toggle-column-tabbed-display",
 }
 ```
 

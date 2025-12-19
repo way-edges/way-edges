@@ -17,6 +17,9 @@
     "ring-width": 20,
     "radius": 35,
     "text-transition-ms": 100, // ms
+    "event-map": {
+      // same as btn
+    },
     // "preset": {
     //   "type": "ram",
     //   "update-interval": 1000, // ms
@@ -62,6 +65,7 @@
 | ring-width         | int                                                         |
 | radius             | total radius of the circle                                  |
 | text-transition-ms | ms                                                          |
+| event-map          | same as button                                              |
 | preset             | `ram` or `battery` or `cpu` or `swap` or `disk` or `custom` |
 
 ## Preset: ram

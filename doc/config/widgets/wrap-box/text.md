@@ -7,6 +7,9 @@
   "fg-color": "#00000000",
   "font-family": "monospace",
   "font-size": 24,
+  "event-map": {
+    // same as btn
+  },
   // "preset": {
   //   "type": "time",
   //   "format": "%Y-%m-%d %H:%M:%S",
@@ -27,6 +30,7 @@
 | fg-color    | color              |
 | font-family | font family        |
 | font-size   | font size          |
+| event-map   | same as button     |
 | preset      | `time` or `custom` |
 
 ## Preset: time
