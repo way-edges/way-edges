@@ -1,4 +1,4 @@
 #!/bin/bash
 
 # run debug
-cargo r -r -- --config-path ./debug/debug.jsonc
+cargo r -- --config-path ./debug/debug.jsonc
