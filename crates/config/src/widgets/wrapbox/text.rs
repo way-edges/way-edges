@@ -4,7 +4,7 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 use util::color::COLOR_BLACK;
 
-use crate::shared::{color_translate, dt_family_owned, schema_color, FamilyOwnedRef};
+use crate::shared::{color_translate, dt_family_owned, schema_color, FamilyOwnedRef, KeyEventMap};
 
 #[derive(Educe, Deserialize, JsonSchema, Clone)]
 #[educe(Debug)]
@@ -50,6 +50,9 @@ pub struct TextConfig {
     #[serde(default = "dt_family_owned")]
     #[serde(with = "FamilyOwnedRef")]
     pub font_family: FamilyOwned,
+
+    #[serde(default)]
+    pub event_map: KeyEventMap,
 
     pub preset: TextPreset,
 }

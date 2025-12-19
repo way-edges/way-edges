@@ -3,8 +3,10 @@ mod draw;
 use std::cell::UnsafeCell;
 use std::{rc::Rc, time::Duration};
 
+use cairo::ImageSurface;
 use calloop::channel::Sender;
 use chrono::{Local, Utc};
+use config::shared::KeyEventMap;
 use draw::TextDrawer;
 use interval_task::runner::Runner;
 
@@ -76,6 +78,20 @@ pub struct TextCtx {
     runner: Runner<()>,
     text: Rc<UnsafeCell<String>>,
     drawer: TextDrawer,
+    event_map: KeyEventMap,
+}
+
+impl BoxedWidget for TextCtx {
+    fn content(&mut self) -> ImageSurface {
+        let text = unsafe { self.text.get().as_ref().unwrap().as_str() };
+        self.drawer.draw_text(text)
+    }
+    fn on_mouse_event(&mut self, e: crate::mouse_state::MouseEvent) -> bool {
+        if let crate::mouse_state::MouseEvent::Release(_, k) = e {
+            self.event_map.call(k);
+        };
+        false
+    }
 }
 
 pub fn init_text(box_temp_ctx: &mut BoxTemporaryCtx, conf: TextConfig) -> impl BoxedWidget {
@@ -97,5 +113,6 @@ pub fn init_text(box_temp_ctx: &mut BoxTemporaryCtx, conf: TextConfig) -> impl B
         runner,
         text,
         drawer,
+        event_map: conf.event_map,
     }
 }

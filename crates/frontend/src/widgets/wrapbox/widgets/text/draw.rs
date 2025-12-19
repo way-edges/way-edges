@@ -4,9 +4,6 @@ use config::widgets::wrapbox::text::TextConfig;
 use cosmic_text::{Color, FamilyOwned};
 use util::text::draw_text;
 
-use super::TextCtx;
-use crate::widgets::wrapbox::box_traits::BoxedWidget;
-
 #[derive(Debug)]
 pub struct TextDrawer {
     pub fg_color: Color,
@@ -21,7 +18,7 @@ impl TextDrawer {
             font_pixel_size: conf.font_size,
         }
     }
-    fn draw_text(&self, text: &str) -> ImageSurface {
+    pub fn draw_text(&self, text: &str) -> ImageSurface {
         let text_conf = util::text::TextConfig::new(
             self.font_family.as_family(),
             None,
@@ -30,12 +27,5 @@ impl TextDrawer {
         );
 
         draw_text(text, text_conf).to_image_surface()
-    }
-}
-
-impl BoxedWidget for TextCtx {
-    fn content(&mut self) -> ImageSurface {
-        let text = unsafe { self.text.get().as_ref().unwrap().as_str() };
-        self.drawer.draw_text(text)
     }
 }
