@@ -3,3 +3,5 @@
 .direnv/bin
 .envrc
 .direnv
+
+rd.sh
