@@ -5,6 +5,7 @@ use std::cell::UnsafeCell;
 use std::rc::Rc;
 
 use cairo::ImageSurface;
+use config::shared::KeyEventMap;
 use draw::RingDrawer;
 use interval_task::runner::Runner;
 
@@ -21,6 +22,7 @@ pub struct RingCtx {
     runner: Runner<()>,
     current: Rc<UnsafeCell<RunnerResult>>,
     drawer: RingDrawer,
+    event_map: KeyEventMap,
 }
 
 impl BoxedWidget for RingCtx {
@@ -43,6 +45,10 @@ impl BoxedWidget for RingCtx {
                     .borrow_mut()
                     .set_direction(crate::animation::ToggleDirection::Backward);
                 true
+            }
+            MouseEvent::Release(_, key) => {
+                self.event_map.call(key);
+                false
             }
             _ => false,
         }
@@ -68,5 +74,6 @@ pub fn init_widget(box_temp_ctx: &mut BoxTemporaryCtx, mut conf: RingConfig) -> 
         runner,
         current,
         drawer,
+        event_map: conf.event_map,
     }
 }

@@ -1,5 +1,6 @@
 use crate::shared::{
-    color_translate, dt_family_owned, schema_color, schema_optional_template, Curve, FamilyOwnedRef,
+    color_translate, dt_family_owned, schema_color, schema_optional_template, Curve,
+    FamilyOwnedRef, KeyEventMap,
 };
 use cosmic_text::{Color, FamilyOwned};
 use schemars::JsonSchema;
@@ -99,6 +100,9 @@ pub struct RingConfigShadow {
     #[serde(default)]
     pub font_size: Option<i32>,
 
+    #[serde(default)]
+    pub event_map: KeyEventMap,
+
     pub preset: RingPreset,
 }
 
@@ -135,6 +139,7 @@ impl From<RingConfigShadow> for RingConfig {
             font_size,
             preset: value.preset,
             animation_curve: value.animation_curve,
+            event_map: value.event_map,
         }
     }
 }
@@ -165,6 +170,8 @@ pub struct RingConfig {
     #[serde(with = "FamilyOwnedRef")]
     pub font_family: FamilyOwned,
     pub font_size: i32,
+
+    pub event_map: KeyEventMap,
 
     pub preset: RingPreset,
 }
