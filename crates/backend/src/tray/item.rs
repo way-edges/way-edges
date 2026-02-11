@@ -242,6 +242,7 @@ pub struct Tray {
     pub menu_path: Option<String>,
     pub menu: Option<RootMenu>,
 }
+unsafe impl Send for Tray {}
 
 impl Tray {
     pub(super) fn new(value: StatusNotifierItem) -> Self {
