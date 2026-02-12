@@ -5,6 +5,7 @@ mod module;
 
 use std::{
     cell::RefCell,
+    ops::Deref,
     rc::{Rc, Weak},
 };
 
@@ -26,8 +27,7 @@ pub struct TrayCtx {
 
 impl TrayCtx {
     fn content(&mut self) -> cairo::ImageSurface {
-        self.module
-            .draw_content(&self.backend_handle.get_tray_map().lock().unwrap())
+        self.module.draw_content(self.backend_handle.get_tray_map())
     }
 
     fn on_mouse_event(&mut self, e: MouseEvent) -> bool {
@@ -85,34 +85,28 @@ pub fn init_widget(box_temp_ctx: &mut BoxTemporaryCtx, config: TrayConfig) -> Tr
 
             use backend::tray::TrayEventSignal::*;
             match dest {
-                Add(dest) => {
-                    let tray_map_ptr = m.backend_handle.get_tray_map();
-                    let tray_map = tray_map_ptr.lock().unwrap();
-                    let tray = tray_map.get_tray(&dest).unwrap();
-                    m.module.add_tray(dest, tray);
+                Add(dest, tray) => {
+                    let tray_map = m.backend_handle.get_tray_map_mut();
+                    tray_map.add_tray(dest.clone(), tray.clone());
+                    m.module.add_tray(dest, tray.lock().unwrap().deref());
                 }
                 Rm(dest) => {
+                    let tray_map = m.backend_handle.get_tray_map_mut();
+                    tray_map.remove_tray(&dest);
                     m.module.remove_tray(&dest);
                 }
                 Update(dest) => {
-                    let tray_map_ptr = m.backend_handle.get_tray_map();
-                    let tray_map = tray_map_ptr.lock().unwrap();
-                    let tray = tray_map.get_tray(&dest).unwrap();
-                    m.module.update_tray(&dest, tray)
+                    let tray = m.backend_handle.get_tray_map().get(&dest).unwrap().clone();
+                    m.module.update_tray(&dest, tray.lock().unwrap().deref());
                 }
             };
         });
         let backend_handle = register_tray(s);
 
         let map_ptr = backend_handle.get_tray_map();
-        map_ptr
-            .lock()
-            .unwrap()
-            .list_tray()
-            .into_iter()
-            .for_each(|(k, v)| {
-                module.add_tray(k, v);
-            });
+        map_ptr.iter().for_each(|(k, v)| {
+            module.add_tray(k.clone(), v.lock().unwrap().deref());
+        });
 
         RefCell::new(TrayCtx {
             module,

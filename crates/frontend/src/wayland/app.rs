@@ -454,12 +454,7 @@ impl Widget {
     fn clear_contents(&mut self, app: &mut App) {
         let (buffer, canvas) = app
             .pool
-            .create_buffer(
-                1,
-                1,
-                1 * 4,
-                wayland_client::protocol::wl_shm::Format::Argb8888,
-            )
+            .create_buffer(1, 1, 4, wayland_client::protocol::wl_shm::Format::Argb8888)
             .unwrap();
         buffer
             .attach_to(self.layer.wl_surface())

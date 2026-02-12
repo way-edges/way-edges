@@ -26,7 +26,11 @@ pub struct TrayBackendHandle {
     id: i32,
 }
 impl TrayBackendHandle {
-    pub fn get_tray_map(&mut self) -> &mut TrayMap {
+    pub fn get_tray_map(&self) -> &TrayMap {
+        &self.tray_map
+    }
+
+    pub fn get_tray_map_mut(&mut self) -> &mut TrayMap {
         &mut self.tray_map
     }
 }

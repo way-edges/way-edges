@@ -1,4 +1,4 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, ops::Deref, sync::Arc};
 
 use backend::tray::{item::Tray, TrayMap};
 use cairo::ImageSurface;
@@ -45,8 +45,8 @@ impl TrayModule {
     pub fn draw_content(&mut self, tray_map: &TrayMap) -> ImageSurface {
         self.grid.draw(|dest| {
             let tray_state = self.id_tray_map.get_mut(dest).unwrap();
-            let tray = tray_map.get_tray(dest).unwrap();
-            tray_state.draw(tray, &self.config)
+            let tray = tray_map.get(dest).unwrap().lock().unwrap();
+            tray_state.draw(tray.deref(), &self.config)
         })
     }
     pub fn add_tray(&mut self, dest: Arc<String>, tray: &Tray) {
