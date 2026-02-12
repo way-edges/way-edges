@@ -7,3 +7,5 @@ else
 fi
 
 source ./way-edges-bash-complete.bash
+
+which way-edges

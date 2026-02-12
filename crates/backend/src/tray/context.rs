@@ -122,21 +122,21 @@ impl TrayMap {
 
                     // not implemented
                     system_tray::client::UpdateEvent::AttentionIcon(_) => {
-                        log::warn!("NOT IMPLEMENTED ATTENTION ICON");
+                        log::debug!("NOT IMPLEMENTED ATTENTION ICON");
                         false
                     }
                     system_tray::client::UpdateEvent::OverlayIcon(_) => {
-                        log::warn!("NOT IMPLEMENTED OVERLAY ICON");
+                        log::debug!("NOT IMPLEMENTED OVERLAY ICON");
                         false
                     }
                     system_tray::client::UpdateEvent::Status(_) => {
                         // no need
-                        log::warn!("NOT IMPLEMENTED STATUS");
+                        log::debug!("NOT IMPLEMENTED STATUS");
                         false
                     }
                     system_tray::client::UpdateEvent::Tooltip(_) => {
                         // maybe some other time
-                        log::warn!("NOT IMPLEMENTED TOOLTIP");
+                        log::debug!("NOT IMPLEMENTED TOOLTIP");
                         false
                     }
                     system_tray::client::UpdateEvent::MenuDiff(diffs) => {
@@ -149,7 +149,7 @@ impl TrayMap {
                     }
                     system_tray::client::UpdateEvent::MenuConnect(_) => {
                         // no need i think?
-                        log::warn!("NOT IMPLEMENTED MENU CONNECT");
+                        log::debug!("NOT IMPLEMENTED MENU CONNECT");
                         false
                     }
                 };
