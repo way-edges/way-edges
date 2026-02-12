@@ -9,7 +9,7 @@ use std::str::FromStr;
 use util::{color::parse_color, shell::shell_cmd_non_block};
 
 #[rustfmt::skip]
-static ACTION_CODE_PAIRS: &[(&'static str, u32)] = &[
+static ACTION_CODE_PAIRS: &[(&str, u32)] = &[
     ("mouse-left",    0x110),
     ("mouse-right",   0x111),
     ("mouse-middle",  0x112),
