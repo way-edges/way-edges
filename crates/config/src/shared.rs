@@ -287,6 +287,51 @@ impl JsonSchema for KeyEventMap {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_jsonrc::json;
+
+    #[test]
+    fn test_key_event_map_deserialize_valid() {
+        let json_data = json!({
+            "kc-0x110": "command1",
+            "kc-0x112": "command2",
+            "mouse-right": "command3"
+        });
+
+        let key_event_map: KeyEventMap = serde_jsonrc::from_value(json_data).unwrap();
+
+        assert_eq!(key_event_map.0.get(&0x110).unwrap(), "command1");
+        assert_eq!(key_event_map.0.get(&0x112).unwrap(), "command2");
+        assert_eq!(key_event_map.0.get(&0x111).unwrap(), "command3");
+    }
+
+    #[test]
+    fn test_key_event_map_deserialize_invalid_key() {
+        let json_data = json!({
+            "invalid-key": "command1"
+        });
+
+        let result: Result<KeyEventMap, _> = serde_jsonrc::from_value(json_data);
+
+        // Expecting an error because the key format is invalid
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_key_event_map_deserialize_invalid_value() {
+        let json_data = json!({
+            "kc-110": 12345
+        });
+
+        let result: Result<KeyEventMap, _> = serde_jsonrc::from_value(json_data);
+
+        // Expecting an error because the value is not a string
+        assert!(result.is_err());
+    }
+}
+
 pub fn option_color_translate<'de, D>(d: D) -> Result<Option<Color>, D::Error>
 where
     D: Deserializer<'de>,
