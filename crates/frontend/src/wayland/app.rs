@@ -142,35 +142,37 @@ impl WidgetMap {
 
         for conf in widgets_config.iter().cloned() {
             let name = conf.common.namespace.clone();
-            let confs: Vec<(config::Widget, WlOutput)> = match conf.common.monitor.clone() {
-                MonitorSpecifier::ID(index) => app
-                    .output_state
-                    .outputs()
-                    .nth(index)
-                    .map(|output| vec![(conf, output)])
-                    .unwrap_or(vec![]),
-                MonitorSpecifier::Names(items) => app
-                    .output_state
-                    .outputs()
-                    .filter_map(|out| {
-                        app.output_state
-                            .info(&out)
-                            .and_then(|info| info.name)
-                            .filter(|output_name| items.contains(output_name))
-                            .is_some()
-                            .then(|| (conf.clone(), out))
-                    })
-                    .collect(),
-                MonitorSpecifier::All => app
-                    .output_state
-                    .outputs()
-                    .map(|out| (conf.clone(), out))
-                    .collect(),
-                _ => unreachable!(),
+            let confs: Vec<WlOutput> = match conf.common.monitor.clone() {
+                MonitorSpecifier::Lists { ids, names } => {
+                    let mut ids = ids.clone();
+                    // find names and record index and put into ids
+                    for (id, output) in app.output_state.outputs().enumerate() {
+                        if let Some(info) = app.output_state.info(&output) {
+                            if let Some(output_name) = info.name {
+                                if names.contains(&output_name) {
+                                    ids.insert(id);
+                                }
+                            }
+                        }
+                    }
+
+                    app.output_state
+                        .outputs()
+                        .enumerate()
+                        .filter_map(|(id, output)| {
+                            if ids.contains(&id) {
+                                Some(output)
+                            } else {
+                                None
+                            }
+                        })
+                        .collect()
+                }
+                MonitorSpecifier::All => app.output_state.outputs().collect(),
             };
 
-            for (conf, output) in confs.into_iter() {
-                let ctx = Widget::init_widget(conf, output, app)?;
+            for output in confs.into_iter() {
+                let ctx = Widget::init_widget(conf.clone(), output, app)?;
                 // TODO: CLONE
                 map.entry(name.clone()).or_default().push(ctx.clone());
             }

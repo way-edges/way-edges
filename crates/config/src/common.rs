@@ -1,5 +1,6 @@
 use schemars::json_schema;
 use serde::Deserializer;
+use serde_jsonrc::Value;
 use smithay_client_toolkit::shell::wlr_layer::{Anchor, Layer};
 
 use schemars::JsonSchema;
@@ -11,12 +12,19 @@ use crate::shared::{Curve, NumOrRelative};
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum MonitorSpecifier {
-    ID(usize),
-    Names(HashSet<String>),
+    Lists {
+        ids: HashSet<usize>,
+        names: HashSet<String>,
+    },
     All,
-
-    // this shall not be used for deserialization
-    Name(String),
+}
+impl Default for MonitorSpecifier {
+    fn default() -> Self {
+        Self::Lists {
+            ids: HashSet::from([0]),
+            names: HashSet::new(),
+        }
+    }
 }
 impl JsonSchema for MonitorSpecifier {
     fn schema_name() -> std::borrow::Cow<'static, str> {
@@ -46,11 +54,6 @@ impl JsonSchema for MonitorSpecifier {
         })
     }
 }
-impl Default for MonitorSpecifier {
-    fn default() -> Self {
-        Self::ID(0)
-    }
-}
 impl<'de> Deserialize<'de> for MonitorSpecifier {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -68,7 +71,10 @@ impl<'de> Deserialize<'de> for MonitorSpecifier {
             where
                 E: serde::de::Error,
             {
-                Ok(MonitorSpecifier::ID(value as usize))
+                Ok(MonitorSpecifier::Lists {
+                    ids: HashSet::from([value as usize]),
+                    names: HashSet::new(),
+                })
             }
 
             fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
@@ -78,9 +84,10 @@ impl<'de> Deserialize<'de> for MonitorSpecifier {
                 if value == "*" {
                     Ok(MonitorSpecifier::All)
                 } else {
-                    let mut hashset = HashSet::new();
-                    hashset.insert(value.to_string());
-                    Ok(MonitorSpecifier::Names(hashset))
+                    Ok(MonitorSpecifier::Lists {
+                        ids: HashSet::new(),
+                        names: HashSet::from([value.to_string()]),
+                    })
                 }
             }
 
@@ -88,11 +95,38 @@ impl<'de> Deserialize<'de> for MonitorSpecifier {
             where
                 A: serde::de::SeqAccess<'ae>,
             {
+                let mut ids = HashSet::new();
                 let mut names = HashSet::new();
-                while let Some(value) = seq.next_element::<String>()? {
-                    names.insert(value);
+                while let Some(value) = seq.next_element::<Value>()? {
+                    match value {
+                        Value::String(s) => {
+                            if s == "*" {
+                                return Err(serde::de::Error::invalid_value(
+                                    serde::de::Unexpected::Str(&s),
+                                    &"You cannot use the wildcard character '*' in a list of monitors, it is only allowed as the sole argument to specify all monitors",
+                                ));
+                            }
+                            names.insert(s);
+                        }
+                        Value::Number(num) => {
+                            if let Some(id) = num.as_u64() {
+                                ids.insert(id as usize);
+                            } else {
+                                return Err(serde::de::Error::invalid_value(
+                                    serde::de::Unexpected::Other(&format!("number {}", num)),
+                                    &"Invalid integer value encountered",
+                                ));
+                            }
+                        }
+                        _ => {
+                            return Err(serde::de::Error::invalid_type(
+                                serde::de::Unexpected::Other(&format!("{:?}", value)),
+                                &"a string or a number",
+                            ));
+                        }
+                    }
                 }
-                Ok(MonitorSpecifier::Names(names))
+                Ok(MonitorSpecifier::Lists { ids, names })
             }
         }
 
@@ -116,7 +150,13 @@ mod tests {
             "monitor": 1,
         });
         let config: TestConfig = serde_jsonrc::from_value(json_data).unwrap();
-        assert_eq!(config.monitor, MonitorSpecifier::ID(1));
+        assert_eq!(
+            config.monitor,
+            MonitorSpecifier::Lists {
+                ids: HashSet::from([1]),
+                names: HashSet::new(),
+            }
+        );
 
         let json_data = json!({
             "monitor": "*",
@@ -130,11 +170,29 @@ mod tests {
         let config: TestConfig = serde_jsonrc::from_value(json_data).unwrap();
         assert_eq!(
             config.monitor,
-            MonitorSpecifier::Names(HashSet::from_iter(vec![
-                "Monitor1".to_string(),
-                "Monitor2".to_string()
-            ]))
+            MonitorSpecifier::Lists {
+                ids: HashSet::new(),
+                names: HashSet::from(["Monitor1".to_string(), "Monitor2".to_string()]),
+            }
         );
+
+        let json_data = json!({
+            "monitor": ["Monitor1", 2],
+        });
+        let config: TestConfig = serde_jsonrc::from_value(json_data).unwrap();
+        assert_eq!(
+            config.monitor,
+            MonitorSpecifier::Lists {
+                ids: HashSet::from([2]),
+                names: HashSet::from(["Monitor1".to_string()]),
+            }
+        );
+
+        let json_data = json!({
+            "monitor": ["*"],
+        });
+        let config: Result<TestConfig, _> = serde_jsonrc::from_value(json_data);
+        assert!(config.is_err());
     }
 }
 
