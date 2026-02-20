@@ -1,0 +1,23 @@
+
+btn {
+  ignore-exclusive 
+  pin-with-key
+  edge "bottom"
+  monitor "*"
+  layer "overlay"
+  thickness 20
+  length "40%"
+
+  margins {
+    right "25%"
+  }
+  extra-trigger-size 3
+
+  event-map {
+    mouse-left "sh -c pkill nwg-drawer || nwg-drawer -ovl --closebtn left"
+    mouse-right "niri msg action maximize-column"
+    mouse-middle "niri msg action close-window"
+    mouse-side "niri msg action toggle-overview"
+    mouse-extra "niri msg action toggle-column-tabbed-display"
+  }
+}

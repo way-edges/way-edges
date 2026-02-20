@@ -9,6 +9,8 @@ config = { version = "0.1.0", path = "crates/config" }
 util = { version = "0.1.0", path = "crates/util" }
 backend = { version = "0.1.0", path = "crates/backend" }
 frontend = { version = "0.1.0", path = "crates/frontend" }
+knus = { version = "3.3.1", path = "crates/knus" }
+knus-derive = { version = "3.3.1", path = "crates/derive" }
 
 
 # cosmic-text = { git = "https://github.com/pop-os/cosmic-text.git", features = [

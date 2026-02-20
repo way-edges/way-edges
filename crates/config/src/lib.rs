@@ -1,4 +1,5 @@
 pub mod common;
+pub mod kdl;
 pub mod shared;
 pub mod widgets;
 
