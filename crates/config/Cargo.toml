@@ -22,7 +22,7 @@ schemars.workspace = true
 xdg.workspace = true
 
 serde_json = "1.0.140"
+kdl = "6.5.0"
 
 smol_str = "0.2.2"
-
 string-to-num = "0.1.2"
