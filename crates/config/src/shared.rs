@@ -6,6 +6,7 @@ use serde_jsonrc::Value;
 use smithay_client_toolkit::shell::wlr_layer::Anchor;
 use std::collections::HashMap;
 use std::str::FromStr;
+use string_to_num::ParseNum;
 use util::{color::parse_color, shell::shell_cmd_non_block};
 
 #[rustfmt::skip]
@@ -230,17 +231,30 @@ impl<'de> Deserialize<'de> for KeyEventMap {
             {
                 let mut event_map = HashMap::new();
                 while let Some((key, value)) = map.next_entry::<String, String>()? {
-                    let action_code = if let Ok(code) = key.parse::<u32>() {
-                        code
+                    let kc = if let Some(key_code_str) = key.strip_prefix("kc-") {
+                        // strip the "kc-" prefix
+                        println!("key_code_str: {}", key_code_str);
+                        if let Ok(key_code) = key_code_str.parse_num::<u32>() {
+                            key_code
+                        } else {
+                            return Err(serde::de::Error::custom(format!(
+                                "Invalid key code after 'kc-' prefix: '{}'",
+                                key_code_str
+                            )));
+                        }
+                    } else if let Some(kc) = ACTION_CODE_PAIRS
+                        .iter()
+                        .find_map(|&(k, code)| (k == key).then_some(code))
+                    {
+                        kc
                     } else {
-                        ACTION_CODE_PAIRS
-                            .iter()
-                            .find_map(|&(k, code)| (k == key).then_some(code))
-                            .ok_or_else(|| {
-                                serde::de::Error::custom(format!("Unknown action key: '{}'.", key))
-                            })?
+                        return Err(serde::de::Error::custom(format!(
+                            "Unknown action key: '{}'.",
+                            key
+                        )));
                     };
-                    event_map.insert(action_code, value);
+
+                    event_map.insert(kc, value);
                 }
                 Ok(KeyEventMap(event_map))
             }
