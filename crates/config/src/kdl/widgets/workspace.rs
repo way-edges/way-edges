@@ -179,3 +179,74 @@ pub struct NiriConf {
     #[knus(child)]
     pub preserve_empty: bool,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use knus::Decode;
+
+    #[test]
+    fn test_decode_workspace_config_with_preset() {
+        let kdl = r#"
+workspace {
+    edge "bottom"
+    thickness 20
+    length "40%"
+    preset "niri" {
+        preserve-empty
+    }
+}
+"#;
+        let parsed: Vec<crate::kdl::TopLevelConf> = knus::parse("test", kdl).unwrap();
+        if let crate::kdl::TopLevelConf::Workspace(ws) = &parsed[0] {
+            assert!(matches!(ws.widget.preset, WorkspacePreset::Niri(_)));
+            if let WorkspacePreset::Niri(conf) = &ws.widget.preset {
+                assert!(conf.preserve_empty);
+            }
+        } else {
+            panic!("Expected Workspace");
+        }
+    }
+
+    #[test]
+    fn test_decode_workspace_config_invalid_default_color() {
+        let kdl = r#"
+workspace {
+    edge "bottom"
+    thickness 20
+    length "40%"
+    default-color "invalid-color"
+}
+"#;
+        let result: Result<Vec<crate::kdl::TopLevelConf>, _> = knus::parse("test", kdl);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_decode_workspace_config_invalid_preset() {
+        let kdl = r#"
+workspace {
+    edge "bottom"
+    thickness 20
+    length "40%"
+    preset "invalid-preset"
+}
+"#;
+        let result: Result<Vec<crate::kdl::TopLevelConf>, _> = knus::parse("test", kdl);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_decode_workspace_config_invalid_border_width() {
+        let kdl = r#"
+workspace {
+    edge "bottom"
+    thickness 20
+    length "40%"
+    border-width "not-a-number"
+}
+"#;
+        let result: Result<Vec<crate::kdl::TopLevelConf>, _> = knus::parse("test", kdl);
+        assert!(result.is_err());
+    }
+}
