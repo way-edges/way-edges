@@ -4,6 +4,6 @@
 // use wrapbox::BoxConfig;
 
 pub mod button;
-// pub mod slide;
+pub mod slide;
 pub mod workspace;
 // pub mod wrapbox;

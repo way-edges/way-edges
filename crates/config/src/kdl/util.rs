@@ -1,4 +1,6 @@
+use cosmic_text::Color;
 use knus::{ast::SpannedNode, errors::DecodeError, traits::ErrorSpan, Decode, DecodeScalar};
+use util::color::{parse_color, ParseColorError};
 
 pub fn argv<S: ErrorSpan>(
     node: &SpannedNode<S>,
@@ -68,4 +70,12 @@ macro_rules! unexpected_node_name {
     ($name:expr) => {
         log::warn!("unexpected node name '{:?}'", $name);
     };
+}
+
+pub fn parse_optional_color(color: &str) -> Result<Option<Color>, ParseColorError> {
+    if color.is_empty() {
+        Ok(None)
+    } else {
+        Ok(Some(parse_color(color)?))
+    }
 }

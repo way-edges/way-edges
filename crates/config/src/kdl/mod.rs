@@ -8,39 +8,31 @@ pub mod widgets;
 #[derive(Debug, Clone, Decode)]
 pub enum TopLevelConf {
     Btn(Btn),
+    Slide(Slide),
     Workspace(Workspace),
 }
 
-#[derive(Debug, Clone)]
-pub struct Btn {
-    pub common: common::CommonConfig,
-    pub widget: widgets::button::BtnConfig,
-}
-impl<S: knus::traits::ErrorSpan> knus::Decode<S> for Btn {
-    fn decode_node(
-        node: &knus::ast::SpannedNode<S>,
-        ctx: &mut knus::decode::Context<S>,
-    ) -> Result<Self, knus::errors::DecodeError<S>> {
-        Ok(Self {
-            common: common::CommonConfig::decode_node(node, ctx)?,
-            widget: widgets::button::BtnConfig::decode_node(node, ctx)?,
-        })
-    }
+macro_rules! impl_top_level_widget {
+    ($name:ident, $config:ty) => {
+        #[derive(Debug, Clone)]
+        pub struct $name {
+            pub common: common::CommonConfig,
+            pub widget: $config,
+        }
+        impl<S: knus::traits::ErrorSpan> knus::Decode<S> for $name {
+            fn decode_node(
+                node: &knus::ast::SpannedNode<S>,
+                ctx: &mut knus::decode::Context<S>,
+            ) -> Result<Self, knus::errors::DecodeError<S>> {
+                Ok(Self {
+                    common: common::CommonConfig::decode_node(node, ctx)?,
+                    widget: <$config>::decode_node(node, ctx)?,
+                })
+            }
+        }
+    };
 }
 
-#[derive(Debug, Clone)]
-pub struct Workspace {
-    pub common: common::CommonConfig,
-    pub widget: widgets::workspace::WorkspaceConfig,
-}
-impl<S: knus::traits::ErrorSpan> knus::Decode<S> for Workspace {
-    fn decode_node(
-        node: &knus::ast::SpannedNode<S>,
-        ctx: &mut knus::decode::Context<S>,
-    ) -> Result<Self, knus::errors::DecodeError<S>> {
-        Ok(Self {
-            common: common::CommonConfig::decode_node(node, ctx)?,
-            widget: widgets::workspace::WorkspaceConfig::decode_node(node, ctx)?,
-        })
-    }
-}
+impl_top_level_widget!(Btn, widgets::button::BtnConfig);
+impl_top_level_widget!(Slide, widgets::slide::base::SlideConfig);
+impl_top_level_widget!(Workspace, widgets::workspace::WorkspaceConfig);
