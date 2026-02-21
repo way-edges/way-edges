@@ -3,12 +3,10 @@ use crate::kdl::{
     util::{argv_str, argv_v, ToKdlError},
 };
 use cosmic_text::Color;
-use educe::Educe;
 use util::color::{parse_color, COLOR_BLACK};
 use way_edges_derive::GetSize;
 
-#[derive(Educe, GetSize, Clone)]
-#[educe(Debug)]
+#[derive(Debug, GetSize, Clone)]
 pub struct BtnConfig {
     pub size: CommonSize,
     pub color: Color,
