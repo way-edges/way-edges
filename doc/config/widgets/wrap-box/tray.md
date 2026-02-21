@@ -1,7 +1,7 @@
 # Tray
 
-```jsonc
-"widget": {
+```json
+{
   "type": "tray",
   "font-family": "monospace",
   "grid-align": "bottom-center", // 9 positions: center-left, center-right, top-left, top-right, bottom-left, bottom-right, left-top, left-bottom, right-top, right-bottom
