@@ -87,7 +87,7 @@ btn {
             assert_eq!(btn.widget.color, dt_color());
             assert_eq!(btn.widget.border_width, dt_border_width());
             assert_eq!(btn.widget.border_color, dt_border_color());
-            assert!(btn.widget.event_map.get_map().is_empty());
+            assert!(btn.widget.event_map.is_empty());
         } else {
             panic!("Expected Btn");
         }
@@ -111,13 +111,13 @@ btn {
             assert_eq!(btn.widget.color, dt_color());
             assert_eq!(btn.widget.border_width, dt_border_width());
             assert_eq!(btn.widget.border_color, dt_border_color());
-            assert_eq!(btn.widget.event_map.get_map().len(), 2);
+            assert_eq!(btn.widget.event_map.len(), 2);
             assert_eq!(
-                btn.widget.event_map.get_map().get(&0x110),
+                btn.widget.event_map.get(&0x110),
                 Some(&"some command".to_string())
             );
             assert_eq!(
-                btn.widget.event_map.get_map().get(&0x111),
+                btn.widget.event_map.get(&0x111),
                 Some(&"another command".to_string())
             );
         } else {

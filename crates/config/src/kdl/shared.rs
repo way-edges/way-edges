@@ -182,6 +182,13 @@ impl KeyEventMap {
         }
     }
 }
+impl Deref for KeyEventMap {
+    type Target = HashMap<u32, String>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
 impl<S: knus::traits::ErrorSpan> knus::Decode<S> for KeyEventMap {
     fn decode_node(
         node: &knus::ast::SpannedNode<S>,
