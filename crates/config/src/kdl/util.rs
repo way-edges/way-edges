@@ -10,11 +10,29 @@ pub fn argv<S: ErrorSpan>(
         .ok_or(DecodeError::missing(node, "no argument provided"))
 }
 
+pub fn argvi<S: ErrorSpan>(
+    node: &SpannedNode<S>,
+    i: usize,
+) -> Result<&knus::ast::Value<S>, knus::errors::DecodeError<S>> {
+    node.arguments
+        .get(i)
+        .ok_or(DecodeError::missing(node, "no argument provided"))
+}
+
 pub fn argv_v<S: ErrorSpan, V: DecodeScalar<S>>(
     node: &SpannedNode<S>,
     ctx: &mut knus::decode::Context<S>,
 ) -> Result<V, knus::errors::DecodeError<S>> {
     let arg = argv(node)?;
+    V::decode(arg, ctx)
+}
+
+pub fn argvi_v<S: ErrorSpan, V: DecodeScalar<S>>(
+    node: &SpannedNode<S>,
+    ctx: &mut knus::decode::Context<S>,
+    i: usize,
+) -> Result<V, knus::errors::DecodeError<S>> {
+    let arg = argvi(node, i)?;
     V::decode(arg, ctx)
 }
 
