@@ -8,7 +8,6 @@ use ring::RingConfig;
 use text::TextConfig;
 use tray::TrayConfig;
 use util::color::parse_color;
-use way_edges_derive::const_property;
 
 // =================================== OUTLOOK
 #[derive(Debug, Clone, Decode)]
