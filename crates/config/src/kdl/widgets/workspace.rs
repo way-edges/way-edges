@@ -183,7 +183,6 @@ pub struct NiriConf {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use knus::Decode;
 
     #[test]
     fn test_decode_workspace_config_with_preset() {
@@ -248,5 +247,181 @@ workspace {
 "#;
         let result: Result<Vec<crate::kdl::TopLevelConf>, _> = knus::parse("test", kdl);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_decode_workspace_config_defaults() {
+        let kdl = r#"
+workspace {
+    edge "bottom"
+    thickness 20
+    length "40%"
+}
+"#;
+        let parsed: Vec<crate::kdl::TopLevelConf> = knus::parse("test", kdl).unwrap();
+        if let crate::kdl::TopLevelConf::Workspace(ws) = &parsed[0] {
+            let widget = &ws.widget;
+            assert_eq!(widget.gap, 5);
+            assert_eq!(widget.active_increase, 0.5);
+            assert_eq!(widget.workspace_transition_duration, 300);
+            assert_eq!(widget.workspace_animation_curve, Curve::EaseCubic);
+            assert_eq!(widget.pop_duration, 1000);
+            assert_eq!(widget.default_color, parse_color("#003049").unwrap());
+            assert_eq!(widget.focus_color, parse_color("#669bbc").unwrap());
+            assert_eq!(widget.active_color, parse_color("#aaa").unwrap());
+            assert_eq!(widget.hover_color, None);
+            assert_eq!(widget.invert_direction, false);
+            assert_eq!(widget.output_name, None);
+            assert_eq!(widget.focused_only, false);
+            assert_eq!(widget.border_width, None);
+            assert_eq!(widget.border_radius, 5);
+            assert!(matches!(widget.preset, WorkspacePreset::Hyprland));
+        } else {
+            panic!("Expected Workspace");
+        }
+    }
+
+    #[test]
+    fn test_decode_workspace_config_gap() {
+        let kdl = r#"
+workspace {
+    edge "bottom"
+    thickness 20
+    length "40%"
+    gap 10
+}
+"#;
+        let parsed: Vec<crate::kdl::TopLevelConf> = knus::parse("test", kdl).unwrap();
+        if let crate::kdl::TopLevelConf::Workspace(ws) = &parsed[0] {
+            assert_eq!(ws.widget.gap, 10);
+        } else {
+            panic!("Expected Workspace");
+        }
+    }
+
+    #[test]
+    fn test_decode_workspace_config_active_increase() {
+        let kdl = r#"
+workspace {
+    edge "bottom"
+    thickness 20
+    length "40%"
+    active-increase 0.7
+}
+"#;
+        let parsed: Vec<crate::kdl::TopLevelConf> = knus::parse("test", kdl).unwrap();
+        if let crate::kdl::TopLevelConf::Workspace(ws) = &parsed[0] {
+            assert_eq!(ws.widget.active_increase, 0.7);
+        } else {
+            panic!("Expected Workspace");
+        }
+    }
+
+    #[test]
+    fn test_decode_workspace_config_workspace_transition_duration() {
+        let kdl = r#"
+workspace {
+    edge "bottom"
+    thickness 20
+    length "40%"
+    workspace-transition-duration 500
+}
+"#;
+        let parsed: Vec<crate::kdl::TopLevelConf> = knus::parse("test", kdl).unwrap();
+        if let crate::kdl::TopLevelConf::Workspace(ws) = &parsed[0] {
+            assert_eq!(ws.widget.workspace_transition_duration, 500);
+        } else {
+            panic!("Expected Workspace");
+        }
+    }
+
+    #[test]
+    fn test_decode_workspace_config_workspace_animation_curve() {
+        let kdl = r#"
+workspace {
+    edge "bottom"
+    thickness 20
+    length "40%"
+    workspace-animation-curve "ease-quad"
+}
+"#;
+        let parsed: Vec<crate::kdl::TopLevelConf> = knus::parse("test", kdl).unwrap();
+        if let crate::kdl::TopLevelConf::Workspace(ws) = &parsed[0] {
+            assert_eq!(ws.widget.workspace_animation_curve, Curve::EaseQuad);
+        } else {
+            panic!("Expected Workspace");
+        }
+    }
+
+    #[test]
+    fn test_decode_workspace_config_pop_duration() {
+        let kdl = r#"
+workspace {
+    edge "bottom"
+    thickness 20
+    length "40%"
+    pop-duration 1500
+}
+"#;
+        let parsed: Vec<crate::kdl::TopLevelConf> = knus::parse("test", kdl).unwrap();
+        if let crate::kdl::TopLevelConf::Workspace(ws) = &parsed[0] {
+            assert_eq!(ws.widget.pop_duration, 1500);
+        } else {
+            panic!("Expected Workspace");
+        }
+    }
+
+    #[test]
+    fn test_decode_workspace_config_all_fields() {
+        let kdl = r##"
+workspace {
+    edge "top"
+    thickness 25
+    length "50%"
+    gap 15
+    active-increase 0.8
+    workspace-transition-duration 600
+    workspace-animation-curve "ease-quad"
+    pop-duration 1200
+    default-color "#ff0000"
+    focus-color "#00ff00"
+    active-color "#0000ff"
+    hover-color "#ffff00"
+    invert-direction
+    output-name "DP-1"
+    focused-only
+    border-width 3
+    border-radius 12
+    preset "niri" {
+        preserve-empty
+    }
+}
+"##;
+        let parsed: Vec<crate::kdl::TopLevelConf> = knus::parse("test", kdl).unwrap();
+        if let crate::kdl::TopLevelConf::Workspace(ws) = &parsed[0] {
+            let widget = &ws.widget;
+            assert_eq!(widget.size.thickness, crate::kdl::shared::NumOrRelative::Num(25.0));
+            assert_eq!(widget.size.length, crate::kdl::shared::NumOrRelative::Relative(0.5));
+            assert_eq!(widget.gap, 15);
+            assert_eq!(widget.active_increase, 0.8);
+            assert_eq!(widget.workspace_transition_duration, 600);
+            assert_eq!(widget.workspace_animation_curve, Curve::EaseQuad);
+            assert_eq!(widget.pop_duration, 1200);
+            assert_eq!(widget.default_color, parse_color("#ff0000").unwrap());
+            assert_eq!(widget.focus_color, parse_color("#00ff00").unwrap());
+            assert_eq!(widget.active_color, parse_color("#0000ff").unwrap());
+            assert_eq!(widget.hover_color, Some(parse_color("#ffff00").unwrap()));
+            assert_eq!(widget.invert_direction, true);
+            assert_eq!(widget.output_name, Some("DP-1".to_string()));
+            assert_eq!(widget.focused_only, true);
+            assert_eq!(widget.border_width, Some(3));
+            assert_eq!(widget.border_radius, 12);
+            assert!(matches!(widget.preset, WorkspacePreset::Niri(_)));
+            if let WorkspacePreset::Niri(conf) = &widget.preset {
+                assert!(conf.preserve_empty);
+            }
+        } else {
+            panic!("Expected Workspace");
+        }
     }
 }

@@ -19,7 +19,7 @@ static ACTION_CODE_PAIRS: &[(&str, u32)] = &[
     ("mouse-back",    0x116),
 ];
 
-#[derive(Debug, Clone, Copy, Default, DecodeScalar)]
+#[derive(Debug, Clone, Copy, Default, DecodeScalar, PartialEq)]
 pub enum Curve {
     Linear,
     EaseQuad,
@@ -28,7 +28,7 @@ pub enum Curve {
     EaseExpo,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum NumOrRelative {
     Num(f64),
     Relative(f64),
