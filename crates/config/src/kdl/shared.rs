@@ -1,4 +1,4 @@
-use cosmic_text::FamilyOwned;
+use cosmic_text::{Color, FamilyOwned};
 use knus::{errors::DecodeError, Decode, DecodeScalar};
 use regex_lite::Regex;
 use smithay_client_toolkit::shell::wlr_layer::Anchor;
@@ -139,6 +139,10 @@ impl<S: knus::traits::ErrorSpan> knus::DecodeScalar<S> for NumOrRelative {
             }
             knus::ast::Literal::Decimal(ref value) => match value.try_into() {
                 Ok(v) => Ok(NumOrRelative::Num(v)),
+                Err(e) => Err(DecodeError::conversion(val, e)),
+            },
+            knus::ast::Literal::Int(ref value) => match TryInto::<isize>::try_into(value) {
+                Ok(v) => Ok(NumOrRelative::Num(v as f64)),
                 Err(e) => Err(DecodeError::conversion(val, e)),
             },
             _ => Err(DecodeError::unsupported(

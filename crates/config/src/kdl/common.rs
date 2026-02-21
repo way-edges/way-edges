@@ -38,6 +38,7 @@ impl<S: knus::traits::ErrorSpan> knus::Decode<S> for MonitorSpecifier {
                 "MonitorSpecifier should have at least one argument",
             ));
         }
+        // knus::Decode::D
 
         #[allow(clippy::collapsible_if)]
         if node.arguments.len() == 1 {
@@ -149,28 +150,6 @@ pub struct CommonConfig {
     #[knus(child)]
     pub pin_on_startup: bool,
 }
-impl Default for CommonConfig {
-    fn default() -> Self {
-        Self {
-            edge: Anchor::TOP,
-            position: None,
-            layer: Layer::Top,
-            offset: NumOrRelative::Num(0.0),
-            margins: Margins::default(),
-            monitor: MonitorSpecifier::default(),
-            namespace: String::new(),
-            ignore_exclusive: false,
-            transition_duration: 300,
-            animation_curve: Curve::default(),
-            extra_trigger_size: NumOrRelative::Num(1.0),
-            preview_size: NumOrRelative::Num(0.0),
-            pinnable: false,
-            pin_with_key: false,
-            pin_key: smithay_client_toolkit::seat::pointer::BTN_MIDDLE,
-            pin_on_startup: false,
-        }
-    }
-}
 
 impl CommonConfig {
     pub fn resolve_relative(&mut self, size: (i32, i32)) {
@@ -201,32 +180,6 @@ impl CommonConfig {
         }
     }
 }
-
-// impl<S: ErrorSpan> DecodePartial<S> for CommonConfig {
-//     fn insert_child(
-//         &mut self,
-//         node: &knus::ast::SpannedNode<S>,
-//         ctx: &mut knus::decode::Context<S>,
-//     ) -> Result<bool, knus::errors::DecodeError<S>> {
-//         match node.node_name.as_ref() {
-//             "margins" => {
-//                 self.margins = Decode::decode_node(node, ctx)?;
-//             }
-//             _ => {}
-//         }
-//         println!("CommonConfig insert_child: {:?}\n", node);
-//         Ok(true)
-//     }
-//     fn insert_property(
-//         &mut self,
-//         _name: &knus::span::Spanned<Box<str>, S>,
-//         _value: &knus::ast::Value<S>,
-//         _ctx: &mut knus::decode::Context<S>,
-//     ) -> Result<bool, knus::errors::DecodeError<S>> {
-//         println!("CommonConfig insert_property: {:?}", _name);
-//         Ok(false)
-//     }
-// }
 
 fn match_edge(edge: &str) -> Result<Anchor, std::io::Error> {
     Ok(match edge {
