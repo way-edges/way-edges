@@ -74,21 +74,15 @@ impl<S: knus::traits::ErrorSpan> knus::Decode<S> for Outlook {
         node: &knus::ast::SpannedNode<S>,
         ctx: &mut knus::decode::Context<S>,
     ) -> Result<Self, knus::errors::DecodeError<S>> {
-        let mut outlook = Self::default();
-
-        for child in node.children() {
-            match argv_str(node, ctx)?.as_ref() {
-                "window" => {
-                    outlook = Self::Window(OutlookWindowConfig::decode_node(child, ctx)?);
-                }
-                "board" => {
-                    outlook = Self::Board(OutlookBoardConfig::decode_node(child, ctx)?);
-                }
-                _ => {}
-            }
+        match argv_str(node, ctx)?.as_ref() {
+            "window" => Ok(Self::Window(OutlookWindowConfig::decode_node(node, ctx)?)),
+            "board" => Ok(Self::Board(OutlookBoardConfig::decode_node(node, ctx)?)),
+            name => Err(knus::errors::DecodeError::unexpected(
+                &node.node_name,
+                "window or board",
+                format!("Unknown outlook type: {name}"),
+            )),
         }
-
-        Ok(outlook)
     }
 }
 
@@ -209,13 +203,11 @@ impl<S: knus::traits::ErrorSpan> knus::Decode<S> for BoxedWidgetConfig {
         ctx: &mut knus::decode::Context<S>,
     ) -> Result<Self, knus::errors::DecodeError<S>> {
         let widget = BoxedWidget::decode_node(node, ctx)?;
-
         let mut index = dt_index();
 
         for child in node.children() {
-            match argv_str(node, ctx)?.as_ref() {
-                "index" => index = [argvi_v(child, ctx, 0)?, argvi_v(child, ctx, 1)?],
-                _ => {}
+            if child.node_name.as_ref() == "index" {
+                index = [argvi_v(child, ctx, 0)?, argvi_v(child, ctx, 1)?]
             }
         }
 
@@ -225,7 +217,7 @@ impl<S: knus::traits::ErrorSpan> knus::Decode<S> for BoxedWidgetConfig {
 
 use crate::kdl::{
     shared::NumMargins,
-    util::{argv_str, argv_v, argvi_v},
+    util::{argv_str, argvi_v},
 };
 
 // =================================== FINAL
@@ -242,4 +234,133 @@ pub struct BoxConfig {
 }
 fn dt_gap() -> f64 {
     10.
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_decode_minimal_box_config() {
+        let kdl = r#"
+wrap-box {
+    edge "bottom"
+    thickness 20
+    length "40%"
+}
+"#;
+        let parsed: Vec<crate::kdl::TopLevelConf> = knus::parse("test", kdl).unwrap();
+        if let crate::kdl::TopLevelConf::WrapBox(wrap_box) = &parsed[0] {
+            // Assert defaults
+            assert_eq!(wrap_box.widget.gap, dt_gap());
+            assert!(matches!(wrap_box.widget.align, Align::TopLeft));
+            assert!(wrap_box.widget.items.is_empty());
+            // Outlook defaults
+            match &wrap_box.widget.outlook {
+                Outlook::Window(config) => {
+                    assert_eq!(config.margins, dt_outlook_margin());
+                    assert_eq!(config.color, dt_color());
+                    assert_eq!(config.border_radius, dt_radius());
+                    assert_eq!(config.border_width, dt_border_width());
+                }
+                _ => panic!("Expected Window outlook"),
+            }
+        } else {
+            panic!("Expected WrapBox");
+        }
+    }
+
+    #[test]
+    fn test_decode_box_config_with_outlook_window() {
+        let kdl = r##"
+wrap-box {
+    edge "bottom"
+    thickness 20
+    length "40%"
+    outlook "window" {
+    }
+}
+"##;
+        let parsed: Vec<crate::kdl::TopLevelConf> = knus::parse("test", kdl).unwrap();
+        if let crate::kdl::TopLevelConf::WrapBox(wrap_box) = &parsed[0] {
+            match &wrap_box.widget.outlook {
+                Outlook::Window(_) => {
+                    // Just check that it's Window
+                }
+                _ => panic!("Expected Window outlook"),
+            }
+        } else {
+            panic!("Expected WrapBox");
+        }
+    }
+
+    #[test]
+    fn test_decode_full_box_config() {
+        let kdl = r##"
+wrap-box {
+    edge "bottom"
+    thickness 20
+    length "40%"
+    outlook "window" {
+        margins {
+            left 10
+            right 10
+            top 10
+            bottom 10
+        }
+        color "#ffffff"
+        border-radius 10
+        border-width 20
+    }
+    gap 15.0
+    align "center-center"
+    item "ring" {
+        index 0 1
+
+        preset "custom" {
+        }
+    }
+    item "text" {
+        index 1 0
+
+        preset "custom" {
+        }
+    }
+}
+"##;
+        let parsed: Vec<crate::kdl::TopLevelConf> = knus::parse("test", kdl).unwrap();
+        if let crate::kdl::TopLevelConf::WrapBox(wrap_box) = &parsed[0] {
+            let config = &wrap_box.widget;
+            // Check outlook
+            match &config.outlook {
+                Outlook::Window(window_config) => {
+                    assert_eq!(
+                        window_config.margins,
+                        NumMargins {
+                            left: 10,
+                            right: 10,
+                            top: 10,
+                            bottom: 10
+                        }
+                    );
+                    assert_eq!(window_config.color, parse_color("#ffffff").unwrap());
+                    assert_eq!(window_config.border_radius, 10);
+                    assert_eq!(window_config.border_width, 20);
+                }
+                _ => panic!("Expected Window outlook"),
+            }
+            // Check gap
+            assert_eq!(config.gap, 15.0);
+            // Check align
+            assert!(matches!(config.align, Align::CenterCenter));
+            // Check items
+            assert_eq!(config.items.len(), 2);
+            assert_eq!(config.items[0].index, [0, 1]);
+            assert!(matches!(config.items[0].widget, BoxedWidget::Ring(_)));
+            assert_eq!(config.items[1].index, [1, 0]);
+            assert!(matches!(config.items[1].widget, BoxedWidget::Text(_)));
+        } else {
+            panic!("Expected WrapBox");
+        }
+    }
 }

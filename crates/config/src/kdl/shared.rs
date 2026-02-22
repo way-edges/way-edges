@@ -154,7 +154,7 @@ impl<S: knus::traits::ErrorSpan> knus::DecodeScalar<S> for NumOrRelative {
     }
 }
 
-#[derive(Debug, Clone, Decode)]
+#[derive(Debug, Clone, Default, Decode, PartialEq)]
 pub struct CommonSize {
     #[knus(child, unwrap(argument))]
     pub thickness: NumOrRelative,
@@ -260,7 +260,7 @@ pub fn parse_family_owned(s: &str) -> Result<FamilyOwned, Infallible> {
     })
 }
 
-#[derive(Debug, Clone, Decode)]
+#[derive(Debug, Clone, Decode, PartialEq)]
 pub struct NumMargins {
     #[knus(child, default, unwrap(argument))]
     pub left: i32,
