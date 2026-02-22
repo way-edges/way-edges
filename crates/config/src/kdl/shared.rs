@@ -1,12 +1,16 @@
 use cosmic_text::{Color, FamilyOwned};
 use knus::{errors::DecodeError, Decode, DecodeScalar};
 use regex_lite::Regex;
+use schemars::{json_schema, JsonSchema};
+use serde::{Deserialize, Deserializer};
+use serde_jsonrc::Value;
 use smithay_client_toolkit::shell::wlr_layer::Anchor;
 use std::collections::HashMap;
 use std::convert::Infallible;
 use std::ops::Deref;
 use std::str::FromStr;
 use string_to_num::ParseNum;
+use util::color::parse_color;
 use util::shell::shell_cmd_non_block;
 
 #[rustfmt::skip]
@@ -20,7 +24,7 @@ static ACTION_CODE_PAIRS: &[(&str, u32)] = &[
     ("mouse-back",    0x116),
 ];
 
-#[derive(Debug, Clone, Copy, Default, DecodeScalar, PartialEq)]
+#[derive(Debug, Clone, Copy, Default, DecodeScalar, PartialEq, Deserialize, JsonSchema)]
 pub enum Curve {
     Linear,
     EaseQuad,
@@ -153,8 +157,91 @@ impl<S: knus::traits::ErrorSpan> knus::DecodeScalar<S> for NumOrRelative {
         }
     }
 }
+impl JsonSchema for NumOrRelative {
+    fn schema_id() -> std::borrow::Cow<'static, str> {
+        Self::schema_name()
+    }
 
-#[derive(Debug, Clone, Default, Decode, PartialEq)]
+    fn schema_name() -> std::borrow::Cow<'static, str> {
+        std::borrow::Cow::Borrowed("NumOrRelative")
+    }
+
+    fn json_schema(_: &mut schemars::SchemaGenerator) -> schemars::Schema {
+        json_schema!({
+            "type": ["number", "string"],
+            "anyOf": [
+                {
+                    "type": "number",
+                    "description": "absolute number"
+                },
+                {
+                    "type": "string",
+                    "pattern": r"^(\d+(\.\d+)?)%\s*(.*)$",
+                    "description": "relative number"
+                }
+            ]
+        })
+    }
+}
+impl<'de> Deserialize<'de> for NumOrRelative {
+    fn deserialize<D>(d: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        struct F64OrRelativeVisitor;
+        impl serde::de::Visitor<'_> for F64OrRelativeVisitor {
+            type Value = NumOrRelative;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("a number or a string")
+            }
+
+            fn visit_i64<E>(self, v: i64) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                Ok(NumOrRelative::Num(v as f64))
+            }
+
+            fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                Ok(NumOrRelative::Num(v as f64))
+            }
+
+            fn visit_f64<E>(self, v: f64) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                Ok(NumOrRelative::Num(v))
+            }
+            fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                // just `unwrap`, it's ok
+                lazy_static::lazy_static! {
+                    static ref re: Regex = Regex::new(r"^(\d+(\.\d+)?)%\s*(.*)$").unwrap();
+                }
+
+                if let Some(captures) = re.captures(v) {
+                    let percentage_str = captures.get(1).map_or("", |m| m.as_str());
+                    let percentage = f64::from_str(percentage_str).map_err(E::custom)?;
+
+                    Ok(NumOrRelative::Relative(percentage * 0.01))
+                } else {
+                    Err(E::custom(
+                        "Input does not match the expected format.".to_string(),
+                    ))
+                }
+            }
+        }
+        d.deserialize_any(F64OrRelativeVisitor)
+    }
+}
+
+#[derive(Debug, Clone, Default, Decode, PartialEq, Deserialize, JsonSchema)]
 pub struct CommonSize {
     #[knus(child, unwrap(argument))]
     pub thickness: NumOrRelative,
@@ -245,6 +332,139 @@ impl<S: knus::traits::ErrorSpan> knus::Decode<S> for KeyEventMap {
     }
 }
 
+impl<'de> Deserialize<'de> for KeyEventMap {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        struct EventMapVisitor;
+        impl<'a> serde::de::Visitor<'a> for EventMapVisitor {
+            type Value = KeyEventMap;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("vec of tuples: (key: number, command: string)")
+            }
+
+            fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
+            where
+                A: serde::de::MapAccess<'a>,
+            {
+                let mut event_map = HashMap::new();
+                while let Some((key, value)) = map.next_entry::<String, String>()? {
+                    let action_code = if let Ok(code) = key.parse::<u32>() {
+                        code
+                    } else {
+                        ACTION_CODE_PAIRS
+                            .iter()
+                            .find_map(|&(k, code)| (k == key).then_some(code))
+                            .ok_or_else(|| {
+                                serde::de::Error::custom(format!("Unknown action key: '{}'.", key))
+                            })?
+                    };
+                    event_map.insert(action_code, value);
+                }
+                Ok(KeyEventMap(event_map))
+            }
+        }
+        deserializer.deserialize_any(EventMapVisitor)
+    }
+}
+
+impl JsonSchema for KeyEventMap {
+    fn schema_id() -> std::borrow::Cow<'static, str> {
+        Self::schema_name()
+    }
+
+    fn schema_name() -> std::borrow::Cow<'static, str> {
+        std::borrow::Cow::Borrowed("KeyEventMap")
+    }
+
+    fn json_schema(_: &mut schemars::SchemaGenerator) -> schemars::Schema {
+        let allowed_str_keys: Vec<_> = ACTION_CODE_PAIRS.iter().map(|&(k, _)| k).collect();
+        let str_keys_pattern = format!("^({})$", allowed_str_keys.join("|"));
+
+        json_schema!({
+            "type": "object",
+            "patternProperties": {
+                r"^\d+$": {"type": "string"},
+                str_keys_pattern: {"type": "string"}
+            },
+            "additionalProperties": false
+        })
+    }
+}
+
+pub fn option_color_translate<'de, D>(d: D) -> Result<Option<Color>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    struct ColorVisitor;
+    impl serde::de::Visitor<'_> for ColorVisitor {
+        type Value = Option<Color>;
+        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            formatter.write_str("A string")
+        }
+
+        fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(Some(parse_color(v).map_err(serde::de::Error::custom)?))
+        }
+
+        fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            self.visit_str(v.as_str())
+        }
+    }
+    d.deserialize_any(ColorVisitor)
+}
+
+pub fn color_translate<'de, D>(d: D) -> Result<Color, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    if let Some(c) = option_color_translate(d)? {
+        Ok(c)
+    } else {
+        Err(serde::de::Error::missing_field("color is not optional"))
+    }
+}
+
+pub fn from_value<T>(v: Value) -> Result<T, String>
+where
+    T: serde::de::DeserializeOwned,
+{
+    serde_jsonrc::from_value::<T>(v).map_err(|e| format!("Fail to parse config: {e}"))
+}
+
+pub fn schema_color(_: &mut schemars::SchemaGenerator) -> schemars::Schema {
+    schemars::json_schema!({
+        "type": "string",
+        "default": "#00000000",
+    })
+}
+pub fn schema_optional_color(_: &mut schemars::SchemaGenerator) -> schemars::Schema {
+    schemars::json_schema!({
+        "type": ["string", "null"],
+        "default": "#00000000",
+    })
+}
+pub fn schema_template(_: &mut schemars::SchemaGenerator) -> schemars::Schema {
+    schemars::json_schema!({
+        "type": "string",
+        "default": "{float:2,100}",
+    })
+}
+pub fn schema_optional_template(_: &mut schemars::SchemaGenerator) -> schemars::Schema {
+    schemars::json_schema!({
+        "type": ["string", "null"],
+        "default": "{float:2,100}",
+    })
+}
+
 pub fn dt_family_owned() -> FamilyOwned {
     FamilyOwned::Monospace
 }
@@ -260,14 +480,55 @@ pub fn parse_family_owned(s: &str) -> Result<FamilyOwned, Infallible> {
     })
 }
 
-#[derive(Debug, Clone, Decode, PartialEq)]
+pub fn deserialize_family_owned<'de, D>(d: D) -> Result<FamilyOwned, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    struct FamilyOwnedVisitor;
+    impl<'a> serde::de::Visitor<'a> for FamilyOwnedVisitor {
+        type Value = FamilyOwned;
+
+        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            formatter.write_str("a string representing a font family")
+        }
+
+        fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            parse_family_owned(v).map_err(E::custom)
+        }
+
+        fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            self.visit_str(v.as_str())
+        }
+    }
+    d.deserialize_any(FamilyOwnedVisitor)
+}
+
+pub fn schema_family_owned(_: &mut schemars::SchemaGenerator) -> schemars::Schema {
+    schemars::json_schema!({
+        "type": "string",
+        "enum": ["serif", "sans-serif", "cursive", "fantasy", "monospace"],
+        "default": "monospace",
+    })
+}
+
+#[derive(Debug, Clone, Decode, PartialEq, Deserialize, JsonSchema)]
 pub struct NumMargins {
     #[knus(child, default, unwrap(argument))]
+    #[serde(default)]
     pub left: i32,
     #[knus(child, default, unwrap(argument))]
+    #[serde(default)]
     pub top: i32,
     #[knus(child, default, unwrap(argument))]
+    #[serde(default)]
     pub right: i32,
     #[knus(child, default, unwrap(argument))]
+    #[serde(default)]
     pub bottom: i32,
 }
