@@ -104,3 +104,98 @@ fn dt_fg_color() -> Color {
 fn dt_font_size() -> i32 {
     24
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_decode_text_configs() {
+        let kdl = r##"
+wrap-box {
+    edge "bottom"
+    thickness 20
+    length "40%"
+    item "text" {
+        index 0 0
+        preset "time" {
+            format "%H:%M"
+            time-zone "UTC"
+            update-interval 2000
+        }
+    }
+    item "text" {
+        index 0 1
+        preset "time" {
+            format "%Y-%m-%d"
+            update-interval 5000
+        }
+    }
+    item "text" {
+        index 1 0
+        preset "custom" {
+            update-interval 3000
+            cmd "echo Hello"
+        }
+        fg-color "#ffffff"
+        font-size 30
+    }
+}
+"##;
+        let parsed: Vec<crate::kdl::TopLevelConf> = knus::parse("test", kdl).unwrap();
+        if let crate::kdl::TopLevelConf::WrapBox(wrap_box) = &parsed[0] {
+            let config = &wrap_box.widget;
+            assert_eq!(config.items.len(), 3);
+
+            // Time preset with format, time-zone, update-interval
+            if let crate::kdl::widgets::wrapbox::BoxedWidget::Text(text_config) = &config.items[0].widget {
+                assert_eq!(config.items[0].index, [0, 0]);
+                match &text_config.preset {
+                    TextPreset::Time { format, time_zone, update_interval } => {
+                        assert_eq!(format, "%H:%M");
+                        assert_eq!(time_zone.as_ref().unwrap(), "UTC");
+                        assert_eq!(*update_interval, 2000);
+                    }
+                    _ => panic!("Expected Time preset"),
+                }
+                assert_eq!(text_config.fg_color, COLOR_BLACK); // default
+                assert_eq!(text_config.font_size, 24); // default
+            } else {
+                panic!("Expected Text widget");
+            }
+
+            // Time preset with format and update-interval, no time-zone
+            if let crate::kdl::widgets::wrapbox::BoxedWidget::Text(text_config) = &config.items[1].widget {
+                assert_eq!(config.items[1].index, [0, 1]);
+                match &text_config.preset {
+                    TextPreset::Time { format, time_zone, update_interval } => {
+                        assert_eq!(format, "%Y-%m-%d");
+                        assert_eq!(time_zone, &None);
+                        assert_eq!(*update_interval, 5000);
+                    }
+                    _ => panic!("Expected Time preset"),
+                }
+            } else {
+                panic!("Expected Text widget");
+            }
+
+            // Custom preset with cmd, update-interval, and custom fg-color, font-size
+            if let crate::kdl::widgets::wrapbox::BoxedWidget::Text(text_config) = &config.items[2].widget {
+                assert_eq!(config.items[2].index, [1, 0]);
+                match &text_config.preset {
+                    TextPreset::Custom { update_interval, cmd } => {
+                        assert_eq!(*update_interval, 3000);
+                        assert_eq!(cmd, "echo Hello");
+                    }
+                    _ => panic!("Expected Custom preset"),
+                }
+                assert_eq!(text_config.fg_color, parse_color("#ffffff").unwrap());
+                assert_eq!(text_config.font_size, 30);
+            } else {
+                panic!("Expected Text widget");
+            }
+        } else {
+            panic!("Expected WrapBox");
+        }
+    }
+}
