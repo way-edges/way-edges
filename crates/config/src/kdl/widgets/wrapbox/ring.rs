@@ -207,3 +207,124 @@ fn ring_text_optional_template(s: &str) -> Result<Option<Template>, String> {
         .map_err(|e| e.to_string())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_decode_ring_configs() {
+        let kdl = r##"
+wrap-box {
+    edge "bottom"
+    thickness 20
+    length "40%"
+    item "ring" {
+        index 0 0
+        preset "ram" {
+            update-interval 2000
+        }
+    }
+    item "ring" {
+        index 0 1
+        preset "cpu" {
+            update-interval 1500
+            core 1
+        }
+    }
+    item "ring" {
+        index 1 0
+        preset "disk" {
+            update-interval 3000
+            partition "/home"
+        }
+    }
+    item "ring" {
+        index 1 1
+        preset "custom" {
+            update-interval 5000
+            cmd "echo 50"
+        }
+        radius 20
+        ring-width 8
+        bg-color "#000000"
+        fg-color "#ff0000"
+        text-transition-ms 500
+        prefix "Usage: "
+        suffix "%"
+    }
+}
+"##;
+        let parsed: Vec<crate::kdl::TopLevelConf> = knus::parse("test", kdl).unwrap();
+        if let crate::kdl::TopLevelConf::WrapBox(wrap_box) = &parsed[0] {
+            let config = &wrap_box.widget;
+            assert_eq!(config.items.len(), 4);
+
+            // Ram preset
+            if let crate::kdl::widgets::wrapbox::BoxedWidget::Ring(ring_config) = &config.items[0].widget {
+                assert_eq!(config.items[0].index, [0, 0]);
+                match &ring_config.preset {
+                    RingPreset::Ram { update_interval } => {
+                        assert_eq!(*update_interval, 2000);
+                    }
+                    _ => panic!("Expected Ram preset"),
+                }
+                assert_eq!(ring_config.radius, 13); // default
+                assert_eq!(ring_config.ring_width, 5); // default
+            } else {
+                panic!("Expected Ring widget");
+            }
+
+            // Cpu preset with core
+            if let crate::kdl::widgets::wrapbox::BoxedWidget::Ring(ring_config) = &config.items[1].widget {
+                assert_eq!(config.items[1].index, [0, 1]);
+                match &ring_config.preset {
+                    RingPreset::Cpu { update_interval, core } => {
+                        assert_eq!(*update_interval, 1500);
+                        assert_eq!(*core, Some(1));
+                    }
+                    _ => panic!("Expected Cpu preset"),
+                }
+            } else {
+                panic!("Expected Ring widget");
+            }
+
+            // Disk preset with partition
+            if let crate::kdl::widgets::wrapbox::BoxedWidget::Ring(ring_config) = &config.items[2].widget {
+                assert_eq!(config.items[2].index, [1, 0]);
+                match &ring_config.preset {
+                    RingPreset::Disk { update_interval, partition } => {
+                        assert_eq!(*update_interval, 3000);
+                        assert_eq!(partition, "/home");
+                    }
+                    _ => panic!("Expected Disk preset"),
+                }
+            } else {
+                panic!("Expected Ring widget");
+            }
+
+            // Custom preset with cmd and other fields
+            if let crate::kdl::widgets::wrapbox::BoxedWidget::Ring(ring_config) = &config.items[3].widget {
+                assert_eq!(config.items[3].index, [1, 1]);
+                match &ring_config.preset {
+                    RingPreset::Custom { update_interval, cmd } => {
+                        assert_eq!(*update_interval, 5000);
+                        assert_eq!(cmd, "echo 50");
+                    }
+                    _ => panic!("Expected Custom preset"),
+                }
+                assert_eq!(ring_config.radius, 20);
+                assert_eq!(ring_config.ring_width, 8);
+                assert_eq!(ring_config.bg_color, parse_color("#000000").unwrap());
+                assert_eq!(ring_config.fg_color, parse_color("#ff0000").unwrap());
+                assert_eq!(ring_config.text_transition_ms, 500);
+                assert!(ring_config.prefix.is_some());
+                assert!(ring_config.suffix.is_some());
+            } else {
+                panic!("Expected Ring widget");
+            }
+        } else {
+            panic!("Expected WrapBox");
+        }
+    }
+}
