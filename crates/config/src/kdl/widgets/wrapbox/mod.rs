@@ -9,6 +9,13 @@ use text::TextConfig;
 use tray::TrayConfig;
 use util::color::parse_color;
 
+// Add serde imports
+use crate::kdl::shared::{color_translate, schema_color};
+use schemars::{JsonSchema, Schema};
+use serde::Deserialize;
+use serde_json::Value;
+use way_edges_derive::const_property;
+
 // =================================== OUTLOOK
 fn dt_outlook_margin() -> NumMargins {
     NumMargins {
@@ -18,15 +25,22 @@ fn dt_outlook_margin() -> NumMargins {
         bottom: 5,
     }
 }
-#[derive(Debug, Decode, Clone)]
+#[derive(Debug, Decode, Deserialize, JsonSchema, Clone)]
+#[serde(rename_all = "kebab-case")]
 pub struct OutlookWindowConfig {
     #[knus(child, default = dt_outlook_margin())]
+    #[serde(default = "dt_outlook_margin")]
     pub margins: NumMargins,
     #[knus(child, default = dt_color(), unwrap(argument, decode_with = parse_color))]
+    #[serde(default = "dt_color")]
+    #[serde(deserialize_with = "color_translate")]
+    #[schemars(schema_with = "schema_color")]
     pub color: Color,
     #[knus(child, default = dt_radius(), unwrap(argument))]
+    #[serde(default = "dt_radius")]
     pub border_radius: i32,
     #[knus(child, default = dt_border_width(), unwrap(argument))]
+    #[serde(default = "dt_border_width")]
     pub border_width: i32,
 }
 impl Default for OutlookWindowConfig {
@@ -49,17 +63,24 @@ fn dt_border_width() -> i32 {
     15
 }
 
-#[derive(Debug, Decode, Clone)]
+#[derive(Debug, Decode, Deserialize, JsonSchema, Clone)]
+#[serde(rename_all = "kebab-case")]
 pub struct OutlookBoardConfig {
     #[knus(child, default = dt_outlook_margin())]
+    #[serde(default = "dt_outlook_margin")]
     pub margins: NumMargins,
     #[knus(child, default = dt_color(), unwrap(argument, decode_with = parse_color))]
+    #[serde(default = "dt_color")]
+    #[serde(deserialize_with = "color_translate")]
+    #[schemars(schema_with = "schema_color")]
     pub color: Color,
     #[knus(child, default = dt_radius(), unwrap(argument))]
+    #[serde(default = "dt_radius")]
     pub border_radius: i32,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Deserialize, Clone, JsonSchema)]
+#[serde(rename_all = "kebab-case", tag = "type")]
 pub enum Outlook {
     Window(OutlookWindowConfig),
     Board(OutlookBoardConfig),
@@ -87,7 +108,8 @@ impl<S: knus::traits::ErrorSpan> knus::Decode<S> for Outlook {
 }
 
 // =================================== GRID
-#[derive(Debug, Default, Clone, Copy, DecodeScalar)]
+#[derive(Debug, Default, Clone, Copy, DecodeScalar, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
 pub enum Align {
     #[default]
     TopLeft,
@@ -160,7 +182,8 @@ impl Align {
 }
 
 // =================================== WIDGETS
-#[derive(Debug, Clone)]
+#[derive(Debug, Deserialize, JsonSchema, Clone)]
+#[serde(rename_all = "kebab-case", tag = "type")]
 pub enum BoxedWidget {
     Ring(RingConfig),
     Text(TextConfig),
@@ -188,9 +211,13 @@ impl<S: knus::traits::ErrorSpan> knus::Decode<S> for BoxedWidget {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Deserialize, JsonSchema, Clone)]
+#[schemars(deny_unknown_fields)]
+#[serde(rename_all = "kebab-case")]
 pub struct BoxedWidgetConfig {
+    #[serde(default = "dt_index")]
     pub index: [isize; 2],
+    #[serde(flatten)]
     pub widget: BoxedWidget,
 }
 fn dt_index() -> [isize; 2] {
@@ -221,15 +248,23 @@ use crate::kdl::{
 };
 
 // =================================== FINAL
-#[derive(Debug, Decode, Clone)]
+#[derive(Debug, Decode, Deserialize, JsonSchema, Clone)]
+#[schemars(deny_unknown_fields)]
+#[schemars(transform = BoxConfig_generate_defs)]
+#[const_property("type", "wrap-box")]
+#[serde(rename_all = "kebab-case")]
 pub struct BoxConfig {
     #[knus(child, default)]
+    #[serde(default)]
     pub outlook: Outlook,
     #[knus(child, default = dt_gap(), unwrap(argument))]
+    #[serde(default = "dt_gap")]
     pub gap: f64,
     #[knus(child, default, unwrap(argument))]
+    #[serde(default)]
     pub align: Align,
     #[knus(children(name = "item"), default)]
+    #[serde(default)]
     pub items: Vec<BoxedWidgetConfig>,
 }
 fn dt_gap() -> f64 {
