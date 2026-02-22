@@ -259,3 +259,15 @@ pub fn parse_family_owned(s: &str) -> Result<FamilyOwned, Infallible> {
         other => FamilyOwned::Name(other.into()),
     })
 }
+
+#[derive(Debug, Clone, Decode)]
+pub struct NumMargins {
+    #[knus(child, default, unwrap(argument))]
+    pub left: i32,
+    #[knus(child, default, unwrap(argument))]
+    pub top: i32,
+    #[knus(child, default, unwrap(argument))]
+    pub right: i32,
+    #[knus(child, default, unwrap(argument))]
+    pub bottom: i32,
+}

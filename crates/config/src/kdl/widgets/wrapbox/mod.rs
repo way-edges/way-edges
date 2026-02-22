@@ -10,34 +10,18 @@ use tray::TrayConfig;
 use util::color::parse_color;
 
 // =================================== OUTLOOK
-#[derive(Debug, Clone, Decode)]
-pub struct OutlookMargins {
-    #[knus(child, default = dt_margin(), unwrap(argument))]
-    pub left: i32,
-    #[knus(child, default = dt_margin(), unwrap(argument))]
-    pub top: i32,
-    #[knus(child, default = dt_margin(), unwrap(argument))]
-    pub right: i32,
-    #[knus(child, default = dt_margin(), unwrap(argument))]
-    pub bottom: i32,
-}
-fn dt_margin() -> i32 {
-    5
-}
-impl Default for OutlookMargins {
-    fn default() -> Self {
-        Self {
-            left: dt_margin(),
-            top: dt_margin(),
-            right: dt_margin(),
-            bottom: dt_margin(),
-        }
+fn dt_outlook_margin() -> NumMargins {
+    NumMargins {
+        left: 5,
+        right: 5,
+        top: 5,
+        bottom: 5,
     }
 }
 #[derive(Debug, Decode, Clone)]
 pub struct OutlookWindowConfig {
-    #[knus(child, default)]
-    pub margins: OutlookMargins,
+    #[knus(child, default = dt_outlook_margin())]
+    pub margins: NumMargins,
     #[knus(child, default = dt_color(), unwrap(argument, decode_with = parse_color))]
     pub color: Color,
     #[knus(child, default = dt_radius(), unwrap(argument))]
@@ -48,7 +32,7 @@ pub struct OutlookWindowConfig {
 impl Default for OutlookWindowConfig {
     fn default() -> Self {
         Self {
-            margins: Default::default(),
+            margins: dt_outlook_margin(),
             color: dt_color(),
             border_radius: dt_radius(),
             border_width: dt_border_width(),
@@ -67,8 +51,8 @@ fn dt_border_width() -> i32 {
 
 #[derive(Debug, Decode, Clone)]
 pub struct OutlookBoardConfig {
-    #[knus(child, default)]
-    pub margins: OutlookMargins,
+    #[knus(child, default = dt_outlook_margin())]
+    pub margins: NumMargins,
     #[knus(child, default = dt_color(), unwrap(argument, decode_with = parse_color))]
     pub color: Color,
     #[knus(child, default = dt_radius(), unwrap(argument))]
@@ -239,7 +223,10 @@ impl<S: knus::traits::ErrorSpan> knus::Decode<S> for BoxedWidgetConfig {
     }
 }
 
-use crate::kdl::util::{argv_str, argv_v, argvi_v};
+use crate::kdl::{
+    shared::NumMargins,
+    util::{argv_str, argv_v, argvi_v},
+};
 
 // =================================== FINAL
 #[derive(Debug, Decode, Clone)]
