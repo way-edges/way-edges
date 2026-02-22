@@ -1,5 +1,4 @@
 use cosmic_text::{Color, FamilyOwned};
-use educe::Educe;
 use knus::{Decode, DecodeScalar};
 use util::color::{parse_color, COLOR_WHITE};
 
