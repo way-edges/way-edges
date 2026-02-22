@@ -10,6 +10,7 @@ pub enum TopLevelConf {
     Btn(Btn),
     Slide(Slide),
     Workspace(Workspace),
+    WrapBox(WrapBox),
 }
 
 macro_rules! impl_top_level_widget {
@@ -36,3 +37,4 @@ macro_rules! impl_top_level_widget {
 impl_top_level_widget!(Btn, widgets::button::BtnConfig);
 impl_top_level_widget!(Slide, widgets::slide::base::SlideConfig);
 impl_top_level_widget!(Workspace, widgets::workspace::WorkspaceConfig);
+impl_top_level_widget!(WrapBox, widgets::wrapbox::BoxConfig);

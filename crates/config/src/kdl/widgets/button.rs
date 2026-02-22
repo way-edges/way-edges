@@ -30,13 +30,13 @@ impl<S: knus::traits::ErrorSpan> knus::Decode<S> for BtnConfig {
         for child in node.children() {
             match child.node_name.as_ref() {
                 "color" => {
-                    color = parse_color(&argv_str(node, ctx)?).to_kdl_error(child)?;
+                    color = parse_color(&argv_str(child, ctx)?).to_kdl_error(child)?;
                 }
                 "border-width" => {
                     border_width = argv_v(child, ctx)?;
                 }
                 "border-color" => {
-                    border_color = parse_color(&argv_str(node, ctx)?).to_kdl_error(child)?;
+                    border_color = parse_color(&argv_str(child, ctx)?).to_kdl_error(child)?;
                 }
                 "event-map" => {
                     event_map = KeyEventMap::decode_node(child, ctx)?;

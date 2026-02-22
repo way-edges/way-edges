@@ -84,7 +84,7 @@ pub struct CustomConfig {
     #[knus(child, default, unwrap(argument, decode_with = slide_change_optional_template))]
     pub on_change_command: Option<Template>,
 
-    #[knus(child)]
+    #[knus(child, default)]
     pub event_map: KeyEventMap,
 }
 
