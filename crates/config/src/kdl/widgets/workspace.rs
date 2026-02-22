@@ -1,29 +1,63 @@
 use cosmic_text::Color;
 use knus::{Decode, DecodeScalar};
+use schemars::json_schema;
+use schemars::JsonSchema;
+use schemars::Schema;
+use serde::Deserialize;
+use serde::Deserializer;
+use serde_json::Value;
 use util::color::parse_color;
+use way_edges_derive::const_property;
 use way_edges_derive::GetSize;
 
-use crate::kdl::{
-    shared::{CommonSize, Curve},
-    util::{argv, argv_str, argv_v, ToKdlError},
+use crate::kdl::shared::{
+    color_translate, option_color_translate, schema_color, schema_optional_color, CommonSize, Curve,
 };
+use crate::kdl::util::{argv, argv_str, argv_v, ToKdlError};
 
-#[derive(Debug, GetSize, Clone)]
+#[derive(Debug, GetSize, Clone, Deserialize, JsonSchema)]
+#[schemars(deny_unknown_fields)]
+#[schemars(transform = WorkspaceConfig_generate_defs)]
+#[const_property("type", "workspace")]
+#[serde(rename_all = "kebab-case")]
 pub struct WorkspaceConfig {
+    #[serde(flatten)]
     pub size: CommonSize,
+    #[serde(default = "dt_gap")]
     pub gap: i32,
+    #[serde(default = "dt_active_increase")]
     pub active_increase: f64,
+    #[serde(default = "dt_workspace_transition_duration")]
     pub workspace_transition_duration: u64,
+    #[serde(default)]
     pub workspace_animation_curve: Curve,
+    #[serde(default = "dt_pop_duration")]
     pub pop_duration: u64,
+    #[serde(default = "dt_default_color")]
+    #[serde(deserialize_with = "color_translate")]
+    #[schemars(schema_with = "schema_color")]
     pub default_color: Color,
+    #[serde(default = "dt_focus_color")]
+    #[serde(deserialize_with = "color_translate")]
+    #[schemars(schema_with = "schema_color")]
     pub focus_color: Color,
+    #[serde(default = "dt_active_color")]
+    #[serde(deserialize_with = "color_translate")]
+    #[schemars(schema_with = "schema_color")]
     pub active_color: Color,
+    #[serde(default)]
+    #[serde(deserialize_with = "option_color_translate")]
+    #[schemars(schema_with = "schema_optional_color")]
     pub hover_color: Option<Color>,
+    #[serde(default)]
     pub invert_direction: bool,
+    #[serde(default)]
     pub output_name: Option<String>,
+    #[serde(default)]
     pub focused_only: bool,
+    #[serde(default)]
     pub border_width: Option<i32>,
+    #[serde(default = "dt_border_radius")]
     pub border_radius: i32,
     pub preset: WorkspacePreset,
 }
@@ -151,7 +185,9 @@ fn dt_active_color() -> Color {
     parse_color("#aaa").unwrap()
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, JsonSchema)]
+#[schemars(transform = WorkspacePreset_generate_defs)]
+#[serde(rename_all = "kebab-case")]
 pub enum WorkspacePreset {
     Hyprland,
     Niri(NiriConf),
@@ -173,11 +209,74 @@ impl<S: knus::traits::ErrorSpan> knus::Decode<S> for WorkspacePreset {
         }
     }
 }
+impl<'de> Deserialize<'de> for WorkspacePreset {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let value = Value::deserialize(deserializer)?;
 
-#[derive(Debug, Decode, Clone)]
+        if let Some(preset_str) = value.as_str() {
+            match preset_str {
+                "hyprland" => Ok(WorkspacePreset::Hyprland),
+                "niri" => Ok(WorkspacePreset::Niri(NiriConf::default())),
+                _ => Err(serde::de::Error::unknown_variant(
+                    preset_str,
+                    &["hyprland", "niri"],
+                )),
+            }
+        } else {
+            #[derive(Deserialize)]
+            #[serde(rename_all = "kebab-case", tag = "type")]
+            enum Helper {
+                Hyprland,
+                Niri(NiriConf),
+            }
+
+            let helper: Helper = Helper::deserialize(value).map_err(|err| {
+                serde::de::Error::custom(format!("Failed to deserialize as object: {}", err))
+            })?;
+
+            match helper {
+                Helper::Hyprland => Ok(WorkspacePreset::Hyprland),
+                Helper::Niri(conf) => Ok(WorkspacePreset::Niri(conf)),
+            }
+        }
+    }
+}
+
+#[derive(Debug, Decode, Clone, Deserialize, JsonSchema)]
+#[schemars(deny_unknown_fields)]
+#[schemars(transform = NiriConf_generate_defs)]
+#[const_property("type", "niri")]
+#[serde(rename_all = "kebab-case")]
 pub struct NiriConf {
     #[knus(child)]
+    #[serde(default)]
     pub preserve_empty: bool,
+}
+impl Default for NiriConf {
+    fn default() -> Self {
+        Self {
+            preserve_empty: false,
+        }
+    }
+}
+
+#[allow(non_snake_case)]
+fn WorkspacePreset_generate_defs(s: &mut Schema) {
+    *s = json_schema!({
+      "oneOf": [
+      {
+          "type": "string",
+          "enum": ["hyprland", "niri"]
+      },
+      {
+        "type": "object",
+        "$ref": "#/$defs/NiriConf",
+      }
+      ]
+    })
 }
 
 #[cfg(test)]
@@ -400,8 +499,14 @@ workspace {
         let parsed: Vec<crate::kdl::TopLevelConf> = knus::parse("test", kdl).unwrap();
         if let crate::kdl::TopLevelConf::Workspace(ws) = &parsed[0] {
             let widget = &ws.widget;
-            assert_eq!(widget.size.thickness, crate::kdl::shared::NumOrRelative::Num(25.0));
-            assert_eq!(widget.size.length, crate::kdl::shared::NumOrRelative::Relative(0.5));
+            assert_eq!(
+                widget.size.thickness,
+                crate::kdl::shared::NumOrRelative::Num(25.0)
+            );
+            assert_eq!(
+                widget.size.length,
+                crate::kdl::shared::NumOrRelative::Relative(0.5)
+            );
             assert_eq!(widget.gap, 15);
             assert_eq!(widget.active_increase, 0.8);
             assert_eq!(widget.workspace_transition_duration, 600);
