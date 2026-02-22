@@ -1,29 +1,56 @@
-use cosmic_text::Color;
-use educe::Educe;
-use util::color::parse_color;
-use way_edges_derive::GetSize;
-
-use crate::kdl::shared::CommonSize;
-
 use super::preset::Preset;
-
+use crate::kdl::shared::{
+    color_translate, option_color_translate, schema_color, schema_optional_color, CommonSize,
+};
 use crate::kdl::util::{argv_str, argv_v, ToKdlError};
+use cosmic_text::Color;
 use knus::Decode;
+use schemars::JsonSchema;
+use schemars::Schema;
+use serde::Deserialize;
+use serde_json::Value;
+use util::color::parse_color;
+use way_edges_derive::{const_property, GetSize};
 
-#[derive(Educe, GetSize, Clone)]
-#[educe(Debug)]
+#[derive(Debug, GetSize, Clone, Deserialize, JsonSchema)]
+#[schemars(deny_unknown_fields)]
+#[schemars(transform = SlideConfig_generate_defs)]
+#[const_property("type", "slide")]
+#[serde(rename_all = "kebab-case")]
 pub struct SlideConfig {
+    #[serde(flatten)]
     pub size: CommonSize,
+    #[serde(default = "dt_border_width")]
     pub border_width: i32,
+    #[serde(default = "dt_obtuse_angle")]
     pub obtuse_angle: f64,
+    #[serde(default = "dt_radius")]
     pub radius: f64,
+    #[serde(default = "dt_bg_color")]
+    #[serde(deserialize_with = "color_translate")]
+    #[schemars(schema_with = "schema_color")]
     pub bg_color: Color,
+    #[serde(default = "dt_fg_color")]
+    #[serde(deserialize_with = "color_translate")]
+    #[schemars(schema_with = "schema_color")]
     pub fg_color: Color,
+    #[serde(default = "dt_border_color")]
+    #[serde(deserialize_with = "color_translate")]
+    #[schemars(schema_with = "schema_color")]
     pub border_color: Color,
+    #[serde(default)]
+    #[serde(deserialize_with = "option_color_translate")]
+    #[schemars(schema_with = "schema_optional_color")]
     pub fg_text_color: Option<Color>,
+    #[serde(default)]
+    #[serde(deserialize_with = "option_color_translate")]
+    #[schemars(schema_with = "schema_optional_color")]
     pub bg_text_color: Option<Color>,
+    #[serde(default)]
     pub redraw_only_on_internal_update: bool,
+    #[serde(default = "default_scroll_unit")]
     pub scroll_unit: f64,
+    #[serde(default)]
     pub preset: Preset,
 }
 
