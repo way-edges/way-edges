@@ -159,3 +159,100 @@ fn dt_icon_size() -> i32 {
 fn dt_tray_gap() -> i32 {
     2
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_decode_tray_configs() {
+        let kdl = r##"
+wrap-box {
+    edge "bottom"
+    thickness 20
+    length "40%"
+    item "tray" {
+        index 0 0
+        icon-theme "Papirus"
+        icon-size 24
+        tray-gap 5
+        grid-align "center-center"
+        header-menu-stack "menu-top"
+        header-menu-align "right"
+        header-draw-config {
+            font-pixel-height 25
+            text-color "#ff0000"
+        }
+        menu-draw-config {
+            margin { 
+                left 10
+                right 10
+                top 10
+                bottom 10
+            }
+            font-pixel-height 26
+            icon-size 22
+            marker-size 18
+            separator-height 4
+            border-color "#00ff00"
+            text-color "#0000ff"
+            marker-color "#ffff00"
+        }
+    }
+}
+"##;
+        let parsed: Vec<crate::kdl::TopLevelConf> = knus::parse("test", kdl).unwrap();
+        if let crate::kdl::TopLevelConf::WrapBox(wrap_box) = &parsed[0] {
+            let config = &wrap_box.widget;
+            assert_eq!(config.items.len(), 1);
+
+            // Tray with custom fields
+            if let crate::kdl::widgets::wrapbox::BoxedWidget::Tray(tray_config) =
+                &config.items[0].widget
+            {
+                assert_eq!(config.items[0].index, [0, 0]);
+                assert_eq!(tray_config.icon_theme.as_ref().unwrap(), "Papirus");
+                assert_eq!(tray_config.icon_size, 24);
+                assert_eq!(tray_config.tray_gap, 5);
+                assert!(matches!(tray_config.grid_align, Align::CenterCenter));
+                assert!(matches!(
+                    tray_config.header_menu_stack,
+                    HeaderMenuStack::MenuTop
+                ));
+                assert!(matches!(
+                    tray_config.header_menu_align,
+                    HeaderMenuAlign::Right
+                ));
+                assert_eq!(tray_config.header_draw_config.font_pixel_height, 25);
+                assert_eq!(
+                    tray_config.header_draw_config.text_color,
+                    parse_color("#ff0000").unwrap()
+                );
+                assert_eq!(tray_config.menu_draw_config.margin.left, 10);
+                assert_eq!(tray_config.menu_draw_config.margin.right, 10);
+                assert_eq!(tray_config.menu_draw_config.margin.top, 10);
+                assert_eq!(tray_config.menu_draw_config.margin.bottom, 10);
+                assert_eq!(tray_config.menu_draw_config.font_pixel_height, 26);
+                assert_eq!(tray_config.menu_draw_config.icon_size, 22);
+                assert_eq!(tray_config.menu_draw_config.marker_size, 18);
+                assert_eq!(tray_config.menu_draw_config.separator_height, 4);
+                assert_eq!(
+                    tray_config.menu_draw_config.border_color,
+                    parse_color("#00ff00").unwrap()
+                );
+                assert_eq!(
+                    tray_config.menu_draw_config.text_color,
+                    parse_color("#0000ff").unwrap()
+                );
+                assert_eq!(
+                    tray_config.menu_draw_config.marker_color.unwrap(),
+                    parse_color("#ffff00").unwrap()
+                );
+            } else {
+                panic!("Expected Tray widget");
+            }
+        } else {
+            panic!("Expected WrapBox");
+        }
+    }
+}
