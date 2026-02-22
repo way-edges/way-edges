@@ -3,6 +3,7 @@ use knus::{errors::DecodeError, Decode, DecodeScalar};
 use regex_lite::Regex;
 use smithay_client_toolkit::shell::wlr_layer::Anchor;
 use std::collections::HashMap;
+use std::convert::Infallible;
 use std::ops::Deref;
 use std::str::FromStr;
 use string_to_num::ParseNum;
@@ -244,17 +245,17 @@ impl<S: knus::traits::ErrorSpan> knus::Decode<S> for KeyEventMap {
     }
 }
 
-// pub fn dt_family_owned() -> FamilyOwned {
-//     FamilyOwned::Monospace
-// }
+pub fn dt_family_owned() -> FamilyOwned {
+    FamilyOwned::Monospace
+}
 
-pub fn parse_family_owned(s: &str) -> FamilyOwned {
-    match s {
+pub fn parse_family_owned(s: &str) -> Result<FamilyOwned, Infallible> {
+    Ok(match s {
         "serif" => FamilyOwned::Serif,
         "sans-serif" => FamilyOwned::SansSerif,
         "cursive" => FamilyOwned::Cursive,
         "fantasy" => FamilyOwned::Fantasy,
         "monospace" => FamilyOwned::Monospace,
         other => FamilyOwned::Name(other.into()),
-    }
+    })
 }

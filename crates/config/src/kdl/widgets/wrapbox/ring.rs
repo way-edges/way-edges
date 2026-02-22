@@ -1,10 +1,12 @@
 use cosmic_text::{Color, FamilyOwned};
+use knus::Decode;
 use util::color::parse_color;
 use util::template::{
     arg::{TemplateArgFloatProcesser, TemplateArgRingPresetProcesser},
     base::{Template, TemplateProcesser},
 };
 
+use crate::kdl::shared::{dt_family_owned, parse_family_owned, Curve, KeyEventMap};
 use crate::kdl::util::{argv_str, argv_v};
 
 #[derive(Debug, Clone)]
@@ -142,45 +144,36 @@ impl<S: knus::traits::ErrorSpan> knus::Decode<S> for RingPreset {
     }
 }
 
-#[derive(Deserialize, Debug)]
-#[serde(rename_all = "kebab-case")]
-pub struct RingConfigShadow {
-    #[serde(default = "dt_r")]
+#[derive(Debug, Decode, Clone)]
+pub struct RingConfig {
+    #[knus(child, default = dt_r(), unwrap(argument))]
     pub radius: i32,
-    #[serde(default = "dt_rw")]
+    #[knus(child, default = dt_rw(), unwrap(argument))]
     pub ring_width: i32,
-    #[serde(default = "dt_bg")]
-    #[serde(deserialize_with = "color_translate")]
+    #[knus(child, default = dt_bg(), unwrap(argument, decode_with = parse_color))]
     pub bg_color: Color,
-    #[serde(default = "dt_fg")]
-    #[serde(deserialize_with = "color_translate")]
+    #[knus(child, default = dt_fg(), unwrap(argument, decode_with = parse_color))]
     pub fg_color: Color,
-
-    #[serde(default = "dt_tt")]
+    #[knus(child, default = dt_tt(), unwrap(argument))]
     pub text_transition_ms: u64,
-    #[serde(default)]
+    #[knus(child, default, unwrap(argument))]
     pub animation_curve: Curve,
-
-    #[serde(default)]
-    #[serde(deserialize_with = "ring_text_template")]
+    #[knus(child, default, unwrap(argument, decode_with = ring_text_optional_template))]
     pub prefix: Option<Template>,
-    #[serde(default)]
+    #[knus(child)]
     pub prefix_hide: bool,
-    #[serde(default)]
-    #[serde(deserialize_with = "ring_text_template")]
+    #[knus(child, default, unwrap(argument, decode_with = ring_text_optional_template))]
     pub suffix: Option<Template>,
-    #[serde(default)]
+    #[knus(child)]
     pub suffix_hide: bool,
-
-    #[serde(default = "dt_family_owned")]
-    #[serde(with = "FamilyOwnedRef")]
+    #[knus(child, default = dt_family_owned(), unwrap(argument, decode_with = parse_family_owned))]
     pub font_family: FamilyOwned,
-    #[serde(default)]
+    #[knus(child, default, unwrap(argument))]
+    // let font_size = value.font_size.unwrap_or(value.radius * 2);
     pub font_size: Option<i32>,
-
-    #[serde(default)]
+    #[knus(child, default)]
     pub event_map: KeyEventMap,
-
+    #[knus(child)]
     pub preset: RingPreset,
 }
 
@@ -200,93 +193,17 @@ fn dt_tt() -> u64 {
     300
 }
 
-impl From<RingConfigShadow> for RingConfig {
-    fn from(value: RingConfigShadow) -> Self {
-        let font_size = value.font_size.unwrap_or(value.radius * 2);
-        Self {
-            radius: value.radius,
-            ring_width: value.ring_width,
-            bg_color: value.bg_color,
-            fg_color: value.fg_color,
-            text_transition_ms: value.text_transition_ms,
-            prefix: value.prefix,
-            prefix_hide: value.prefix_hide,
-            suffix: value.suffix,
-            suffix_hide: value.suffix_hide,
-            font_family: value.font_family,
-            font_size,
-            preset: value.preset,
-            animation_curve: value.animation_curve,
-            event_map: value.event_map,
-        }
+fn ring_text_optional_template(s: &str) -> Result<Option<Template>, String> {
+    if s.is_empty() {
+        Ok(None)
+    } else {
+        Template::create_from_str(
+            s,
+            TemplateProcesser::new()
+                .add_processer(TemplateArgFloatProcesser)
+                .add_processer(TemplateArgRingPresetProcesser),
+        )
+        .map(Some)
+        .map_err(|e| e.to_string())
     }
-}
-
-#[derive(Debug, Deserialize, JsonSchema, Clone)]
-#[serde(from = "RingConfigShadow")]
-#[serde(rename_all = "kebab-case")]
-#[schemars(deny_unknown_fields, !from)]
-pub struct RingConfig {
-    pub radius: i32,
-    pub ring_width: i32,
-    #[schemars(schema_with = "schema_color")]
-    pub bg_color: Color,
-    #[schemars(schema_with = "schema_color")]
-    pub fg_color: Color,
-
-    pub text_transition_ms: u64,
-    pub animation_curve: Curve,
-
-    #[schemars(schema_with = "schema_optional_template")]
-    pub prefix: Option<Template>,
-    pub prefix_hide: bool,
-    #[schemars(schema_with = "schema_optional_template")]
-    pub suffix: Option<Template>,
-    pub suffix_hide: bool,
-
-    #[serde(default = "dt_family_owned")]
-    #[serde(with = "FamilyOwnedRef")]
-    pub font_family: FamilyOwned,
-    pub font_size: i32,
-
-    pub event_map: KeyEventMap,
-
-    pub preset: RingPreset,
-}
-
-pub fn ring_text_template<'de, D>(d: D) -> Result<Option<Template>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    struct EventMapVisitor;
-    impl serde::de::Visitor<'_> for EventMapVisitor {
-        type Value = Option<Template>;
-
-        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-            formatter.write_str("vec of tuples: (key: number, command: string)")
-        }
-
-        fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-        where
-            E: serde::de::Error,
-        {
-            self.visit_string(v.to_string())
-        }
-
-        fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
-        where
-            E: serde::de::Error,
-        {
-            Ok(Some(
-                Template::create_from_str(
-                    &v,
-                    TemplateProcesser::new()
-                        .add_processer(TemplateArgFloatProcesser)
-                        .add_processer(TemplateArgRingPresetProcesser),
-                )
-                .map_err(serde::de::Error::custom)?,
-            ))
-        }
-    }
-    d.deserialize_any(EventMapVisitor)
 }
