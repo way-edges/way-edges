@@ -32,12 +32,12 @@ fn main() {
         })
         .init();
 
-    let config = match knus::parse::<Root>("aaa", include_str!("../example.kdl")) {
-        Ok(config) => config,
-        Err(e) => {
-            println!("{:?}", miette::Report::new(e));
-            std::process::exit(1);
-        }
-    };
-    println!("{:#?}", config);
+    // let config = match knus::parse::<Root>("aaa", include_str!("../example.kdl")) {
+    //     Ok(config) => config,
+    //     Err(e) => {
+    //         println!("{:?}", miette::Report::new(e));
+    //         std::process::exit(1);
+    //     }
+    // };
+    // println!("{:#?}", config);
 }
