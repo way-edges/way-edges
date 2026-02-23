@@ -116,16 +116,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7c02d123df017efcdfbd739ef81735b36c5ba83ec3c59c80a9d7ecc718f92e50"
 
 [[package]]
-name = "assert-json-diff"
-version = "2.0.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "47e4f2b81832e72834d7518d8487a0396a28cc408186a2e8854c0f98011faf12"
-dependencies = [
- "serde",
- "serde_json",
-]
-
-[[package]]
 name = "async-broadcast"
 version = "0.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1369,14 +1359,12 @@ dependencies = [
 [[package]]
 name = "knus"
 version = "3.3.1"
+source = "git+https://github.com/ogios/knus.git?branch=custom#4fd9b09f6db6cb91770eda842beb0c7338bdd205"
 dependencies = [
- "assert-json-diff",
  "base64",
  "chumsky",
  "knus-derive",
  "miette",
- "minicbor",
- "serde_json",
  "thiserror 2.0.17",
  "unicode-width 0.2.2",
 ]
@@ -1384,10 +1372,9 @@ dependencies = [
 [[package]]
 name = "knus-derive"
 version = "3.3.1"
+source = "git+https://github.com/ogios/knus.git?branch=custom#4fd9b09f6db6cb91770eda842beb0c7338bdd205"
 dependencies = [
  "heck",
- "knus",
- "miette",
  "proc-macro-error2",
  "proc-macro2",
  "quote",
@@ -1558,26 +1545,6 @@ name = "miette-derive"
 version = "7.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "db5b29714e950dbb20d5e6f74f9dcec4edbcc1067bb7f8ed198c097b8c1a818b"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
-name = "minicbor"
-version = "0.26.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8a309f581ade7597820083bc275075c4c6986e57e53f8d26f88507cfefc8c987"
-dependencies = [
- "minicbor-derive",
-]
-
-[[package]]
-name = "minicbor-derive"
-version = "0.16.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a9882ef5c56df184b8ffc107fc6c61e33ee3a654b021961d790a78571bb9d67a"
 dependencies = [
  "proc-macro2",
  "quote",
