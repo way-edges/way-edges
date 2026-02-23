@@ -18,10 +18,21 @@ pub fn set_config_path(path: Option<&str>) {
     CONFIG_PATH
         .set(path.map(PathBuf::from).unwrap_or_else(|| {
             let bd = xdg::BaseDirectories::new();
-            match bd.place_config_file("way-edges/config.jsonc") {
-                Ok(p) => p,
-                Err(e) => panic!("failed to create config file: {e}"),
+            let supported = [
+                "way-edges/config.kdl",
+                "way-edges/config.jsonc",
+                "way-edges/config.json",
+            ];
+            for p in supported {
+                if let Ok(p) = bd.place_config_file(p) {
+                    return p;
+                }
             }
+            panic!("failed to find config file in supported paths: {supported:?}");
+            // match bd.place_config_file("way-edges/config.jsonc") {
+            //     Ok(p) => p,
+            //     Err(e) => panic!("failed to create config file: {e}"),
+            // }
         }))
         .unwrap();
 }
