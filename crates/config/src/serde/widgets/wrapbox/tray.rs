@@ -5,7 +5,7 @@ use serde::Deserialize;
 use util::color::COLOR_WHITE;
 
 use super::Align;
-use crate::shared::{
+use crate::serde::shared::{
     color_translate, dt_family_owned, option_color_translate, schema_color, schema_optional_color,
     FamilyOwnedRef,
 };

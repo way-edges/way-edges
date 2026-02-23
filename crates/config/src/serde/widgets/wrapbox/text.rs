@@ -4,7 +4,7 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 use util::color::COLOR_BLACK;
 
-use crate::shared::{color_translate, dt_family_owned, schema_color, FamilyOwnedRef, KeyEventMap};
+use crate::serde::shared::{color_translate, dt_family_owned, schema_color, FamilyOwnedRef, KeyEventMap};
 
 #[derive(Educe, Deserialize, JsonSchema, Clone)]
 #[educe(Debug)]

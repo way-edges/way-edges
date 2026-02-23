@@ -7,7 +7,7 @@ use std::collections::HashSet;
 
 use serde::Deserialize;
 
-use crate::shared::{Curve, NumOrRelative};
+use crate::serde::shared::{Curve, NumOrRelative};
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum MonitorSpecifier {

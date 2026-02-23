@@ -1,4 +1,4 @@
-use crate::shared::{
+use crate::serde::shared::{
     color_translate, dt_family_owned, schema_color, schema_optional_template, Curve,
     FamilyOwnedRef, KeyEventMap,
 };

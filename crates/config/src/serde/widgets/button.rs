@@ -1,4 +1,4 @@
-use crate::shared::{color_translate, schema_color, CommonSize, KeyEventMap};
+use crate::serde::shared::{color_translate, schema_color, CommonSize, KeyEventMap};
 use cosmic_text::Color;
 use educe::Educe;
 use schemars::JsonSchema;

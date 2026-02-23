@@ -5,7 +5,7 @@ use serde::Deserialize;
 use util::color::parse_color;
 use way_edges_derive::{const_property, GetSize};
 
-use crate::shared::{
+use crate::serde::shared::{
     color_translate, option_color_translate, schema_color, schema_optional_color, CommonSize,
 };
 

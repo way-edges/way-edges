@@ -1,4 +1,4 @@
-use crate::shared::{
+use crate::serde::shared::{
     color_translate, option_color_translate, schema_color, schema_optional_color, CommonSize, Curve,
 };
 

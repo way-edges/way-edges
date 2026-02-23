@@ -11,7 +11,7 @@ use tray::TrayConfig;
 use util::color::parse_color;
 use way_edges_derive::const_property;
 
-use crate::shared::{color_translate, schema_color};
+use crate::serde::shared::{color_translate, schema_color};
 
 // =================================== OUTLOOK
 #[derive(Debug, Deserialize, Clone, JsonSchema)]
