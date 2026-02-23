@@ -1,14 +1,9 @@
-use button::BtnConfig;
 use schemars::JsonSchema;
 use serde::Deserialize;
-use slide::base::SlideConfig;
-use workspace::WorkspaceConfig;
-use wrapbox::BoxConfig;
 
-pub mod button;
-pub mod slide;
-pub mod workspace;
-pub mod wrapbox;
+use crate::kdl::widgets::{
+    button::BtnConfig, slide::base::SlideConfig, workspace::WorkspaceConfig, wrapbox::BoxConfig,
+};
 
 #[derive(Debug, Deserialize, JsonSchema, Clone)]
 #[serde(rename_all = "kebab-case", tag = "type")]
