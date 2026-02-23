@@ -28,7 +28,7 @@ Which means scroll with 2 fingers on touchpad can not trigger anything in this w
     // "preset": "niri",
     "preset": {
       "type": "niri",
-      "filter-empty": true,
+      "preserve-empty": true,
     },
   },
 },
@@ -62,7 +62,7 @@ Which means scroll with 2 fingers on touchpad can not trigger anything in this w
 ```jsonc
 "preset": {
   "type": "niri",
-  "filter-empty": true,
+  "preserve-empty": true,
 },
 // or
 "preset": "niri",
@@ -91,7 +91,7 @@ Which means scroll with 2 fingers on touchpad can not trigger anything in this w
 {
   "preset": {
     "type": "niri",
-    "filter-empty": true,
+    "preserve-empty": true,
   },
   "focused-only": true, // Only animate on currently focused monitor
 }
