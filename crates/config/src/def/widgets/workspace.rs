@@ -245,7 +245,7 @@ impl<'de> Deserialize<'de> for WorkspacePreset {
     }
 }
 
-#[derive(Debug, Decode, Clone, Deserialize, JsonSchema)]
+#[derive(Debug, Decode, Clone, Deserialize, JsonSchema, Default)]
 #[schemars(deny_unknown_fields)]
 #[schemars(transform = NiriConf_generate_defs)]
 #[const_property("type", "niri")]
@@ -254,13 +254,6 @@ pub struct NiriConf {
     #[knus(child)]
     #[serde(default)]
     pub preserve_empty: bool,
-}
-impl Default for NiriConf {
-    fn default() -> Self {
-        Self {
-            preserve_empty: false,
-        }
-    }
 }
 
 #[allow(non_snake_case)]

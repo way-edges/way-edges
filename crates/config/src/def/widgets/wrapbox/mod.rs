@@ -130,7 +130,7 @@ pub type AlignFunc =
     Box<fn(AlignFuncPos, AlignFuncGridBlockSize, AlignFuncContentSize) -> AlignFuncPos>;
 
 impl Align {
-    pub fn to_func(&self) -> AlignFunc {
+    pub fn to_func(self) -> AlignFunc {
         macro_rules! align_y {
             (T, $pos:expr, $size:expr, $content_size:expr) => {
                 $pos.1

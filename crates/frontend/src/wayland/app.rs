@@ -144,7 +144,7 @@ impl WidgetMap {
     fn new(widgets_config: Vec<WidgetConf>, app: &App) -> Result<Self, String> {
         let mut map: HashMap<String, Vec<Arc<Mutex<Widget>>>> = HashMap::new();
 
-        for conf in widgets_config.iter().cloned() {
+        for conf in widgets_config.iter() {
             let common_config = conf.common();
             let name = common_config.namespace.clone();
             let confs: Vec<WlOutput> = match common_config.monitor.clone() {
@@ -469,12 +469,12 @@ impl Widget {
 
         let s: Widget = match conf {
             config::def::WidgetConf::Btn(c) => {
-                ws!(c, config::def::Btn, "button", |b, w, m, s| {
+                ws!(c, config::def::Btn, "button", |b, w, _, s| {
                     Box::new(button::init_widget(b, s, w))
                 })
             }
             config::def::WidgetConf::Slide(c) => {
-                ws!(c, config::def::Slide, "slide", |b, w, m, s| {
+                ws!(c, config::def::Slide, "slide", |b, w, _, s| {
                     slide::init_widget(b, s, w)
                 })
             }
@@ -485,7 +485,7 @@ impl Widget {
                 })
             }
             config::def::WidgetConf::WrapBox(c) => {
-                ws!(c, config::def::WrapBox, "wrapbox", |b, w, m, s| {
+                ws!(c, config::def::WrapBox, "wrapbox", |b, w, _, _| {
                     Box::new(wrapbox::init_widget(b, w))
                 })
             }

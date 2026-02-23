@@ -77,6 +77,7 @@ impl<S: knus::traits::ErrorSpan> knus::Decode<S> for RingPreset {
         let mut partition = dt_partition();
         let mut cmd = String::default();
 
+        #[allow(clippy::single_match)]
         match argv_str(node, ctx)?.as_ref() {
             "ram" => {
                 for child in node.children() {

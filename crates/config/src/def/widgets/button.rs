@@ -85,7 +85,7 @@ fn dt_border_color() -> Color {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use knus::Decode;
+    // use knus::Decode;
 
     #[test]
     fn test_decode_minimal_btn_config() {
