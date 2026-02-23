@@ -1,5 +1,5 @@
 use cosmic_text::Color;
-use knus::{ast::SpannedNode, errors::DecodeError, traits::ErrorSpan, Decode, DecodeScalar};
+use knus::{ast::SpannedNode, errors::DecodeError, traits::ErrorSpan, DecodeScalar};
 use util::color::{parse_color, ParseColorError};
 
 pub fn argv<S: ErrorSpan>(

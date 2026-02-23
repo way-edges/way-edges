@@ -1,6 +1,5 @@
 mod def;
 
-use config::def::Root;
 use log::Level;
 use std::env;
 use std::io::Write;
@@ -32,7 +31,7 @@ fn main() {
         })
         .init();
 
-    // let config = match knus::parse::<Root>("aaa", include_str!("../example.kdl")) {
+    // let config = match knus::parse::<config::def::Root>("aaa", include_str!("../example.kdl")) {
     //     Ok(config) => config,
     //     Err(e) => {
     //         println!("{:?}", miette::Report::new(e));

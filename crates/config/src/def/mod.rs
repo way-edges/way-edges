@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_variables)]
 use knus::Decode;
 use schemars::JsonSchema;
 use serde::Deserialize;
