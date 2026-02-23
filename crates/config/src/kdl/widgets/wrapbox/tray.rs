@@ -1,22 +1,29 @@
 use cosmic_text::{Color, FamilyOwned};
 use knus::{Decode, DecodeScalar};
+use schemars::JsonSchema;
+use serde::Deserialize;
 use util::color::{parse_color, COLOR_WHITE};
 
 use crate::kdl::{
-    shared::{dt_family_owned, parse_family_owned, NumMargins},
+    shared::{
+        color_translate, deserialize_family_owned, dt_family_owned, option_color_translate,
+        parse_family_owned, schema_color, schema_family_owned, schema_optional_color, NumMargins,
+    },
     util::parse_optional_color,
 };
 
 use super::Align;
 
-#[derive(Debug, Default, Clone, DecodeScalar)]
+#[derive(Debug, Default, Clone, DecodeScalar, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
 pub enum HeaderMenuStack {
     #[default]
     HeaderTop,
     MenuTop,
 }
 
-#[derive(Debug, Default, Clone, DecodeScalar)]
+#[derive(Debug, Default, Clone, DecodeScalar, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
 pub enum HeaderMenuAlign {
     #[default]
     Left,
@@ -31,11 +38,17 @@ impl HeaderMenuAlign {
     }
 }
 
-#[derive(Debug, Decode, Clone)]
+#[derive(Debug, Decode, Clone, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+#[schemars(deny_unknown_fields)]
 pub struct HeaderDrawConfig {
     #[knus(child, default = dt_header_font_pixel_height(), unwrap(argument))]
+    #[serde(default = "dt_header_font_pixel_height")]
     pub font_pixel_height: i32,
     #[knus(child, default = dt_header_text_color(), unwrap(argument, decode_with = parse_color))]
+    #[serde(default = "dt_header_text_color")]
+    #[serde(deserialize_with = "color_translate")]
+    #[schemars(schema_with = "schema_color")]
     pub text_color: Color,
 }
 impl Default for HeaderDrawConfig {
@@ -53,23 +66,39 @@ fn dt_header_text_color() -> Color {
     COLOR_WHITE
 }
 
-#[derive(Debug, Clone, Decode)]
+#[derive(Debug, Clone, Decode, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+#[schemars(deny_unknown_fields)]
 pub struct MenuDrawConfig {
     #[knus(child, default = dt_menu_margin())]
+    #[serde(default = "dt_menu_margin")]
     pub margin: NumMargins,
     #[knus(child, default = dt_font_pixel_height(), unwrap(argument))]
+    #[serde(default = "dt_font_pixel_height")]
     pub font_pixel_height: i32,
     #[knus(child, default = dt_menu_icon_size(), unwrap(argument))]
+    #[serde(default = "dt_menu_icon_size")]
     pub icon_size: i32,
     #[knus(child, default = dt_menu_marker_size(), unwrap(argument))]
+    #[serde(default = "dt_menu_marker_size")]
     pub marker_size: i32,
     #[knus(child, default = dt_menu_separator_height(), unwrap(argument))]
+    #[serde(default = "dt_menu_separator_height")]
     pub separator_height: i32,
     #[knus(child, default = dt_menu_border_color(), unwrap(argument, decode_with = parse_color))]
+    #[serde(default = "dt_menu_border_color")]
+    #[serde(deserialize_with = "color_translate")]
+    #[schemars(schema_with = "schema_color")]
     pub border_color: Color,
     #[knus(child, default = dt_menu_text_color(), unwrap(argument, decode_with = parse_color))]
+    #[serde(default = "dt_menu_text_color")]
+    #[serde(deserialize_with = "color_translate")]
+    #[schemars(schema_with = "schema_color")]
     pub text_color: Color,
     #[knus(child, default, unwrap(argument, decode_with = parse_optional_color))]
+    #[serde(default)]
+    #[serde(deserialize_with = "option_color_translate")]
+    #[schemars(schema_with = "schema_optional_color")]
     pub marker_color: Option<Color>,
 }
 impl Default for MenuDrawConfig {
@@ -113,27 +142,40 @@ fn dt_menu_text_color() -> Color {
     COLOR_WHITE
 }
 
-#[derive(Debug, Decode, Clone)]
+#[derive(Debug, Decode, Clone, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+#[schemars(deny_unknown_fields)]
 pub struct TrayConfig {
     #[knus(child, default = dt_family_owned(), unwrap(argument, decode_with = parse_family_owned))]
+    #[serde(default = "dt_family_owned")]
+    #[serde(deserialize_with = "deserialize_family_owned")]
+    #[schemars(schema_with = "schema_family_owned")]
     pub font_family: FamilyOwned,
     #[knus(child, default, unwrap(argument))]
+    #[serde(default)]
     pub icon_theme: Option<String>,
     #[knus(child, default = dt_icon_size(), unwrap(argument))]
+    #[serde(default = "dt_icon_size")]
     pub icon_size: i32,
     #[knus(child, default = dt_tray_gap(), unwrap(argument))]
+    #[serde(default = "dt_tray_gap")]
     pub tray_gap: i32,
     #[knus(child, default, unwrap(argument))]
+    #[serde(default)]
     pub grid_align: Align,
 
     #[knus(child, default, unwrap(argument))]
+    #[serde(default)]
     pub header_menu_stack: HeaderMenuStack,
     #[knus(child, default, unwrap(argument))]
+    #[serde(default)]
     pub header_menu_align: HeaderMenuAlign,
 
     #[knus(child, default)]
+    #[serde(default)]
     pub header_draw_config: HeaderDrawConfig,
     #[knus(child, default)]
+    #[serde(default)]
     pub menu_draw_config: MenuDrawConfig,
 }
 impl Default for TrayConfig {
@@ -183,7 +225,7 @@ wrap-box {
             text-color "#ff0000"
         }
         menu-draw-config {
-            margin { 
+            margin {
                 left 10
                 right 10
                 top 10
