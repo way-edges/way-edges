@@ -1,24 +1,48 @@
 use cosmic_text::{Color, FamilyOwned};
 use knus::Decode;
+use schemars::JsonSchema;
+use serde::Deserialize;
 use util::color::{parse_color, COLOR_BLACK};
 
 use crate::kdl::{
-    shared::{dt_family_owned, parse_family_owned, KeyEventMap},
+    shared::{
+        color_translate, deserialize_family_owned, dt_family_owned, parse_family_owned,
+        schema_color, schema_family_owned, KeyEventMap,
+    },
     util::{argv_str, argv_v},
 };
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Deserialize, JsonSchema, Clone)]
+#[serde(
+    rename_all = "kebab-case",
+    rename_all_fields = "kebab-case",
+    tag = "type"
+)]
+#[schemars(deny_unknown_fields)]
 pub enum TextPreset {
     Time {
+        #[serde(default = "dt_time_format")]
         format: String,
+        #[serde(default)]
         time_zone: Option<String>,
+        #[serde(default = "dt_update_interval")]
         update_interval: u64,
     },
     Custom {
+        #[serde(default = "dt_update_interval")]
         update_interval: u64,
         cmd: String,
     },
 }
+impl Default for TextPreset {
+    fn default() -> Self {
+        Self::Custom {
+            update_interval: dt_update_interval(),
+            cmd: String::default(),
+        }
+    }
+}
+
 impl<S: knus::traits::ErrorSpan> knus::Decode<S> for TextPreset {
     fn decode_node(
         node: &knus::ast::SpannedNode<S>,
@@ -84,16 +108,30 @@ fn dt_update_interval() -> u64 {
     1000
 }
 
-#[derive(Debug, Clone, Decode)]
+#[derive(Debug, Decode, Clone, Deserialize, JsonSchema)]
+#[serde(rename_all = "kebab-case")]
+#[schemars(deny_unknown_fields)]
 pub struct TextConfig {
     #[knus(child, default = dt_fg_color(), unwrap(argument, decode_with = parse_color))]
+    #[serde(default = "dt_fg_color")]
+    #[serde(deserialize_with = "color_translate")]
+    #[schemars(schema_with = "schema_color")]
     pub fg_color: Color,
+
     #[knus(child, default = dt_font_size(), unwrap(argument))]
+    #[serde(default = "dt_font_size")]
     pub font_size: i32,
+
     #[knus(child, default = dt_family_owned(), unwrap(argument, decode_with = parse_family_owned))]
+    #[serde(default = "dt_family_owned")]
+    #[serde(deserialize_with = "deserialize_family_owned")]
+    #[schemars(schema_with = "schema_family_owned")]
     pub font_family: FamilyOwned,
+
     #[knus(child, default)]
+    #[serde(default)]
     pub event_map: KeyEventMap,
+
     #[knus(child)]
     pub preset: TextPreset,
 }
@@ -148,10 +186,16 @@ wrap-box {
             assert_eq!(config.items.len(), 3);
 
             // Time preset with format, time-zone, update-interval
-            if let crate::kdl::widgets::wrapbox::BoxedWidget::Text(text_config) = &config.items[0].widget {
+            if let crate::kdl::widgets::wrapbox::BoxedWidget::Text(text_config) =
+                &config.items[0].widget
+            {
                 assert_eq!(config.items[0].index, [0, 0]);
                 match &text_config.preset {
-                    TextPreset::Time { format, time_zone, update_interval } => {
+                    TextPreset::Time {
+                        format,
+                        time_zone,
+                        update_interval,
+                    } => {
                         assert_eq!(format, "%H:%M");
                         assert_eq!(time_zone.as_ref().unwrap(), "UTC");
                         assert_eq!(*update_interval, 2000);
@@ -165,10 +209,16 @@ wrap-box {
             }
 
             // Time preset with format and update-interval, no time-zone
-            if let crate::kdl::widgets::wrapbox::BoxedWidget::Text(text_config) = &config.items[1].widget {
+            if let crate::kdl::widgets::wrapbox::BoxedWidget::Text(text_config) =
+                &config.items[1].widget
+            {
                 assert_eq!(config.items[1].index, [0, 1]);
                 match &text_config.preset {
-                    TextPreset::Time { format, time_zone, update_interval } => {
+                    TextPreset::Time {
+                        format,
+                        time_zone,
+                        update_interval,
+                    } => {
                         assert_eq!(format, "%Y-%m-%d");
                         assert_eq!(time_zone, &None);
                         assert_eq!(*update_interval, 5000);
@@ -180,10 +230,15 @@ wrap-box {
             }
 
             // Custom preset with cmd, update-interval, and custom fg-color, font-size
-            if let crate::kdl::widgets::wrapbox::BoxedWidget::Text(text_config) = &config.items[2].widget {
+            if let crate::kdl::widgets::wrapbox::BoxedWidget::Text(text_config) =
+                &config.items[2].widget
+            {
                 assert_eq!(config.items[2].index, [1, 0]);
                 match &text_config.preset {
-                    TextPreset::Custom { update_interval, cmd } => {
+                    TextPreset::Custom {
+                        update_interval,
+                        cmd,
+                    } => {
                         assert_eq!(*update_interval, 3000);
                         assert_eq!(cmd, "echo Hello");
                     }
