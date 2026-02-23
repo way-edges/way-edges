@@ -6,11 +6,11 @@ use std::{rc::Rc, time::Duration};
 use cairo::ImageSurface;
 use calloop::channel::Sender;
 use chrono::{Local, Utc};
-use config::shared::KeyEventMap;
+use config::def::shared::KeyEventMap;
 use draw::TextDrawer;
 use interval_task::runner::Runner;
 
-use config::widgets::wrapbox::text::{TextConfig, TextPreset};
+use config::def::widgets::wrapbox::text::{TextConfig, TextPreset};
 use util::shell::shell_cmd;
 
 use super::super::box_traits::BoxedWidget;

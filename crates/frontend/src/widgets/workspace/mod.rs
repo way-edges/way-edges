@@ -12,7 +12,7 @@ use backend::workspace::{
     niri::register_niri_event_callback,
     WorkspaceCB, WorkspaceData, WorkspaceHandler,
 };
-use config::widgets::workspace::{WorkspaceConfig, WorkspacePreset};
+use config::def::widgets::workspace::{WorkspaceConfig, WorkspacePreset};
 use draw::DrawConf;
 use event::HoverData;
 use smithay_client_toolkit::{output::OutputInfo, seat::pointer::BTN_LEFT};

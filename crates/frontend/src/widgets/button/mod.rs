@@ -4,7 +4,7 @@ use crate::{
     mouse_state::{MouseEvent, MouseStateData},
     wayland::app::WidgetBuilder,
 };
-use config::{shared::KeyEventMap, widgets::button::BtnConfig};
+use config::def::{shared::KeyEventMap, widgets::button::BtnConfig};
 use draw::DrawConfig;
 
 use super::WidgetContext;

@@ -12,7 +12,11 @@ use calloop::{
     ping::{make_ping, Ping},
     Idle, LoopHandle, LoopSignal,
 };
-use config::{common::MonitorSpecifier, shared::Curve};
+use config::def::{
+    common::{CommonConfig, MonitorSpecifier},
+    shared::Curve,
+    WidgetConf,
+};
 use smithay_client_toolkit::{
     compositor::{CompositorState, SurfaceData as SctkSurfaceData, SurfaceDataExt},
     output::OutputState,
@@ -40,7 +44,7 @@ use crate::{
     animation::{AnimationList, ToggleAnimation, ToggleAnimationRc},
     buffer::Buffer,
     mouse_state::{MouseEvent, MouseState},
-    widgets::{init_widget, WidgetContext},
+    widgets::{button, slide, workspace, wrapbox, WidgetContext},
 };
 
 use super::{draw::DrawCore, window_pop_state::WindowPopState};
@@ -109,7 +113,7 @@ impl App {
         });
 
         // create new
-        self.widget_map = config::get_config_root()
+        self.widget_map = config::get_config()
             .and_then(|c| WidgetMap::new(c.widgets.clone(), self))
             .unwrap_or_else(|e| {
                 log::error!("Failed to load widgets: {e}");
@@ -137,40 +141,43 @@ pub struct WidgetBuildingStates<'a> {
 #[derive(Debug, Default)]
 pub struct WidgetMap(HashMap<String, Vec<Arc<Mutex<Widget>>>>);
 impl WidgetMap {
-    fn new(widgets_config: Vec<config::Widget>, app: &App) -> Result<Self, String> {
+    fn new(widgets_config: Vec<WidgetConf>, app: &App) -> Result<Self, String> {
         let mut map: HashMap<String, Vec<Arc<Mutex<Widget>>>> = HashMap::new();
 
         for conf in widgets_config.iter().cloned() {
-            let name = conf.common.namespace.clone();
-            let confs: Vec<(config::Widget, WlOutput)> = match conf.common.monitor.clone() {
-                MonitorSpecifier::ID(index) => app
-                    .output_state
-                    .outputs()
-                    .nth(index)
-                    .map(|output| vec![(conf, output)])
-                    .unwrap_or(vec![]),
-                MonitorSpecifier::Names(items) => app
-                    .output_state
-                    .outputs()
-                    .filter_map(|out| {
-                        app.output_state
-                            .info(&out)
-                            .and_then(|info| info.name)
-                            .filter(|output_name| items.contains(output_name))
-                            .is_some()
-                            .then(|| (conf.clone(), out))
-                    })
-                    .collect(),
-                MonitorSpecifier::All => app
-                    .output_state
-                    .outputs()
-                    .map(|out| (conf.clone(), out))
-                    .collect(),
-                _ => unreachable!(),
+            let common_config = conf.common();
+            let name = common_config.namespace.clone();
+            let confs: Vec<WlOutput> = match common_config.monitor.clone() {
+                MonitorSpecifier::Lists { ids, names } => {
+                    let mut ids = ids.clone();
+                    // find names and record index and put into ids
+                    for (id, output) in app.output_state.outputs().enumerate() {
+                        if let Some(info) = app.output_state.info(&output) {
+                            if let Some(output_name) = info.name {
+                                if names.contains(&output_name) {
+                                    ids.insert(id);
+                                }
+                            }
+                        }
+                    }
+
+                    app.output_state
+                        .outputs()
+                        .enumerate()
+                        .filter_map(|(id, output)| {
+                            if ids.contains(&id) {
+                                Some(output)
+                            } else {
+                                None
+                            }
+                        })
+                        .collect()
+                }
+                MonitorSpecifier::All => app.output_state.outputs().collect(),
             };
 
-            for (conf, output) in confs.into_iter() {
-                let ctx = Widget::init_widget(conf, output, app)?;
+            for output in confs.into_iter() {
+                let ctx = Widget::init_widget(conf.clone(), output, app)?;
                 // TODO: CLONE
                 map.entry(name.clone()).or_default().push(ctx.clone());
             }
@@ -436,14 +443,53 @@ impl Widget {
     }
 
     fn init_widget(
-        conf: config::Widget,
+        conf: WidgetConf,
         wl_output: WlOutput,
         app: &App,
     ) -> Result<Arc<Mutex<Self>>, String> {
-        let config::Widget { common, widget } = conf;
-        let mut builder = WidgetBuilder::new(common, wl_output, app)?;
-        let w = init_widget(widget, &mut builder);
-        let s = builder.build(w);
+        macro_rules! ws {
+            ($w:ident, $t:path, $name:literal, $call:expr) => {{
+                let $t { common, widget } = $w;
+
+                let mut builder = WidgetBuilder::new(common, wl_output, app)?;
+
+                let monitor = builder.app.output_state.info(&builder.output).unwrap();
+                let size = monitor.modes[0].dimensions;
+
+                log::debug!("initializing {}", $name);
+
+                let w = $call(&mut builder, widget, monitor, size);
+                // let w = button::init_widget(builder, size, btn_config);
+
+                log::info!("initialized {}", $name);
+
+                builder.build(w)
+            }};
+        }
+
+        let s: Widget = match conf {
+            config::def::WidgetConf::Btn(c) => {
+                ws!(c, config::def::Btn, "button", |b, w, m, s| {
+                    Box::new(button::init_widget(b, s, w))
+                })
+            }
+            config::def::WidgetConf::Slide(c) => {
+                ws!(c, config::def::Slide, "slide", |b, w, m, s| {
+                    slide::init_widget(b, s, w)
+                })
+            }
+
+            config::def::WidgetConf::Workspace(c) => {
+                ws!(c, config::def::Workspace, "workspace", |b, w, m, s| {
+                    Box::new(workspace::init_widget(b, s, w, &m))
+                })
+            }
+            config::def::WidgetConf::WrapBox(c) => {
+                ws!(c, config::def::WrapBox, "wrapbox", |b, w, m, s| {
+                    Box::new(wrapbox::init_widget(b, w))
+                })
+            }
+        };
 
         Ok(Arc::new_cyclic(|weak| {
             SurfaceData::from_wl(s.layer.wl_surface()).store_widget(weak.clone());
@@ -638,7 +684,7 @@ impl RedrawEssentail {
 }
 
 pub struct WidgetBuilder<'a> {
-    pub common_config: config::CommonConfig,
+    pub common_config: CommonConfig,
 
     pub offset: i32,
     pub margins: [i32; 4],
@@ -772,7 +818,7 @@ impl WidgetBuilder<'_> {
 }
 impl<'a> WidgetBuilder<'a> {
     fn new(
-        mut common: config::CommonConfig,
+        mut common: CommonConfig,
         output: WlOutput,
         app: &'a App,
     ) -> Result<WidgetBuilder<'a>, String> {
@@ -826,7 +872,7 @@ impl<'a> WidgetBuilder<'a> {
             Some(format!("way-edges-widget{}", common.namespace)),
             Some(&output),
         );
-        layer.set_anchor(common.edge | common.position);
+        layer.set_anchor(common.edge | common.position.unwrap_or(common.edge));
         if common.ignore_exclusive {
             layer.set_exclusive_zone(-1);
         };

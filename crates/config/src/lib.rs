@@ -1,10 +1,5 @@
-pub mod common;
-pub mod kdl;
-pub mod shared;
-pub mod widgets;
-
-use schemars::{schema_for, JsonSchema};
-use serde::Deserialize;
+pub mod def;
+// mod serde;
 
 use std::{
     fs::OpenOptions,
@@ -13,8 +8,9 @@ use std::{
     sync::OnceLock,
 };
 
-pub use crate::common::CommonConfig;
-pub use crate::widgets::WidgetConfig;
+use schemars::schema_for;
+
+use crate::def::{parse_jsonc, parse_kdl, Root};
 
 static CONFIG_PATH: OnceLock<PathBuf> = OnceLock::new();
 
@@ -39,42 +35,56 @@ pub fn get_config_path() -> &'static Path {
     CONFIG_PATH.get().unwrap().as_path()
 }
 
-fn get_config_file_content() -> Result<String, String> {
+enum ConfigContent {
+    Serde(String),
+    Kdl(String),
+    Unknown(String),
+}
+
+fn get_config_file_content() -> Result<ConfigContent, String> {
     let p = get_config_path();
 
-    OpenOptions::new()
+    let content = OpenOptions::new()
         .read(true)
         .open(p)
         .and_then(|mut f| {
             let mut s = String::new();
             f.read_to_string(&mut s).map(|_| s)
         })
-        .map_err(|e| format!("failed to open config file: {e}"))
+        .map_err(|e| format!("failed to open config file: {e}"))?;
+
+    if let Some(ext) = p.extension().and_then(|e| e.to_str()) {
+        match ext {
+            "kdl" => Ok(ConfigContent::Kdl(content)),
+            "json" | "jsonc" => Ok(ConfigContent::Serde(content)),
+            _ => {
+                log::warn!("unsupported config file extension: {ext:?}");
+                Ok(ConfigContent::Unknown(content))
+            }
+        }
+    } else {
+        Ok(ConfigContent::Unknown(content))
+    }
 }
 
-pub fn get_config_root() -> Result<Root, String> {
-    let s = get_config_file_content()?;
-    serde_jsonrc::from_str(&s).map_err(|e| format!("JSON parse error: {e}"))
+pub fn get_config() -> Result<Root, String> {
+    match get_config_file_content()? {
+        ConfigContent::Serde(c) => parse_jsonc(&c),
+        ConfigContent::Kdl(c) => parse_kdl(&c),
+        ConfigContent::Unknown(c) => {
+            // try kdl first
+            parse_kdl(&c)
+                .or_else(|e| {
+                    log::warn!("failed to parse config file as KDL: {e}");
+                    // try serde next
+                    parse_jsonc(&c)
+                })
+                .inspect_err(|e| log::error!("failed to parse config file as KDL or JSON: {e}"))
+        }
+    }
 }
 
 pub fn output_json_schema() {
     let schema = schema_for!(Root);
     println!("{}", serde_jsonrc::to_string_pretty(&schema).unwrap());
-}
-
-#[derive(Deserialize, Debug, JsonSchema)]
-#[schemars(extend("allowTrailingCommas" = true))]
-#[serde(rename_all = "kebab-case")]
-pub struct Root {
-    #[serde(default)]
-    pub widgets: Vec<Widget>,
-}
-
-#[derive(Deserialize, Debug, JsonSchema, Clone)]
-#[serde(rename_all = "kebab-case")]
-pub struct Widget {
-    #[serde(flatten)]
-    pub common: CommonConfig,
-    #[serde(flatten)]
-    pub widget: WidgetConfig,
 }

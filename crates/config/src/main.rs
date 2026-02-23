@@ -1,11 +1,9 @@
-use std::env;
+mod def;
 
+use config::def::Root;
 use log::Level;
-
-use crate::kdl::TopLevelConf;
+use std::env;
 use std::io::Write;
-
-mod kdl;
 
 fn main() {
     if env::var("RUST_LOG").is_err() {
@@ -34,7 +32,7 @@ fn main() {
         })
         .init();
 
-    let config = match knus::parse::<Vec<TopLevelConf>>("aaa", include_str!("../debug.kdl")) {
+    let config = match knus::parse::<Root>("aaa", include_str!("../example.kdl")) {
         Ok(config) => config,
         Err(e) => {
             println!("{:?}", miette::Report::new(e));

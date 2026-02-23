@@ -2,7 +2,7 @@ use std::cell::Cell;
 use std::rc::Rc;
 
 use crate::mouse_state::MouseEvent;
-use config::widgets::slide::base::SlideConfig;
+use config::def::widgets::slide::base::SlideConfig;
 use smithay_client_toolkit::seat::pointer::BTN_LEFT;
 use smithay_client_toolkit::shell::wlr_layer::Anchor;
 
