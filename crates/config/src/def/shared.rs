@@ -351,17 +351,30 @@ impl<'de> Deserialize<'de> for KeyEventMap {
             {
                 let mut event_map = HashMap::new();
                 while let Some((key, value)) = map.next_entry::<String, String>()? {
-                    let action_code = if let Ok(code) = key.parse::<u32>() {
-                        code
+                    let kc = if let Some(key_code_str) = key.strip_prefix("kc-") {
+                        // strip the "kc-" prefix
+                        println!("key_code_str: {}", key_code_str);
+                        if let Ok(key_code) = key_code_str.parse_num::<u32>() {
+                            key_code
+                        } else {
+                            return Err(serde::de::Error::custom(format!(
+                                "Invalid key code after 'kc-' prefix: '{}'",
+                                key_code_str
+                            )));
+                        }
+                    } else if let Some(kc) = ACTION_CODE_PAIRS
+                        .iter()
+                        .find_map(|&(k, code)| (k == key).then_some(code))
+                    {
+                        kc
                     } else {
-                        ACTION_CODE_PAIRS
-                            .iter()
-                            .find_map(|&(k, code)| (k == key).then_some(code))
-                            .ok_or_else(|| {
-                                serde::de::Error::custom(format!("Unknown action key: '{}'.", key))
-                            })?
+                        return Err(serde::de::Error::custom(format!(
+                            "Unknown action key: '{}'.",
+                            key
+                        )));
                     };
-                    event_map.insert(action_code, value);
+
+                    event_map.insert(kc, value);
                 }
                 Ok(KeyEventMap(event_map))
             }
@@ -391,6 +404,51 @@ impl JsonSchema for KeyEventMap {
             },
             "additionalProperties": false
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_jsonrc::json;
+
+    #[test]
+    fn test_key_event_map_deserialize_valid() {
+        let json_data = json!({
+            "kc-0x110": "command1",
+            "kc-0x112": "command2",
+            "mouse-right": "command3"
+        });
+
+        let key_event_map: KeyEventMap = serde_jsonrc::from_value(json_data).unwrap();
+
+        assert_eq!(key_event_map.0.get(&0x110).unwrap(), "command1");
+        assert_eq!(key_event_map.0.get(&0x112).unwrap(), "command2");
+        assert_eq!(key_event_map.0.get(&0x111).unwrap(), "command3");
+    }
+
+    #[test]
+    fn test_key_event_map_deserialize_invalid_key() {
+        let json_data = json!({
+            "invalid-key": "command1"
+        });
+
+        let result: Result<KeyEventMap, _> = serde_jsonrc::from_value(json_data);
+
+        // Expecting an error because the key format is invalid
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_key_event_map_deserialize_invalid_value() {
+        let json_data = json!({
+            "kc-110": 12345
+        });
+
+        let result: Result<KeyEventMap, _> = serde_jsonrc::from_value(json_data);
+
+        // Expecting an error because the value is not a string
+        assert!(result.is_err());
     }
 }
 

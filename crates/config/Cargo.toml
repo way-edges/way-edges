@@ -25,8 +25,7 @@ serde_json = "1.0.140"
 
 smol_str = "0.2.2"
 
-# knus = { git = "https://github.com/ogios/knus.git", branch = "custom" }
-knus.workspace = true
+knus = { git = "https://github.com/ogios/knus.git", branch = "custom" }
 
 string-to-num = "0.1.2"
 
