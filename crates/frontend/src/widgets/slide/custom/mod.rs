@@ -2,7 +2,7 @@ use cairo::ImageSurface;
 use interval_task::runner::Runner;
 use std::{cell::Cell, rc::Rc, time::Duration};
 
-use config::{
+use config::def::{
     shared::KeyEventMap,
     widgets::slide::{base::SlideConfig, preset::CustomConfig},
 };

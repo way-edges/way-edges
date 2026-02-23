@@ -1,6 +1,6 @@
 # Wrap Box
 
-```jsonc
+```json
 {
   // ... other basic configs omitted here for brevity
   "widget": {

@@ -1,4 +1,4 @@
-use config::{common::CommonConfig, shared::NumOrRelative};
+use config::def::{common::CommonConfig, shared::NumOrRelative};
 use smithay_client_toolkit::shell::wlr_layer::Anchor;
 
 #[derive(Debug)]
@@ -20,7 +20,12 @@ impl DrawCore {
             pop_coordinate_func,
         }
     }
-    pub fn calc_coordinate(&self, content_size: (i32, i32), offset: i32, progress: f64) -> [i32; 4] {
+    pub fn calc_coordinate(
+        &self,
+        content_size: (i32, i32),
+        offset: i32,
+        progress: f64,
+    ) -> [i32; 4] {
         let visible = (self.visible_y_func)(content_size, offset, progress, self.preview_size);
         (self.pop_coordinate_func)(content_size, visible, self.extra_trigger_size)
     }

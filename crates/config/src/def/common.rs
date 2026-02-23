@@ -1,14 +1,12 @@
-use schemars::json_schema;
-use serde::Deserializer;
+use knus::{errors::DecodeError, Decode};
+use schemars::{json_schema, JsonSchema};
+use serde::{Deserialize, Deserializer};
 use serde_jsonrc::Value;
 use smithay_client_toolkit::shell::wlr_layer::{Anchor, Layer};
-
-use schemars::JsonSchema;
 use std::collections::HashSet;
+use std::ops::Deref;
 
-use serde::Deserialize;
-
-use crate::shared::{Curve, NumOrRelative};
+use crate::def::shared::{Curve, NumOrRelative};
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum MonitorSpecifier {
@@ -24,6 +22,66 @@ impl Default for MonitorSpecifier {
             ids: HashSet::from([0]),
             names: HashSet::new(),
         }
+    }
+}
+impl<S: knus::traits::ErrorSpan> knus::Decode<S> for MonitorSpecifier {
+    fn decode_node(
+        node: &knus::ast::SpannedNode<S>,
+        ctx: &mut knus::decode::Context<S>,
+    ) -> Result<Self, DecodeError<S>> {
+        // check empty
+        if node.arguments.is_empty() {
+            return Err(DecodeError::unexpected(
+                &node.node_name,
+                "index or name",
+                "MonitorSpecifier should have at least one argument",
+            ));
+        }
+        // knus::Decode::D
+
+        #[allow(clippy::collapsible_if)]
+        if node.arguments.len() == 1 {
+            if let knus::ast::Literal::String(s) = node.arguments[0].literal.deref() {
+                if s.deref() == "*" {
+                    return Ok(MonitorSpecifier::All);
+                }
+            }
+        }
+
+        let mut ids = HashSet::new();
+        let mut names = HashSet::new();
+
+        for arg in &node.arguments {
+            match arg.literal.deref() {
+                knus::ast::Literal::String(s) => {
+                    if s.deref() == "*" {
+                        return Err(DecodeError::unsupported(
+                            &arg.literal,
+                            "You cannot use the wildcard character '*' in a list of monitors, it is only allowed as the sole argument to specify all monitors",
+                        ));
+                    }
+                    names.insert(s.to_string());
+                }
+                knus::ast::Literal::Int(value) => {
+                    if let Ok(id) = value.try_into() {
+                        ids.insert(id);
+                    } else {
+                        return Err(DecodeError::unsupported(
+                            &arg.literal,
+                            "Invalid integer value encountered",
+                        ));
+                    }
+                }
+                _ => {
+                    return Err(DecodeError::unsupported(
+                        &arg.literal,
+                        "Unsupported value, only numbers and strings are recognized",
+                    ));
+                }
+            }
+        }
+
+        Ok(MonitorSpecifier::Lists { ids, names })
     }
 }
 impl JsonSchema for MonitorSpecifier {
@@ -47,7 +105,7 @@ impl JsonSchema for MonitorSpecifier {
                 {
                     "type": "array",
                     "items": {
-                        "type": "string",
+                        "type": ["string", "number"],
                     },
                 }
             ],
@@ -134,188 +192,98 @@ impl<'de> Deserialize<'de> for MonitorSpecifier {
     }
 }
 
-mod tests {
-
-    #[test]
-    fn test_monitor_specifier() {
-        use super::*;
-        use serde_jsonrc::json;
-
-        #[derive(Debug, Deserialize)]
-        struct TestConfig {
-            monitor: MonitorSpecifier,
-        }
-
-        let json_data = json!({
-            "monitor": 1,
-        });
-        let config: TestConfig = serde_jsonrc::from_value(json_data).unwrap();
-        assert_eq!(
-            config.monitor,
-            MonitorSpecifier::Lists {
-                ids: HashSet::from([1]),
-                names: HashSet::new(),
-            }
-        );
-
-        let json_data = json!({
-            "monitor": "*",
-        });
-        let config: TestConfig = serde_jsonrc::from_value(json_data).unwrap();
-        assert_eq!(config.monitor, MonitorSpecifier::All);
-
-        let json_data = json!({
-            "monitor": ["Monitor1", "Monitor2"],
-        });
-        let config: TestConfig = serde_jsonrc::from_value(json_data).unwrap();
-        assert_eq!(
-            config.monitor,
-            MonitorSpecifier::Lists {
-                ids: HashSet::new(),
-                names: HashSet::from(["Monitor1".to_string(), "Monitor2".to_string()]),
-            }
-        );
-
-        let json_data = json!({
-            "monitor": ["Monitor1", 2],
-        });
-        let config: TestConfig = serde_jsonrc::from_value(json_data).unwrap();
-        assert_eq!(
-            config.monitor,
-            MonitorSpecifier::Lists {
-                ids: HashSet::from([2]),
-                names: HashSet::from(["Monitor1".to_string()]),
-            }
-        );
-
-        let json_data = json!({
-            "monitor": ["*"],
-        });
-        let config: Result<TestConfig, _> = serde_jsonrc::from_value(json_data);
-        assert!(config.is_err());
-    }
-}
-
-#[derive(Debug, Deserialize, Clone, Default, JsonSchema)]
-#[schemars(deny_unknown_fields)]
-#[serde(rename_all = "kebab-case")]
+#[derive(Debug, Clone, Default, Decode, Deserialize, JsonSchema)]
 pub struct Margins {
+    #[knus(child, default, unwrap(argument))]
     #[serde(default)]
     pub left: NumOrRelative,
+    #[knus(child, default, unwrap(argument))]
     #[serde(default)]
     pub top: NumOrRelative,
+    #[knus(child, default, unwrap(argument))]
     #[serde(default)]
     pub right: NumOrRelative,
+    #[knus(child, default, unwrap(argument))]
     #[serde(default)]
     pub bottom: NumOrRelative,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Decode, Deserialize, JsonSchema)]
 #[serde(rename_all = "kebab-case")]
-struct ConfigShadow {
-    #[serde(default = "dt_edge")]
+#[schemars(deny_unknown_fields)]
+pub struct CommonConfig {
+    #[knus(child, unwrap(argument, decode_with = match_edge))]
     #[serde(deserialize_with = "deserialize_edge")]
+    #[schemars(schema_with = "schema_edge")]
     pub edge: Anchor,
 
+    #[knus(child, unwrap(argument, decode_with = match_edge))]
     #[serde(default)]
     #[serde(deserialize_with = "deserialize_optional_edge")]
+    #[schemars(schema_with = "schema_optional_edge")]
     pub position: Option<Anchor>,
 
+    #[knus(child, default=dt_layer(), unwrap(argument, decode_with = match_layer))]
     #[serde(default = "dt_layer")]
     #[serde(deserialize_with = "deserialize_layer")]
+    #[schemars(schema_with = "schema_layer")]
     pub layer: Layer,
 
+    #[knus(child, default, unwrap(argument))]
     #[serde(default)]
     pub offset: NumOrRelative,
 
+    #[knus(child, default)]
     #[serde(default)]
     pub margins: Margins,
 
+    #[knus(child, default)]
     #[serde(default)]
     pub monitor: MonitorSpecifier,
 
+    #[knus(child, default, unwrap(argument))]
     #[serde(default)]
     pub namespace: String,
 
+    #[knus(child)]
     #[serde(default)]
     pub ignore_exclusive: bool,
 
+    #[knus(child, default = dt_transition_duration(), unwrap(argument))]
     #[serde(default = "dt_transition_duration")]
     pub transition_duration: u64,
+
+    #[knus(child, default, unwrap(argument))]
     #[serde(default)]
     pub animation_curve: Curve,
+
+    #[knus(child, default = dt_extra_trigger_size(), unwrap(argument))]
     #[serde(default = "dt_extra_trigger_size")]
     pub extra_trigger_size: NumOrRelative,
 
+    #[knus(child, default = dt_preview_size(), unwrap(argument))]
     #[serde(default = "dt_preview_size")]
     pub preview_size: NumOrRelative,
 
-    #[serde(default = "dt_pinnable")]
+    // TODO: true
+    #[knus(child)]
+    #[serde(default)]
     pub pinnable: bool,
-    #[serde(default = "dt_pin_with_key")]
+
+    // TODO: true
+    #[knus(child)]
+    #[serde(default)]
     pub pin_with_key: bool,
+
+    #[knus(child, default = dt_pin_key(), unwrap(argument))]
     #[serde(default = "dt_pin_key")]
     pub pin_key: u32,
 
+    #[knus(child)]
     #[serde(default)]
     pub pin_on_startup: bool,
 }
 
-impl From<ConfigShadow> for CommonConfig {
-    fn from(value: ConfigShadow) -> Self {
-        let position;
-        if let Some(pos) = value.position {
-            position = pos
-        } else {
-            position = value.edge
-        }
-        Self {
-            edge: value.edge,
-            position,
-            layer: value.layer,
-            offset: value.offset,
-            margins: value.margins,
-            monitor: value.monitor,
-            namespace: value.namespace,
-            ignore_exclusive: value.ignore_exclusive,
-            transition_duration: value.transition_duration,
-            extra_trigger_size: value.extra_trigger_size,
-            preview_size: value.preview_size,
-            animation_curve: value.animation_curve,
-            pinnable: value.pinnable,
-            pin_with_key: value.pin_with_key,
-            pin_key: value.pin_key,
-            pin_on_startup: value.pin_on_startup,
-        }
-    }
-}
-
-#[derive(Debug, Deserialize, JsonSchema, Clone)]
-#[serde(from = "ConfigShadow")]
-#[schemars(deny_unknown_fields, !from)]
-#[serde(rename_all = "kebab-case")]
-pub struct CommonConfig {
-    #[schemars(schema_with = "schema_edge")]
-    pub edge: Anchor,
-    #[schemars(schema_with = "schema_optional_edge")]
-    pub position: Anchor,
-    #[schemars(schema_with = "schema_layer")]
-    pub layer: Layer,
-    pub offset: NumOrRelative,
-    pub margins: Margins,
-    pub monitor: MonitorSpecifier,
-    pub namespace: String,
-    pub ignore_exclusive: bool,
-    pub transition_duration: u64,
-    pub animation_curve: Curve,
-    pub extra_trigger_size: NumOrRelative,
-    pub preview_size: NumOrRelative,
-
-    pub pin_with_key: bool,
-    pub pin_key: u32,
-    pub pinnable: bool,
-    pub pin_on_startup: bool,
-}
 impl CommonConfig {
     pub fn resolve_relative(&mut self, size: (i32, i32)) {
         // margins
@@ -361,23 +329,37 @@ fn dt_extra_trigger_size() -> NumOrRelative {
 fn dt_preview_size() -> NumOrRelative {
     NumOrRelative::Num(0.0)
 }
-fn dt_pinnable() -> bool {
-    true
-}
-fn dt_pin_with_key() -> bool {
-    true
-}
 fn dt_pin_key() -> u32 {
     smithay_client_toolkit::seat::pointer::BTN_MIDDLE
 }
 
-fn match_edge(edge: &str) -> Option<Anchor> {
-    Some(match edge {
+fn match_edge(edge: &str) -> Result<Anchor, std::io::Error> {
+    Ok(match edge {
         "top" => Anchor::TOP,
         "left" => Anchor::LEFT,
         "bottom" => Anchor::BOTTOM,
         "right" => Anchor::RIGHT,
-        _ => return None,
+        _ => {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                format!("Invalid edge: {}", edge),
+            ))
+        }
+    })
+}
+
+fn match_layer(layer: &str) -> Result<Layer, std::io::Error> {
+    Ok(match layer {
+        "background" => Layer::Background,
+        "bottom" => Layer::Bottom,
+        "top" => Layer::Top,
+        "overlay" => Layer::Overlay,
+        _ => {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                format!("Invalid layer: {}", layer),
+            ))
+        }
     })
 }
 
@@ -397,14 +379,9 @@ where
         where
             E: serde::de::Error,
         {
-            if let Some(edge) = match_edge(v) {
-                Ok(Some(edge))
-            } else {
-                Err(serde::de::Error::invalid_value(
-                    serde::de::Unexpected::Str(v),
-                    &self,
-                ))
-            }
+            Ok(Some(match_edge(v).map_err(|_| {
+                serde::de::Error::invalid_value(serde::de::Unexpected::Str(v), &self)
+            })?))
         }
 
         fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
@@ -445,19 +422,8 @@ where
         where
             E: serde::de::Error,
         {
-            let edge = match v {
-                "background" => Layer::Background,
-                "bottom" => Layer::Bottom,
-                "top" => Layer::Top,
-                "overlay" => Layer::Overlay,
-                _ => {
-                    return Err(serde::de::Error::invalid_value(
-                        serde::de::Unexpected::Str(v),
-                        &self,
-                    ));
-                }
-            };
-            Ok(edge)
+            match_layer(v)
+                .map_err(|_| serde::de::Error::invalid_value(serde::de::Unexpected::Str(v), &self))
         }
 
         fn visit_string<E>(self, v: String) -> Result<Self::Value, E>

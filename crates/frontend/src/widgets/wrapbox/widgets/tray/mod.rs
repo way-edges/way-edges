@@ -10,7 +10,7 @@ use std::{
 };
 
 use backend::tray::{init_tray_client, register_tray, TrayBackendHandle, TrayMsg};
-use config::widgets::wrapbox::tray::TrayConfig;
+use config::def::widgets::wrapbox::tray::TrayConfig;
 use module::{new_tray_module, TrayModule};
 use util::Or;
 

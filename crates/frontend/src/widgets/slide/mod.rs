@@ -4,7 +4,7 @@ mod custom;
 mod pulseaudio;
 
 use crate::wayland::app::WidgetBuilder;
-use config::widgets::slide::base::SlideConfig;
+use config::def::widgets::slide::base::SlideConfig;
 
 use super::WidgetContext;
 
@@ -17,7 +17,7 @@ pub fn init_widget(
         .size
         .calculate_relative(size, builder.common_config.edge);
 
-    use config::widgets::slide::preset::Preset;
+    use config::def::widgets::slide::preset::Preset;
 
     match std::mem::take(&mut w_conf.preset) {
         Preset::Backlight(backlight_config) => {

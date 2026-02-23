@@ -11,7 +11,7 @@ use crate::{
     wayland::app::{App, WidgetBuilder},
 };
 use box_traits::{BoxedWidgetCtx, BoxedWidgetCtxRc, BoxedWidgetGrid};
-use config::{shared::Curve, widgets::wrapbox::BoxConfig};
+use config::def::{shared::Curve, widgets::wrapbox::BoxConfig};
 use event::LastWidget;
 use grid::{builder::GrideBoxBuilder, GridBox};
 use outlook::{init_outlook, OutlookDraw};
@@ -64,7 +64,7 @@ fn init_boxed_widgets(window: &mut WidgetBuilder, mut box_conf: BoxConfig) -> Bo
     let mut builder = GrideBoxBuilder::<BoxedWidgetCtxRc>::new();
     let ws = std::mem::take(&mut box_conf.items);
 
-    use config::widgets::wrapbox::BoxedWidget;
+    use config::def::widgets::wrapbox::BoxedWidget;
     ws.into_iter().for_each(|w| {
         let mut box_temporary_ctx = BoxTemporaryCtx::new(window);
 

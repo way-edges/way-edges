@@ -8,7 +8,7 @@ use backend::tray::{
     item::{MenuItem, RootMenu, Tray},
     tray_about_to_show_menuitem, tray_active_request,
 };
-use config::widgets::wrapbox::tray::TrayConfig;
+use config::def::widgets::wrapbox::tray::TrayConfig;
 
 use crate::{buffer::Buffer, mouse_state::MouseEvent};
 

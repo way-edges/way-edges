@@ -2,7 +2,7 @@ pub mod builder;
 pub mod item;
 
 use cairo::{self, Format, ImageSurface};
-use config::widgets::wrapbox::{Align, AlignFunc};
+use config::def::widgets::wrapbox::{Align, AlignFunc};
 use item::GridItemMap;
 use util::binary_search_within_range;
 

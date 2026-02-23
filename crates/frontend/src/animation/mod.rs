@@ -3,7 +3,7 @@ mod list;
 
 use std::{hash::Hash, ops::Not, rc::Rc, time::Duration};
 
-use config::shared::Curve;
+use config::def::shared::Curve;
 use way_edges_derive::wrap_rc;
 
 use base::Animation;

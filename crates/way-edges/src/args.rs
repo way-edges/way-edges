@@ -33,14 +33,14 @@ fn complete_widget_name(current: &std::ffi::OsStr) -> Vec<CompletionCandidate> {
         return vec![];
     };
 
-    let Ok(root) = config::get_config_root() else {
+    let Ok(root) = config::get_config() else {
         return vec![];
     };
 
     root.widgets
         .into_iter()
-        .filter(|w| w.common.namespace.starts_with(current))
-        .map(|w| CompletionCandidate::new(&w.common.namespace))
+        .filter(|w| w.common().namespace.starts_with(current))
+        .map(|w| CompletionCandidate::new(&w.common().namespace))
         .collect()
 }
 

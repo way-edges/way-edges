@@ -1,4 +1,4 @@
-use config::widgets::slide::base::SlideConfig;
+use config::def::widgets::slide::base::SlideConfig;
 use cosmic_text::Color;
 use smithay_client_toolkit::shell::wlr_layer::Anchor;
 use util::color::{cairo_set_color, COLOR_BLACK};

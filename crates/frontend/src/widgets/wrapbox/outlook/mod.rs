@@ -1,7 +1,7 @@
 use std::fmt::Debug;
 
 use cairo::ImageSurface;
-use config::{shared::NumOrRelative, widgets::wrapbox::Outlook};
+use config::def::{shared::NumOrRelative, widgets::wrapbox::Outlook};
 use smithay_client_toolkit::shell::wlr_layer::Anchor;
 
 mod board;

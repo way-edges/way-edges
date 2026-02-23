@@ -5,11 +5,11 @@ use std::cell::UnsafeCell;
 use std::rc::Rc;
 
 use cairo::ImageSurface;
-use config::shared::KeyEventMap;
+use config::def::shared::KeyEventMap;
 use draw::RingDrawer;
 use interval_task::runner::Runner;
 
-use config::widgets::wrapbox::ring::RingConfig;
+use config::def::widgets::wrapbox::ring::RingConfig;
 use preset::RunnerResult;
 
 use crate::mouse_state::MouseEvent;

@@ -1,4 +1,4 @@
-use config::widgets::wrapbox::{Align, AlignFunc};
+use config::def::widgets::wrapbox::{Align, AlignFunc};
 
 use super::{item::GridItemMap, GridBox};
 

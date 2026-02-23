@@ -1,6 +1,6 @@
 use std::{collections::HashSet, time::Duration};
 
-use config::shared::Curve;
+use config::def::shared::Curve;
 
 use super::{ToggleAnimation, ToggleAnimationRc};
 
