@@ -6,11 +6,13 @@
     "widgets": {
       "type": "array",
       "items": {
-        "$ref": "#/$defs/Widget"
+        "$ref": "#/$defs/WidgetConf"
       }
     }
   },
-  "allowTrailingCommas": true,
+  "required": [
+    "widgets"
+  ],
   "$defs": {
     "Align": {
       "type": "string",
@@ -31,7 +33,10 @@
       "properties": {
         "index": {
           "type": "array",
-          "default": [-1, -1],
+          "default": [
+            -1,
+            -1
+          ],
           "items": {
             "type": "integer",
             "format": "int"
@@ -44,10 +49,6 @@
         {
           "type": "object",
           "properties": {
-            "type": {
-              "type": "string",
-              "const": "ring"
-            },
             "animation-curve": {
               "$ref": "#/$defs/Curve"
             },
@@ -55,79 +56,103 @@
               "type": "string",
               "default": "#00000000"
             },
+            "event-map": {
+              "$ref": "#/$defs/KeyEventMap"
+            },
             "fg-color": {
               "type": "string",
               "default": "#00000000"
             },
             "font-family": {
-              "$ref": "#/$defs/FamilyOwned",
-              "default": "monospace"
+              "type": "string",
+              "default": "monospace",
+              "enum": [
+                "serif",
+                "sans-serif",
+                "cursive",
+                "fantasy",
+                "monospace"
+              ]
             },
             "font-size": {
-              "type": "integer",
-              "format": "int32"
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "int32",
+              "default": null
             },
             "prefix": {
-              "type": ["string", "null"],
+              "type": [
+                "string",
+                "null"
+              ],
               "default": "{float:2,100}"
             },
             "prefix-hide": {
-              "type": "boolean"
+              "type": "boolean",
+              "default": false
             },
             "preset": {
               "$ref": "#/$defs/RingPreset"
             },
             "radius": {
               "type": "integer",
-              "format": "int32"
+              "format": "int32",
+              "default": 13
             },
             "ring-width": {
               "type": "integer",
-              "format": "int32"
+              "format": "int32",
+              "default": 5
             },
             "suffix": {
-              "type": ["string", "null"],
+              "type": [
+                "string",
+                "null"
+              ],
               "default": "{float:2,100}"
             },
             "suffix-hide": {
-              "type": "boolean"
+              "type": "boolean",
+              "default": false
             },
             "text-transition-ms": {
               "type": "integer",
               "format": "uint64",
+              "default": 300,
               "minimum": 0
+            },
+            "type": {
+              "type": "string",
+              "const": "ring"
             }
           },
           "required": [
             "type",
-            "radius",
-            "ring-width",
-            "bg-color",
-            "fg-color",
-            "text-transition-ms",
-            "animation-curve",
-            "prefix",
-            "prefix-hide",
-            "suffix",
-            "suffix-hide",
-            "font-size",
             "preset"
           ]
         },
         {
           "type": "object",
           "properties": {
-            "type": {
-              "type": "string",
-              "const": "text"
+            "event-map": {
+              "$ref": "#/$defs/KeyEventMap"
             },
             "fg-color": {
               "type": "string",
               "default": "#00000000"
             },
             "font-family": {
-              "$ref": "#/$defs/FamilyOwned",
-              "default": "monospace"
+              "type": "string",
+              "default": "monospace",
+              "enum": [
+                "serif",
+                "sans-serif",
+                "cursive",
+                "fantasy",
+                "monospace"
+              ]
             },
             "font-size": {
               "type": "integer",
@@ -136,20 +161,30 @@
             },
             "preset": {
               "$ref": "#/$defs/TextPreset"
+            },
+            "type": {
+              "type": "string",
+              "const": "text"
             }
           },
-          "required": ["type", "preset"]
+          "required": [
+            "type",
+            "preset"
+          ]
         },
         {
           "type": "object",
           "properties": {
-            "type": {
-              "type": "string",
-              "const": "tray"
-            },
             "font-family": {
-              "$ref": "#/$defs/FamilyOwned",
-              "default": "monospace"
+              "type": "string",
+              "default": "monospace",
+              "enum": [
+                "serif",
+                "sans-serif",
+                "cursive",
+                "fantasy",
+                "monospace"
+              ]
             },
             "grid-align": {
               "$ref": "#/$defs/Align"
@@ -169,7 +204,10 @@
               "default": 20
             },
             "icon-theme": {
-              "type": ["string", "null"],
+              "type": [
+                "string",
+                "null"
+              ],
               "default": null
             },
             "menu-draw-config": {
@@ -179,25 +217,141 @@
               "type": "integer",
               "format": "int32",
               "default": 2
+            },
+            "type": {
+              "type": "string",
+              "const": "tray"
             }
           },
-          "required": ["type"]
+          "required": [
+            "type"
+          ]
         }
       ],
       "unevaluatedProperties": false
     },
+    "Btn": {
+      "type": "object",
+      "properties": {
+        "animation-curve": {
+          "$ref": "#/$defs/Curve"
+        },
+        "border-color": {
+          "type": "string",
+          "default": "#00000000"
+        },
+        "border-width": {
+          "type": "integer",
+          "format": "int32",
+          "default": 3
+        },
+        "color": {
+          "type": "string",
+          "default": "#00000000"
+        },
+        "edge": {
+          "type": "string",
+          "enum": [
+            "top",
+            "bottom",
+            "left",
+            "right"
+          ]
+        },
+        "event-map": {
+          "$ref": "#/$defs/KeyEventMap"
+        },
+        "extra-trigger-size": {
+          "$ref": "#/$defs/NumOrRelative"
+        },
+        "ignore-exclusive": {
+          "type": "boolean",
+          "default": false
+        },
+        "layer": {
+          "type": "string",
+          "enum": [
+            "top",
+            "bottom",
+            "background",
+            "overlay"
+          ]
+        },
+        "length": {
+          "$ref": "#/$defs/NumOrRelative"
+        },
+        "margins": {
+          "$ref": "#/$defs/Margins"
+        },
+        "monitor": {
+          "$ref": "#/$defs/MonitorSpecifier"
+        },
+        "namespace": {
+          "type": "string",
+          "default": ""
+        },
+        "offset": {
+          "$ref": "#/$defs/NumOrRelative"
+        },
+        "pin-key": {
+          "type": "integer",
+          "format": "uint32",
+          "default": 274,
+          "minimum": 0
+        },
+        "pin-on-startup": {
+          "type": "boolean",
+          "default": false
+        },
+        "pin-with-key": {
+          "type": "boolean",
+          "default": false
+        },
+        "pinnable": {
+          "type": "boolean",
+          "default": false
+        },
+        "position": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "top",
+            "bottom",
+            "left",
+            "right"
+          ]
+        },
+        "preview-size": {
+          "$ref": "#/$defs/NumOrRelative"
+        },
+        "thickness": {
+          "$ref": "#/$defs/NumOrRelative"
+        },
+        "transition-duration": {
+          "type": "integer",
+          "format": "uint64",
+          "default": 300,
+          "minimum": 0
+        },
+        "type": {
+          "const": "btn"
+        }
+      },
+      "required": [
+        "edge",
+        "thickness",
+        "length"
+      ]
+    },
     "Curve": {
       "type": "string",
-      "enum": ["linear", "ease-quad", "ease-cubic", "ease-expo"]
-    },
-    "FamilyOwned": {
-      "oneOf": [
-        {
-          "enum": ["serif", "sans-serif", "cursive", "fantasy", "monospace"]
-        },
-        {
-          "type": "string"
-        }
+      "enum": [
+        "Linear",
+        "EaseQuad",
+        "EaseCubic",
+        "EaseExpo"
       ]
     },
     "HeaderDrawConfig": {
@@ -217,16 +371,25 @@
     },
     "HeaderMenuAlign": {
       "type": "string",
-      "enum": ["left", "right"]
+      "enum": [
+        "left",
+        "right"
+      ]
     },
     "HeaderMenuStack": {
       "type": "string",
-      "enum": ["header-top", "menu-top"]
+      "enum": [
+        "header-top",
+        "menu-top"
+      ]
     },
     "KeyEventMap": {
       "type": "object",
       "additionalProperties": false,
       "patternProperties": {
+        "^(mouse-left|mouse-right|mouse-middle|mouse-side|mouse-extra|mouse-forward|mouse-back)$": {
+          "type": "string"
+        },
         "^\\d+$": {
           "type": "string"
         }
@@ -247,8 +410,7 @@
         "top": {
           "$ref": "#/$defs/NumOrRelative"
         }
-      },
-      "additionalProperties": false
+      }
     },
     "MenuDrawConfig": {
       "type": "object",
@@ -268,17 +430,13 @@
           "default": 20
         },
         "margin": {
-          "type": "array",
-          "default": [12, 12],
-          "items": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "maxItems": 2,
-          "minItems": 2
+          "$ref": "#/$defs/NumMargins"
         },
         "marker-color": {
-          "type": ["string", "null"],
+          "type": [
+            "string",
+            "null"
+          ],
           "default": "#00000000"
         },
         "marker-size": {
@@ -304,7 +462,9 @@
           "type": "string"
         },
         {
-          "enum": ["*"]
+          "enum": [
+            "*"
+          ]
         },
         {
           "type": "number",
@@ -313,7 +473,10 @@
         {
           "type": "array",
           "items": {
-            "type": "string"
+            "type": [
+              "string",
+              "number"
+            ]
           }
         }
       ]
@@ -321,18 +484,46 @@
     "NiriConf": {
       "type": "object",
       "properties": {
+        "preserve-empty": {
+          "type": "boolean",
+          "default": false
+        },
         "type": {
           "const": "niri"
-        },
-        "filter-empty": {
-          "type": "boolean",
-          "default": true
         }
       },
       "additionalProperties": false
     },
+    "NumMargins": {
+      "type": "object",
+      "properties": {
+        "bottom": {
+          "type": "integer",
+          "format": "int32",
+          "default": 0
+        },
+        "left": {
+          "type": "integer",
+          "format": "int32",
+          "default": 0
+        },
+        "right": {
+          "type": "integer",
+          "format": "int32",
+          "default": 0
+        },
+        "top": {
+          "type": "integer",
+          "format": "int32",
+          "default": 0
+        }
+      }
+    },
     "NumOrRelative": {
-      "type": ["number", "string"],
+      "type": [
+        "number",
+        "string"
+      ],
       "anyOf": [
         {
           "description": "absolute number",
@@ -353,27 +544,12 @@
             "type": {
               "type": "string",
               "const": "window"
-            },
-            "border-radius": {
-              "type": "integer",
-              "format": "int32",
-              "default": 5
-            },
-            "border-width": {
-              "type": "integer",
-              "format": "int32",
-              "default": 15
-            },
-            "color": {
-              "type": "string",
-              "default": "#00000000"
-            },
-            "margins": {
-              "$ref": "#/$defs/OutlookMargins"
             }
           },
-          "additionalProperties": false,
-          "required": ["type"]
+          "$ref": "#/$defs/OutlookWindowConfig",
+          "required": [
+            "type"
+          ]
         },
         {
           "type": "object",
@@ -384,7 +560,9 @@
             }
           },
           "$ref": "#/$defs/OutlookBoardConfig",
-          "required": ["type"]
+          "required": [
+            "type"
+          ]
         }
       ]
     },
@@ -401,32 +579,29 @@
           "default": "#00000000"
         },
         "margins": {
-          "$ref": "#/$defs/OutlookMargins"
+          "$ref": "#/$defs/NumMargins"
         }
       }
     },
-    "OutlookMargins": {
+    "OutlookWindowConfig": {
       "type": "object",
       "properties": {
-        "bottom": {
+        "border-radius": {
           "type": "integer",
           "format": "int32",
           "default": 5
         },
-        "left": {
+        "border-width": {
           "type": "integer",
           "format": "int32",
-          "default": 5
+          "default": 15
         },
-        "right": {
-          "type": "integer",
-          "format": "int32",
-          "default": 5
+        "color": {
+          "type": "string",
+          "default": "#00000000"
         },
-        "top": {
-          "type": "integer",
-          "format": "int32",
-          "default": 5
+        "margins": {
+          "$ref": "#/$defs/NumMargins"
         }
       }
     },
@@ -435,81 +610,107 @@
         {
           "type": "object",
           "properties": {
+            "animation-curve": {
+              "$ref": "#/$defs/Curve"
+            },
+            "device": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "default": null
+            },
+            "mute-color": {
+              "type": "string",
+              "default": "#00000000"
+            },
+            "mute-text-color": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "default": "#00000000"
+            },
             "type": {
               "type": "string",
               "const": "speaker"
-            },
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
             "animation-curve": {
               "$ref": "#/$defs/Curve"
             },
             "device": {
-              "type": ["string", "null"]
+              "type": [
+                "string",
+                "null"
+              ],
+              "default": null
             },
             "mute-color": {
               "type": "string",
               "default": "#00000000"
             },
             "mute-text-color": {
-              "type": ["string", "null"],
+              "type": [
+                "string",
+                "null"
+              ],
               "default": "#00000000"
-            }
-          },
-          "additionalProperties": false,
-          "required": ["type"]
-        },
-        {
-          "type": "object",
-          "properties": {
+            },
             "type": {
               "type": "string",
               "const": "microphone"
-            },
-            "animation-curve": {
-              "$ref": "#/$defs/Curve"
-            },
-            "device": {
-              "type": ["string", "null"]
-            },
-            "mute-color": {
-              "type": "string",
-              "default": "#00000000"
-            },
-            "mute-text-color": {
-              "type": ["string", "null"],
-              "default": "#00000000"
             }
           },
           "additionalProperties": false,
-          "required": ["type"]
+          "required": [
+            "type"
+          ]
         },
         {
           "type": "object",
           "properties": {
+            "device": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "default": null
+            },
             "type": {
               "type": "string",
               "const": "backlight"
-            },
-            "device": {
-              "type": ["string", "null"],
-              "default": null
             }
           },
           "additionalProperties": false,
-          "required": ["type"]
+          "required": [
+            "type"
+          ]
         },
         {
           "type": "object",
           "properties": {
-            "type": {
-              "type": "string",
-              "const": "custom"
-            },
             "event-map": {
               "$ref": "#/$defs/KeyEventMap"
             },
             "on-change-command": {
-              "type": ["string", "null"],
+              "type": [
+                "string",
+                "null"
+              ],
               "default": "{float:2,100}"
+            },
+            "type": {
+              "type": "string",
+              "const": "custom"
             },
             "update-command": {
               "type": "string",
@@ -523,7 +724,9 @@
             }
           },
           "additionalProperties": false,
-          "required": ["type"]
+          "required": [
+            "type"
+          ]
         }
       ]
     },
@@ -544,7 +747,9 @@
             }
           },
           "additionalProperties": false,
-          "required": ["type"]
+          "required": [
+            "type"
+          ]
         },
         {
           "type": "object",
@@ -561,20 +766,25 @@
             }
           },
           "additionalProperties": false,
-          "required": ["type"]
+          "required": [
+            "type"
+          ]
         },
         {
           "type": "object",
           "properties": {
-            "type": {
-              "type": "string",
-              "const": "cpu"
-            },
             "core": {
-              "type": ["integer", "null"],
+              "type": [
+                "integer",
+                "null"
+              ],
               "format": "uint",
               "default": null,
               "minimum": 0
+            },
+            "type": {
+              "type": "string",
+              "const": "cpu"
             },
             "update-interval": {
               "type": "integer",
@@ -584,7 +794,9 @@
             }
           },
           "additionalProperties": false,
-          "required": ["type"]
+          "required": [
+            "type"
+          ]
         },
         {
           "type": "object",
@@ -601,19 +813,21 @@
             }
           },
           "additionalProperties": false,
-          "required": ["type"]
+          "required": [
+            "type"
+          ]
         },
         {
           "type": "object",
           "properties": {
-            "type": {
-              "type": "string",
-              "const": "disk"
-            },
             "partition": {
               "type": "string",
               "default": "/"
             },
+            "type": {
+              "type": "string",
+              "const": "disk"
+            },
             "update-interval": {
               "type": "integer",
               "format": "uint64",
@@ -622,18 +836,20 @@
             }
           },
           "additionalProperties": false,
-          "required": ["type"]
+          "required": [
+            "type"
+          ]
         },
         {
           "type": "object",
           "properties": {
+            "cmd": {
+              "type": "string"
+            },
             "type": {
               "type": "string",
               "const": "custom"
             },
-            "cmd": {
-              "type": "string"
-            },
             "update-interval": {
               "type": "integer",
               "format": "uint64",
@@ -642,78 +858,77 @@
             }
           },
           "additionalProperties": false,
-          "required": ["type", "cmd"]
+          "required": [
+            "type",
+            "cmd"
+          ]
         }
       ]
     },
-    "TextPreset": {
-      "oneOf": [
-        {
-          "type": "object",
-          "properties": {
-            "type": {
-              "type": "string",
-              "const": "time"
-            },
-            "format": {
-              "type": "string",
-              "default": "%Y-%m-%d %H:%M:%S"
-            },
-            "time-zone": {
-              "type": ["string", "null"],
-              "default": null
-            },
-            "update-interval": {
-              "type": "integer",
-              "format": "uint64",
-              "default": 1000,
-              "minimum": 0
-            }
-          },
-          "additionalProperties": false,
-          "required": ["type"]
-        },
-        {
-          "type": "object",
-          "properties": {
-            "type": {
-              "type": "string",
-              "const": "custom"
-            },
-            "cmd": {
-              "type": "string"
-            },
-            "update-interval": {
-              "type": "integer",
-              "format": "uint64",
-              "default": 1000,
-              "minimum": 0
-            }
-          },
-          "additionalProperties": false,
-          "required": ["type", "cmd"]
-        }
-      ]
-    },
-    "Widget": {
+    "Slide": {
       "type": "object",
       "properties": {
         "animation-curve": {
           "$ref": "#/$defs/Curve"
         },
+        "bg-color": {
+          "type": "string",
+          "default": "#00000000"
+        },
+        "bg-text-color": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": "#00000000"
+        },
+        "border-color": {
+          "type": "string",
+          "default": "#00000000"
+        },
+        "border-width": {
+          "type": "integer",
+          "format": "int32",
+          "default": 3
+        },
         "edge": {
           "type": "string",
-          "enum": ["top", "bottom", "left", "right"]
+          "enum": [
+            "top",
+            "bottom",
+            "left",
+            "right"
+          ]
         },
         "extra-trigger-size": {
           "$ref": "#/$defs/NumOrRelative"
         },
+        "fg-color": {
+          "type": "string",
+          "default": "#00000000"
+        },
+        "fg-text-color": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": "#00000000"
+        },
         "ignore-exclusive": {
-          "type": "boolean"
+          "type": "boolean",
+          "default": false
         },
         "layer": {
           "type": "string",
-          "enum": ["top", "bottom", "background", "overlay"]
+          "enum": [
+            "top",
+            "bottom",
+            "background",
+            "overlay"
+          ]
+        },
+        "length": {
+          "$ref": "#/$defs/NumOrRelative"
         },
         "margins": {
           "$ref": "#/$defs/Margins"
@@ -722,35 +937,144 @@
           "$ref": "#/$defs/MonitorSpecifier"
         },
         "namespace": {
-          "type": "string"
+          "type": "string",
+          "default": ""
+        },
+        "obtuse-angle": {
+          "type": "number",
+          "format": "double",
+          "default": 120.0
+        },
+        "offset": {
+          "$ref": "#/$defs/NumOrRelative"
         },
         "pin-key": {
           "type": "integer",
           "format": "uint32",
+          "default": 274,
           "minimum": 0
         },
         "pin-on-startup": {
-          "type": "boolean"
+          "type": "boolean",
+          "default": false
         },
         "pin-with-key": {
-          "type": "boolean"
+          "type": "boolean",
+          "default": false
         },
         "pinnable": {
-          "type": "boolean"
+          "type": "boolean",
+          "default": false
         },
         "position": {
-          "type": ["string", "null"],
-          "enum": ["top", "bottom", "left", "right"]
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "top",
+            "bottom",
+            "left",
+            "right"
+          ]
+        },
+        "preset": {
+          "$ref": "#/$defs/Preset"
         },
         "preview-size": {
+          "$ref": "#/$defs/NumOrRelative"
+        },
+        "radius": {
+          "type": "number",
+          "format": "double",
+          "default": 20.0
+        },
+        "redraw-only-on-internal-update": {
+          "type": "boolean",
+          "default": false
+        },
+        "scroll-unit": {
+          "type": "number",
+          "format": "double",
+          "default": 0.005
+        },
+        "thickness": {
           "$ref": "#/$defs/NumOrRelative"
         },
         "transition-duration": {
           "type": "integer",
           "format": "uint64",
+          "default": 300,
           "minimum": 0
+        },
+        "type": {
+          "const": "slide"
         }
       },
+      "required": [
+        "edge",
+        "thickness",
+        "length"
+      ]
+    },
+    "TextPreset": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "format": {
+              "type": "string",
+              "default": "%Y-%m-%d %H:%M:%S"
+            },
+            "time-zone": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "default": null
+            },
+            "type": {
+              "type": "string",
+              "const": "time"
+            },
+            "update-interval": {
+              "type": "integer",
+              "format": "uint64",
+              "default": 1000,
+              "minimum": 0
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "cmd": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "const": "custom"
+            },
+            "update-interval": {
+              "type": "integer",
+              "format": "uint64",
+              "default": 1000,
+              "minimum": 0
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "cmd"
+          ]
+        }
+      ]
+    },
+    "WidgetConf": {
       "oneOf": [
         {
           "type": "object",
@@ -758,121 +1082,25 @@
             "type": {
               "type": "string",
               "const": "btn"
-            },
-            "border-color": {
-              "type": "string",
-              "default": "#00000000"
-            },
-            "border-width": {
-              "type": "integer",
-              "format": "int32",
-              "default": 3
-            },
-            "color": {
-              "type": "string",
-              "default": "#00000000"
-            },
-            "event-map": {
-              "$ref": "#/$defs/KeyEventMap"
-            },
-            "length": {
-              "$ref": "#/$defs/NumOrRelative"
-            },
-            "thickness": {
-              "$ref": "#/$defs/NumOrRelative"
             }
           },
-          "required": ["type", "thickness", "length"]
+          "$ref": "#/$defs/Btn",
+          "required": [
+            "type"
+          ]
         },
         {
           "type": "object",
           "properties": {
             "type": {
               "type": "string",
-              "const": "slider"
-            },
-            "bg-color": {
-              "type": "string",
-              "default": "#00000000"
-            },
-            "bg-text-color": {
-              "type": ["string", "null"],
-              "default": "#00000000"
-            },
-            "border-color": {
-              "type": "string",
-              "default": "#00000000"
-            },
-            "border-width": {
-              "type": "integer",
-              "format": "int32",
-              "default": 3
-            },
-            "fg-color": {
-              "type": "string",
-              "default": "#00000000"
-            },
-            "fg-text-color": {
-              "type": ["string", "null"],
-              "default": "#00000000"
-            },
-            "length": {
-              "$ref": "#/$defs/NumOrRelative"
-            },
-            "obtuse-angle": {
-              "type": "number",
-              "format": "double",
-              "default": 120.0
-            },
-            "preset": {
-              "$ref": "#/$defs/Preset"
-            },
-            "radius": {
-              "type": "number",
-              "format": "double",
-              "default": 20.0
-            },
-            "redraw-only-on-internal-update": {
-              "type": "boolean",
-              "default": false
-            },
-            "scroll-unit": {
-              "type": "number",
-              "format": "double",
-              "default": 0.005
-            },
-            "thickness": {
-              "$ref": "#/$defs/NumOrRelative"
+              "const": "slide"
             }
           },
-          "required": ["type", "thickness", "length"]
-        },
-        {
-          "type": "object",
-          "properties": {
-            "type": {
-              "type": "string",
-              "const": "wrap-box"
-            },
-            "align": {
-              "$ref": "#/$defs/Align"
-            },
-            "gap": {
-              "type": "number",
-              "format": "double",
-              "default": 10.0
-            },
-            "items": {
-              "type": "array",
-              "items": {
-                "$ref": "#/$defs/BoxedWidgetConfig"
-              }
-            },
-            "outlook": {
-              "$ref": "#/$defs/Outlook"
-            }
-          },
-          "required": ["type"]
+          "$ref": "#/$defs/Slide",
+          "required": [
+            "type"
+          ]
         },
         {
           "type": "object",
@@ -880,111 +1108,324 @@
             "type": {
               "type": "string",
               "const": "workspace"
-            },
-            "active-color": {
-              "type": "string",
-              "default": "#00000000"
-            },
-            "active-increase": {
-              "type": "number",
-              "format": "double",
-              "default": 0.5
-            },
-            "border-radius": {
-              "type": "integer",
-              "format": "int32",
-              "default": 5
-            },
-            "border-width": {
-              "type": ["integer", "null"],
-              "format": "int32",
-              "default": null
-            },
-            "default-color": {
-              "type": "string",
-              "default": "#00000000"
-            },
-            "focus-color": {
-              "type": "string",
-              "default": "#00000000"
-            },
-            "focused-only": {
-              "type": "boolean",
-              "default": false
-            },
-            "gap": {
-              "type": "integer",
-              "format": "int32",
-              "default": 5
-            },
-            "hover-color": {
-              "type": ["string", "null"],
-              "default": "#00000000"
-            },
-            "invert-direction": {
-              "type": "boolean",
-              "default": false
-            },
-            "length": {
-              "$ref": "#/$defs/NumOrRelative"
-            },
-            "output-name": {
-              "type": ["string", "null"],
-              "default": null
-            },
-            "pop-duration": {
-              "type": "integer",
-              "format": "uint64",
-              "default": 1000,
-              "minimum": 0
-            },
-            "preset": {
-              "$ref": "#/$defs/WorkspacePreset"
-            },
-            "thickness": {
-              "$ref": "#/$defs/NumOrRelative"
-            },
-            "workspace-animation-curve": {
-              "$ref": "#/$defs/Curve"
-            },
-            "workspace-transition-duration": {
-              "type": "integer",
-              "format": "uint64",
-              "default": 300,
-              "minimum": 0
             }
           },
-          "required": ["type", "thickness", "length", "preset"]
+          "$ref": "#/$defs/Workspace",
+          "required": [
+            "type"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "wrap-box"
+            }
+          },
+          "$ref": "#/$defs/WrapBox",
+          "required": [
+            "type"
+          ]
         }
-      ],
+      ]
+    },
+    "Workspace": {
+      "type": "object",
+      "properties": {
+        "active-color": {
+          "type": "string",
+          "default": "#00000000"
+        },
+        "active-increase": {
+          "type": "number",
+          "format": "double",
+          "default": 0.5
+        },
+        "animation-curve": {
+          "$ref": "#/$defs/Curve"
+        },
+        "border-radius": {
+          "type": "integer",
+          "format": "int32",
+          "default": 5
+        },
+        "border-width": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "format": "int32",
+          "default": null
+        },
+        "default-color": {
+          "type": "string",
+          "default": "#00000000"
+        },
+        "edge": {
+          "type": "string",
+          "enum": [
+            "top",
+            "bottom",
+            "left",
+            "right"
+          ]
+        },
+        "extra-trigger-size": {
+          "$ref": "#/$defs/NumOrRelative"
+        },
+        "focus-color": {
+          "type": "string",
+          "default": "#00000000"
+        },
+        "focused-only": {
+          "type": "boolean",
+          "default": false
+        },
+        "gap": {
+          "type": "integer",
+          "format": "int32",
+          "default": 5
+        },
+        "hover-color": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": "#00000000"
+        },
+        "ignore-exclusive": {
+          "type": "boolean",
+          "default": false
+        },
+        "invert-direction": {
+          "type": "boolean",
+          "default": false
+        },
+        "layer": {
+          "type": "string",
+          "enum": [
+            "top",
+            "bottom",
+            "background",
+            "overlay"
+          ]
+        },
+        "length": {
+          "$ref": "#/$defs/NumOrRelative"
+        },
+        "margins": {
+          "$ref": "#/$defs/Margins"
+        },
+        "monitor": {
+          "$ref": "#/$defs/MonitorSpecifier"
+        },
+        "namespace": {
+          "type": "string",
+          "default": ""
+        },
+        "offset": {
+          "$ref": "#/$defs/NumOrRelative"
+        },
+        "output-name": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "pin-key": {
+          "type": "integer",
+          "format": "uint32",
+          "default": 274,
+          "minimum": 0
+        },
+        "pin-on-startup": {
+          "type": "boolean",
+          "default": false
+        },
+        "pin-with-key": {
+          "type": "boolean",
+          "default": false
+        },
+        "pinnable": {
+          "type": "boolean",
+          "default": false
+        },
+        "pop-duration": {
+          "type": "integer",
+          "format": "uint64",
+          "default": 1000,
+          "minimum": 0
+        },
+        "position": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "top",
+            "bottom",
+            "left",
+            "right"
+          ]
+        },
+        "preset": {
+          "$ref": "#/$defs/WorkspacePreset"
+        },
+        "preview-size": {
+          "$ref": "#/$defs/NumOrRelative"
+        },
+        "thickness": {
+          "$ref": "#/$defs/NumOrRelative"
+        },
+        "transition-duration": {
+          "type": "integer",
+          "format": "uint64",
+          "default": 300,
+          "minimum": 0
+        },
+        "type": {
+          "const": "workspace"
+        },
+        "workspace-animation-curve": {
+          "$ref": "#/$defs/Curve"
+        },
+        "workspace-transition-duration": {
+          "type": "integer",
+          "format": "uint64",
+          "default": 300,
+          "minimum": 0
+        }
+      },
       "required": [
         "edge",
-        "position",
-        "layer",
-        "margins",
-        "monitor",
-        "namespace",
-        "ignore-exclusive",
-        "transition-duration",
-        "animation-curve",
-        "extra-trigger-size",
-        "preview-size",
-        "pin-with-key",
-        "pin-key",
-        "pinnable",
-        "pin-on-startup"
+        "thickness",
+        "length",
+        "preset"
       ]
     },
     "WorkspacePreset": {
       "oneOf": [
         {
           "type": "string",
-          "enum": ["hyprland", "niri"]
+          "enum": [
+            "hyprland",
+            "niri"
+          ]
         },
         {
           "type": "object",
           "$ref": "#/$defs/NiriConf"
         }
+      ]
+    },
+    "WrapBox": {
+      "type": "object",
+      "properties": {
+        "align": {
+          "$ref": "#/$defs/Align"
+        },
+        "animation-curve": {
+          "$ref": "#/$defs/Curve"
+        },
+        "edge": {
+          "type": "string",
+          "enum": [
+            "top",
+            "bottom",
+            "left",
+            "right"
+          ]
+        },
+        "extra-trigger-size": {
+          "$ref": "#/$defs/NumOrRelative"
+        },
+        "gap": {
+          "type": "number",
+          "format": "double",
+          "default": 10.0
+        },
+        "ignore-exclusive": {
+          "type": "boolean",
+          "default": false
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/BoxedWidgetConfig"
+          }
+        },
+        "layer": {
+          "type": "string",
+          "enum": [
+            "top",
+            "bottom",
+            "background",
+            "overlay"
+          ]
+        },
+        "margins": {
+          "$ref": "#/$defs/Margins"
+        },
+        "monitor": {
+          "$ref": "#/$defs/MonitorSpecifier"
+        },
+        "namespace": {
+          "type": "string",
+          "default": ""
+        },
+        "offset": {
+          "$ref": "#/$defs/NumOrRelative"
+        },
+        "outlook": {
+          "$ref": "#/$defs/Outlook"
+        },
+        "pin-key": {
+          "type": "integer",
+          "format": "uint32",
+          "default": 274,
+          "minimum": 0
+        },
+        "pin-on-startup": {
+          "type": "boolean",
+          "default": false
+        },
+        "pin-with-key": {
+          "type": "boolean",
+          "default": false
+        },
+        "pinnable": {
+          "type": "boolean",
+          "default": false
+        },
+        "position": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "top",
+            "bottom",
+            "left",
+            "right"
+          ]
+        },
+        "preview-size": {
+          "$ref": "#/$defs/NumOrRelative"
+        },
+        "transition-duration": {
+          "type": "integer",
+          "format": "uint64",
+          "default": 300,
+          "minimum": 0
+        },
+        "type": {
+          "const": "wrap-box"
+        }
+      },
+      "required": [
+        "edge"
       ]
     }
   }

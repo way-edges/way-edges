@@ -100,7 +100,7 @@
       // "preset": "niri",
       "preset": {
         "type": "niri",
-        "filter-empty": true,
+        "preserve-empty": true,
       },
     },
     {
