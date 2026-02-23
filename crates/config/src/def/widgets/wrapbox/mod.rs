@@ -10,7 +10,7 @@ use tray::TrayConfig;
 use util::color::parse_color;
 
 // Add serde imports
-use crate::kdl::shared::{color_translate, schema_color};
+use crate::def::shared::{color_translate, schema_color};
 use schemars::{JsonSchema, Schema};
 use serde::Deserialize;
 use serde_json::Value;
@@ -242,7 +242,7 @@ impl<S: knus::traits::ErrorSpan> knus::Decode<S> for BoxedWidgetConfig {
     }
 }
 
-use crate::kdl::{
+use crate::def::{
     shared::NumMargins,
     util::{argv_str, argvi_v},
 };
@@ -284,8 +284,8 @@ wrap-box {
     length "40%"
 }
 "#;
-        let parsed: Vec<crate::kdl::TopLevelConf> = knus::parse("test", kdl).unwrap();
-        if let crate::kdl::TopLevelConf::WrapBox(wrap_box) = &parsed[0] {
+        let parsed: Vec<crate::def::WidgetConf> = knus::parse("test", kdl).unwrap();
+        if let crate::def::WidgetConf::WrapBox(wrap_box) = &parsed[0] {
             // Assert defaults
             assert_eq!(wrap_box.widget.gap, dt_gap());
             assert!(matches!(wrap_box.widget.align, Align::TopLeft));
@@ -316,8 +316,8 @@ wrap-box {
     }
 }
 "##;
-        let parsed: Vec<crate::kdl::TopLevelConf> = knus::parse("test", kdl).unwrap();
-        if let crate::kdl::TopLevelConf::WrapBox(wrap_box) = &parsed[0] {
+        let parsed: Vec<crate::def::WidgetConf> = knus::parse("test", kdl).unwrap();
+        if let crate::def::WidgetConf::WrapBox(wrap_box) = &parsed[0] {
             match &wrap_box.widget.outlook {
                 Outlook::Window(_) => {
                     // Just check that it's Window
@@ -363,8 +363,8 @@ wrap-box {
     }
 }
 "##;
-        let parsed: Vec<crate::kdl::TopLevelConf> = knus::parse("test", kdl).unwrap();
-        if let crate::kdl::TopLevelConf::WrapBox(wrap_box) = &parsed[0] {
+        let parsed: Vec<crate::def::WidgetConf> = knus::parse("test", kdl).unwrap();
+        if let crate::def::WidgetConf::WrapBox(wrap_box) = &parsed[0] {
             let config = &wrap_box.widget;
             // Check outlook
             match &config.outlook {

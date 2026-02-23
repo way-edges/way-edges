@@ -4,7 +4,7 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 use util::color::{parse_color, COLOR_WHITE};
 
-use crate::kdl::{
+use crate::def::{
     shared::{
         color_translate, deserialize_family_owned, dt_family_owned, option_color_translate,
         parse_family_owned, schema_color, schema_family_owned, schema_optional_color, NumMargins,
@@ -242,13 +242,13 @@ wrap-box {
     }
 }
 "##;
-        let parsed: Vec<crate::kdl::TopLevelConf> = knus::parse("test", kdl).unwrap();
-        if let crate::kdl::TopLevelConf::WrapBox(wrap_box) = &parsed[0] {
+        let parsed: Vec<crate::def::WidgetConf> = knus::parse("test", kdl).unwrap();
+        if let crate::def::WidgetConf::WrapBox(wrap_box) = &parsed[0] {
             let config = &wrap_box.widget;
             assert_eq!(config.items.len(), 1);
 
             // Tray with custom fields
-            if let crate::kdl::widgets::wrapbox::BoxedWidget::Tray(tray_config) =
+            if let crate::def::widgets::wrapbox::BoxedWidget::Tray(tray_config) =
                 &config.items[0].widget
             {
                 assert_eq!(config.items[0].index, [0, 0]);

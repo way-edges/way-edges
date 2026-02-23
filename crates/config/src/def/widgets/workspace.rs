@@ -10,10 +10,10 @@ use util::color::parse_color;
 use way_edges_derive::const_property;
 use way_edges_derive::GetSize;
 
-use crate::kdl::shared::{
+use crate::def::shared::{
     color_translate, option_color_translate, schema_color, schema_optional_color, CommonSize, Curve,
 };
-use crate::kdl::util::{argv, argv_str, argv_v, ToKdlError};
+use crate::def::util::{argv, argv_str, argv_v, ToKdlError};
 
 #[derive(Debug, GetSize, Clone, Deserialize, JsonSchema)]
 #[schemars(deny_unknown_fields)]
@@ -295,8 +295,8 @@ workspace {
     }
 }
 "#;
-        let parsed: Vec<crate::kdl::TopLevelConf> = knus::parse("test", kdl).unwrap();
-        if let crate::kdl::TopLevelConf::Workspace(ws) = &parsed[0] {
+        let parsed: Vec<crate::def::WidgetConf> = knus::parse("test", kdl).unwrap();
+        if let crate::def::WidgetConf::Workspace(ws) = &parsed[0] {
             assert!(matches!(ws.widget.preset, WorkspacePreset::Niri(_)));
             if let WorkspacePreset::Niri(conf) = &ws.widget.preset {
                 assert!(conf.preserve_empty);
@@ -316,7 +316,7 @@ workspace {
     default-color "invalid-color"
 }
 "#;
-        let result: Result<Vec<crate::kdl::TopLevelConf>, _> = knus::parse("test", kdl);
+        let result: Result<Vec<crate::def::WidgetConf>, _> = knus::parse("test", kdl);
         assert!(result.is_err());
     }
 
@@ -330,7 +330,7 @@ workspace {
     preset "invalid-preset"
 }
 "#;
-        let result: Result<Vec<crate::kdl::TopLevelConf>, _> = knus::parse("test", kdl);
+        let result: Result<Vec<crate::def::WidgetConf>, _> = knus::parse("test", kdl);
         assert!(result.is_err());
     }
 
@@ -344,7 +344,7 @@ workspace {
     border-width "not-a-number"
 }
 "#;
-        let result: Result<Vec<crate::kdl::TopLevelConf>, _> = knus::parse("test", kdl);
+        let result: Result<Vec<crate::def::WidgetConf>, _> = knus::parse("test", kdl);
         assert!(result.is_err());
     }
 
@@ -357,8 +357,8 @@ workspace {
     length "40%"
 }
 "#;
-        let parsed: Vec<crate::kdl::TopLevelConf> = knus::parse("test", kdl).unwrap();
-        if let crate::kdl::TopLevelConf::Workspace(ws) = &parsed[0] {
+        let parsed: Vec<crate::def::WidgetConf> = knus::parse("test", kdl).unwrap();
+        if let crate::def::WidgetConf::Workspace(ws) = &parsed[0] {
             let widget = &ws.widget;
             assert_eq!(widget.gap, 5);
             assert_eq!(widget.active_increase, 0.5);
@@ -390,8 +390,8 @@ workspace {
     gap 10
 }
 "#;
-        let parsed: Vec<crate::kdl::TopLevelConf> = knus::parse("test", kdl).unwrap();
-        if let crate::kdl::TopLevelConf::Workspace(ws) = &parsed[0] {
+        let parsed: Vec<crate::def::WidgetConf> = knus::parse("test", kdl).unwrap();
+        if let crate::def::WidgetConf::Workspace(ws) = &parsed[0] {
             assert_eq!(ws.widget.gap, 10);
         } else {
             panic!("Expected Workspace");
@@ -408,8 +408,8 @@ workspace {
     active-increase 0.7
 }
 "#;
-        let parsed: Vec<crate::kdl::TopLevelConf> = knus::parse("test", kdl).unwrap();
-        if let crate::kdl::TopLevelConf::Workspace(ws) = &parsed[0] {
+        let parsed: Vec<crate::def::WidgetConf> = knus::parse("test", kdl).unwrap();
+        if let crate::def::WidgetConf::Workspace(ws) = &parsed[0] {
             assert_eq!(ws.widget.active_increase, 0.7);
         } else {
             panic!("Expected Workspace");
@@ -426,8 +426,8 @@ workspace {
     workspace-transition-duration 500
 }
 "#;
-        let parsed: Vec<crate::kdl::TopLevelConf> = knus::parse("test", kdl).unwrap();
-        if let crate::kdl::TopLevelConf::Workspace(ws) = &parsed[0] {
+        let parsed: Vec<crate::def::WidgetConf> = knus::parse("test", kdl).unwrap();
+        if let crate::def::WidgetConf::Workspace(ws) = &parsed[0] {
             assert_eq!(ws.widget.workspace_transition_duration, 500);
         } else {
             panic!("Expected Workspace");
@@ -444,8 +444,8 @@ workspace {
     workspace-animation-curve "ease-quad"
 }
 "#;
-        let parsed: Vec<crate::kdl::TopLevelConf> = knus::parse("test", kdl).unwrap();
-        if let crate::kdl::TopLevelConf::Workspace(ws) = &parsed[0] {
+        let parsed: Vec<crate::def::WidgetConf> = knus::parse("test", kdl).unwrap();
+        if let crate::def::WidgetConf::Workspace(ws) = &parsed[0] {
             assert_eq!(ws.widget.workspace_animation_curve, Curve::EaseQuad);
         } else {
             panic!("Expected Workspace");
@@ -462,8 +462,8 @@ workspace {
     pop-duration 1500
 }
 "#;
-        let parsed: Vec<crate::kdl::TopLevelConf> = knus::parse("test", kdl).unwrap();
-        if let crate::kdl::TopLevelConf::Workspace(ws) = &parsed[0] {
+        let parsed: Vec<crate::def::WidgetConf> = knus::parse("test", kdl).unwrap();
+        if let crate::def::WidgetConf::Workspace(ws) = &parsed[0] {
             assert_eq!(ws.widget.pop_duration, 1500);
         } else {
             panic!("Expected Workspace");
@@ -496,16 +496,16 @@ workspace {
     }
 }
 "##;
-        let parsed: Vec<crate::kdl::TopLevelConf> = knus::parse("test", kdl).unwrap();
-        if let crate::kdl::TopLevelConf::Workspace(ws) = &parsed[0] {
+        let parsed: Vec<crate::def::WidgetConf> = knus::parse("test", kdl).unwrap();
+        if let crate::def::WidgetConf::Workspace(ws) = &parsed[0] {
             let widget = &ws.widget;
             assert_eq!(
                 widget.size.thickness,
-                crate::kdl::shared::NumOrRelative::Num(25.0)
+                crate::def::shared::NumOrRelative::Num(25.0)
             );
             assert_eq!(
                 widget.size.length,
-                crate::kdl::shared::NumOrRelative::Relative(0.5)
+                crate::def::shared::NumOrRelative::Relative(0.5)
             );
             assert_eq!(widget.gap, 15);
             assert_eq!(widget.active_increase, 0.8);

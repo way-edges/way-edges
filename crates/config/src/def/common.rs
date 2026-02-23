@@ -6,7 +6,7 @@ use smithay_client_toolkit::shell::wlr_layer::{Anchor, Layer};
 use std::collections::HashSet;
 use std::ops::Deref;
 
-use crate::kdl::shared::{Curve, NumOrRelative};
+use crate::def::shared::{Curve, NumOrRelative};
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum MonitorSpecifier {

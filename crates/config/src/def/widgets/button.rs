@@ -1,5 +1,5 @@
-use crate::kdl::shared::{color_translate, schema_color, CommonSize, KeyEventMap};
-use crate::kdl::util::{argv_str, argv_v, ToKdlError};
+use crate::def::shared::{color_translate, schema_color, CommonSize, KeyEventMap};
+use crate::def::util::{argv_str, argv_v, ToKdlError};
 use cosmic_text::Color;
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -96,8 +96,8 @@ btn {
     length "40%"
 }
 "#;
-        let parsed: Vec<crate::kdl::TopLevelConf> = knus::parse("test", kdl).unwrap();
-        if let crate::kdl::TopLevelConf::Btn(btn) = &parsed[0] {
+        let parsed: Vec<crate::def::WidgetConf> = knus::parse("test", kdl).unwrap();
+        if let crate::def::WidgetConf::Btn(btn) = &parsed[0] {
             // Assert defaults
             assert_eq!(btn.widget.color, dt_color());
             assert_eq!(btn.widget.border_width, dt_border_width());
@@ -121,8 +121,8 @@ btn {
     }
 }
 "#;
-        let parsed: Vec<crate::kdl::TopLevelConf> = knus::parse("test", kdl).unwrap();
-        if let crate::kdl::TopLevelConf::Btn(btn) = &parsed[0] {
+        let parsed: Vec<crate::def::WidgetConf> = knus::parse("test", kdl).unwrap();
+        if let crate::def::WidgetConf::Btn(btn) = &parsed[0] {
             assert_eq!(btn.widget.color, dt_color());
             assert_eq!(btn.widget.border_width, dt_border_width());
             assert_eq!(btn.widget.border_color, dt_border_color());
@@ -149,7 +149,7 @@ btn {
     color "invalid-color"
 }
 "#;
-        let result: Result<Vec<crate::kdl::TopLevelConf>, _> = knus::parse("test", kdl);
+        let result: Result<Vec<crate::def::WidgetConf>, _> = knus::parse("test", kdl);
         assert!(result.is_err()); // Should fail due to invalid color
     }
 
@@ -162,7 +162,7 @@ btn {
     border-width "not-a-number"
 }
 "#;
-        let result: Result<Vec<crate::kdl::TopLevelConf>, _> = knus::parse("test", kdl);
+        let result: Result<Vec<crate::def::WidgetConf>, _> = knus::parse("test", kdl);
         assert!(result.is_err()); // Should fail due to invalid border-width
     }
 
@@ -175,7 +175,7 @@ btn {
     border-color "invalid-color"
 }
 "#;
-        let result: Result<Vec<crate::kdl::TopLevelConf>, _> = knus::parse("test", kdl);
+        let result: Result<Vec<crate::def::WidgetConf>, _> = knus::parse("test", kdl);
         assert!(result.is_err()); // Should fail due to invalid border-color
     }
 
@@ -190,7 +190,7 @@ btn {
     }
 }
 "#;
-        let result: Result<Vec<crate::kdl::TopLevelConf>, _> = knus::parse("test", kdl);
+        let result: Result<Vec<crate::def::WidgetConf>, _> = knus::parse("test", kdl);
         assert!(result.is_err()); // Should fail due to invalid event key
     }
 }

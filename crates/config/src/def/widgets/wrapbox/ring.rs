@@ -8,9 +8,9 @@ use util::template::{
     base::{Template, TemplateProcesser},
 };
 
-use crate::kdl::util::{argv_str, argv_v};
+use crate::def::util::{argv_str, argv_v};
 
-use crate::kdl::shared::{
+use crate::def::shared::{
     color_translate, deserialize_family_owned, dt_family_owned, parse_family_owned, schema_color,
     schema_family_owned, schema_optional_template, Curve, KeyEventMap,
 };
@@ -223,7 +223,6 @@ pub struct RingConfig {
     pub font_family: FamilyOwned,
 
     #[knus(child, default, unwrap(argument))]
-    // let font_size = value.font_size.unwrap_or(value.radius * 2);
     #[serde(default)]
     pub font_size: Option<i32>,
 
@@ -350,13 +349,13 @@ wrap-box {
     }
 }
 "##;
-        let parsed: Vec<crate::kdl::TopLevelConf> = knus::parse("test", kdl).unwrap();
-        if let crate::kdl::TopLevelConf::WrapBox(wrap_box) = &parsed[0] {
+        let parsed: Vec<crate::def::WidgetConf> = knus::parse("test", kdl).unwrap();
+        if let crate::def::WidgetConf::WrapBox(wrap_box) = &parsed[0] {
             let config = &wrap_box.widget;
             assert_eq!(config.items.len(), 4);
 
             // Ram preset
-            if let crate::kdl::widgets::wrapbox::BoxedWidget::Ring(ring_config) =
+            if let crate::def::widgets::wrapbox::BoxedWidget::Ring(ring_config) =
                 &config.items[0].widget
             {
                 assert_eq!(config.items[0].index, [0, 0]);
@@ -373,7 +372,7 @@ wrap-box {
             }
 
             // Cpu preset with core
-            if let crate::kdl::widgets::wrapbox::BoxedWidget::Ring(ring_config) =
+            if let crate::def::widgets::wrapbox::BoxedWidget::Ring(ring_config) =
                 &config.items[1].widget
             {
                 assert_eq!(config.items[1].index, [0, 1]);
@@ -392,7 +391,7 @@ wrap-box {
             }
 
             // Disk preset with partition
-            if let crate::kdl::widgets::wrapbox::BoxedWidget::Ring(ring_config) =
+            if let crate::def::widgets::wrapbox::BoxedWidget::Ring(ring_config) =
                 &config.items[2].widget
             {
                 assert_eq!(config.items[2].index, [1, 0]);
@@ -411,7 +410,7 @@ wrap-box {
             }
 
             // Custom preset with cmd and other fields
-            if let crate::kdl::widgets::wrapbox::BoxedWidget::Ring(ring_config) =
+            if let crate::def::widgets::wrapbox::BoxedWidget::Ring(ring_config) =
                 &config.items[3].widget
             {
                 assert_eq!(config.items[3].index, [1, 1]);

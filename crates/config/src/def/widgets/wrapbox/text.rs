@@ -4,7 +4,7 @@ use schemars::JsonSchema;
 use serde::Deserialize;
 use util::color::{parse_color, COLOR_BLACK};
 
-use crate::kdl::{
+use crate::def::{
     shared::{
         color_translate, deserialize_family_owned, dt_family_owned, parse_family_owned,
         schema_color, schema_family_owned, KeyEventMap,
@@ -180,13 +180,13 @@ wrap-box {
     }
 }
 "##;
-        let parsed: Vec<crate::kdl::TopLevelConf> = knus::parse("test", kdl).unwrap();
-        if let crate::kdl::TopLevelConf::WrapBox(wrap_box) = &parsed[0] {
+        let parsed: Vec<crate::def::WidgetConf> = knus::parse("test", kdl).unwrap();
+        if let crate::def::WidgetConf::WrapBox(wrap_box) = &parsed[0] {
             let config = &wrap_box.widget;
             assert_eq!(config.items.len(), 3);
 
             // Time preset with format, time-zone, update-interval
-            if let crate::kdl::widgets::wrapbox::BoxedWidget::Text(text_config) =
+            if let crate::def::widgets::wrapbox::BoxedWidget::Text(text_config) =
                 &config.items[0].widget
             {
                 assert_eq!(config.items[0].index, [0, 0]);
@@ -209,7 +209,7 @@ wrap-box {
             }
 
             // Time preset with format and update-interval, no time-zone
-            if let crate::kdl::widgets::wrapbox::BoxedWidget::Text(text_config) =
+            if let crate::def::widgets::wrapbox::BoxedWidget::Text(text_config) =
                 &config.items[1].widget
             {
                 assert_eq!(config.items[1].index, [0, 1]);
@@ -230,7 +230,7 @@ wrap-box {
             }
 
             // Custom preset with cmd, update-interval, and custom fg-color, font-size
-            if let crate::kdl::widgets::wrapbox::BoxedWidget::Text(text_config) =
+            if let crate::def::widgets::wrapbox::BoxedWidget::Text(text_config) =
                 &config.items[2].widget
             {
                 assert_eq!(config.items[2].index, [1, 0]);

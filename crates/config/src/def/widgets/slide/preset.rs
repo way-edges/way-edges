@@ -11,7 +11,7 @@ use util::{
     },
 };
 
-use crate::kdl::{
+use crate::def::{
     shared::{
         color_translate, option_color_translate, schema_color, schema_optional_color,
         schema_optional_template, Curve, KeyEventMap,
