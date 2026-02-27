@@ -15,7 +15,7 @@ use super::{WorkspaceCB, WorkspaceCtx, WorkspaceData, WorkspaceHandler, ID};
 
 fn filter_empty_workspace(v: &[niri_ipc::Workspace]) -> Vec<&niri_ipc::Workspace> {
     v.iter()
-        .filter(|w| w.is_focused || w.active_window_id.is_some())
+        .filter(|w| w.is_focused || w.active_window_id.is_some() || w.name.is_some())
         .collect()
 }
 
