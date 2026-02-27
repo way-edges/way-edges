@@ -34,7 +34,7 @@
 
 ## Preset: time
 
-```jsonc
+```json
 "preset": {
   "type": "time",
   "format": "%Y-%m-%d %H:%M:%S",
@@ -52,7 +52,7 @@
 
 ## Preset: custom
 
-```jsonc
+```json
 "preset": {
   "type": "custom",
   "cmd": "echo -n aaa", // this is the command to run. The command should output a string.

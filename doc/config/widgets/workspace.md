@@ -3,7 +3,7 @@
 The workspace can be changed by either left click, or by only vertical scroll event though mouse wheel or whatever input device that sends `discrete != 0`  
 Which means scroll with 2 fingers on touchpad can not trigger anything in this widget. (This should be a behavior defined by your compositor for example niri, using 3 fingers swipe operation to change the workspace)
 
-```jsonc
+```json
 {
   // ... other basic configs omitted here for brevity
   "widget": {
@@ -59,7 +59,7 @@ Which means scroll with 2 fingers on touchpad can not trigger anything in this w
 
 ## Preset: niri
 
-```jsonc
+```json
 "preset": {
   "type": "niri",
   "preserve-empty": true,
@@ -70,7 +70,7 @@ Which means scroll with 2 fingers on touchpad can not trigger anything in this w
 
 ## Preset: hyprland
 
-```jsonc
+```json
 "preset": "hyprland",
 ```
 
@@ -78,7 +78,7 @@ Which means scroll with 2 fingers on touchpad can not trigger anything in this w
 
 ### Example: Focused-only animations
 
-```jsonc
+```json
 {
   "preset": "hyprland",
   "focused-only": true, // Only animate on currently focused monitor
@@ -87,7 +87,7 @@ Which means scroll with 2 fingers on touchpad can not trigger anything in this w
 
 ### Example: Niri with focused-only animations
 
-```jsonc
+```json
 {
   "preset": {
     "type": "niri",

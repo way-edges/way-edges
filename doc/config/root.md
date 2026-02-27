@@ -1,6 +1,6 @@
 # Root
 
-```jsonc
+```json
 {
   "$schema": "./schema.json",
   "widgets": [],

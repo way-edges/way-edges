@@ -48,7 +48,7 @@
 
 ## Outlook: window
 
-```jsonc
+```json
 "outlook": {
   "type": "window",
   "color": "#00000000",
@@ -73,7 +73,7 @@
 
 ## Outlook: board
 
-```jsonc
+```json
 "outlook": {
   "type": "board",
   "color": "#00000000",

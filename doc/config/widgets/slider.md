@@ -2,7 +2,7 @@
 
 The progress can be changed by either left click and drag, or by any vertical scroll event though what ever input device(touchpad, mouse wheel etc.)
 
-```jsonc
+```json
 {
   // ... other basic configs omitted here for brevity
   "widget": {
@@ -63,7 +63,7 @@ The progress can be changed by either left click and drag, or by any vertical sc
 
 ## Preset: Custom
 
-```jsonc
+```json
 "preset": {
   "type": "custom",
   "update-interval": 100, // ms to execute update command
@@ -85,7 +85,7 @@ The progress can be changed by either left click and drag, or by any vertical sc
 
 ## Preset: speaker/microphone
 
-```jsonc
+```json
 "preset": {
   "type": "speaker",
   // "type": "microphone",
@@ -106,7 +106,7 @@ The progress can be changed by either left click and drag, or by any vertical sc
 
 ## Preset: backlight
 
-```jsonc
+```json
 "preset": {
   "type": "backlight",
   "device": "nvidia_0", // this is the name of the device. Find it under `/sys/class/backlight/` It should be something like `nvidia_0`, `intel_0`, etc.

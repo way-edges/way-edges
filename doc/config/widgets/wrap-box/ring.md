@@ -68,7 +68,7 @@
 
 ## Preset: ram
 
-```jsonc
+```json
 "preset": {
   "type": "ram",
   "update-interval": 1000, // ms
@@ -82,7 +82,7 @@
 
 ## Preset: battery
 
-```jsonc
+```json
 "preset": {
   "type": "battery",
   "update-interval": 1000, // ms
@@ -96,7 +96,7 @@
 
 ## Preset: cpu
 
-```jsonc
+```json
 "preset": {
   "type": "cpu",
   "update-interval": 1000, // ms
@@ -112,7 +112,7 @@
 
 ## Preset: swap
 
-```jsonc
+```json
 "preset": {
   "type": "swap",
   "update-interval": 1000, // ms
@@ -126,7 +126,7 @@
 
 ## Preset: disk
 
-```jsonc
+```json
 "preset": {
   "type": "disk",
   "update-interval": 1000, // ms
@@ -142,7 +142,7 @@
 
 ## Preset: custom
 
-```jsonc
+```json
 "preset": {
   "type": "custom",
   "cmd": "echo -n 0.5", // this is the command to run. The command should output a number between 0 and 1.

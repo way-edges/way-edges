@@ -1,6 +1,6 @@
 # Widget
 
-```jsonc
+```json
 {
   "namespace": "widget_base_example",
   "edge": "top",
