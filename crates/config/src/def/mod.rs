@@ -21,7 +21,7 @@ impl<S: knus::traits::ErrorSpan> knus::DecodeChildren<S> for Root {
         let mut widgets = vec![];
         for n in nodes {
             match n.node_name.as_ref() {
-                "btn" | "slide" | "workspace" | "wrap-box" => {
+                "btn" | "slider" | "workspace" | "wrap-box" => {
                     widgets.push(WidgetConf::decode_node(n, ctx)?);
                 }
                 _ => {}
