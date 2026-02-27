@@ -21,9 +21,9 @@
     "right": 0,
   },
   "ignore-exclusive": false,
-  "pinnable": true,
+  "pinnable": false,
   "pin-on-startup": false,
-  "pin-with-key": true,
+  "pin-with-key": false,
   "pin-key": 274, // run `way-edges` with `--mouse-debug`, then click on any widget to get the key printed in log
 
   // NOTE: THE REST OF THESE CONFIGURATIONS ARE ENUM SPECIFIC
