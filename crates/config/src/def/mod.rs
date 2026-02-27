@@ -36,7 +36,7 @@ impl<S: knus::traits::ErrorSpan> knus::DecodeChildren<S> for Root {
 #[serde(rename_all = "kebab-case", tag = "type")]
 pub enum WidgetConf {
     Btn(Btn),
-    Slide(Slide),
+    Slider(Slide),
     Workspace(Workspace),
     WrapBox(WrapBox),
 }
@@ -44,7 +44,7 @@ impl WidgetConf {
     pub fn common(&self) -> &common::CommonConfig {
         match self {
             WidgetConf::Btn(c) => &c.common,
-            WidgetConf::Slide(c) => &c.common,
+            WidgetConf::Slider(c) => &c.common,
             WidgetConf::Workspace(c) => &c.common,
             WidgetConf::WrapBox(c) => &c.common,
         }

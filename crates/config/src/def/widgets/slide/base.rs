@@ -167,7 +167,7 @@ slide {
 }
 "##;
         let parsed: Vec<crate::def::WidgetConf> = knus::parse("test", kdl).unwrap();
-        if let crate::def::WidgetConf::Slide(slide) = &parsed[0] {
+        if let crate::def::WidgetConf::Slider(slide) = &parsed[0] {
             // Assert defaults
             assert_eq!(slide.widget.border_width, dt_border_width());
             assert_eq!(slide.widget.obtuse_angle, dt_obtuse_angle());
@@ -199,7 +199,7 @@ slide {
 }
 "##;
         let parsed: Vec<crate::def::WidgetConf> = knus::parse("test", kdl).unwrap();
-        if let crate::def::WidgetConf::Slide(slide) = &parsed[0] {
+        if let crate::def::WidgetConf::Slider(slide) = &parsed[0] {
             assert!(matches!(slide.widget.preset, Preset::Speaker(_)));
             if let Preset::Speaker(conf) = &slide.widget.preset {
                 assert_eq!(conf.mute_color, parse_color("#ff0000").unwrap());
@@ -226,7 +226,7 @@ slide {
 }
 "##;
         let parsed: Vec<crate::def::WidgetConf> = knus::parse("test", kdl).unwrap();
-        if let crate::def::WidgetConf::Slide(slide) = &parsed[0] {
+        if let crate::def::WidgetConf::Slider(slide) = &parsed[0] {
             assert!(matches!(slide.widget.preset, Preset::Backlight(_)));
             if let Preset::Backlight(conf) = &slide.widget.preset {
                 assert_eq!(conf.device, Some("intel_backlight".to_string()));
@@ -252,7 +252,7 @@ slide {
 }
 "##;
         let parsed: Vec<crate::def::WidgetConf> = knus::parse("test", kdl).unwrap();
-        if let crate::def::WidgetConf::Slide(slide) = &parsed[0] {
+        if let crate::def::WidgetConf::Slider(slide) = &parsed[0] {
             assert!(matches!(slide.widget.preset, Preset::Custom(_)));
             if let Preset::Custom(conf) = &slide.widget.preset {
                 assert_eq!(conf.update_command, "echo test");
@@ -317,7 +317,7 @@ slide {
 }
 "#;
         let parsed: Vec<crate::def::WidgetConf> = knus::parse("test", kdl).unwrap();
-        if let crate::def::WidgetConf::Slide(slide) = &parsed[0] {
+        if let crate::def::WidgetConf::Slider(slide) = &parsed[0] {
             assert_eq!(slide.widget.border_width, 5);
         } else {
             panic!("Expected Slide");
@@ -335,7 +335,7 @@ slide {
 }
 "#;
         let parsed: Vec<crate::def::WidgetConf> = knus::parse("test", kdl).unwrap();
-        if let crate::def::WidgetConf::Slide(slide) = &parsed[0] {
+        if let crate::def::WidgetConf::Slider(slide) = &parsed[0] {
             assert_eq!(slide.widget.obtuse_angle, 150.0);
         } else {
             panic!("Expected Slide");
@@ -353,7 +353,7 @@ slide {
 }
 "#;
         let parsed: Vec<crate::def::WidgetConf> = knus::parse("test", kdl).unwrap();
-        if let crate::def::WidgetConf::Slide(slide) = &parsed[0] {
+        if let crate::def::WidgetConf::Slider(slide) = &parsed[0] {
             assert_eq!(slide.widget.radius, 25.0);
         } else {
             panic!("Expected Slide");
@@ -375,7 +375,7 @@ slide {
 }
 "##;
         let parsed: Vec<crate::def::WidgetConf> = knus::parse("test", kdl).unwrap();
-        if let crate::def::WidgetConf::Slide(slide) = &parsed[0] {
+        if let crate::def::WidgetConf::Slider(slide) = &parsed[0] {
             assert_eq!(slide.widget.bg_color, parse_color("#ffffff").unwrap());
             assert_eq!(slide.widget.fg_color, parse_color("#000000").unwrap());
             assert_eq!(slide.widget.border_color, parse_color("#cccccc").unwrap());
@@ -403,7 +403,7 @@ slide {
 }
 "#;
         let parsed: Vec<crate::def::WidgetConf> = knus::parse("test", kdl).unwrap();
-        if let crate::def::WidgetConf::Slide(slide) = &parsed[0] {
+        if let crate::def::WidgetConf::Slider(slide) = &parsed[0] {
             assert_eq!(slide.widget.scroll_unit, 0.01);
         } else {
             panic!("Expected Slide");
@@ -421,7 +421,7 @@ slide {
 }
 "#;
         let parsed: Vec<crate::def::WidgetConf> = knus::parse("test", kdl).unwrap();
-        if let crate::def::WidgetConf::Slide(slide) = &parsed[0] {
+        if let crate::def::WidgetConf::Slider(slide) = &parsed[0] {
             assert_eq!(slide.widget.redraw_only_on_internal_update, true);
         } else {
             panic!("Expected Slide");
@@ -454,7 +454,7 @@ slide {
 }
 "##;
         let parsed: Vec<crate::def::WidgetConf> = knus::parse("test", kdl).unwrap();
-        if let crate::def::WidgetConf::Slide(slide) = &parsed[0] {
+        if let crate::def::WidgetConf::Slider(slide) = &parsed[0] {
             let widget = &slide.widget;
             assert_eq!(widget.border_width, 5);
             assert_eq!(widget.obtuse_angle, 140.0);

@@ -473,7 +473,7 @@ impl Widget {
                     Box::new(button::init_widget(b, s, w))
                 })
             }
-            config::def::WidgetConf::Slide(c) => {
+            config::def::WidgetConf::Slider(c) => {
                 ws!(c, config::def::Slide, "slide", |b, w, _, s| {
                     slide::init_widget(b, s, w)
                 })
