@@ -3,7 +3,7 @@ use std::{collections::HashMap, ops::Deref, sync::Arc};
 use backend::tray::{item::Tray, TrayMap};
 use cairo::ImageSurface;
 
-use config::widgets::wrapbox::tray::TrayConfig;
+use config::def::widgets::wrapbox::tray::TrayConfig;
 
 use crate::{mouse_state::MouseEvent, widgets::wrapbox::grid::GridBox};
 

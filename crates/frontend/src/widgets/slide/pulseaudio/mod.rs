@@ -21,7 +21,7 @@ use backend::pulseaudio::{
     change::{set_mute, set_vol},
     PulseAudioDevice, VInfo,
 };
-use config::widgets::slide::{base::SlideConfig, preset::PulseAudioConfig};
+use config::def::widgets::slide::{base::SlideConfig, preset::PulseAudioConfig};
 
 #[derive(Debug)]
 struct Progress(Rc<Cell<VInfo>>);

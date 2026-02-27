@@ -3,7 +3,7 @@ use interval_task::runner::Runner;
 use std::time::Duration;
 
 use backend::system::{get_battery_info, get_cpu_info, get_disk_info, get_ram_info, get_swap_info};
-use config::widgets::wrapbox::ring::RingPreset;
+use config::def::widgets::wrapbox::ring::RingPreset;
 use util::shell::shell_cmd;
 
 #[allow(dead_code)]

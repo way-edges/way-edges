@@ -5,7 +5,7 @@ use std::{
     sync::atomic::{AtomicBool, AtomicPtr},
 };
 
-use config::widgets::workspace::NiriConf;
+use config::def::widgets::workspace::NiriConf;
 use connection::{Connection, Event};
 use tokio::io;
 
@@ -45,15 +45,15 @@ impl DataCache {
         self.inner.is_empty() && self.focused_output.is_none()
     }
 
-    fn get_workspace_data(&self, output: &str, filter_empty: bool) -> WorkspaceData {
+    fn get_workspace_data(&self, output: &str, preserve_empty: bool) -> WorkspaceData {
         let Some(wps) = self.inner.get(output) else {
             return WorkspaceData::default();
         };
 
-        let v = if filter_empty {
-            filter_empty_workspace(wps)
-        } else {
+        let v = if preserve_empty {
             wps.iter().collect()
+        } else {
+            filter_empty_workspace(wps)
         };
         let focus = v
             .iter()
@@ -76,15 +76,15 @@ impl DataCache {
     fn get_workspace(
         &self,
         output: &str,
-        filter_empty: bool,
+        preserve_empty: bool,
         index: usize,
     ) -> Option<&niri_ipc::Workspace> {
         let wps = self.inner.get(output)?;
 
-        let v = if filter_empty {
-            filter_empty_workspace(wps)
-        } else {
+        let v = if preserve_empty {
             wps.iter().collect()
+        } else {
+            filter_empty_workspace(wps)
         };
         if v.len() > index {
             Some(v[index])
@@ -177,7 +177,7 @@ impl NiriCtx {
                     return None; // No focused monitor found, skip all
                 }
             }
-            Some(self.data.get_workspace_data(output, conf.filter_empty))
+            Some(self.data.get_workspace_data(output, conf.preserve_empty))
         });
     }
     fn add_cb(&mut self, cb: WorkspaceCB<NiriConf>) -> ID {
@@ -185,7 +185,7 @@ impl NiriCtx {
             cb.sender
                 .send(
                     self.data
-                        .get_workspace_data(&cb.output, cb.data.filter_empty),
+                        .get_workspace_data(&cb.output, cb.data.preserve_empty),
                 )
                 .unwrap_or_else(|e| log::error!("Error sending initial data in add_cb: {e}"));
         }
@@ -214,7 +214,8 @@ fn start_listener() {
         // Perform the unconditional sync
         ctx.workspace_ctx
             .sync_all_widgets_unconditionally(|output, conf_data| {
-                ctx.data.get_workspace_data(output, conf_data.filter_empty)
+                ctx.data
+                    .get_workspace_data(output, conf_data.preserve_empty)
             });
 
         // It's good practice to call the main update logic afterwards,
@@ -271,18 +272,18 @@ impl NiriWorkspaceHandler {
         get_backend_runtime_handle().spawn(async move {
             let ctx = get_niri_ctx();
 
-            let Some((output, filter_empty)) = ctx
+            let Some((output, preserve_empty)) = ctx
                 .workspace_ctx
                 .cb
                 .get(&cb_id)
-                .map(|w| (w.output.as_str(), w.data.filter_empty))
+                .map(|w| (w.output.as_str(), w.data.preserve_empty))
             else {
                 return;
             };
 
             let Some(id) = ctx
                 .data
-                .get_workspace(output, filter_empty, index)
+                .get_workspace(output, preserve_empty, index)
                 .map(|w| w.id)
             else {
                 return;

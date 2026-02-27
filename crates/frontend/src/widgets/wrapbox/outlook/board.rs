@@ -1,8 +1,8 @@
 use cairo::ImageSurface;
 
-use config::{
-    shared::NumOrRelative,
-    widgets::wrapbox::{OutlookBoardConfig, OutlookMargins},
+use config::def::{
+    shared::{NumMargins, NumOrRelative},
+    widgets::wrapbox::OutlookBoardConfig,
 };
 use cosmic_text::Color;
 use smithay_client_toolkit::shell::wlr_layer::Anchor;
@@ -15,7 +15,7 @@ use super::OutlookDraw;
 
 #[derive(Debug)]
 pub struct DrawConf {
-    margins: OutlookMargins,
+    margins: NumMargins,
     color: Color,
     border_radius: i32,
 

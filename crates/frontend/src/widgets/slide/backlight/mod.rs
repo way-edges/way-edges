@@ -11,7 +11,7 @@ use crate::{
     widgets::{slide::base::event::ProgressDataf, WidgetContext},
 };
 
-use config::widgets::slide::{base::SlideConfig, preset::BacklightConfig};
+use config::def::widgets::slide::{base::SlideConfig, preset::BacklightConfig};
 
 #[derive(Debug)]
 pub struct BacklightContext {

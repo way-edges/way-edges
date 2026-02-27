@@ -1,7 +1,7 @@
 use backend::tray::item::{MenuItem, RootMenu, Tray};
 use cairo::{Context, ImageSurface};
 
-use config::widgets::wrapbox::tray::{HeaderMenuAlign, HeaderMenuStack, TrayConfig};
+use config::def::widgets::wrapbox::tray::{HeaderMenuAlign, HeaderMenuStack, TrayConfig};
 use util::{binary_search_end, draw::new_surface, Z};
 
 use super::{

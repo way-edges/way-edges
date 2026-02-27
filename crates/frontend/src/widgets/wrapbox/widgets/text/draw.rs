@@ -1,6 +1,6 @@
 use cairo::ImageSurface;
 
-use config::widgets::wrapbox::text::TextConfig;
+use config::def::widgets::wrapbox::text::TextConfig;
 use cosmic_text::{Color, FamilyOwned};
 use util::text::draw_text;
 

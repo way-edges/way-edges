@@ -1,7 +1,7 @@
 use cairo::{Context, ImageSurface};
 
 use backend::workspace::WorkspaceData;
-use config::widgets::workspace::WorkspaceConfig;
+use config::def::widgets::workspace::WorkspaceConfig;
 use cosmic_text::Color;
 use smithay_client_toolkit::shell::wlr_layer::Anchor;
 use util::{

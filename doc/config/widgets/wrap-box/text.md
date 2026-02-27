@@ -1,8 +1,7 @@
 # Text
 
-```jsonc
+```json
 {
-"widget": {
   "type": "text",
   "fg-color": "#00000000",
   "font-family": "monospace",

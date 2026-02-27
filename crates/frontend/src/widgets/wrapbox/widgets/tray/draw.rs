@@ -3,7 +3,7 @@ use std::f64::consts::PI;
 use backend::tray::item::{MenuItem, MenuType, Tray};
 use cairo::{Context, ImageSurface};
 
-use config::widgets::wrapbox::tray::{MenuDrawConfig, TrayConfig};
+use config::def::widgets::wrapbox::tray::{MenuDrawConfig, TrayConfig};
 use util::{
     color::cairo_set_color,
     draw::new_surface,
@@ -279,14 +279,14 @@ impl<'a> MenuDrawArg<'a> {
 
         // margin
         let surf = new_surface((
-            combined.width() + 2 * self.draw_config.margin[0],
-            combined.height() + 2 * self.draw_config.margin[1],
+            combined.width() + self.draw_config.margin.left + self.draw_config.margin.right,
+            combined.height() + self.draw_config.margin.top + self.draw_config.margin.bottom,
         ));
         let ctx = Context::new(&surf).unwrap();
         ctx.set_source_surface(
             &combined,
-            self.draw_config.margin[0] as f64,
-            self.draw_config.margin[1] as f64,
+            self.draw_config.margin.left as f64,
+            self.draw_config.margin.top as f64,
         )
         .unwrap();
         ctx.paint().unwrap();

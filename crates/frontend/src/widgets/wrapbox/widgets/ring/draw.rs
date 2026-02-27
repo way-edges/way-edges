@@ -1,6 +1,6 @@
 use cairo::{Format, ImageSurface};
 
-use config::widgets::wrapbox::ring::RingConfig;
+use config::def::widgets::wrapbox::ring::RingConfig;
 use cosmic_text::{Color, FamilyOwned};
 use util::color::cairo_set_color;
 use util::draw::{draw_fan, new_surface};
@@ -176,7 +176,7 @@ impl RingDrawer {
         let bg_color = config.bg_color;
         let fg_color = config.fg_color;
         let font_family = config.font_family.clone();
-        let font_size = config.font_size;
+        let font_size = config.font_size.unwrap_or(radius * 2);
 
         let prefix = config.prefix.take();
         let suffix = config.suffix.take();
