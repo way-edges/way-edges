@@ -15,7 +15,7 @@ use way_edges_derive::{const_property, GetSize};
 #[derive(Debug, GetSize, Clone, Deserialize, JsonSchema)]
 #[schemars(deny_unknown_fields)]
 #[schemars(transform = SlideConfig_generate_defs)]
-#[const_property("type", "slide")]
+#[const_property("type", "slider")]
 #[serde(rename_all = "kebab-case")]
 pub struct SlideConfig {
     #[serde(flatten)]
@@ -158,37 +158,37 @@ mod tests {
     use knus::Decode;
 
     #[test]
-    fn test_decode_minimal_slide_config() {
+    fn test_decode_minimal_slider_config() {
         let kdl = r##"
-slide {
+slider {
     edge "bottom"
     thickness 20
     length "40%"
 }
 "##;
         let parsed: Vec<crate::def::WidgetConf> = knus::parse("test", kdl).unwrap();
-        if let crate::def::WidgetConf::Slider(slide) = &parsed[0] {
+        if let crate::def::WidgetConf::Slider(slider) = &parsed[0] {
             // Assert defaults
-            assert_eq!(slide.widget.border_width, dt_border_width());
-            assert_eq!(slide.widget.obtuse_angle, dt_obtuse_angle());
-            assert_eq!(slide.widget.radius, dt_radius());
-            assert_eq!(slide.widget.bg_color, dt_bg_color());
-            assert_eq!(slide.widget.fg_color, dt_fg_color());
-            assert_eq!(slide.widget.border_color, dt_border_color());
-            assert_eq!(slide.widget.fg_text_color, None);
-            assert_eq!(slide.widget.bg_text_color, None);
-            assert_eq!(slide.widget.redraw_only_on_internal_update, false);
-            assert_eq!(slide.widget.scroll_unit, default_scroll_unit());
-            assert!(matches!(slide.widget.preset, Preset::Custom(_)));
+            assert_eq!(slider.widget.border_width, dt_border_width());
+            assert_eq!(slider.widget.obtuse_angle, dt_obtuse_angle());
+            assert_eq!(slider.widget.radius, dt_radius());
+            assert_eq!(slider.widget.bg_color, dt_bg_color());
+            assert_eq!(slider.widget.fg_color, dt_fg_color());
+            assert_eq!(slider.widget.border_color, dt_border_color());
+            assert_eq!(slider.widget.fg_text_color, None);
+            assert_eq!(slider.widget.bg_text_color, None);
+            assert_eq!(slider.widget.redraw_only_on_internal_update, false);
+            assert_eq!(slider.widget.scroll_unit, default_scroll_unit());
+            assert!(matches!(slider.widget.preset, Preset::Custom(_)));
         } else {
-            panic!("Expected Slide");
+            panic!("Expected Slider");
         }
     }
 
     #[test]
     fn test_decode_slide_config_with_preset_speaker() {
         let kdl = r##"
-slide {
+slider {
     edge "bottom"
     thickness 20
     length "40%"
@@ -199,9 +199,9 @@ slide {
 }
 "##;
         let parsed: Vec<crate::def::WidgetConf> = knus::parse("test", kdl).unwrap();
-        if let crate::def::WidgetConf::Slider(slide) = &parsed[0] {
-            assert!(matches!(slide.widget.preset, Preset::Speaker(_)));
-            if let Preset::Speaker(conf) = &slide.widget.preset {
+        if let crate::def::WidgetConf::Slider(slider) = &parsed[0] {
+            assert!(matches!(slider.widget.preset, Preset::Speaker(_)));
+            if let Preset::Speaker(conf) = &slider.widget.preset {
                 assert_eq!(conf.mute_color, parse_color("#ff0000").unwrap());
                 assert_eq!(
                     conf.device,
@@ -209,14 +209,14 @@ slide {
                 );
             }
         } else {
-            panic!("Expected Slide");
+            panic!("Expected Slider");
         }
     }
 
     #[test]
     fn test_decode_slide_config_with_preset_backlight() {
         let kdl = r##"
-slide {
+slider {
     edge "bottom"
     thickness 20
     length "40%"
@@ -226,9 +226,9 @@ slide {
 }
 "##;
         let parsed: Vec<crate::def::WidgetConf> = knus::parse("test", kdl).unwrap();
-        if let crate::def::WidgetConf::Slider(slide) = &parsed[0] {
-            assert!(matches!(slide.widget.preset, Preset::Backlight(_)));
-            if let Preset::Backlight(conf) = &slide.widget.preset {
+        if let crate::def::WidgetConf::Slider(slider) = &parsed[0] {
+            assert!(matches!(slider.widget.preset, Preset::Backlight(_)));
+            if let Preset::Backlight(conf) = &slider.widget.preset {
                 assert_eq!(conf.device, Some("intel_backlight".to_string()));
             }
         } else {
@@ -239,7 +239,7 @@ slide {
     #[test]
     fn test_decode_slide_config_with_preset_custom() {
         let kdl = r##"
-slide {
+slider {
     edge "bottom"
     thickness 20
     length "40%"
@@ -252,22 +252,22 @@ slide {
 }
 "##;
         let parsed: Vec<crate::def::WidgetConf> = knus::parse("test", kdl).unwrap();
-        if let crate::def::WidgetConf::Slider(slide) = &parsed[0] {
-            assert!(matches!(slide.widget.preset, Preset::Custom(_)));
-            if let Preset::Custom(conf) = &slide.widget.preset {
+        if let crate::def::WidgetConf::Slider(slider) = &parsed[0] {
+            assert!(matches!(slider.widget.preset, Preset::Custom(_)));
+            if let Preset::Custom(conf) = &slider.widget.preset {
                 assert_eq!(conf.update_command, "echo test");
                 assert_eq!(conf.update_interval, 1000);
                 assert!(conf.on_change_command.is_some());
             }
         } else {
-            panic!("Expected Slide");
+            panic!("Expected Slider");
         }
     }
 
     #[test]
     fn test_decode_slide_config_invalid_bg_color() {
         let kdl = r#"
-slide {
+slider {
     edge "bottom"
     thickness 20
     length "40%"
@@ -281,7 +281,7 @@ slide {
     #[test]
     fn test_decode_slide_config_invalid_border_width() {
         let kdl = r#"
-slide {
+slider {
     edge "bottom"
     thickness 20
     length "40%"
@@ -295,7 +295,7 @@ slide {
     #[test]
     fn test_decode_slide_config_invalid_preset() {
         let kdl = r#"
-slide {
+slider {
     edge "bottom"
     thickness 20
     length "40%"
@@ -309,7 +309,7 @@ slide {
     #[test]
     fn test_decode_slide_config_border_width() {
         let kdl = r#"
-slide {
+slider {
     edge "bottom"
     thickness 20
     length "40%"
@@ -327,7 +327,7 @@ slide {
     #[test]
     fn test_decode_slide_config_obtuse_angle() {
         let kdl = r#"
-slide {
+slider {
     edge "bottom"
     thickness 20
     length "40%"
@@ -345,7 +345,7 @@ slide {
     #[test]
     fn test_decode_slide_config_radius() {
         let kdl = r#"
-slide {
+slider {
     edge "bottom"
     thickness 20
     length "40%"
@@ -363,7 +363,7 @@ slide {
     #[test]
     fn test_decode_slide_config_colors() {
         let kdl = r##"
-slide {
+slider {
     edge "bottom"
     thickness 20
     length "40%"
@@ -395,7 +395,7 @@ slide {
     #[test]
     fn test_decode_slide_config_scroll_unit() {
         let kdl = r#"
-slide {
+slider {
     edge "bottom"
     thickness 20
     length "40%"
@@ -413,7 +413,7 @@ slide {
     #[test]
     fn test_decode_slide_config_redraw_only_on_internal_update() {
         let kdl = r#"
-slide {
+slider {
     edge "bottom"
     thickness 20
     length "40%"
@@ -431,7 +431,7 @@ slide {
     #[test]
     fn test_decode_slide_config_all_fields() {
         let kdl = r##"
-slide {
+slider {
     edge "top"
     thickness 25
     length "50%"
