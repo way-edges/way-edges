@@ -1,19 +1,19 @@
 # Button
 
-```json
-{
-"type": "btn",
-"thickness": 20,
-"length": "25%",
-"border-width": 5,
-"border-color": "#112233aa",
-"color": "#ffeeddaa",
-"event-map": {
-  "mouse-left": "sh -c pkill nwg-drawer || nwg-drawer -ovl",
-  "mouse-right": "niri msg action maximize-column",
-  "mouse-middle": "niri msg action close-window",
-  "mouse-side": "niri msg action toggle-overview",
-  "mouse-extra": "niri msg action toggle-column-tabbed-display",
+```kdl
+btn {
+  thickness 20
+  length "25%"
+  border-width 5
+  border-color "#112233aa"
+  color "#ffeeddaa"
+  event-map {
+    mouse-left "sh -c pkill nwg-drawer || nwg-drawer -ovl"
+    mouse-right "niri msg action maximize-column"
+    mouse-middle "niri msg action close-window"
+    mouse-side "niri msg action toggle-overview"
+    mouse-extra "niri msg action toggle-column-tabbed-display"
+  }
 }
 ```
 

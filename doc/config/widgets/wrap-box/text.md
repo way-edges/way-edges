@@ -1,26 +1,24 @@
 # Text
 
-```json
-{
-  "type": "text",
-  "fg-color": "#00000000",
-  "font-family": "monospace",
-  "font-size": 24,
-  "event-map": {
+```kdl
+item "text" {
+  font-family "monospace"
+  font-size 24
+  fg-color "#00000000"
+  event-map {
     // same as btn
-  },
-  // "preset": {
-  //   "type": "time",
-  //   "format": "%Y-%m-%d %H:%M:%S",
-  //   "time-zone": "uk", // null for local time
-  //   "update-interval": 1000, // ms
-  // },
-  "preset": {
-    "type": "custom",
-    "cmd": "echo -n aaa", // this is the command to run. The command should output a string.
-    "update-interval": 1000, // ms
-  },
-},
+  }
+  // preset {
+  //   type "time"
+  //   format "%Y-%m-%d %H:%M:%S"
+  //   time-zone "uk" // null for local time
+  //   update-interval 1000 // ms
+  // }
+  preset "custom" {
+    cmd "echo -n aaa" // this is the command to run. The command should output a string.
+    update-interval 1000 // ms
+  }
+}
 ```
 
 | Name        | Description        |
@@ -34,13 +32,12 @@
 
 ## Preset: time
 
-```json
-"preset": {
-  "type": "time",
-  "format": "%Y-%m-%d %H:%M:%S",
-  "time-zone": "uk", // null for local time
-  "update-interval": 1000, // ms
-},
+```kdl
+preset "time" {
+  format "%Y-%m-%d %H:%M:%S"
+  time-zone "uk" // null for local time
+  update-interval 1000 // ms
+}
 ```
 
 | Name            | Description  |
@@ -52,12 +49,11 @@
 
 ## Preset: custom
 
-```json
-"preset": {
-  "type": "custom",
-  "cmd": "echo -n aaa", // this is the command to run. The command should output a string.
-  "update-interval": 1000, // ms
-},
+```kdl
+preset "custom" {
+  cmd "echo -n aaa" // this is the command to run. The command should output a string.
+  update-interval 1000 // ms
+}
 ```
 
 | Name            | Description                                                     |

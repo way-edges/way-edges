@@ -1,51 +1,27 @@
 # Ring
 
-```json
-{
-  "index": [-1, -1], // position in the grid layout. -1 means next available position.
-  "type": "ring",
-  "animation-curve": "ease-expo",
-  "bg-color": "#00000000",
-  "fg-color": "#00000000",
-  "font-family": "serif",
-  "font-size": 0,
-  "prefix": "prefix {float:2,100}%",
-  "suffix": "surfix {float:2,100}%",
-  "prefix-hide": false,
-  "suffix-hide": false,
-  "ring-width": 20,
-  "radius": 35,
-  "text-transition-ms": 100, // ms
-  "event-map": {
+```kdl
+item "ring" {
+  index -1 -1 // position in the grid layout. -1 means next available position.
+  animation-curve "ease-expo"
+  bg-color "#00000000"
+  fg-color "#00000000"
+  font-family "serif"
+  font-size 0
+  prefix "prefix {float:2,100}%"
+  suffix "surfix {float:2,100}%"
+  prefix-hide
+  suffix-hide
+  ring-width 20
+  radius 35
+  text-transition-ms 100 // ms
+  event-map {
     // same as btn
-  },
-  // "preset": {
-  //   "type": "ram",
-  //   "update-interval": 1000, // ms
-  // },
-  // "preset": {
-  //   "type": "battery",
-  //   "update-interval": 1000, // ms
-  // },
-  // "preset": {
-  //   "type": "cpu",
-  //   "update-interval": 1000, // ms
-  // },
-  // "preset": {
-  //   "type": "swap",
-  //   "update-interval": 1000, // ms
-  // },
-  // "preset": {
-  //   "type": "disk",
-  //   "update-interval": 1000, // ms
-  //   "partition": "/",
-  // },
-  "preset": {
-    "type": "custom",
-    "cmd": "echo -n 0.5", // this is the command to run. The command should output a number between 0 and 1.
-    "update-interval": 1000, // ms
-  },
-},
+  }
+  // preset "ram" {
+  //   update-interval 1000 // ms
+  // }
+}
 ```
 
 | Name               | Description                                                 |
@@ -68,11 +44,10 @@
 
 ## Preset: ram
 
-```json
-"preset": {
-  "type": "ram",
-  "update-interval": 1000, // ms
-},
+```kdl
+preset "ram" {
+  update-interval 1000 // ms
+}
 ```
 
 | Name            | Description |
@@ -82,11 +57,10 @@
 
 ## Preset: battery
 
-```json
-"preset": {
-  "type": "battery",
-  "update-interval": 1000, // ms
-},
+```kdl
+preset "battery" {
+  update-interval 1000 // ms
+}
 ```
 
 | Name            | Description     |
@@ -96,12 +70,11 @@
 
 ## Preset: cpu
 
-```json
-"preset": {
-  "type": "cpu",
-  "update-interval": 1000, // ms
-  "core": 0, // null for all cores
-},
+```kdl
+preset "cpu" {
+  update-interval 1000 // ms
+  core 0 // null for all cores
+}
 ```
 
 | Name            | Description        |
@@ -112,11 +85,10 @@
 
 ## Preset: swap
 
-```json
-"preset": {
-  "type": "swap",
-  "update-interval": 1000, // ms
-},
+```kdl
+preset "swap" {
+  update-interval 1000 // ms
+}
 ```
 
 | Name            | Description  |
@@ -126,12 +98,11 @@
 
 ## Preset: disk
 
-```json
-"preset": {
-  "type": "disk",
-  "update-interval": 1000, // ms
-  "partition": "/",
-},
+```kdl
+preset "disk" {
+  update-interval 1000 // ms
+  partition "/" // partition to monitor, e.g. "/", "/home", "/mnt/data"
+}
 ```
 
 | Name            | Description  |
@@ -142,12 +113,11 @@
 
 ## Preset: custom
 
-```json
-"preset": {
-  "type": "custom",
-  "cmd": "echo -n 0.5", // this is the command to run. The command should output a number between 0 and 1.
-  "update-interval": 1000, // ms
-},
+```kdl
+preset "custom" {
+  cmd "echo -n 0.5" // this is the command to run. The command should output a number between 0 and 1.
+  update-interval 1000 // ms
+}
 ```
 
 | Name            | Description                                                                     |

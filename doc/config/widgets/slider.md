@@ -2,46 +2,52 @@
 
 The progress can be changed by either left click and drag, or by any vertical scroll event though what ever input device(touchpad, mouse wheel etc.)
 
-```json
-{
-  // ... other basic configs omitted here for brevity
-  "widget": {
-    "type": "slider",
-    "thickness": 20,
-    "length": "25%",
-    "border-width": 3,
-    "border-color": "#112233aa",
-    "fg-color": "#ffeeddaa",
-    "bg-color": "#112233aa",
-    "bg-text-color": "#124123aa",
-    "fg-text-color": "#124123aa",
-    "redraw-only-on-internal-update": true, // This is when you want to reduce the cpu usage. The progress update by manually dragging the slider is sent, but it won't be redrawn until the value is changed by other means.
-    "radius": 20, // corner radius
-    "obtuse-angle": 120, // in degrees(90~180). controls how much curve the widget has
-    "scroll-unit": 0.005, // 0 to 1. defines the amount of progress to change per pixel from vertical scroll with mouse wheel. default 0.005
-    // "preset": {
-    //   "type": "custom",
-    //   "update-interval": 100, // ms to execute update command
-    //   "update-command": "echo -n 0.1", // The command should output a number between 0 and 1.
-    //   "on-change-command": "notify-send {float:2,100}%", // this is the command to run when the value changes. The value is passed as a parameter. You can use {float:2,100} to format the value as a float with 2 decimal places multiplied by 100.
-    //   "event-map": {
-    //     // same as btn
-    //   },
-    // },
-    // "preset": {
-    //   "type": "speaker",
-    //   "type": "microphone",
-    //   "device": "alsa_output.pci-0000_00_1f.3.analog-stereo", // Name of the device, not description of the device. null for default sink/source
-    //   "animation-curve": "ease-expo", // mute animation
-    //   "mute-text-color": "#00000000",
-    //   "mute-color": "#00000000",
-    // },
-    "preset": {
-      "type": "backlight",
-      "device": "nvidia_0", // this is the name of the device. Find it under `/sys/class/backlight/` It should be something like `nvidia_0`, `intel_0`, etc.
-    },
-  },
-},
+```kdl
+slider {
+  // ...
+
+  thickness 20
+  length "25%"
+  border-width 3
+  border-color "#112233aa"
+  fg-color "#ffeeddaa"
+  bg-color "#112233aa"
+  bg-text-color "#124123aa"
+  fg-text-color "#124123aa"
+  redraw-only-on-internal-update // This is when you want to reduce the cpu usage. The progress update by manually dragging the slider is sent, but it won't be redrawn until the value is changed by other means.
+  radius 20 // corner radius
+  obtuse-angle 120 // in degrees(90~180). controls how much curve the widget has
+  scroll-unit 0.005 // 0 to 1. defines the amount of progress to change per pixel from vertical scroll with mouse wheel. default 0.005
+
+  // preset, choose only one of these.
+
+  preset "custom" {
+    update-interval 100 // ms to execute update command
+    update-command "echo -n 0.1" // The command should output a number between 0 and 1.
+    on-change-command "notify-send {float:2,100}%" // this is the command to run when the value changes. The value is passed as a parameter. You can use {float:2,100} to format the value as a float with 2 decimal places multiplied by 100.
+    event-map {
+      // same as btn
+    }
+  }
+
+  preset "speaker" {
+    device "alsa_output.pci-0000_00_1f.3.analog-stereo" // Name of the device, not description of the device. null for default sink/source
+    animation-curve "ease-expo" // mute animation
+    mute-text-color "#00000000"
+    mute-color "#00000000"
+  }
+
+  preset "microphone" {
+    device "alsa_input.pci-0000_00_1f.3.analog-stereo" // Name of the device, not description of the device. null for default sink/source
+    animation-curve "ease-expo" // mute animation
+    mute-text-color "#00000000"
+    mute-color "#00000000"
+  }
+
+  preset "backlight" {
+    device "nvidia_0" // this is the name of the device. Find it under `/sys/class/backlight/` It should be something like `nvidia_0`, `intel_0`, etc.
+  }
+}
 ```
 
 | Name                           | Description                                                                                                                                                                    |
@@ -63,16 +69,15 @@ The progress can be changed by either left click and drag, or by any vertical sc
 
 ## Preset: Custom
 
-```json
-"preset": {
-  "type": "custom",
-  "update-interval": 100, // ms to execute update command
-  "update-command": "echo -n 0.1", // The command should output a number between 0 and 1.
-  "on-change-command": "notify-send {float:2,100}%", // this is the command to run when the value changes. The value is passed as a parameter. You can use {float:2,100} to format the value as a float with 2 decimal places multiplied by 100.
-  "event-map": {
+```kdl
+preset "custom" {
+  update-interval 100 // ms to execute update command
+  update-command "echo -n 0.1" // The command should output a number between 0 and 1.
+  on-change-command "notify-send {float:2,100}%" // this is the command to run when the value changes. The value is passed as a parameter. You can use {float:2,100} to format the value as a float with 2 decimal places multiplied by 100.
+  event-map {
     // same as btn
-  },
-},
+  }
+}
 ```
 
 | Name              | Description                                                                                                                                                                              |
@@ -85,15 +90,13 @@ The progress can be changed by either left click and drag, or by any vertical sc
 
 ## Preset: speaker/microphone
 
-```json
-"preset": {
-  "type": "speaker",
-  // "type": "microphone",
-  "device": "alsa_output.pci-0000_00_1f.3.analog-stereo", // Name of the device, not description of the device. null for default sink/source
-  "animation-curve": "ease-expo", // mute animation
-  "mute-text-color": "#00000000",
-  "mute-color": "#00000000",
-},
+```kdl
+preset "speaker" {
+  device "alsa_output.pci-0000_00_1f.3.analog-stereo" // Name of the device, not description of the device. null for default sink/source
+  animation-curve "ease-expo" // mute animation
+  mute-text-color "#00000000"
+  mute-color "#00000000"
+}
 ```
 
 | Name            | Description                                                                     |
@@ -106,11 +109,10 @@ The progress can be changed by either left click and drag, or by any vertical sc
 
 ## Preset: backlight
 
-```json
-"preset": {
-  "type": "backlight",
-  "device": "nvidia_0", // this is the name of the device. Find it under `/sys/class/backlight/` It should be something like `nvidia_0`, `intel_0`, etc.
-},
+```kdl
+preset "backlight" {
+  device "nvidia_0" // this is the name of the device. Find it under `/sys/class/backlight/` It should be something like `nvidia_0`, `intel_0`, etc.
+}
 ```
 
 | Name   | Description                                                                                                                   |

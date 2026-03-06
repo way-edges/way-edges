@@ -1,41 +1,33 @@
 # Wrap Box
 
-```json
-{
-  // ... other basic configs omitted here for brevity
-  "widget": {
-    "type": "wrap-box",
-    "align": "center-left", // 9 positions: center-left, center-right, top-left, top-right, bottom-left, bottom-right, left-top, left-bottom, right-top, right-bottom
-    "gap": 10,
-    // "outlook": {
-    //   "type": "window",
-    //   "color": "#00000000",
-    //   "border-radius": 5,
-    //   "border-width": 15,
-    //   "margins": {
-    //     "left": 5,
-    //     "right": 5,
-    //     "bottom": 5,
-    //     "top": 5,
-    //   }
-    // },
-    "outlook": {
-      "type": "board",
-      "border-radius": 5,
-      "color": "#00000000",
-      "margins": {
-        // ...
-      },
-    },
-    "items": [
-      {
-        "index": [-1, -1], // position in the grid layout. -1 means next available position.
-        "type": "ring",
-        // ... ring configs omitted here for brevity
-      },
-    ],
-  },
-},
+```kdl
+wrap-box {
+  align "center-left" // 9 positions: center-left, center-right, top-left, top-right, bottom-left, bottom-right, left-top, left-bottom, right-top, right-bottom
+  gap 10
+  // outlook "window" {
+  //   color "#00000000"
+  //   border-radius 5
+  //   border-width 15
+  //   margins {
+  //     left 5
+  //     right 5
+  //     bottom 5
+  //     top 5
+  //   }
+  // }
+  outlook "board" {
+    border-radius 5
+    color "#00000000"
+    margins {
+      // ...
+    }
+  }
+  item "ring" {
+      index -1 -1 // position in the grid layout. -1 means next available position.
+      // ... ring configs omitted here for brevity
+    }
+  ]
+}
 ```
 
 | Name    | Description                                                                                                                            |
@@ -48,19 +40,18 @@
 
 ## Outlook: window
 
-```json
-"outlook": {
-  "type": "window",
-  "color": "#00000000",
-  "border-radius": 5,
-  "border-width": 15,
-  "margins": {
-    "left": 5,
-    "right": 5,
-    "bottom": 5,
-    "top": 5,
+```kdl
+outlook "window" {
+  color "#00000000"
+  border-radius 5
+  border-width 15
+  margins {
+    left 5
+    right 5
+    bottom 5
+    top 5
   }
-},
+}
 ```
 
 | Name          | Description    |
@@ -73,18 +64,17 @@
 
 ## Outlook: board
 
-```json
-"outlook": {
-  "type": "board",
-  "color": "#00000000",
-  "border-radius": 5,
-  "margins": {
-    "left": 5,
-    "right": 5,
-    "bottom": 5,
-    "top": 5,
+```kdl
+outlook "board" {
+  color "#00000000"
+  border-radius 5
+  margins {
+    left 5
+    right 5
+    bottom 5
+    top 5
   }
-},
+}
 ```
 
 | Name          | Description   |

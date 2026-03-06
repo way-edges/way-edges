@@ -3,35 +3,31 @@
 The workspace can be changed by either left click, or by only vertical scroll event though mouse wheel or whatever input device that sends `discrete != 0`  
 Which means scroll with 2 fingers on touchpad can not trigger anything in this widget. (This should be a behavior defined by your compositor for example niri, using 3 fingers swipe operation to change the workspace)
 
-```json
-{
+```kdl
+workspace {
   // ... other basic configs omitted here for brevity
-  "widget": {
-    "type": "workspace",
-    "thickness": 20,
-    "length": "25%",
-    "active-increase": 0.5, // increase the size of the active workspace hint
-    "workspace-animation-curve": "ease-expo",
-    "active-color": "#00000000",
-    "default-color": "#00000000",
-    "focus-color": "#00000000",
-    "hover-color": "#00000000",
-    "gap": 5,
-    "invert-direction": false,
-    "output-name": "eDP-1", // not specified, it will use the output that this widget is on
-    "pop-duration": 1000, // ms
-    "workspace-transition-duration": 300, // ms
-    "focused-only": false, // only show animation on the currently focused monitor
-    "border-radius": 5,
-    "border-width": null,
-    // "preset": "hyprland",
-    // "preset": "niri",
-    "preset": {
-      "type": "niri",
-      "preserve-empty": true,
-    },
-  },
-},
+  thickness 20
+  length "25%"
+  active-increase 0.5 // increase the size of the active workspace hint
+  workspace-animation-curve "ease-expo"
+  active-color "#00000000"
+  default-color "#00000000"
+  focus-color "#00000000"
+  hover-color "#00000000"
+  gap 5
+  invert-directio
+  output-name "eDP-1" // not specified, it will use the output that this widget is on
+  pop-duration 1000 // ms
+  workspace-transition-duration 300 // ms
+  focused-only // only show animation on the currently focused monitor
+  border-radius 5
+  border-width null
+  // preset "hyprland"
+  // preset "niri"
+  preset "niri" {
+    preserve-empty
+  }
+}
 ```
 
 | Name                          | Description                                                                |
@@ -59,40 +55,20 @@ Which means scroll with 2 fingers on touchpad can not trigger anything in this w
 
 ## Preset: niri
 
-```json
-"preset": {
-  "type": "niri",
-  "preserve-empty": true,
-},
+```kdl
+preset "niri" {
+  preserve-empty
+}
 // or
-"preset": "niri",
+preset "niri"
 ```
 
 ## Preset: hyprland
 
-```json
-"preset": "hyprland",
+```kdl
+preset "hyprland"
 ```
 
-## Multi-Monitor Configuration Examples
+## Multi-Monitor
 
-### Example: Focused-only animations
-
-```json
-{
-  "preset": "hyprland",
-  "focused-only": true, // Only animate on currently focused monitor
-}
-```
-
-### Example: Niri with focused-only animations
-
-```json
-{
-  "preset": {
-    "type": "niri",
-    "preserve-empty": true,
-  },
-  "focused-only": true, // Only animate on currently focused monitor
-}
-```
+use `focused-only` to prevent unwanted animations on non-focused monitors when switching workspaces. This is especially useful for users who prefer to have workspace animations but find them distracting on non-focused monitors.

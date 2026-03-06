@@ -1,49 +1,46 @@
 # Widget
 
-```json
-{
-  "namespace": "widget_base_example",
-  "edge": "top",
-  "position": "left",
-  "layer": "overlay",
-  // "monitor": 0,
-  // "monitor": "*",
-  // "monitor": "eDP-1",
-  "monitor": ["eDP-1", "HDMI-A-1"],
-  "extra-trigger-size": 1, // or "10%"
-  "preview-size": 20, // or "100%"
-  "animation-curve": "ease-expo",
-  "transition-duration": 300,
-  "margins": {
-    "top": 0,
-    "left": 0,
-    "bottom": 0,
-    "right": 0,
-  },
-  "ignore-exclusive": false,
-  "pinnable": false,
-  "pin-on-startup": false,
-  "pin-with-key": false,
-  "pin-key": 274, // run `way-edges` with `--mouse-debug`, then click on any widget to get the key printed in log
+```kdl
+// `type` can be `btn`, `slider`, `wrap-box`, `workspace`.
+btn {
+  namespace "widget_base_example"
+  edge "top"
+  position "left"
+  layer "overlay"
+  // monitor 0
+  // monitor "*"
+  // monitor "eDP-1"
+  monitor "eDP-1" "HDMI-A-1"
+  extra-trigger-size 1 // or "10%"
+  preview-size 20 // or "100%"
+  animation-curve "ease-expo"
+  transition-duration 300
+  margins {
+    top 0
+    left 0
+    bottom 0
+    right 0
+  }
+  ignore-exclusive
+  pinnable
+  pin-on-startup
+  pin-with-key
+  pin-key 274 // run `way-edges` with `--mouse-debug`, then click on any widget to get the key printed in log
 
   // NOTE: THE REST OF THESE CONFIGURATIONS ARE ENUM SPECIFIC
-  // `type` can be `btn`, `slider`, `wrap-box`, `workspace`.
-  // the lsp completion might not show them all, but once you write it, the rest property completion should work
-  "type": "btn",
   // ...
-  // "thickness": 20,
-  // "length": "25%",
-  // "border-width": 5,
-  // "border-color": "#112233aa",
-  // "color": "#ffeeddaa",
-  // "event-map": {
-  //   "272": "sh -c pkill nwg-drawer || nwg-drawer", // left click
-  //   "273": "niri msg action maximize-column", // right click
-  //   "274": "niri msg action close-window", // middle click
-  //   "275": "niri msg action toggle-overview", // side click 1
-  //   "276": "niri msg action toggle-column-tabbed-display", // side click 2
-  // },
-},
+  // thickness 20
+  // length "25%"
+  // border-width 5
+  // border-color "#112233aa"
+  // color "#ffeeddaa"
+  // event-map {
+  //   "mouse-left" "sh -c pkill nwg-drawer || nwg-drawer"
+  //   "mouse-right" "niri msg action maximize-column"
+  //   "kc-274" "niri msg action close-window" // middle click, you can also use "mouse-middle"
+  //   "mouse-side" "niri msg action toggle-overview"
+  // }
+}
 ```
 
 | Name                | Description                                                                   |

@@ -1,32 +1,34 @@
 # Tray
 
-```json
-{
-  "type": "tray",
-  "font-family": "monospace",
-  "grid-align": "bottom-center", // 9 positions: center-left, center-right, top-left, top-right, bottom-left, bottom-right, left-top, left-bottom, right-top, right-bottom
-  "icon-theme": "breeze", // null will fetch the default icon theme
-  "icon-size": 20,
-  "tray-gap": 2,
-  "header-draw-config": {
-    "text-color": "#00000000",
-    "font-pixel-height": 20,
-  },
-  // "header-menu-align": "left"
-  "header-menu-align": "right",
-  // "header-menu-stack": "header-top",
-  "header-menu-stack": "menu-top",
-  "menu-draw-config": {
-    "border-color": "#00000000",
-    "text-color": "#00000000",
-    "marker-color": "#00000000",
-    "font-pixel-height": 22,
-    "icon-size": 20,
-    "marker-size": 20,
-    "separator-height": 5,
-    "margin": [12, 12], // horizontal, vertical
-  },
-},
+```kdl
+item "tray" {
+  font-family "monospace"
+  grid-align "bottom-center" // 9 positions: center-left, center-right, top-left, top-right, bottom-left, bottom-right, left-top, left-bottom, right-top, right-bottom
+  icon-theme "breeze" // null will fetch the default icon theme
+  icon-size 20
+  tray-gap 2
+  header-draw-config {
+    text-color "#00000000"
+    font-pixel-height 20
+  }
+  // header-menu-align "left"
+  header-menu-align "right"
+  // header-menu-stack "header-top"
+  header-menu-stack "menu-top"
+  menu-draw-config {
+    border-color "#00000000"
+    text-color "#00000000"
+    marker-color "#00000000"
+    font-pixel-height 22
+    icon-size 20
+    marker-size 20
+    separator-height 5
+    margin {
+      left 12
+      top 12
+    }
+  }
+}
 ```
 
 | Name               | Description                                                                                                                            |
