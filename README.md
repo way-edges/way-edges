@@ -6,11 +6,12 @@ Please refer to [doc](doc) directory.
 
 > [!WARNING]
 > **master branch always refer to the latest but may not be released configurations, if you are using a released binary, please match the corresponding commit with the tag you are on**.
-> 
+>
 > You can always find that in the [tag](https://github.com/way-edges/way-edges/tags) page:
+>
 > - enter the tag page
 > - click on the commit hash link under the corresponding tag
-> - click **Browse files** on the right 
+> - click **Browse files** on the right
 
 ## 📥 Installation
 
@@ -28,7 +29,7 @@ cd way-edges && cargo build --release
 
 ## ⚙️ Example config
 
-my own config: <https://github.com/ogios/dots/tree/master/way-edges>  
+my own: <https://github.com/ogios/dots/blob/master/way-edges/config.kdl>  
 i'm using `-git` version of the package in aur, the configurations may differ from `-bin`
 
 ## 🚀 Launch
