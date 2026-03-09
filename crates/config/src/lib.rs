@@ -24,7 +24,7 @@ pub fn set_config_path(path: Option<&str>) {
                 "way-edges/config.json",
             ];
             for p in supported {
-                if let Ok(p) = bd.place_config_file(p) {
+                if let Some(p) = bd.find_config_file(p) {
                     return p;
                 }
             }
@@ -35,6 +35,8 @@ pub fn set_config_path(path: Option<&str>) {
             // }
         }))
         .unwrap();
+
+    log::info!("config path set to: {:?}", CONFIG_PATH.get().unwrap());
 }
 
 pub fn get_config_path() -> &'static Path {
