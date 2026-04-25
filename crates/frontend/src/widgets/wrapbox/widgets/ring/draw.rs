@@ -132,7 +132,7 @@ impl RingDrawer {
                 size.1 = size.1.max(img_size.1);
             } else {
                 v[1] = Some((img, img_size.0, img_size.1));
-                size.0 += img_size.1;
+                size.0 += img_size.0;
                 size.1 = size.1.max(img_size.1);
             }
         }
