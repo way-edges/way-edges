@@ -26,3 +26,5 @@ interval-task = "0.3.4"
 
 chrono = "0.4.38"
 chrono-tz = "0.10.0"
+
+niri-ipc = "25.5.0"

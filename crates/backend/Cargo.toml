@@ -44,3 +44,6 @@ sysinfo = { version = "0.37.1", default-features = false, features = [
   "system",
 ] }
 starship-battery = "0.10.0"
+
+# Processamento de PNG e redimensionamento
+image = "0.24"

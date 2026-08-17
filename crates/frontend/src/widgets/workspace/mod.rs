@@ -64,12 +64,12 @@ pub fn init_widget(
 
     macro_rules! wp_cb {
         ($s:expr, $c:expr, $d:expr) => {
-            WorkspaceCB {
-                sender: $s,
-                output: $c.output_name.take().unwrap(),
-                data: $d,
-                focused_only: $c.focused_only,
-            }
+            WorkspaceCB::new(
+                $s,
+                $c.output_name.take().unwrap(),
+                $d,
+                $c.focused_only,
+            )
         };
     }
 

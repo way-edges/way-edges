@@ -155,7 +155,6 @@ impl<S: knus::traits::ErrorSpan> Decode<S> for SlideConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use knus::Decode;
 
     #[test]
     fn test_decode_minimal_slider_config() {
