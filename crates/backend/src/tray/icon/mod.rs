@@ -63,12 +63,22 @@ pub fn parse_icon_given_name(
     size: i32,
     theme: IconThemeNameOrPath,
 ) -> Option<ImageSurface> {
-    let f = match theme {
-        IconThemeNameOrPath::Name(n) => freedesktop::find_icon(name, size, n),
-        IconThemeNameOrPath::Path(p) => custom::find_icon(p, name),
-    }?;
+    // AppIndicator applications can publish an absolute image path as IconName.
+    let path = std::path::Path::new(name);
+    if path.is_absolute() {
+        return draw_icon_file(path.to_path_buf(), size);
+    }
 
-    draw_icon_file(f, size)
+    match theme {
+        IconThemeNameOrPath::Name(n) => {
+            freedesktop::find_icon(name, size, n).and_then(|file| draw_icon_file(file, size))
+        }
+        IconThemeNameOrPath::Path(p) => custom::find_icon(p, name)
+            .and_then(|file| draw_icon_file(file, size))
+            .or_else(|| {
+                freedesktop::find_icon(name, size, None).and_then(|file| draw_icon_file(file, size))
+            }),
+    }
 }
 
 pub fn fallback_icon(size: i32, theme: Option<&str>) -> Option<ImageSurface> {
@@ -101,7 +111,7 @@ fn scale_image_to_size(img: ImageSurface, size: i32) -> Option<ImageSurface> {
 }
 
 fn draw_icon_file(file_path: PathBuf, size: i32) -> Option<ImageSurface> {
-    let ext = file_path.extension().unwrap().to_str().unwrap();
+    let ext = file_path.extension()?.to_str()?;
     let img = match ext {
         "png" => load_png(&file_path),
         "svg" => load_svg(&file_path),

@@ -58,7 +58,7 @@ impl IconHandle {
         let cache_key = IconCacheKey {
             size,
             t: match icon {
-                Icon::Named(name) => IconCacheType::Name {
+                Icon::Named(name) | Icon::NamedWithPixmap { name, .. } => IconCacheType::Name {
                     name: name.clone(),
                     theme: theme.map(ToString::to_string),
                     theme_path: theme_path.map(ToString::to_string),
@@ -89,8 +89,27 @@ pub enum Icon {
     Named(String),
     PngData(Vec<u8>),
     Pixmap(Vec<IconPixmap>),
+    NamedWithPixmap {
+        name: String,
+        pixmaps: Vec<IconPixmap>,
+    },
 }
 impl Icon {
+    /// Retains both sources so a missing named icon can fall back at draw time.
+    pub(super) fn from_tray_sources(
+        name: Option<String>,
+        pixmaps: Option<Vec<IconPixmap>>,
+    ) -> Option<Self> {
+        let name = name.filter(|name| !name.is_empty());
+        let pixmaps = pixmaps.filter(|pixmaps| !pixmaps.is_empty());
+        match (name, pixmaps) {
+            (Some(name), Some(pixmaps)) => Some(Self::NamedWithPixmap { name, pixmaps }),
+            (Some(name), None) => Some(Self::Named(name)),
+            (None, Some(pixmaps)) => Some(Self::Pixmap(pixmaps)),
+            (None, None) => None,
+        }
+    }
+
     pub fn draw_icon(
         &self,
         size: i32,
@@ -105,6 +124,9 @@ impl Icon {
                     .unwrap_or_else(|| IconThemeNameOrPath::Name(theme));
                 parse_icon_given_name(name, size, theme_or_path)
             }
+            Icon::NamedWithPixmap { name, pixmaps } => Icon::Named(name.clone())
+                .draw_icon(size, theme, theme_path)
+                .or_else(|| parse_icon_given_pixmaps(pixmaps, size)),
             Icon::PngData(items) => parse_icon_given_data(items, size),
             Icon::Pixmap(icon_pixmap) => parse_icon_given_pixmaps(icon_pixmap, size),
         }
@@ -115,7 +137,9 @@ impl PartialEq for Icon {
         match (self, other) {
             (Self::Named(l0), Self::Named(r0)) => l0 == r0,
             // THIS OPERATION IS HEAVY
-            (Self::PngData(_), Self::PngData(_)) | (Self::Pixmap(_), Self::Pixmap(_)) => false,
+            (Self::PngData(_), Self::PngData(_))
+            | (Self::Pixmap(_), Self::Pixmap(_))
+            | (Self::NamedWithPixmap { .. }, Self::NamedWithPixmap { .. }) => false,
             _ => core::mem::discriminant(self) == core::mem::discriminant(other),
         }
     }
@@ -266,10 +290,7 @@ impl Tray {
             // item_is_menu,
         } = value;
 
-        let icon = icon_name
-            .filter(|icon_name| !icon_name.is_empty())
-            .map(Icon::Named)
-            .or_else(|| icon_pixmap.map(Icon::Pixmap));
+        let icon = Icon::from_tray_sources(icon_name, icon_pixmap);
 
         let icon = IconHandle::new(icon);
 

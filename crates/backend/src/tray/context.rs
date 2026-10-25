@@ -106,14 +106,7 @@ impl TrayMap {
                         icon_name,
                         icon_pixmap,
                     } => {
-                        let icon = icon_name
-                            .filter(|name| !name.is_empty())
-                            .map(Icon::Named)
-                            .or_else(|| {
-                                icon_pixmap
-                                    .filter(|pixmap| !pixmap.is_empty())
-                                    .map(Icon::Pixmap)
-                            });
+                        let icon = Icon::from_tray_sources(icon_name, icon_pixmap);
 
                         self.get_mut(&dest)
                             .map(|tray| tray.lock().unwrap().update_icon(icon))
