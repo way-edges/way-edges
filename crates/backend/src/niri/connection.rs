@@ -1,35 +1,42 @@
-use niri_ipc::{socket::SOCKET_PATH_ENV, Reply, Workspace};
+use niri_ipc::{socket::SOCKET_PATH_ENV, Reply, Window, WindowLayout, Workspace};
 use serde::Deserialize;
+use serde_jsonrc::Value;
 use tokio::{
     io::{self, AsyncBufReadExt, AsyncWriteExt, BufReader},
     net::UnixStream,
 };
 
-/// A compositor event.
 #[derive(Deserialize, Debug, Clone)]
 pub enum Event {
-    /// The workspace configuration has changed.
     WorkspacesChanged {
-        /// The new workspace configuration.
-        ///
-        /// This configuration completely replaces the previous configuration. I.e. if any
-        /// workspaces are missing from here, then they were deleted.
         workspaces: Vec<Workspace>,
     },
-    /// A workspace was activated on an output.
-    ///
-    /// This doesn't always mean the workspace became focused, just that it's now the active
-    /// workspace on its output. All other workspaces on the same output become inactive.
     WorkspaceActivated {
-        /// Id of the newly active workspace.
         #[allow(dead_code)]
         id: u64,
-        /// Whether this workspace also became focused.
-        ///
-        /// If `true`, this is now the single focused workspace. All other workspaces are no longer
-        /// focused, but they may remain active on their respective outputs.
         #[allow(dead_code)]
         focused: bool,
+    },
+    WindowsChanged {
+        windows: Vec<Window>,
+    },
+    WindowOpenedOrChanged {
+        window: Window,
+    },
+    WindowClosed {
+        id: u64,
+    },
+    WindowFocusChanged {
+        id: Option<u64>,
+    },
+    WindowLayoutsChanged {
+        changes: Vec<(u64, WindowLayout)>,
+        #[serde(flatten)]
+        _payload: Option<Value>,
+    },
+    WindowUrgencyChanged {
+        id: u64,
+        is_urgent: bool,
     },
 }
 
@@ -57,11 +64,12 @@ impl Connection {
     }
     pub async fn push_request(&mut self, req: niri_ipc::Request) -> io::Result<Reply> {
         let mut buf = serde_jsonrc::to_string(&req).unwrap();
+        buf.push('\n');
         self.0.write_all(buf.as_bytes()).await?;
-        self.0.shutdown().await?;
 
         buf.clear();
-        BufReader::new(&mut self.0).read_line(&mut buf).await?;
+        let mut reader = BufReader::new(&mut self.0);
+        reader.read_line(&mut buf).await?;
 
         Ok(serde_jsonrc::from_str(buf.as_str()).unwrap())
     }

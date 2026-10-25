@@ -44,7 +44,7 @@ use crate::{
     animation::{AnimationList, ToggleAnimation, ToggleAnimationRc},
     buffer::Buffer,
     mouse_state::{MouseEvent, MouseState},
-    widgets::{button, slide, workspace, wrapbox, WidgetContext},
+    widgets::{button, dock, slide, workspace, wrapbox, WidgetContext},
 };
 
 use super::{draw::DrawCore, window_pop_state::WindowPopState};
@@ -103,7 +103,11 @@ impl App {
 
             // and tipically this should be Ok() since no other references should exist
             match mtx.into_inner() {
-                Ok(mut w) => w.clear_contents(self),
+                Ok(mut w) => {
+                    if w.configured {
+                        w.clear_contents(self);
+                    }
+                }
                 Err(e) => {
                     log::error!(
                         "Failed to clear widget contents during reload, mutex of this widget is poisoned: {e}"
@@ -487,6 +491,11 @@ impl Widget {
             config::def::WidgetConf::WrapBox(c) => {
                 ws!(c, config::def::WrapBox, "wrapbox", |b, w, _, _| {
                     Box::new(wrapbox::init_widget(b, w))
+                })
+            }
+            config::def::WidgetConf::Dock(c) => {
+                ws!(c, config::def::Dock, "dock", |b, w, m, s| {
+                    Box::new(dock::init_widget(b, s, w, &m))
                 })
             }
         };

@@ -21,7 +21,7 @@ impl<S: knus::traits::ErrorSpan> knus::DecodeChildren<S> for Root {
         let mut widgets = vec![];
         for n in nodes {
             match n.node_name.as_ref() {
-                "btn" | "slider" | "workspace" | "wrap-box" => {
+                "btn" | "slider" | "workspace" | "wrap-box" | "dock" => {
                     widgets.push(WidgetConf::decode_node(n, ctx)?);
                 }
                 _ => {}
@@ -39,6 +39,7 @@ pub enum WidgetConf {
     Slider(Slide),
     Workspace(Workspace),
     WrapBox(WrapBox),
+    Dock(Dock),
 }
 impl WidgetConf {
     pub fn common(&self) -> &common::CommonConfig {
@@ -47,6 +48,7 @@ impl WidgetConf {
             WidgetConf::Slider(c) => &c.common,
             WidgetConf::Workspace(c) => &c.common,
             WidgetConf::WrapBox(c) => &c.common,
+            WidgetConf::Dock(c) => &c.common,
         }
     }
 }
@@ -78,6 +80,7 @@ impl_top_level_widget!(Btn, widgets::button::BtnConfig);
 impl_top_level_widget!(Slide, widgets::slide::base::SlideConfig);
 impl_top_level_widget!(Workspace, widgets::workspace::WorkspaceConfig);
 impl_top_level_widget!(WrapBox, widgets::wrapbox::BoxConfig);
+impl_top_level_widget!(Dock, widgets::dock::DockConfig);
 
 pub fn parse_kdl(s: &str) -> Result<Root, String> {
     match knus::parse::<Root>("config.kdl", s) {
