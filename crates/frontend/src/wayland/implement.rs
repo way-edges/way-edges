@@ -141,6 +141,9 @@ impl OutputHandler for App {
 impl LayerShellHandler for App {
     fn closed(&mut self, _conn: &Connection, _qh: &QueueHandle<Self>, _layer: &LayerSurface) {
         log::debug!("Close event from layer surface: {_layer:?}");
+        if let Some(widget) = SurfaceData::from_wl(_layer.wl_surface()).get_widget() {
+            widget.lock().unwrap().configured = false;
+        }
     }
 
     fn configure(

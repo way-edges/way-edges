@@ -107,6 +107,11 @@ pub fn run_app(show_mouse_key: bool) {
         event_loop
             .dispatch(Some(Duration::from_millis(16)), &mut app)
             .unwrap();
+        // A fatal connection error cannot be recovered by dispatching more events.
+        if let Some(error) = conn.backend().last_error() {
+            log::error!("Wayland connection failed: {error}");
+            break;
+        }
     }
     log::info!("EXITED");
 }

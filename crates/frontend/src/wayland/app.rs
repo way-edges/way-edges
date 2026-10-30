@@ -103,7 +103,7 @@ impl App {
 
             // and tipically this should be Ok() since no other references should exist
             match mtx.into_inner() {
-                Ok(mut w) => w.clear_contents(self),
+                Ok(mut w) => w.clear_contents(),
                 Err(e) => {
                     log::error!(
                         "Failed to clear widget contents during reload, mutex of this widget is poisoned: {e}"
@@ -497,22 +497,10 @@ impl Widget {
         }))
     }
 
-    fn clear_contents(&mut self, app: &mut App) {
-        let (buffer, canvas) = app
-            .pool
-            .create_buffer(1, 1, 4, wayland_client::protocol::wl_shm::Format::Argb8888)
-            .unwrap();
-        buffer
-            .attach_to(self.layer.wl_surface())
-            .expect("buffer attach");
-        canvas.fill(0);
-
-        self.layer
-            .wl_surface()
-            .damage_buffer(0, 0, self.output_size.0, self.output_size.1);
-
-        self.call_frame(&app.queue_handle);
-
+    fn clear_contents(&mut self) {
+        // A null buffer unmaps the surface, including before its initial configure.
+        self.configured = false;
+        self.layer.wl_surface().attach(None, 0, 0);
         self.layer.commit();
     }
 }
