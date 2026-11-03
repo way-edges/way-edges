@@ -1,0 +1,57 @@
+dock {
+    namespace "dock-test"
+    edge "bottom"
+    monitor "*"
+    pinnable
+    ignore-exclusive
+    color "#10141bee"
+    border-radius 4
+    extra-trigger-size 3
+    pop-duration 1500
+    focus-transition-duration 260
+    focus-animation-curve "ease-cubic"
+    workspaces {
+        show-titles true
+        font-size 20
+        fg-color "#8993a3"
+        active-fg-color "#f6c177"
+        bg-color "#00000000"
+        active-bg-color "#00000000"
+        border-width 0
+        border-color "#00000000"
+        active-border-color "#00000000"
+        border-radius 0
+        separator-width 0
+        rail-width 3
+        gap 32
+        margins {
+            left 10
+            right 10
+            top 6
+            bottom 6
+        }
+    }
+    windows {
+        icon-size 64
+        icon-fallback "?"
+        icon-opacity 0.6
+        active-icon-opacity 1
+        font-size 22
+        fg-color "#8993a3"
+        active-fg-color "#fff4df"
+        bg-color "#00000000"
+        active-bg-color "#f6c17712"
+        hover-bg-color "#ffffff12"
+        border-width 0
+        border-radius 0
+        show-titles "focused"
+        title-width 260
+        gap 0
+        margins {
+            left 10
+            right 10
+            top 16
+            bottom 16
+        }
+    }
+}

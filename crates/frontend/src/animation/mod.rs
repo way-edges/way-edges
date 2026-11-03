@@ -48,6 +48,12 @@ impl ToggleAnimation {
             base_animation: Animation::new(time_cost, curve),
         }
     }
+    /// Starts a full forward transition from its initial value.
+    pub fn restart(&mut self) {
+        self.direction = ToggleDirection::Forward;
+        self.base_animation.start_time = std::time::Instant::now();
+        self.base_animation.refresh();
+    }
     pub fn refresh(&mut self) {
         self.base_animation.refresh();
     }
@@ -91,4 +97,41 @@ impl PartialEq for ToggleAnimationRc {
 
 pub fn calculate_transition(y: f64, range: (f64, f64)) -> f64 {
     range.0 + (range.1 - range.0) * y
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::time::Instant;
+
+    #[test]
+    fn restarted_transition_requests_frames_until_completion() {
+        let mut list = AnimationList::new();
+        let animation = list.new_transition(260, Curve::EaseCubic);
+        {
+            let mut animation = animation.borrow_mut();
+            animation.restart();
+            animation.base_animation.start_time = Instant::now() - Duration::from_millis(130);
+        }
+        list.refresh();
+        assert!(list.has_in_progress());
+        assert!(animation.borrow().progress_abs() > 0.5);
+        animation.borrow_mut().base_animation.start_time =
+            Instant::now() - Duration::from_millis(300);
+        list.refresh();
+        assert!(!list.has_in_progress());
+        assert_eq!(animation.borrow().progress_abs(), 1.0);
+        animation.borrow_mut().restart();
+        assert!(animation.borrow().progress_abs() < 0.1);
+    }
+
+    #[test]
+    fn zero_duration_transition_completes_immediately() {
+        let mut list = AnimationList::new();
+        let animation = list.new_transition(0, Curve::EaseCubic);
+        animation.borrow_mut().restart();
+        list.refresh();
+        assert_eq!(animation.borrow().progress_abs(), 1.0);
+        assert!(!list.has_in_progress());
+    }
 }

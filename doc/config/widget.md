@@ -1,7 +1,7 @@
 # Widget
 
 ```kdl
-// `type` can be `btn`, `slider`, `wrap-box`, `workspace`.
+// `type` can be `btn`, `slider`, `wrap-box`, `workspace`, `dock`.
 btn {
   namespace "widget_base_example"
   edge "top"
@@ -60,4 +60,4 @@ btn {
 | pin-on-startup      | widget start with pin, works only if pinnable=true state                      |
 | pin-with-key        | whether use a mouse key to pin the widget, only works when pinnable=true      |
 | pin-key             | the mouse key to pin the widget, only works when pin-with-key=true            |
-| type                | can be `btn`, `slider`, `wrap-box`, `workspace`                               |
+| type                | can be `btn`, `slider`, `wrap-box`, `workspace`, `dock`                               |

@@ -1,35 +1,47 @@
-use niri_ipc::{socket::SOCKET_PATH_ENV, Reply, Workspace};
+use niri_ipc::{socket::SOCKET_PATH_ENV, Reply, Window, WindowLayout, Workspace};
 use serde::Deserialize;
+use serde_jsonrc::Value;
 use tokio::{
     io::{self, AsyncBufReadExt, AsyncWriteExt, BufReader},
     net::UnixStream,
 };
 
-/// A compositor event.
 #[derive(Deserialize, Debug, Clone)]
 pub enum Event {
-    /// The workspace configuration has changed.
     WorkspacesChanged {
-        /// The new workspace configuration.
-        ///
-        /// This configuration completely replaces the previous configuration. I.e. if any
-        /// workspaces are missing from here, then they were deleted.
         workspaces: Vec<Workspace>,
     },
-    /// A workspace was activated on an output.
-    ///
-    /// This doesn't always mean the workspace became focused, just that it's now the active
-    /// workspace on its output. All other workspaces on the same output become inactive.
     WorkspaceActivated {
-        /// Id of the newly active workspace.
         #[allow(dead_code)]
         id: u64,
-        /// Whether this workspace also became focused.
-        ///
-        /// If `true`, this is now the single focused workspace. All other workspaces are no longer
-        /// focused, but they may remain active on their respective outputs.
         #[allow(dead_code)]
         focused: bool,
+    },
+    WorkspaceActiveWindowChanged {
+        workspace_id: u64,
+        active_window_id: Option<u64>,
+    },
+    WindowsChanged {
+        windows: Vec<Window>,
+    },
+    WindowOpenedOrChanged {
+        window: Window,
+    },
+    WindowClosed {
+        id: u64,
+    },
+    WindowFocusChanged {
+        id: Option<u64>,
+    },
+    WindowLayoutsChanged {
+        changes: Vec<(u64, WindowLayout)>,
+        #[serde(flatten)]
+        _payload: Option<Value>,
+    },
+    WindowUrgencyChanged {
+        id: u64,
+        #[serde(rename = "urgent")]
+        is_urgent: bool,
     },
 }
 
@@ -57,11 +69,12 @@ impl Connection {
     }
     pub async fn push_request(&mut self, req: niri_ipc::Request) -> io::Result<Reply> {
         let mut buf = serde_jsonrc::to_string(&req).unwrap();
+        buf.push('\n');
         self.0.write_all(buf.as_bytes()).await?;
-        self.0.shutdown().await?;
 
         buf.clear();
-        BufReader::new(&mut self.0).read_line(&mut buf).await?;
+        let mut reader = BufReader::new(&mut self.0);
+        reader.read_line(&mut buf).await?;
 
         Ok(serde_jsonrc::from_str(buf.as_str()).unwrap())
     }
@@ -70,9 +83,27 @@ impl Connection {
 pub struct Listener(BufReader<UnixStream>);
 impl Listener {
     pub async fn next_event(&mut self, buf: &mut String) -> io::Result<Option<Event>> {
-        self.0.read_line(buf).await.map(|_| {
-            log::debug!("Received niri event: {buf}");
-            serde_jsonrc::from_str(buf).ok()
-        })
+        if self.0.read_line(buf).await? == 0 {
+            return Err(io::Error::new(
+                io::ErrorKind::UnexpectedEof,
+                "Niri event stream closed",
+            ));
+        }
+        log::debug!("Received niri event: {buf}");
+        Ok(serde_jsonrc::from_str(buf).ok())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn closed_event_stream_returns_eof() {
+        let (stream, peer) = UnixStream::pair().unwrap();
+        let mut listener = Listener(BufReader::new(stream));
+        drop(peer);
+        let err = listener.next_event(&mut String::new()).await.unwrap_err();
+        assert_eq!(err.kind(), io::ErrorKind::UnexpectedEof);
     }
 }

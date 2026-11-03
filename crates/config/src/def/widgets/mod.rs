@@ -4,6 +4,7 @@
 // use wrapbox::BoxConfig;
 
 pub mod button;
+pub mod dock;
 pub mod slide;
 pub mod workspace;
 pub mod wrapbox;

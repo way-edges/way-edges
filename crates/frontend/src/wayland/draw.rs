@@ -108,3 +108,50 @@ fn make_pop_coordiante_pose_func(edge: Anchor) -> PopCoordinateFunc {
         _ => unreachable!(),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use config::def::WidgetConf;
+
+    #[test]
+    fn side_docks_hide_and_reveal_across_the_horizontal_axis() {
+        for (source, edge) in [
+            (
+                include_str!("../../../../doc/config/dock-left.kdl"),
+                Anchor::LEFT,
+            ),
+            (
+                include_str!("../../../../doc/config/dock-right.kdl"),
+                Anchor::RIGHT,
+            ),
+        ] {
+            let root = config::def::parse_kdl(source).unwrap();
+            let WidgetConf::Dock(dock) = &root.widgets[0] else {
+                panic!("Expected dock")
+            };
+            assert_eq!(dock.common.edge, edge);
+            assert!(!dock.common.pin_on_startup);
+            assert_eq!(dock.widget.pop_duration, 1500);
+            let draw = DrawCore::new(&dock.common);
+            let size = (400, 800);
+            let extra = dock.common.extra_trigger_size.get_num().unwrap() as i32;
+            for (progress, visible) in [(0.0, 0), (0.5, 200), (1.0, 400)] {
+                let [x, y, width, height] = draw.calc_coordinate(size, 0, progress);
+                assert_eq!(y, 0);
+                assert_eq!(height, size.1);
+                assert_eq!(width, visible + extra);
+                assert_eq!(
+                    x,
+                    if edge == Anchor::LEFT {
+                        visible - size.0
+                    } else {
+                        extra
+                    }
+                );
+                let visible_content = (x + size.0).min(width) - x.max(0);
+                assert_eq!(visible_content.max(0), visible);
+            }
+        }
+    }
+}

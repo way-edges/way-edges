@@ -1,7 +1,6 @@
 use std::{
     collections::HashMap,
     mem,
-    rc::Rc,
     sync::{atomic::AtomicPtr, Arc, Mutex, Weak},
     time::Duration,
 };
@@ -44,7 +43,7 @@ use crate::{
     animation::{AnimationList, ToggleAnimation, ToggleAnimationRc},
     buffer::Buffer,
     mouse_state::{MouseEvent, MouseState},
-    widgets::{button, slide, workspace, wrapbox, WidgetContext},
+    widgets::{button, dock, slide, workspace, wrapbox, WidgetContext},
 };
 
 use super::{draw::DrawCore, window_pop_state::WindowPopState};
@@ -426,7 +425,9 @@ impl Widget {
                 do_redraw()
             }
             MouseEvent::Leave => {
-                self.window_pop_state.leave();
+                if let Some((duration, guard)) = self.window_pop_state.defer_leave() {
+                    schedule_pop_timeout(app, self.layer.clone(), duration, guard);
+                }
                 do_redraw()
             }
             MouseEvent::Motion(_) => self.window_pop_state.invalidate_pop(),
@@ -487,6 +488,11 @@ impl Widget {
             config::def::WidgetConf::WrapBox(c) => {
                 ws!(c, config::def::WrapBox, "wrapbox", |b, w, _, _| {
                     Box::new(wrapbox::init_widget(b, w))
+                })
+            }
+            config::def::WidgetConf::Dock(c) => {
+                ws!(c, config::def::Dock, "dock", |b, w, m, s| {
+                    Box::new(dock::init_widget(b, s, w, &m))
                 })
             }
         };
@@ -625,38 +631,43 @@ impl PopEssential {
             let state = &mut wg.window_pop_state;
             state.enter();
 
-            let guard = Rc::new(());
-            let guard_weak = Rc::downgrade(&guard);
-            state.pop_state.replace(guard);
+            let guard_weak = state.start_pop_timeout();
 
             wg.try_redraw(app);
 
             guard_weak
         };
 
-        // hide
-        let layer = self.layer.clone();
-        app.event_loop_handle
-            .insert_source(
-                calloop::timer::Timer::from_duration(self.pop_duration),
-                move |_, _, app| {
-                    if guard_weak.upgrade().is_none() {
-                        return calloop::timer::TimeoutAction::Drop;
-                    }
-
-                    widget_from_layer!(w, layer, calloop::timer::TimeoutAction::Drop);
-
-                    let mut wg = w.lock().unwrap();
-                    if !wg.mouse_state.data.hovering {
-                        wg.window_pop_state.leave();
-                        wg.try_redraw(app);
-                    }
-
-                    calloop::timer::TimeoutAction::Drop
-                },
-            )
-            .unwrap();
+        schedule_pop_timeout(app, self.layer.clone(), self.pop_duration, guard_weak);
     }
+}
+
+fn schedule_pop_timeout(
+    app: &mut App,
+    layer: LayerSurface,
+    duration: Duration,
+    guard: std::rc::Weak<()>,
+) {
+    app.event_loop_handle
+        .insert_source(
+            calloop::timer::Timer::from_duration(duration),
+            move |_, _, app| {
+                if guard.upgrade().is_none() {
+                    return calloop::timer::TimeoutAction::Drop;
+                }
+                widget_from_layer!(w, layer, calloop::timer::TimeoutAction::Drop);
+                let mut widget = w.lock().unwrap();
+                let hovering = widget.mouse_state.data.hovering;
+                if widget
+                    .window_pop_state
+                    .complete_pop_timeout(&guard, hovering)
+                {
+                    widget.try_redraw(app);
+                }
+                calloop::timer::TimeoutAction::Drop
+            },
+        )
+        .unwrap();
 }
 
 struct RedrawEssentail {

@@ -354,6 +354,136 @@
         "EaseExpo"
       ]
     },
+    "Dock": {
+      "type": "object",
+      "properties": {
+        "animation-curve": {
+          "$ref": "#/$defs/Curve"
+        },
+        "border-color": {
+          "type": "string",
+          "default": "#00000000"
+        },
+        "border-radius": {
+          "type": "number",
+          "format": "double",
+          "default": 10.0
+        },
+        "border-width": {
+          "type": "number",
+          "format": "double",
+          "default": 0.0
+        },
+        "color": {
+          "type": "string",
+          "default": "#00000000"
+        },
+        "edge": {
+          "type": "string",
+          "enum": [
+            "top",
+            "bottom",
+            "left",
+            "right"
+          ]
+        },
+        "extra-trigger-size": {
+          "$ref": "#/$defs/NumOrRelative"
+        },
+        "focus-animation-curve": {
+          "$ref": "#/$defs/Curve"
+        },
+        "focus-transition-duration": {
+          "type": "integer",
+          "format": "uint64",
+          "default": 260,
+          "minimum": 0
+        },
+        "grid-align": {
+          "$ref": "#/$defs/Align"
+        },
+        "ignore-exclusive": {
+          "type": "boolean",
+          "default": false
+        },
+        "layer": {
+          "type": "string",
+          "enum": [
+            "top",
+            "bottom",
+            "background",
+            "overlay"
+          ]
+        },
+        "margins": {
+          "$ref": "#/$defs/NumMargins"
+        },
+        "monitor": {
+          "$ref": "#/$defs/MonitorSpecifier"
+        },
+        "namespace": {
+          "type": "string",
+          "default": ""
+        },
+        "offset": {
+          "$ref": "#/$defs/NumOrRelative"
+        },
+        "pin-key": {
+          "type": "integer",
+          "format": "uint32",
+          "default": 274,
+          "minimum": 0
+        },
+        "pin-on-startup": {
+          "type": "boolean",
+          "default": false
+        },
+        "pin-with-key": {
+          "type": "boolean",
+          "default": false
+        },
+        "pinnable": {
+          "type": "boolean",
+          "default": false
+        },
+        "pop-duration": {
+          "type": "integer",
+          "format": "uint64",
+          "default": 1500,
+          "minimum": 0
+        },
+        "position": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "top",
+            "bottom",
+            "left",
+            "right"
+          ]
+        },
+        "preview-size": {
+          "$ref": "#/$defs/NumOrRelative"
+        },
+        "transition-duration": {
+          "type": "integer",
+          "format": "uint64",
+          "default": 300,
+          "minimum": 0
+        },
+        "windows": {
+          "$ref": "#/$defs/Windows"
+        },
+        "workspaces": {
+          "$ref": "#/$defs/Workspaces"
+        }
+      },
+      "required": [
+        "edge"
+      ]
+    },
     "HeaderDrawConfig": {
       "type": "object",
       "properties": {
@@ -865,6 +995,15 @@
         }
       ]
     },
+    "ShowTitles": {
+      "type": "string",
+      "enum": [
+        "always",
+        "focused",
+        "never",
+        "only"
+      ]
+    },
     "Slide": {
       "type": "object",
       "properties": {
@@ -1008,7 +1147,7 @@
           "minimum": 0
         },
         "type": {
-          "const": "slide"
+          "const": "slider"
         }
       },
       "required": [
@@ -1094,7 +1233,7 @@
           "properties": {
             "type": {
               "type": "string",
-              "const": "slide"
+              "const": "slider"
             }
           },
           "$ref": "#/$defs/Slide",
@@ -1127,8 +1266,153 @@
           "required": [
             "type"
           ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "dock"
+            }
+          },
+          "$ref": "#/$defs/Dock",
+          "required": [
+            "type"
+          ]
         }
       ]
+    },
+    "Windows": {
+      "type": "object",
+      "properties": {
+        "active-bg-color": {
+          "type": "string",
+          "default": "#00000000"
+        },
+        "active-border-color": {
+          "type": "string",
+          "default": "#00000000"
+        },
+        "active-fg-color": {
+          "type": "string",
+          "default": "#00000000"
+        },
+        "active-icon-opacity": {
+          "type": "number",
+          "format": "double",
+          "default": 1.0
+        },
+        "bg-color": {
+          "type": "string",
+          "default": "#00000000"
+        },
+        "border-color": {
+          "type": "string",
+          "default": "#00000000"
+        },
+        "border-radius": {
+          "type": "number",
+          "format": "double",
+          "default": 5.0
+        },
+        "border-width": {
+          "type": "number",
+          "format": "double",
+          "default": 1.0
+        },
+        "fg-color": {
+          "type": "string",
+          "default": "#00000000"
+        },
+        "font-family": {
+          "type": "string",
+          "default": "monospace",
+          "enum": [
+            "serif",
+            "sans-serif",
+            "cursive",
+            "fantasy",
+            "monospace"
+          ]
+        },
+        "font-size": {
+          "type": "integer",
+          "format": "int32",
+          "default": 16
+        },
+        "gap": {
+          "type": "number",
+          "format": "double",
+          "default": 0.0
+        },
+        "hover-bg-color": {
+          "type": "string",
+          "default": "#00000000"
+        },
+        "icon-fallback": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "icon-opacity": {
+          "type": "number",
+          "format": "double",
+          "default": 0.5
+        },
+        "icon-size": {
+          "type": "number",
+          "format": "double",
+          "default": 32.0
+        },
+        "icon-theme": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "default": null
+        },
+        "line-height": {
+          "type": "number",
+          "format": "double",
+          "default": 1.4
+        },
+        "margins": {
+          "$ref": "#/$defs/NumMargins"
+        },
+        "separator-color": {
+          "type": "string",
+          "default": "#00000000"
+        },
+        "separator-margin": {
+          "type": "number",
+          "format": "double",
+          "default": 6.0
+        },
+        "separator-radius": {
+          "type": "number",
+          "format": "double",
+          "default": 0.0
+        },
+        "separator-width": {
+          "type": "number",
+          "format": "double",
+          "default": 0.0
+        },
+        "show-titles": {
+          "$ref": "#/$defs/ShowTitles"
+        },
+        "title-width": {
+          "type": "number",
+          "format": "double",
+          "default": 60.0
+        },
+        "wrap-titles": {
+          "type": "boolean",
+          "default": false
+        }
+      }
     },
     "Workspace": {
       "type": "object",
@@ -1319,6 +1603,97 @@
           "$ref": "#/$defs/NiriConf"
         }
       ]
+    },
+    "Workspaces": {
+      "type": "object",
+      "properties": {
+        "active-bg-color": {
+          "type": "string",
+          "default": "#00000000"
+        },
+        "active-border-color": {
+          "type": "string",
+          "default": "#00000000"
+        },
+        "active-fg-color": {
+          "type": "string",
+          "default": "#00000000"
+        },
+        "bg-color": {
+          "type": "string",
+          "default": "#00000000"
+        },
+        "border-color": {
+          "type": "string",
+          "default": "#00000000"
+        },
+        "border-radius": {
+          "type": "number",
+          "format": "double",
+          "default": 10.0
+        },
+        "border-width": {
+          "type": "number",
+          "format": "double",
+          "default": 0.0
+        },
+        "fg-color": {
+          "type": "string",
+          "default": "#00000000"
+        },
+        "font-family": {
+          "type": "string",
+          "default": "monospace",
+          "enum": [
+            "serif",
+            "sans-serif",
+            "cursive",
+            "fantasy",
+            "monospace"
+          ]
+        },
+        "font-size": {
+          "type": "integer",
+          "format": "int32",
+          "default": 26
+        },
+        "gap": {
+          "type": "number",
+          "format": "double",
+          "default": 20.0
+        },
+        "margins": {
+          "$ref": "#/$defs/NumMargins"
+        },
+        "rail-width": {
+          "type": "number",
+          "format": "double",
+          "default": 3.0
+        },
+        "separator-color": {
+          "type": "string",
+          "default": "#00000000"
+        },
+        "separator-margin": {
+          "type": "number",
+          "format": "double",
+          "default": 6.0
+        },
+        "separator-radius": {
+          "type": "number",
+          "format": "double",
+          "default": 0.0
+        },
+        "separator-width": {
+          "type": "number",
+          "format": "double",
+          "default": 0.0
+        },
+        "show-titles": {
+          "type": "boolean",
+          "default": false
+        }
+      }
     },
     "WrapBox": {
       "type": "object",

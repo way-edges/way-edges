@@ -44,3 +44,5 @@ sysinfo = { version = "0.37.1", default-features = false, features = [
   "system",
 ] }
 starship-battery = "0.10.0"
+
+image = { version = "0.24", default-features = false, features = ["png", "jpeg"] }

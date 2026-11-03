@@ -3,6 +3,7 @@
 - [Root](root.md)
 - [Widget](widget.md)
   - [Workspace](widgets/workspace.md)
+  - [Dock](widgets/dock.md)
   - [Button](widgets/btn.md)
   - [Slider](widgets/slider.md)
   - [WrapBox](widgets/wrap-box/wrap-box.md)

@@ -56,6 +56,10 @@ impl Animation {
         }
     }
     pub(super) fn refresh(&mut self) {
+        if self.animation_costs.is_zero() {
+            self.cache_y = 1.0;
+            return;
+        }
         let max_time = self.animation_costs.as_secs_f64();
         let x = self.start_time.elapsed().as_secs_f64() / max_time;
         self.cache_y = if x >= 1. {

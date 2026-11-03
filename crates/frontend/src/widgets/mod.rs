@@ -3,6 +3,7 @@ use cairo::ImageSurface;
 use crate::mouse_state::{MouseEvent, MouseStateData};
 
 pub mod button;
+pub mod dock;
 pub mod slide;
 pub mod workspace;
 pub mod wrapbox;
