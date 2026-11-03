@@ -36,6 +36,7 @@ pub struct DockWindow {
     pub app_id: Option<String>,
     pub title: Option<String>,
     pub is_focused: bool,
+    pub hover_opacity: f64,
     pub has_resolved_icon: bool,
     pub icon_key: IconKey,
     pub fallback_char: String,
@@ -391,6 +392,7 @@ impl DockLayout {
                     app_id: window.app_id.clone(),
                     title: window.title.clone(),
                     is_focused: window.is_focused,
+                    hover_opacity: 0.0,
                     has_resolved_icon,
                     icon_key: key,
                     fallback_char: config
@@ -630,6 +632,13 @@ impl DockLayout {
             position.and_then(|(x, y)| self.find_clicked_item(x, y).map(|window| window.id));
         let changed = self.hovered_window != hovered;
         self.hovered_window = hovered;
+        for window in self
+            .workspaces
+            .iter_mut()
+            .flat_map(|workspace| &mut workspace.windows)
+        {
+            window.hover_opacity = if hovered == Some(window.id) { 1.0 } else { 0.0 };
+        }
         changed
     }
 

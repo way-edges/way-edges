@@ -289,14 +289,21 @@ pub fn paint(
                 win_bg_color,
             );
 
-            if layout.hovered_window == Some(win.id) {
+            if win.hover_opacity > 0.0 {
+                let color = config.windows.hover_bg_color;
+                let color = Color::rgba(
+                    color.r(),
+                    color.g(),
+                    color.b(),
+                    (color.a() as f64 * win.hover_opacity.clamp(0.0, 1.0)) as u8,
+                );
                 draw_rounded_rect(
                     &cr,
                     &win.rect,
                     config.windows.border_radius,
                     0.0,
-                    config.windows.hover_bg_color,
-                    config.windows.hover_bg_color,
+                    color,
+                    color,
                 );
             }
         }
@@ -592,37 +599,44 @@ mod tests {
             }],
             ..DockData::default()
         };
-        let mut fonts = FontSystem::new();
-        let mut layout = DockLayout::calculate(&data, &config, &HashMap::new(), &mut fonts, false);
-        let item = layout.workspaces[0].windows[0].rect;
-        let mut render = |layout: &DockLayout| {
-            let mut surface = ImageSurface::create(
-                cairo::Format::ARgb32,
-                layout.rect.width().ceil() as i32,
-                layout.rect.height().ceil() as i32,
-            )
-            .unwrap();
-            paint(
-                &surface,
-                layout,
-                &config,
-                &HashMap::new(),
-                &mut fonts,
-                &mut SwashCache::new(),
-                &mut HashMap::new(),
-            );
-            let stride = surface.stride() as usize;
-            let bytes = surface.data().unwrap().to_vec();
-            (bytes, stride)
-        };
-        let (normal, stride) = render(&layout);
-        layout.update_hover(Some((item.x() + 1.0, item.y() + 1.0)));
-        let (hovered, _) = render(&layout);
-        let pixel = (item.y() as usize + 1) * stride + (item.x() as usize + 1) * 4;
-        assert_ne!(&normal[pixel..pixel + 4], &hovered[pixel..pixel + 4]);
-        assert_eq!(&normal[..4], &hovered[..4]);
-        layout.update_hover(None);
-        assert_eq!(render(&layout).0, normal);
+        for vertical in [false, true] {
+            let mut fonts = FontSystem::new();
+            let mut layout =
+                DockLayout::calculate(&data, &config, &HashMap::new(), &mut fonts, vertical);
+            let item = layout.workspaces[0].windows[0].rect;
+            let mut render = |layout: &DockLayout| {
+                let mut surface = ImageSurface::create(
+                    cairo::Format::ARgb32,
+                    layout.rect.width().ceil() as i32,
+                    layout.rect.height().ceil() as i32,
+                )
+                .unwrap();
+                paint(
+                    &surface,
+                    layout,
+                    &config,
+                    &HashMap::new(),
+                    &mut fonts,
+                    &mut SwashCache::new(),
+                    &mut HashMap::new(),
+                );
+                let stride = surface.stride() as usize;
+                let bytes = surface.data().unwrap().to_vec();
+                (bytes, stride)
+            };
+            let (normal, stride) = render(&layout);
+            layout.update_hover(Some((item.x() + 1.0, item.y() + 1.0)));
+            let (hovered, _) = render(&layout);
+            let pixel = (item.y() as usize + 1) * stride + (item.x() as usize + 1) * 4;
+            assert_ne!(&normal[pixel..pixel + 4], &hovered[pixel..pixel + 4]);
+            assert_eq!(&normal[..4], &hovered[..4]);
+            layout.workspaces[0].windows[0].hover_opacity = 0.5;
+            let (middle, _) = render(&layout);
+            assert!(normal[pixel] < middle[pixel]);
+            assert!(middle[pixel] < hovered[pixel]);
+            layout.update_hover(None);
+            assert_eq!(render(&layout).0, normal);
+        }
     }
 
     #[test]

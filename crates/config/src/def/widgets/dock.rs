@@ -327,6 +327,10 @@ impl Default for Workspaces {
 #[serde(rename_all = "kebab-case")]
 #[schemars(deny_unknown_fields)]
 pub struct DockConfig {
+    #[knus(child, default = dt_pop_on_focus_change(), unwrap(argument))]
+    #[serde(default = "dt_pop_on_focus_change")]
+    pub pop_on_focus_change: bool,
+
     #[knus(child, default = dt_pop_duration(), unwrap(argument))]
     #[serde(default = "dt_pop_duration")]
     pub pop_duration: u64,
@@ -338,6 +342,14 @@ pub struct DockConfig {
     #[knus(child, default, unwrap(argument))]
     #[serde(default)]
     pub focus_animation_curve: Curve,
+
+    #[knus(child, default = dt_hover_transition_duration(), unwrap(argument))]
+    #[serde(default = "dt_hover_transition_duration")]
+    pub hover_transition_duration: u64,
+
+    #[knus(child, default, unwrap(argument))]
+    #[serde(default)]
+    pub hover_animation_curve: Curve,
 
     #[knus(child, default, unwrap(argument))]
     #[serde(default)]
@@ -379,9 +391,12 @@ pub struct DockConfig {
 impl Default for DockConfig {
     fn default() -> Self {
         Self {
+            pop_on_focus_change: dt_pop_on_focus_change(),
             pop_duration: dt_pop_duration(),
             focus_transition_duration: dt_focus_transition_duration(),
             focus_animation_curve: Curve::default(),
+            hover_transition_duration: dt_hover_transition_duration(),
+            hover_animation_curve: Curve::default(),
             grid_align: Align::default(),
             color: dt_color(),
             border_color: dt_border_color(),
@@ -402,8 +417,10 @@ macro_rules! def_fallback {
         }
     };
 }
+def_fallback!(dt_pop_on_focus_change, bool, true);
 def_fallback!(dt_pop_duration, u64, 1500);
 def_fallback!(dt_focus_transition_duration, u64, 260);
+def_fallback!(dt_hover_transition_duration, u64, 160);
 def_fallback!(dt_rail_width, f64, 3.0);
 def_fallback!(dt_color, Color, Color::rgba(0, 0, 0, 255));
 def_fallback!(dt_border_color, Color, Color::rgba(0, 0, 0, 0));
@@ -706,6 +723,30 @@ mod integration_tests {
     use crate::def::{parse_jsonc, parse_kdl, WidgetConf};
 
     #[test]
+    fn focus_pop_defaults_to_enabled_and_can_be_disabled_in_kdl_and_json() {
+        assert!(DockConfig::default().pop_on_focus_change);
+        for (value, expected) in [(None, true), (Some(true), true), (Some(false), false)] {
+            let kdl_option = value
+                .map(|v| format!("pop-on-focus-change {v};"))
+                .unwrap_or_default();
+            let json_option = value
+                .map(|v| format!(r#", "pop-on-focus-change":{v}"#))
+                .unwrap_or_default();
+            let kdl = parse_kdl(&format!(r#"dock {{ edge "left"; {kdl_option} }}"#)).unwrap();
+            let json = parse_jsonc(&format!(
+                r#"{{"widgets":[{{"type":"dock","edge":"left"{json_option}}}]}}"#
+            ))
+            .unwrap();
+            for root in [kdl, json] {
+                let WidgetConf::Dock(dock) = &root.widgets[0] else {
+                    panic!("Expected dock")
+                };
+                assert_eq!(dock.widget.pop_on_focus_change, expected);
+            }
+        }
+    }
+
+    #[test]
     fn standalone_example_configures_the_dock() {
         let root = parse_kdl(include_str!("../../../../../doc/config/dock.kdl")).unwrap();
         let WidgetConf::Dock(dock) = &root.widgets[0] else {
@@ -713,6 +754,8 @@ mod integration_tests {
         };
         assert!(dock.common.pinnable);
         assert!(!dock.common.pin_on_startup);
+        assert_eq!(dock.widget.hover_transition_duration, 160);
+        assert_eq!(dock.widget.hover_animation_curve, Curve::EaseCubic);
         assert!(dock.widget.workspaces.show_titles);
         assert_eq!(dock.widget.windows.title_width, 260.0);
         assert_eq!(dock.widget.windows.icon_fallback.as_deref(), Some("?"));
@@ -752,6 +795,8 @@ mod integration_tests {
             pop-duration 1900
             focus-transition-duration 420
             focus-animation-curve "ease-quad"
+            hover-transition-duration 0
+            hover-animation-curve "ease-quad"
             workspaces { rail-width 4; }
             windows { hover-bg-color "#12345678"; }
         }"##,
@@ -760,6 +805,7 @@ mod integration_tests {
         let json = parse_jsonc(
             r##"{"widgets":[{"type":"dock","edge":"bottom",
             "pop-duration":1900,"focus-transition-duration":420,"focus-animation-curve":"EaseQuad",
+            "hover-transition-duration":0,"hover-animation-curve":"EaseQuad",
             "workspaces":{"rail-width":4},"windows":{"hover-bg-color":"#12345678"}}]}"##,
         )
         .unwrap();
@@ -770,6 +816,8 @@ mod integration_tests {
             assert_eq!(dock.widget.pop_duration, 1900);
             assert_eq!(dock.widget.focus_transition_duration, 420);
             assert_eq!(dock.widget.focus_animation_curve, Curve::EaseQuad);
+            assert_eq!(dock.widget.hover_transition_duration, 0);
+            assert_eq!(dock.widget.hover_animation_curve, Curve::EaseQuad);
             assert_eq!(dock.widget.workspaces.rail_width, 4.0);
             assert_eq!(
                 dock.widget.windows.hover_bg_color,

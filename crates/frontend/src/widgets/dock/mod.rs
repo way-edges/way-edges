@@ -1,5 +1,6 @@
 pub mod draw;
 mod focus;
+mod hover;
 pub mod layout;
 
 use crate::animation::ToggleAnimationRc;
@@ -26,6 +27,8 @@ pub struct DockCtx {
     layout_from: DockLayout,
     layout_target: DockLayout,
     layout_transition: ToggleAnimationRc,
+    hover_transition: ToggleAnimationRc,
+    hover: hover::HoverState,
     pub font_system: FontSystem,
     pub swash_cache: SwashCache,
     pub icon_surface_cache: HashMap<IconKey, ImageSurface>,
@@ -117,6 +120,22 @@ impl WidgetContext for DockCtx {
         );
 
         self.last_layout.update_hover(self.pointer_position);
+        let progress = self.hover_transition.borrow().progress_abs();
+        if self
+            .hover
+            .retarget(self.last_layout.hovered_window, progress)
+        {
+            self.hover_transition.borrow_mut().restart();
+        }
+        let progress = self.hover_transition.borrow().progress_abs();
+        for window in self
+            .last_layout
+            .workspaces
+            .iter_mut()
+            .flat_map(|workspace| &mut workspace.windows)
+        {
+            window.hover_opacity = self.hover.opacity(window.id, progress);
+        }
 
         // Allocate the main ImageSurface for Cairo rendering.
         let width = self.last_layout.rect.width().ceil().max(1.0) as i32;
@@ -219,13 +238,23 @@ pub fn init_widget(
 
     let dock_data = Rc::new(RefCell::new(DockData::default()));
     let dock_data_weak = Rc::downgrade(&dock_data);
+    let pop_ping = config
+        .pop_on_focus_change
+        .then(|| builder.make_pop_ping(config.pop_duration));
+    let mut focus_changes = focus::FocusChangeTracker::default();
 
     // `make_redraw_channel` creates a `calloop::channel` internally.
     // The provided closure runs in the main Wayland Event Loop when data is pushed from the backend.
     // We update the local `RefCell` so that `WidgetContext::redraw()` can draw the new state.
     let sender = builder.make_redraw_channel(move |_app, msg: DockData| {
         if let Some(data) = dock_data_weak.upgrade() {
+            let should_pop = focus_changes.update(&msg);
             *data.borrow_mut() = msg;
+            if should_pop {
+                if let Some(ping) = &pop_ping {
+                    ping.ping();
+                }
+            }
         }
     });
 
@@ -242,12 +271,18 @@ pub fn init_widget(
         config.focus_transition_duration,
         config.focus_animation_curve,
     );
+    let hover_transition = builder.new_animation(
+        config.hover_transition_duration,
+        config.hover_animation_curve,
+    );
     DockCtx {
         config,
         last_layout: DockLayout::new(),
         layout_from: DockLayout::new(),
         layout_target: DockLayout::new(),
         layout_transition,
+        hover_transition,
+        hover: hover::HoverState::default(),
         font_system: cosmic_text::FontSystem::new(),
         swash_cache: cosmic_text::SwashCache::new(),
         icon_surface_cache: HashMap::new(),

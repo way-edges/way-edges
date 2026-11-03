@@ -39,6 +39,13 @@ Re-entering cancels the pending hide; leaving again starts a fresh interval.
 This provides time to return to the dock when a focus change shrinks its surface
 away from the pointer. Set `pop-duration 0` for immediate hiding.
 
+`pop-on-focus-change` defaults to `true`. The dock also appears when its output's
+active workspace changes, a window on that output gains focus, or focus moves to
+that output (including an empty workspace). It hides after `pop-duration` unless
+hovered or pinned. Set `pop-on-focus-change false` to disable automatic popping;
+pointer hover still reveals the dock. Title, icon, and other content updates do
+not trigger a pop, and the first data snapshot does not trigger one.
+
 To enlarge the dock, increase `windows.icon-size` (64 in the example).
 `windows.font-size` controls window titles, and `workspaces.font-size` controls
 workspace labels. Increase `windows.gap` for spacing between windows, and
@@ -49,6 +56,13 @@ When `windows.gap` is nonzero, the space between adjacent contents is included i
 the neighboring window cells, so their hit areas still meet without dead zones.
 `windows.hover-bg-color` controls the subtle background shown under the pointer
 (default `#ffffff12`), including the item's padding.
+
+Hover highlights fade in and out with `hover-transition-duration` (160ms by
+default) and `hover-animation-curve` (`"ease-cubic"` by default in KDL). Moving
+between windows crossfades their highlights. Moving or leaving during a
+transition continues from the displayed opacity. Set `hover-transition-duration 0`
+to make hover changes immediate. Hover animation does not change item sizes or
+hit areas, and completed transitions stop requesting frames.
 
 Workspace headers sit above their window groups, with labels such as
 `WS 02 / browser`. Each header has a rail spanning the windows it owns.
@@ -73,7 +87,10 @@ dock {
   edge "bottom"
   monitor "*"
   pinnable
+  pop-on-focus-change true
   pop-duration 1500
+  hover-transition-duration 160
+  hover-animation-curve "ease-cubic"
   color "#222"
   border-radius 10
   border-width 0
